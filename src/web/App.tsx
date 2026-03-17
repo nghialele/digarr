@@ -4,16 +4,8 @@ import { Toaster } from 'sonner'
 import { getSetupStatus, triggerPipeline } from './lib/api'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
+import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
-
-function Placeholder({ name }: { name: string }) {
-  return (
-    <div className="p-8 text-muted">
-      <h1 className="text-2xl font-bold text-text">{name}</h1>
-      <p>Coming soon...</p>
-    </div>
-  )
-}
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -79,7 +71,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/discover" element={<DiscoverPage />} />
-          <Route path="/settings" element={<Placeholder name="Settings" />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AppShell>
