@@ -1,4 +1,19 @@
+# ===========================
+# Project
+# ===========================
 node_modules/
 dist/
 .env
 *.log
+
+# ===========================
+# AI
+# ===========================
+AGENTS.md
+.claude
+PLAN.md
+CLAUDE.md
+***REMOVED***
+***REMOVED***/.cache
+***REMOVED***
+.worktrees/
