@@ -65,7 +65,7 @@ export function score(
         aiConfidence,
         feedbackBoost,
       },
-      aiReasoning: aiDiscovery ? `AI confidence: ${aiDiscovery.similarityScore}` : undefined,
+      aiReasoning: aiDiscovery?.aiReasoning ?? undefined,
     }
   })
 

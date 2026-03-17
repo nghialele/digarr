@@ -30,7 +30,7 @@ export function buildRecommendationPrompt(profile: TasteProfile): string {
 
 Return ONLY a JSON array with no additional text. Each element must have these fields:
 - artistName: string (the artist's name)
-- reasoning: string (brief explanation of why they match this listener's taste)
+- reasoning: string (2-3 sentences: first describe what this artist sounds like and what they're known for, then explain why they match this listener's taste)
 - confidence: number (0.0 to 1.0, how confident you are in this recommendation)
 - genres: string[] (list of genres this artist represents)
 
@@ -38,7 +38,7 @@ Example:
 [
   {
     "artistName": "Grouper",
-    "reasoning": "Fans of ambient and drone music with introspective themes often connect deeply with Grouper's hazy, lo-fi aesthetic.",
+    "reasoning": "Grouper is the project of Portland-based artist Liz Harris, known for hazy, lo-fi ambient folk layered with ethereal vocals and droning guitars. Fans of ambient and drone music with introspective themes often connect deeply with her immersive, meditative soundscapes.",
     "confidence": 0.87,
     "genres": ["ambient", "drone", "indie folk"]
   }

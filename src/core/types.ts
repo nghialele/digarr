@@ -23,6 +23,7 @@ export type DiscoveredArtist = {
   name: string
   mbid?: string
   similarityScore: number
+  aiReasoning?: string
   source: 'listenbrainz' | 'lastfm' | 'musicbrainz' | 'ai'
 }
 

@@ -22,6 +22,7 @@ export const settings = pgTable('settings', {
   aiApiKey: text('ai_api_key'),
   aiModel: text('ai_model'),
   aiBaseUrl: text('ai_base_url'),
+  skipTlsVerify: boolean('skip_tls_verify').default(false).notNull(),
   preferences: jsonb('preferences').$type<Preferences>(),
   setupComplete: boolean('setup_complete').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -69,6 +70,7 @@ export const recommendations = pgTable('recommendations', {
 // Types
 export type Preferences = {
   qualityProfileId: number
+  metadataProfileId: number
   rootFolderId: number
   scheduleCron: string
   scoreThreshold: number
@@ -81,10 +83,12 @@ export type Preferences = {
   }
   rejectionCooldownDays: number
   topArtistsLimit: number
+  librarySeedRatio: number // 0-1: fraction of seed artists from Lidarr library
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   qualityProfileId: 1,
+  metadataProfileId: 1,
   rootFolderId: 1,
   scheduleCron: '0 0 * * 0',
   scoreThreshold: 0.5,
@@ -97,4 +101,5 @@ export const DEFAULT_PREFERENCES: Preferences = {
   },
   rejectionCooldownDays: 90,
   topArtistsLimit: 30,
+  librarySeedRatio: 0.3,
 }

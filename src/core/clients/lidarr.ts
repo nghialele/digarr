@@ -16,16 +16,22 @@ export type QualityProfile = {
   name: string
 }
 
+export type MetadataProfile = {
+  id: number
+  name: string
+}
+
 export type RootFolder = {
   id: number
   path: string
   freeSpace: number
 }
 
-export function createLidarrClient(url: string, apiKey: string) {
+export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = false) {
   const http = createHttpClient({
     baseUrl: url,
     headers: { 'X-Api-Key': apiKey },
+    skipTlsVerify,
   })
 
   // Cache for root folders to avoid repeated API calls within a client instance.
@@ -44,6 +50,10 @@ export function createLidarrClient(url: string, apiKey: string) {
     return http.get<QualityProfile[]>('/api/v1/qualityprofile')
   }
 
+  function getMetadataProfiles(): Promise<MetadataProfile[]> {
+    return http.get<MetadataProfile[]>('/api/v1/metadataprofile')
+  }
+
   async function getRootFolders(): Promise<RootFolder[]> {
     if (rootFolderCache !== null) return rootFolderCache
     const folders = await http.get<RootFolder[]>('/api/v1/rootfolder')
@@ -53,7 +63,9 @@ export function createLidarrClient(url: string, apiKey: string) {
 
   async function addArtist(
     foreignArtistId: string,
+    artistName: string,
     qualityProfileId: number,
+    metadataProfileId: number,
     rootFolderId: number,
   ): Promise<LidarrArtist> {
     const folders = await getRootFolders()
@@ -64,7 +76,9 @@ export function createLidarrClient(url: string, apiKey: string) {
 
     return http.post<LidarrArtist>('/api/v1/artist', {
       foreignArtistId,
+      artistName,
       qualityProfileId,
+      metadataProfileId,
       rootFolderPath: folder.path,
       monitored: true,
       addOptions: {
@@ -93,6 +107,7 @@ export function createLidarrClient(url: string, apiKey: string) {
     lookupArtist,
     addArtist,
     getQualityProfiles,
+    getMetadataProfiles,
     getRootFolders,
     testConnection,
   }

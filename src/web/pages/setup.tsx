@@ -10,7 +10,7 @@ import { completeSetup, testService } from '../lib/api'
 type AiProvider = 'anthropic' | 'openai' | 'ollama'
 
 type FormState = {
-  lidarr: { url: string; apiKey: string }
+  lidarr: { url: string; apiKey: string; skipTlsVerify: boolean }
   listenbrainz: { username: string; token: string }
   lastfm: { username: string; apiKey: string }
   ai: { provider: AiProvider; model: string; apiKey: string; baseUrl: string }
@@ -34,7 +34,7 @@ type TestingState = {
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
-    <div className="flex items-center gap-0 mb-8">
+    <div className="flex items-center justify-center gap-0 mb-8">
       {Array.from({ length: total }, (_, i) => {
         const step = i + 1
         const done = step < current
@@ -121,6 +121,15 @@ function StepLidarr({
           onChange={(e) => onFormChange({ ...form, url: e.target.value })}
         />
       </Field>
+      <label className="flex items-center gap-2 text-sm text-muted cursor-pointer">
+        <input
+          type="checkbox"
+          checked={form.skipTlsVerify}
+          onChange={(e) => onFormChange({ ...form, skipTlsVerify: e.target.checked })}
+          className="rounded border-border"
+        />
+        Skip TLS verification
+      </label>
       <Field label="API Key" id="lidarr-apikey">
         <Input
           id="lidarr-apikey"
@@ -184,6 +193,14 @@ function StepSources({
       <div className="rounded-lg border border-border bg-surface p-4 space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-text">ListenBrainz</span>
+          <a
+            href="https://listenbrainz.org/settings/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-accent hover:underline"
+          >
+            Get your token
+          </a>
           {lbStatus && (
             <span
               className={`text-xs ${results.listenbrainz === true ? 'text-approve' : testing.listenbrainz ? 'text-muted' : 'text-reject'}`}
@@ -227,6 +244,14 @@ function StepSources({
       <div className="rounded-lg border border-border bg-surface p-4 space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-text">Last.fm</span>
+          <a
+            href="https://www.last.fm/api/account/create"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-accent hover:underline"
+          >
+            Create API account
+          </a>
           {lfStatus && (
             <span
               className={`text-xs ${results.lastfm === true ? 'text-approve' : testing.lastfm ? 'text-muted' : 'text-reject'}`}
@@ -285,6 +310,31 @@ function StepAi({
   const needsApiKey = form.provider !== 'ollama'
   const needsBaseUrl = form.provider === 'ollama'
 
+  const modelOptions: Record<AiProvider, Array<{ value: string; label: string }>> = {
+    anthropic: [
+      { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (fast, cheapest)' },
+      { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (balanced)' },
+      { value: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5' },
+      { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (most capable)' },
+    ],
+    openai: [
+      { value: 'gpt-5-nano', label: 'GPT-5 Nano (fast, cheapest)' },
+      { value: 'gpt-5-mini', label: 'GPT-5 Mini (balanced)' },
+      { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
+      { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+      { value: 'gpt-4o', label: 'GPT-4o' },
+    ],
+    ollama: [],
+  }
+
+  const apiKeyLinks: Record<string, { url: string; label: string }> = {
+    anthropic: { url: 'https://console.anthropic.com/settings/keys', label: 'Get API key' },
+    openai: { url: 'https://platform.openai.com/api-keys', label: 'Get API key' },
+  }
+
+  const link = apiKeyLinks[form.provider]
+  const models = modelOptions[form.provider]
+
   return (
     <div className="space-y-4">
       <div>
@@ -295,7 +345,9 @@ function StepAi({
         <Select
           id="ai-provider"
           value={form.provider}
-          onChange={(e) => onFormChange({ ...form, provider: e.target.value as AiProvider })}
+          onChange={(e) =>
+            onFormChange({ ...form, provider: e.target.value as AiProvider, model: '' })
+          }
         >
           <option value="anthropic">Anthropic</option>
           <option value="openai">OpenAI</option>
@@ -303,21 +355,45 @@ function StepAi({
         </Select>
       </Field>
       <Field label="Model" id="ai-model">
-        <Input
-          id="ai-model"
-          placeholder={
-            form.provider === 'anthropic'
-              ? 'claude-3-5-haiku-20241022'
-              : form.provider === 'openai'
-                ? 'gpt-4o-mini'
-                : 'llama3.2'
-          }
-          value={form.model}
-          onChange={(e) => onFormChange({ ...form, model: e.target.value })}
-        />
+        {models.length > 0 ? (
+          <Select
+            id="ai-model"
+            value={form.model}
+            onChange={(e) => onFormChange({ ...form, model: e.target.value })}
+          >
+            <option value="">Select a model</option>
+            {models.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Input
+            id="ai-model"
+            placeholder="llama3.2"
+            value={form.model}
+            onChange={(e) => onFormChange({ ...form, model: e.target.value })}
+          />
+        )}
       </Field>
       {needsApiKey && (
-        <Field label="API Key" id="ai-apikey">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label htmlFor="ai-apikey" className="text-sm text-muted">
+              API Key
+            </label>
+            {link && (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-accent hover:underline"
+              >
+                {link.label}
+              </a>
+            )}
+          </div>
           <Input
             id="ai-apikey"
             type="password"
@@ -325,7 +401,7 @@ function StepAi({
             value={form.apiKey}
             onChange={(e) => onFormChange({ ...form, apiKey: e.target.value })}
           />
-        </Field>
+        </div>
       )}
       {needsBaseUrl && (
         <Field label="Base URL" id="ai-baseurl">
@@ -401,7 +477,7 @@ function StepDone({
 // --- Main wizard ---
 
 const DEFAULT_FORM: FormState = {
-  lidarr: { url: '', apiKey: '' },
+  lidarr: { url: '', apiKey: '', skipTlsVerify: false },
   listenbrainz: { username: '', token: '' },
   lastfm: { username: '', apiKey: '' },
   ai: { provider: 'anthropic', model: '', apiKey: '', baseUrl: '' },
@@ -439,7 +515,11 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
   async function testLidarr() {
     setTestingKey('lidarr', true)
     try {
-      const res = await testService('lidarr', { url: form.lidarr.url, apiKey: form.lidarr.apiKey })
+      const res = await testService('lidarr', {
+        url: form.lidarr.url,
+        apiKey: form.lidarr.apiKey,
+        skipTlsVerify: form.lidarr.skipTlsVerify,
+      })
       if (res.success) {
         setResultKey('lidarr', true)
         toast.success('Lidarr connected successfully')
@@ -529,11 +609,22 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
   async function handleStart() {
     setStarting(true)
     const config: Record<string, unknown> = {
-      lidarr: form.lidarr,
-      ai: form.ai,
+      lidarrUrl: form.lidarr.url,
+      lidarrApiKey: form.lidarr.apiKey,
+      skipTlsVerify: form.lidarr.skipTlsVerify,
+      aiProvider: form.ai.provider,
+      aiModel: form.ai.model,
+      aiApiKey: form.ai.apiKey || null,
+      aiBaseUrl: form.ai.baseUrl || null,
     }
-    if (results.listenbrainz === true) config.listenbrainz = form.listenbrainz
-    if (results.lastfm === true) config.lastfm = form.lastfm
+    if (results.listenbrainz === true) {
+      config.listenbrainzUsername = form.listenbrainz.username
+      config.listenbrainzToken = form.listenbrainz.token
+    }
+    if (results.lastfm === true) {
+      config.lastfmUsername = form.lastfm.username
+      config.lastfmApiKey = form.lastfm.apiKey
+    }
     try {
       await completeSetup(config)
       onComplete()

@@ -15,6 +15,7 @@ import { artistRoutes } from './routes/artists'
 import { batchRoutes } from './routes/batches'
 import { healthRoutes } from './routes/health'
 import { lidarrRoutes } from './routes/lidarr'
+import { listeningRoutes } from './routes/listening'
 import { pipelineRoutes } from './routes/pipeline'
 import { recommendationRoutes } from './routes/recommendations'
 import { settingsRoutes } from './routes/settings'
@@ -59,11 +60,13 @@ export function createApp(deps: AppDependencies) {
   app.route('/', batchRoutes(deps))
   app.route('/', artistRoutes(deps))
   app.route('/', lidarrRoutes(deps))
+  app.route('/', listeningRoutes(deps))
 
-  // Serve static assets from dist/web (production only -- dev uses Vite's dev server)
-  app.use('/*', serveStatic({ root: './dist/web' }))
-  // SPA fallback: serve index.html for all non-API, non-static routes
-  app.get('*', serveStatic({ root: './dist/web', path: 'index.html' }))
+  // Serve built SPA in production (dev uses Vite's dev server with proxy)
+  if (process.env.NODE_ENV === 'production') {
+    app.use('/*', serveStatic({ root: './dist/web' }))
+    app.get('*', serveStatic({ root: './dist/web', path: 'index.html' }))
+  }
 
   return app
 }

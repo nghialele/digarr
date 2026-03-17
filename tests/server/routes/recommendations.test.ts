@@ -77,6 +77,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
 const mockLidarrClient = {
   addArtist: vi.fn(),
   getQualityProfiles: vi.fn(async () => []),
+  getMetadataProfiles: vi.fn(async () => []),
   getRootFolders: vi.fn(async () => []),
   getArtists: vi.fn(async () => []),
   lookupArtist: vi.fn(async () => []),

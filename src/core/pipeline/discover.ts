@@ -32,13 +32,38 @@ export async function discover(
   profile: TasteProfile,
   sources: DiscoverSources,
   topArtistsLimit: number,
+  libraryArtists?: Array<{ mbid: string; name: string }>,
+  librarySeedRatio = 0.3,
 ): Promise<DiscoveredArtist[]> {
   const topArtists = profile.topArtists.slice(0, topArtistsLimit)
   const results: DiscoveredArtist[] = []
 
-  // For each top artist, query each configured source for similar artists
+  // Mix in library artists based on librarySeedRatio (0 = none, 1 = all library)
+  let seedArtists = topArtists
+  if (libraryArtists && libraryArtists.length > 0 && librarySeedRatio > 0) {
+    const librarySlots = Math.max(1, Math.round(topArtistsLimit * librarySeedRatio))
+    const listeningSlots = topArtistsLimit - librarySlots
+
+    // Shuffle library artists so we don't always seed the same ones
+    const shuffled = [...libraryArtists].sort(() => Math.random() - 0.5)
+    // Exclude artists already in topArtists
+    const topMbids = new Set(topArtists.map((a) => a.mbid).filter(Boolean))
+    const librarySeeds = shuffled
+      .filter((a) => !topMbids.has(a.mbid))
+      .slice(0, librarySlots)
+      .map((a) => ({
+        name: a.name,
+        mbid: a.mbid,
+        playCount: 0,
+        source: 'listenbrainz' as const,
+      }))
+
+    seedArtists = [...topArtists.slice(0, listeningSlots), ...librarySeeds]
+  }
+
+  // For each seed artist, query each configured source for similar artists
   await Promise.all(
-    topArtists.map(async (artist) => {
+    seedArtists.map(async (artist) => {
       // ListenBrainz similar artists (needs MBID)
       if (sources.listenbrainz != null && artist.mbid) {
         try {
@@ -82,6 +107,7 @@ export async function discover(
         results.push({
           name: rec.artistName,
           similarityScore: rec.confidence,
+          aiReasoning: rec.reasoning,
           source: 'ai',
         })
       }

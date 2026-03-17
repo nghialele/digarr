@@ -185,13 +185,15 @@ describe('POST /api/settings/test/:service', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 403 when setup not complete', async () => {
+  it('allows test endpoints even when setup not complete', async () => {
     const app = createApp(makeDeps({ isSetupComplete: async () => false }))
     const res = await app.request('/api/settings/test/lidarr', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'http://lidarr:8686', apiKey: 'key' }),
     })
-    expect(res.status).toBe(403)
+    // Test endpoints are exempted from setup guard so users can
+    // verify connections during the setup wizard
+    expect(res.status).toBe(200)
   })
 })

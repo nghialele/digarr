@@ -3,11 +3,19 @@ type HttpClientConfig = {
   headers?: Record<string, string>
   timeout?: number
   retries?: number
+  skipTlsVerify?: boolean
   onRequest?: (method: string, url: string) => void
 }
 
 export function createHttpClient(config: HttpClientConfig) {
-  const { baseUrl, headers = {}, timeout = 10_000, retries = 3, onRequest } = config
+  const {
+    baseUrl,
+    headers = {},
+    timeout = 10_000,
+    retries = 3,
+    skipTlsVerify = false,
+    onRequest,
+  } = config
 
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${baseUrl}${path}`
@@ -26,7 +34,8 @@ export function createHttpClient(config: HttpClientConfig) {
           },
           body: body ? JSON.stringify(body) : undefined,
           signal: controller.signal,
-        })
+          ...(skipTlsVerify ? { tls: { rejectUnauthorized: false } } : {}),
+        } as RequestInit)
 
         clearTimeout(timer)
 

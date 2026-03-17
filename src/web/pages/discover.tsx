@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { type Recommendation, RecommendationCard } from '../components/recommendation-card'
 import { Skeleton } from '../components/ui/skeleton'
-import { bulkAction, getRecommendations, updateRecommendation } from '../lib/api'
+import { bulkAction, getRecommendations, rescanArtists, updateRecommendation } from '../lib/api'
 import { useFetch } from '../lib/hooks'
 
 // ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ const FILTER_LABELS: Record<FilterTab, string> = {
 const STATUS_PARAM: Record<FilterTab, string | undefined> = {
   all: undefined,
   pending: 'pending',
-  approved: 'approved',
+  approved: 'added_to_lidarr,add_failed,approved',
   rejected: 'rejected',
 }
 
@@ -99,13 +99,14 @@ export function DiscoverPage() {
   const items = (data?.items ?? []) as Recommendation[]
   const total = data?.total ?? 0
 
-  // Count per filter for tab badges -- fetch counts separately
+  // Count per filter for tab badges -- fetch all counts independently
+  const allCountFetcher = useCallback(() => getRecommendations({ limit: '1' }), [])
   const pendingCountFetcher = useCallback(
     () => getRecommendations({ status: 'pending', limit: '1' }),
     [],
   )
   const approvedCountFetcher = useCallback(
-    () => getRecommendations({ status: 'approved', limit: '1' }),
+    () => getRecommendations({ status: 'added_to_lidarr,add_failed,approved', limit: '1' }),
     [],
   )
   const rejectedCountFetcher = useCallback(
@@ -113,12 +114,13 @@ export function DiscoverPage() {
     [],
   )
 
+  const { data: allCountData } = useFetch<{ total: number }>(allCountFetcher)
   const { data: pendingCountData } = useFetch<{ total: number }>(pendingCountFetcher)
   const { data: approvedCountData } = useFetch<{ total: number }>(approvedCountFetcher)
   const { data: rejectedCountData } = useFetch<{ total: number }>(rejectedCountFetcher)
 
   const counts: Record<FilterTab, number> = {
-    all: total,
+    all: allCountData?.total ?? 0,
     pending: pendingCountData?.total ?? 0,
     approved: approvedCountData?.total ?? 0,
     rejected: rejectedCountData?.total ?? 0,
@@ -131,12 +133,13 @@ export function DiscoverPage() {
   const handleApprove = useCallback(
     async (id: number) => {
       setActingIds((prev) => new Set([...prev, id]))
+      const newStatus = filter === 'rejected' ? 'pending' : 'approved'
       try {
-        await updateRecommendation(id, { status: 'approved' })
-        toast.success('Approved')
+        await updateRecommendation(id, { status: newStatus })
+        toast.success(filter === 'rejected' ? 'Restored to pending' : 'Approved')
         refetch()
       } catch {
-        toast.error('Failed to approve')
+        toast.error(filter === 'rejected' ? 'Failed to restore' : 'Failed to approve')
       } finally {
         setActingIds((prev) => {
           const next = new Set(prev)
@@ -145,7 +148,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch],
+    [refetch, filter],
   )
 
   const handleReject = useCallback(
@@ -294,9 +297,9 @@ export function DiscoverPage() {
                   {counts[tab]}
                 </span>
               )}
-              {tab === 'all' && total > 0 && (
+              {tab === 'all' && counts.all > 0 && (
                 <span className={`ml-1.5 text-xs ${filter === tab ? 'opacity-70' : 'text-muted'}`}>
-                  {total}
+                  {counts.all}
                 </span>
               )}
             </button>
@@ -327,6 +330,20 @@ export function DiscoverPage() {
             {pendingAboveThreshold > 0 && (
               <span className="ml-1.5 text-xs opacity-70">({pendingAboveThreshold})</span>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              toast.promise(rescanArtists(), {
+                loading: 'Refreshing artist data...',
+                success: (r) => `Updated ${r.updated} of ${r.total} artists`,
+                error: 'Rescan failed',
+              })
+              setTimeout(refetch, 3000)
+            }}
+            className="px-3 py-1.5 bg-surface border border-border rounded text-sm text-muted hover:text-text transition-colors"
+          >
+            Refresh Data
           </button>
         </div>
       </div>

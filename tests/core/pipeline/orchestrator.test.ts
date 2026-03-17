@@ -100,6 +100,7 @@ const defaultSettings = {
   aiBaseUrl: null,
   preferences: {
     qualityProfileId: 1,
+    metadataProfileId: 1,
     rootFolderId: 1,
     scheduleCron: '0 0 * * 0',
     scoreThreshold: 0.5,
@@ -112,6 +113,7 @@ const defaultSettings = {
     },
     rejectionCooldownDays: 90,
     topArtistsLimit: 30,
+    librarySeedRatio: 0.3,
   },
   setupComplete: true,
   id: 1,
@@ -121,6 +123,7 @@ const defaultSettings = {
 
 function makeDb() {
   return {
+    getExistingRecommendationMbids: vi.fn().mockResolvedValue(new Set()),
     insertBatch: vi.fn().mockResolvedValue({ id: 42 }),
     upsertArtist: vi.fn().mockResolvedValue({ id: 1 }),
     insertRecommendation: vi.fn().mockResolvedValue(undefined),

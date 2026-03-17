@@ -31,6 +31,7 @@ export interface PipelineSettings {
   aiModel: string | null
   aiBaseUrl: string | null
   preferences: Preferences | null
+  skipTlsVerify?: boolean
 }
 
 export interface PipelineDeps {
@@ -50,10 +51,23 @@ interface BatchManagementDb extends StoreDb {
 
 export class PipelineOrchestrator extends EventEmitter {
   private running = false
+  private currentStage: string | null = null
+  private currentMessage: string | null = null
+
+  override emit(eventName: string | symbol, ...args: unknown[]): boolean {
+    if (eventName === 'progress') {
+      const progress = args[0] as { stage?: string; message?: string } | undefined
+      if (progress?.stage) this.currentStage = progress.stage
+      if (progress?.message) this.currentMessage = progress.message
+    }
+    return super.emit(eventName, ...args)
+  }
 
   async run(deps: PipelineDeps): Promise<{ batchId: number }> {
     if (this.running) throw new Error('Pipeline already running')
     this.running = true
+    this.currentStage = null
+    this.currentMessage = null
 
     try {
       const { db, settings } = deps
@@ -71,6 +85,7 @@ export class PipelineOrchestrator extends EventEmitter {
         },
         rejectionCooldownDays: 90,
         topArtistsLimit: 30,
+        librarySeedRatio: 0.3,
       }
 
       // -- Build clients from settings ----------------------------------------
@@ -78,7 +93,11 @@ export class PipelineOrchestrator extends EventEmitter {
       if (!settings.lidarrUrl || !settings.lidarrApiKey) {
         throw new Error('Lidarr URL and API key are required')
       }
-      const lidarrClient = createLidarrClient(settings.lidarrUrl, settings.lidarrApiKey)
+      const lidarrClient = createLidarrClient(
+        settings.lidarrUrl,
+        settings.lidarrApiKey,
+        settings.skipTlsVerify,
+      )
 
       const lbClient =
         settings.listenbrainzUsername && settings.listenbrainzToken
@@ -104,8 +123,12 @@ export class PipelineOrchestrator extends EventEmitter {
 
       // -- Stage 1: COLLECT ---------------------------------------------------
 
-      this.emit('progress', { stage: 'collect' })
+      this.emit('progress', { stage: 'collect', message: 'Fetching your Lidarr library...' })
       const libraryArtists = await collect(lidarrClient)
+      this.emit('progress', {
+        stage: 'collect',
+        message: `Found ${libraryArtists.length} artists in your library`,
+      })
 
       // Build lookup structures for score + filter
       const libraryMbids = new Set(libraryArtists.map((a) => a.mbid))
@@ -120,12 +143,19 @@ export class PipelineOrchestrator extends EventEmitter {
 
       // -- Stage 2: ANALYZE ---------------------------------------------------
 
-      this.emit('progress', { stage: 'analyze' })
+      this.emit('progress', { stage: 'analyze', message: 'Building your taste profile...' })
       const tasteProfile = await analyze(lbClient, lfmClient)
+      this.emit('progress', {
+        stage: 'analyze',
+        message: `Profiled ${tasteProfile.topArtists.length} top artists, ${tasteProfile.topGenres.length} genres`,
+      })
 
       // -- Stage 3: DISCOVER --------------------------------------------------
 
-      this.emit('progress', { stage: 'discover' })
+      this.emit('progress', {
+        stage: 'discover',
+        message: 'Finding similar artists from all sources...',
+      })
       const discovered = await discover(
         tasteProfile,
         {
@@ -135,23 +165,48 @@ export class PipelineOrchestrator extends EventEmitter {
           ai: aiProvider,
         },
         prefs.topArtistsLimit,
+        libraryArtists,
+        prefs.librarySeedRatio ?? 0.3,
       )
+      this.emit('progress', {
+        stage: 'discover',
+        message: `Discovered ${discovered.length} candidate artists`,
+      })
 
       // -- Stage 4: RESOLVE ---------------------------------------------------
 
-      this.emit('progress', { stage: 'resolve' })
-      const resolved = await resolve(discovered, mbClient, (progress) => {
-        this.emit('progress', { ...progress, stage: 'resolve' })
+      this.emit('progress', {
+        stage: 'resolve',
+        message: `Resolving ${discovered.length} artists via MusicBrainz...`,
       })
+      const resolved = await resolve(
+        discovered,
+        mbClient,
+        (progress) => {
+          this.emit('progress', progress)
+        },
+        lidarrClient,
+      )
 
       // -- Stage 5: SCORE -----------------------------------------------------
 
-      this.emit('progress', { stage: 'score' })
+      this.emit('progress', {
+        stage: 'score',
+        message: `Scoring ${resolved.length} resolved artists...`,
+      })
       const scored = score(resolved, libraryGenres, prefs.scoringWeights, feedbackHistory)
 
       // -- Stage 6: FILTER ----------------------------------------------------
 
-      this.emit('progress', { stage: 'filter' })
+      this.emit('progress', {
+        stage: 'filter',
+        message: `Filtering ${scored.length} scored artists...`,
+      })
+      // Also exclude artists that already have recommendations (any status)
+      const existingMbids = await db.getExistingRecommendationMbids()
+      for (const mbid of existingMbids) {
+        libraryMbids.add(mbid)
+      }
       const filtered = filter(
         scored,
         libraryMbids,
@@ -162,10 +217,16 @@ export class PipelineOrchestrator extends EventEmitter {
 
       // -- Stage 7: STORE -----------------------------------------------------
 
-      this.emit('progress', { stage: 'store' })
+      this.emit('progress', {
+        stage: 'store',
+        message: `Saving ${filtered.length} recommendations...`,
+      })
       const batchId = await store(filtered, db)
 
-      this.emit('progress', { stage: 'complete' })
+      this.emit('progress', {
+        stage: 'complete',
+        message: `Done! ${filtered.length} new recommendations found.`,
+      })
       return { batchId }
     } catch (err) {
       this.emit('error', err)
@@ -177,6 +238,14 @@ export class PipelineOrchestrator extends EventEmitter {
 
   get isRunning(): boolean {
     return this.running
+  }
+
+  get stage(): string | null {
+    return this.currentStage
+  }
+
+  get stageMessage(): string | null {
+    return this.currentMessage
   }
 
   /**

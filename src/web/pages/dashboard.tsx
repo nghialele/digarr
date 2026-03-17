@@ -1,12 +1,19 @@
 import { useCallback, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PipelineProgress } from '../components/pipeline-progress'
 import { StatCard } from '../components/stat-card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Skeleton } from '../components/ui/skeleton'
-import { getBatches, getRecommendations, updateRecommendation } from '../lib/api'
+import {
+  getBatches,
+  getLidarrStats,
+  getRecentListens,
+  getRecommendations,
+  quickDiscover,
+  updateRecommendation,
+} from '../lib/api'
 import { useFetch } from '../lib/hooks'
 
 // ---------------------------------------------------------------------------
@@ -22,6 +29,9 @@ type Recommendation = {
     id: number
     name: string
     genres?: string[] | null
+    tags?: string[] | null
+    imageUrl?: string | null
+    streamingUrls?: Record<string, string> | null
   }
 }
 
@@ -41,6 +51,24 @@ type Batch = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function ArtistThumb({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
+  if (imageUrl) {
+    return (
+      <img src={imageUrl} alt={name} className="w-10 h-10 rounded-md object-cover bg-bg shrink-0" />
+    )
+  }
+  // Gradient placeholder based on name hash
+  const hue = Math.abs([...name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
+  return (
+    <div
+      className="w-10 h-10 rounded-md shrink-0 flex items-center justify-center text-xs font-bold text-bg"
+      style={{ background: `hsl(${hue}, 40%, 45%)` }}
+    >
+      {name.slice(0, 2).toUpperCase()}
+    </div>
+  )
+}
 
 function relativeTime(dateStr: string | Date): string {
   const ms = Date.now() - new Date(dateStr).getTime()
@@ -62,11 +90,13 @@ function LatestBatchPanel({
   total,
   loading,
   onAction,
+  onClickRec,
 }: {
   recs: Recommendation[]
   total: number
   loading: boolean
   onAction: (id: number, action: 'approved' | 'rejected') => void
+  onClickRec?: () => void
 }) {
   if (loading) {
     return (
@@ -98,14 +128,26 @@ function LatestBatchPanel({
   return (
     <div className="bg-surface border border-border rounded-lg divide-y divide-border">
       {recs.map((rec) => (
-        <div key={rec.id} className="flex items-center justify-between px-4 py-3 gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-text truncate">{rec.artist.name}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-muted">Score {rec.score.toFixed(2)}</span>
-              {rec.artist.genres && rec.artist.genres.length > 0 && (
-                <Badge variant="outline">{rec.artist.genres[0]}</Badge>
-              )}
+        <button
+          type="button"
+          key={rec.id}
+          className="flex items-center justify-between px-4 py-3 gap-4 cursor-pointer hover:bg-bg/50 transition-colors w-full text-left"
+          onClick={onClickRec}
+        >
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <ArtistThumb name={rec.artist.name} imageUrl={rec.artist.imageUrl} />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-text truncate">{rec.artist.name}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-accent font-medium">
+                  {Math.round((rec.score ?? 0) * 100)}%
+                </span>
+                {rec.artist.genres?.slice(0, 3).map((g) => (
+                  <Badge key={g} variant="outline">
+                    {g}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -113,7 +155,10 @@ function LatestBatchPanel({
               size="sm"
               variant="outline"
               className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
-              onClick={() => onAction(rec.id, 'approved')}
+              onClick={(e) => {
+                e.stopPropagation()
+                onAction(rec.id, 'approved')
+              }}
             >
               Approve
             </Button>
@@ -121,12 +166,15 @@ function LatestBatchPanel({
               size="sm"
               variant="outline"
               className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
-              onClick={() => onAction(rec.id, 'rejected')}
+              onClick={(e) => {
+                e.stopPropagation()
+                onAction(rec.id, 'rejected')
+              }}
             >
               Reject
             </Button>
           </div>
-        </div>
+        </button>
       ))}
       {total > recs.length && (
         <div className="px-4 py-3">
@@ -144,6 +192,7 @@ function LatestBatchPanel({
 // ---------------------------------------------------------------------------
 
 export function Dashboard() {
+  const navigate = useNavigate()
   const [actedIds, setActedIds] = useState<Set<number>>(new Set())
 
   // Pending recommendations (top 5 for latest batch panel)
@@ -179,9 +228,32 @@ export function Dashboard() {
     total: number
   }>(rejectedFetcher)
 
-  // Batches for "last scan" and library artist count
+  // Batches for "last scan"
   const batchesFetcher = useCallback(() => getBatches(), [])
-  const { data: batchesData, loading: batchesLoading } = useFetch<unknown[]>(batchesFetcher)
+  const {
+    data: batchesData,
+    loading: batchesLoading,
+    refetch: refetchBatches,
+  } = useFetch<unknown[]>(batchesFetcher)
+
+  // Recent listens
+  const listensFetcher = useCallback(() => getRecentListens(), [])
+  const { data: listensData } = useFetch<{
+    tracks: Array<{
+      artist: string
+      track: string
+      source: string
+      imageUrl?: string
+      mbid?: string
+    }>
+  }>(listensFetcher)
+
+  // Lidarr library stats
+  const lidarrStatsFetcher = useCallback(() => getLidarrStats(), [])
+  const { data: lidarrStats, loading: lidarrLoading } = useFetch<{
+    artists: number
+    monitored: number
+  }>(lidarrStatsFetcher)
 
   // ---------------------------------------------------------------------------
   // Derive stats
@@ -198,9 +270,6 @@ export function Dashboard() {
   const batches = (batchesData ?? []) as Batch[]
   const lastBatch = batches[0] ?? null
   const lastScan = lastBatch?.createdAt ? relativeTime(lastBatch.createdAt) : 'Never'
-
-  // Library artists = total added to Lidarr across all batches
-  const libraryArtists = approvedCount
 
   const statsLoading = approvedLoading || rejectedLoading || batchesLoading
 
@@ -231,10 +300,10 @@ export function Dashboard() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
-          label="Library Artists"
-          value={statsLoading ? '--' : libraryArtists}
-          subValue="added to Lidarr"
-          loading={statsLoading}
+          label="Lidarr Library"
+          value={lidarrLoading ? '--' : (lidarrStats?.artists ?? 0)}
+          subValue={lidarrLoading ? undefined : `${lidarrStats?.monitored ?? 0} monitored`}
+          loading={lidarrLoading}
         />
         <StatCard
           label="Pending Recs"
@@ -256,7 +325,12 @@ export function Dashboard() {
       </div>
 
       {/* Pipeline progress (self-hides when not running) */}
-      <PipelineProgress />
+      <PipelineProgress
+        onComplete={() => {
+          refetchPending()
+          refetchBatches()
+        }}
+      />
 
       {/* Latest batch panel */}
       <div className="space-y-3">
@@ -275,8 +349,46 @@ export function Dashboard() {
           total={pendingTotal}
           loading={pendingLoading}
           onAction={handleAction}
+          onClickRec={() => navigate('/discover')}
         />
       </div>
+
+      {/* Recent listens */}
+      {listensData && listensData.tracks.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+            Recent Listening Activity
+          </h2>
+          <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+            {listensData.tracks.map((t) => (
+              <div
+                key={`${t.source}-${t.artist}-${t.track}`}
+                className="flex items-center gap-3 px-4 py-2.5"
+              >
+                <ArtistThumb name={t.artist} imageUrl={t.imageUrl} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-text truncate">{t.artist}</p>
+                  <p className="text-xs text-muted truncate">{t.track}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 text-xs text-accent border-accent/40 hover:bg-accent/10"
+                  onClick={() => {
+                    toast.promise(quickDiscover(t.artist), {
+                      loading: `Finding artists similar to ${t.artist}...`,
+                      success: (r) => r.message,
+                      error: 'Discovery failed',
+                    })
+                  }}
+                >
+                  Find Similar
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
 import { getSetupStatus, triggerPipeline } from './lib/api'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
@@ -34,7 +34,14 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <button
           type="button"
-          onClick={() => triggerPipeline().catch(console.error)}
+          onClick={() =>
+            triggerPipeline()
+              .then(() => toast.success('Scan started -- check Dashboard for progress'))
+              .catch((err) => {
+                const msg = err instanceof Error ? err.message : 'Failed to start scan'
+                toast.error(msg.includes('409') ? 'Scan already running' : msg)
+              })
+          }
           className="px-4 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90"
         >
           Run Scan

@@ -1,6 +1,51 @@
+import { useState } from 'react'
 import { cn } from '../lib/utils'
 import { StreamingLinks } from './streaming-links'
 import { Button } from './ui/button'
+
+// ---------------------------------------------------------------------------
+// Artist thumbnail
+// ---------------------------------------------------------------------------
+
+function ArtistThumb({
+  name,
+  imageUrl,
+  size = 10,
+}: {
+  name: string
+  imageUrl?: string | null
+  size?: number
+}) {
+  const [imgError, setImgError] = useState(false)
+  const px = size * 4
+  const hue = Math.abs([...name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
+
+  if (imageUrl && !imgError) {
+    return (
+      <img
+        src={imageUrl}
+        alt={name}
+        className="rounded-md shrink-0 object-cover bg-bg"
+        style={{ width: `${px}px`, height: `${px}px` }}
+        onError={() => setImgError(true)}
+      />
+    )
+  }
+
+  return (
+    <div
+      className="rounded-md shrink-0 flex items-center justify-center font-bold text-bg"
+      style={{
+        width: `${px}px`,
+        height: `${px}px`,
+        background: `hsl(${hue}, 40%, 45%)`,
+        fontSize: `${Math.max(size * 1.5, 12)}px`,
+      }}
+    >
+      {name.slice(0, 2).toUpperCase()}
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,6 +62,7 @@ export type Recommendation = {
     id: number
     name: string
     mbid: string
+    disambiguation: string | null
     genres: string[] | null
     tags: string[] | null
     imageUrl: string | null
@@ -98,31 +144,6 @@ function StatusBadge({
 }
 
 // ---------------------------------------------------------------------------
-// Source dots
-// ---------------------------------------------------------------------------
-
-function SourceDots({ sources }: { sources: Record<string, number> | null }) {
-  if (!sources) return null
-  const keys = Object.keys(sources)
-  if (keys.length === 0) return null
-  return (
-    <div className="flex items-center gap-1" title="Sources">
-      {keys.map((key) => {
-        const cfg = SOURCE_COLORS[key] ?? { label: key.slice(0, 2).toUpperCase(), color: '#6b7084' }
-        return (
-          <span
-            key={key}
-            title={`${cfg.label}: ${((sources[key] ?? 0) * 100).toFixed(0)}%`}
-            style={{ backgroundColor: cfg.color }}
-            className="w-2 h-2 rounded-full inline-block"
-          />
-        )
-      })}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Genre pills
 // ---------------------------------------------------------------------------
 
@@ -172,7 +193,7 @@ export function RecommendationCard({
     <button
       type="button"
       className={cn(
-        'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left',
+        'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left flex flex-col',
         isSelected ? 'border-accent' : 'border-border hover:border-border/80',
         expanded ? 'col-span-full' : '',
       )}
@@ -185,19 +206,30 @@ export function RecommendationCard({
       }}
     >
       {/* Compact layout (always shown) */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 flex-1">
         {/* Header row */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-lg font-semibold text-text leading-tight">{rec.artist.name}</h3>
-          <span className="shrink-0 bg-accent/20 text-accent text-xs font-semibold px-2 py-0.5 rounded">
-            {pct}
-          </span>
+        <div className="flex items-start gap-3">
+          <ArtistThumb
+            name={rec.artist.name}
+            imageUrl={rec.artist.imageUrl}
+            size={expanded ? 14 : 10}
+          />
+          <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+            <div>
+              <h3 className="text-lg font-semibold text-text leading-tight">{rec.artist.name}</h3>
+              {rec.artist.disambiguation && (
+                <p className="text-xs text-muted mt-0.5">{rec.artist.disambiguation}</p>
+              )}
+            </div>
+            <span className="shrink-0 bg-accent/20 text-accent text-xs font-semibold px-2 py-0.5 rounded">
+              {pct}
+            </span>
+          </div>
         </div>
 
-        {/* Genre + source row */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Genre tags (single line, overflow hidden) */}
+        <div className="flex items-center gap-1.5 overflow-hidden">
           <GenrePills genres={rec.artist.genres} max={expanded ? 8 : 3} />
-          <SourceDots sources={rec.sources} />
         </div>
 
         {/* Streaming links (compact) */}
@@ -246,6 +278,24 @@ export function RecommendationCard({
             </Button>
           </div>
         )}
+        {rec.status === 'rejected' && (
+          // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
+          <div
+            className="flex gap-2"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-muted border-border/60 hover:bg-surface hover:text-text"
+              onClick={() => onApprove(rec.id)}
+            >
+              Restore
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Expanded-only section */}
@@ -257,9 +307,21 @@ export function RecommendationCard({
           onKeyDown={(e) => e.stopPropagation()}
           role="presentation"
         >
+          {/* MusicBrainz link */}
+          <div className="mt-4 flex items-center gap-2">
+            <a
+              href={`https://musicbrainz.org/artist/${rec.artist.mbid}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-accent hover:underline"
+            >
+              View on MusicBrainz
+            </a>
+          </div>
+
           {/* AI reasoning */}
           {rec.aiReasoning && (
-            <div className="mt-4 border-l-2 border-accent bg-surface/50 px-3 py-2 rounded-r">
+            <div className="border-l-2 border-accent bg-surface/50 px-3 py-2 rounded-r">
               <p className="text-xs text-muted uppercase tracking-wide mb-1">AI Reasoning</p>
               <p className="text-sm text-text italic">{rec.aiReasoning}</p>
             </div>
@@ -330,6 +392,18 @@ export function RecommendationCard({
                 onClick={() => onReject(rec.id)}
               >
                 Reject
+              </Button>
+            </div>
+          )}
+          {rec.status === 'rejected' && (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-muted border-border/60 hover:bg-surface hover:text-text"
+                onClick={() => onApprove(rec.id)}
+              >
+                Restore
               </Button>
             </div>
           )}

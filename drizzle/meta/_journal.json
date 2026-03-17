@@ -8,6 +8,13 @@
       "when": 1773758337623,
       "tag": "0000_wet_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773766637590,
+      "tag": "0001_massive_wild_child",
+      "breakpoints": true
     }
   ]
 }

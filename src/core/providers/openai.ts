@@ -3,7 +3,7 @@ import type { AiRecommendation, TasteProfile } from '@/core/types'
 import { buildRecommendationPrompt, parseRecommendationResponse } from './prompt'
 import type { RecommendationProvider } from './types'
 
-const DEFAULT_MODEL = 'gpt-4o'
+const DEFAULT_MODEL = 'gpt-5-mini'
 
 export class OpenAIProvider implements RecommendationProvider {
   private client: OpenAI
@@ -58,7 +58,7 @@ export class OpenAIProvider implements RecommendationProvider {
     try {
       const response = await this.client.chat.completions.create({
         model: this.model,
-        max_tokens: 10,
+        max_completion_tokens: 10,
         messages: [{ role: 'user', content: 'ping' }],
       })
 

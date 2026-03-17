@@ -25,6 +25,7 @@ function makeArtist(mbid: string, score = 0.75): ScoredArtist {
 
 function makeDb(batchId = 1, artistIdCounter = { value: 100 }) {
   return {
+    getExistingRecommendationMbids: vi.fn().mockResolvedValue(new Set()),
     insertBatch: vi.fn().mockImplementation(async () => ({ id: batchId })),
     upsertArtist: vi.fn().mockImplementation(async () => ({ id: artistIdCounter.value++ })),
     insertRecommendation: vi.fn().mockResolvedValue(undefined),

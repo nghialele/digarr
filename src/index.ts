@@ -1,23 +1,51 @@
 import { serve } from '@hono/node-server'
+import { eq } from 'drizzle-orm'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import { PipelineScheduler } from './core/pipeline/scheduler'
+import type { StoreDb } from './core/pipeline/store'
 import { db, pool } from './db'
-import { getArtistById } from './db/queries/artists'
+import { getArtistById, upsertArtist } from './db/queries/artists'
 import { getBatch, listBatches } from './db/queries/batches'
 import {
   bulkUpdateStatus,
   getRecommendation,
+  insertRecommendation,
   listRecommendations,
   updateRecommendationStatus,
 } from './db/queries/recommendations'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
+import { artists, recommendationBatches, recommendations } from './db/schema'
 import { createApp } from './server'
+
+const storeDb: StoreDb = {
+  getExistingRecommendationMbids: async () => {
+    const rows = await db
+      .select({ mbid: artists.mbid })
+      .from(recommendations)
+      .innerJoin(artists, eq(recommendations.artistId, artists.id))
+    return new Set(rows.map((r) => r.mbid))
+  },
+  insertBatch: async (data) => {
+    const rows = await db
+      .insert(recommendationBatches)
+      .values({ status: data.status, stats: data.stats })
+      .returning({ id: recommendationBatches.id })
+    const row = rows[0]
+    if (!row) throw new Error('insertBatch: no row returned')
+    return row
+  },
+  upsertArtist: async (data) => {
+    const row = await upsertArtist(db, data)
+    return { id: row.id }
+  },
+  insertRecommendation: (data) => insertRecommendation(db, data),
+}
 
 const orchestrator = new PipelineOrchestrator()
 const scheduler = new PipelineScheduler()
 
 const app = createApp({
-  db,
+  db: storeDb,
   orchestrator,
   scheduler,
   isSetupComplete: () => isSetupComplete(db),

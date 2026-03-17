@@ -5,7 +5,14 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
-import { getSettings, testService, triggerPipeline, updateSettings } from '../lib/api'
+import {
+  getLidarrMetadataProfiles,
+  getLidarrProfiles,
+  getSettings,
+  testService,
+  triggerPipeline,
+  updateSettings,
+} from '../lib/api'
 import { useFetch } from '../lib/hooks'
 
 // --- Types ---
@@ -22,12 +29,14 @@ type ScoringWeights = {
 
 type Preferences = {
   qualityProfileId?: number
+  metadataProfileId?: number
   rootFolderId?: number
   scheduleCron?: string
   scoreThreshold?: number
   scoringWeights?: ScoringWeights
   rejectionCooldownDays?: number
   topArtistsLimit?: number
+  librarySeedRatio?: number
 }
 
 type Settings = {
@@ -139,10 +148,13 @@ function SliderField({
 type ServiceTestState = 'idle' | 'testing' | 'ok' | 'error'
 
 function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: () => void }) {
+  const prefs = settings.preferences ?? {}
   const [lidarrUrl, setLidarrUrl] = useState(settings.lidarrUrl ?? '')
   const [lidarrApiKey, setLidarrApiKey] = useState(
     settings.lidarrApiKey === '***' ? '' : (settings.lidarrApiKey ?? ''),
   )
+  const [qualityProfileId, setQualityProfileId] = useState(String(prefs.qualityProfileId ?? 1))
+  const [metadataProfileId, setMetadataProfileId] = useState(String(prefs.metadataProfileId ?? 1))
   const [lbUsername, setLbUsername] = useState(settings.listenbrainzUsername ?? '')
   const [lbToken, setLbToken] = useState(
     settings.listenbrainzToken === '***' ? '' : (settings.listenbrainzToken ?? ''),
@@ -161,6 +173,12 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   const [tests, setTests] = useState<Record<string, ServiceTestState>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
 
+  // Fetch Lidarr profiles
+  const profilesFetcher = useCallback(() => getLidarrProfiles(), [])
+  const { data: qualityProfiles } = useFetch<Array<{ id: number; name: string }>>(profilesFetcher)
+  const metadataFetcher = useCallback(() => getLidarrMetadataProfiles(), [])
+  const { data: metadataProfiles } = useFetch<Array<{ id: number; name: string }>>(metadataFetcher)
+
   function setTest(key: string, val: ServiceTestState) {
     setTests((prev) => ({ ...prev, [key]: val }))
   }
@@ -168,11 +186,20 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
     setSaving((prev) => ({ ...prev, [key]: val }))
   }
 
+  const configuredServices: Record<string, boolean> = {
+    lidarr: Boolean(settings.lidarrUrl && settings.lidarrApiKey),
+    listenbrainz: Boolean(settings.listenbrainzUsername && settings.listenbrainzToken),
+    lastfm: Boolean(settings.lastfmUsername && settings.lastfmApiKey),
+    ai: Boolean(settings.aiProvider && settings.aiModel),
+  }
+
   function serviceStatus(key: string): 'connected' | 'not_configured' | 'error' | 'testing' {
     const t = tests[key]
     if (t === 'testing') return 'testing'
     if (t === 'ok') return 'connected'
     if (t === 'error') return 'error'
+    // If no test has been run but the service has saved credentials, show as connected
+    if (configuredServices[key]) return 'connected'
     return 'not_configured'
   }
 
@@ -192,7 +219,15 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   async function saveLidarr() {
     setSave('lidarr', true)
     try {
-      await updateSettings({ lidarrUrl, lidarrApiKey: lidarrApiKey || undefined })
+      await updateSettings({
+        lidarrUrl,
+        lidarrApiKey: lidarrApiKey || undefined,
+        preferences: {
+          ...prefs,
+          qualityProfileId: parseInt(qualityProfileId, 10) || prefs.qualityProfileId,
+          metadataProfileId: parseInt(metadataProfileId, 10) || prefs.metadataProfileId,
+        },
+      })
       toast.success('Lidarr settings saved')
       onSaved()
     } catch {
@@ -304,27 +339,72 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="Lidarr"
           description="Music library manager -- required for adding artists"
           status={serviceStatus('lidarr')}
-          onTest={testLidarr}
         >
-          <Field label="URL" id="lidarr-url">
-            <Input
-              id="lidarr-url"
-              type="url"
-              placeholder="http://localhost:8686"
-              value={lidarrUrl}
-              onChange={(e) => setLidarrUrl(e.target.value)}
-            />
-          </Field>
-          <Field label="API Key" id="lidarr-apikey">
-            <Input
-              id="lidarr-apikey"
-              type="password"
-              placeholder={settings.lidarrApiKey === '***' ? '(saved)' : 'Your Lidarr API key'}
-              value={lidarrApiKey}
-              onChange={(e) => setLidarrApiKey(e.target.value)}
-            />
-          </Field>
-          <div className="flex justify-end pt-1">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="URL" id="lidarr-url">
+              <Input
+                id="lidarr-url"
+                type="url"
+                placeholder="http://localhost:8686"
+                value={lidarrUrl}
+                onChange={(e) => setLidarrUrl(e.target.value)}
+              />
+            </Field>
+            <Field label="API Key" id="lidarr-apikey">
+              <Input
+                id="lidarr-apikey"
+                type="password"
+                placeholder={settings.lidarrApiKey === '***' ? '(saved)' : 'Your Lidarr API key'}
+                value={lidarrApiKey}
+                onChange={(e) => setLidarrApiKey(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Quality Profile" id="quality-profile">
+              <Select
+                id="quality-profile"
+                value={qualityProfileId}
+                onChange={(e) => setQualityProfileId(e.target.value)}
+              >
+                {qualityProfiles ? (
+                  qualityProfiles.map((p) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value={qualityProfileId}>Loading...</option>
+                )}
+              </Select>
+            </Field>
+            <Field label="Metadata Profile" id="metadata-profile">
+              <Select
+                id="metadata-profile"
+                value={metadataProfileId}
+                onChange={(e) => setMetadataProfileId(e.target.value)}
+              >
+                {metadataProfiles ? (
+                  metadataProfiles.map((p) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value={metadataProfileId}>Loading...</option>
+                )}
+              </Select>
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testLidarr}
+              disabled={tests.lidarr === 'testing'}
+            >
+              {tests.lidarr === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
             <Button size="sm" onClick={saveLidarr} disabled={saving.lidarr}>
               {saving.lidarr ? 'Saving...' : isLidarrConfigured ? 'Save' : 'Configure'}
             </Button>
@@ -338,26 +418,37 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="ListenBrainz"
           description="Open-source listening history tracking"
           status={serviceStatus('listenbrainz')}
-          onTest={testListenbrainz}
         >
-          <Field label="Username" id="lb-username">
-            <Input
-              id="lb-username"
-              placeholder="your-username"
-              value={lbUsername}
-              onChange={(e) => setLbUsername(e.target.value)}
-            />
-          </Field>
-          <Field label="User Token" id="lb-token">
-            <Input
-              id="lb-token"
-              type="password"
-              placeholder={settings.listenbrainzToken === '***' ? '(saved)' : 'ListenBrainz token'}
-              value={lbToken}
-              onChange={(e) => setLbToken(e.target.value)}
-            />
-          </Field>
-          <div className="flex justify-end pt-1">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Username" id="lb-username">
+              <Input
+                id="lb-username"
+                placeholder="your-username"
+                value={lbUsername}
+                onChange={(e) => setLbUsername(e.target.value)}
+              />
+            </Field>
+            <Field label="User Token" id="lb-token">
+              <Input
+                id="lb-token"
+                type="password"
+                placeholder={
+                  settings.listenbrainzToken === '***' ? '(saved)' : 'ListenBrainz token'
+                }
+                value={lbToken}
+                onChange={(e) => setLbToken(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testListenbrainz}
+              disabled={tests.listenbrainz === 'testing'}
+            >
+              {tests.listenbrainz === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
             <Button size="sm" onClick={saveListenbrainz} disabled={saving.listenbrainz}>
               {saving.listenbrainz ? 'Saving...' : isLbConfigured ? 'Save' : 'Configure'}
             </Button>
@@ -371,26 +462,35 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="Last.fm"
           description="Music scrobbling and listening history"
           status={serviceStatus('lastfm')}
-          onTest={testLastfm}
         >
-          <Field label="Username" id="lfm-username">
-            <Input
-              id="lfm-username"
-              placeholder="your-username"
-              value={lfUsername}
-              onChange={(e) => setLfUsername(e.target.value)}
-            />
-          </Field>
-          <Field label="API Key" id="lfm-apikey">
-            <Input
-              id="lfm-apikey"
-              type="password"
-              placeholder={settings.lastfmApiKey === '***' ? '(saved)' : 'Last.fm API key'}
-              value={lfApiKey}
-              onChange={(e) => setLfApiKey(e.target.value)}
-            />
-          </Field>
-          <div className="flex justify-end pt-1">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Username" id="lfm-username">
+              <Input
+                id="lfm-username"
+                placeholder="your-username"
+                value={lfUsername}
+                onChange={(e) => setLfUsername(e.target.value)}
+              />
+            </Field>
+            <Field label="API Key" id="lfm-apikey">
+              <Input
+                id="lfm-apikey"
+                type="password"
+                placeholder={settings.lastfmApiKey === '***' ? '(saved)' : 'Last.fm API key'}
+                value={lfApiKey}
+                onChange={(e) => setLfApiKey(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testLastfm}
+              disabled={tests.lastfm === 'testing'}
+            >
+              {tests.lastfm === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
             <Button size="sm" onClick={saveLastfm} disabled={saving.lastfm}>
               {saving.lastfm ? 'Saving...' : isLfConfigured ? 'Save' : 'Configure'}
             </Button>
@@ -404,33 +504,34 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="AI Provider"
           description="Generates music recommendations"
           status={serviceStatus('ai')}
-          onTest={testAi}
         >
-          <Field label="Provider" id="ai-provider">
-            <Select
-              id="ai-provider"
-              value={aiProvider}
-              onChange={(e) => setAiProvider(e.target.value as AiProvider)}
-            >
-              <option value="anthropic">Anthropic</option>
-              <option value="openai">OpenAI</option>
-              <option value="ollama">Ollama (local)</option>
-            </Select>
-          </Field>
-          <Field label="Model" id="ai-model">
-            <Input
-              id="ai-model"
-              placeholder={
-                aiProvider === 'anthropic'
-                  ? 'claude-3-5-haiku-20241022'
-                  : aiProvider === 'openai'
-                    ? 'gpt-4o-mini'
-                    : 'llama3.2'
-              }
-              value={aiModel}
-              onChange={(e) => setAiModel(e.target.value)}
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Provider" id="ai-provider">
+              <Select
+                id="ai-provider"
+                value={aiProvider}
+                onChange={(e) => setAiProvider(e.target.value as AiProvider)}
+              >
+                <option value="anthropic">Anthropic</option>
+                <option value="openai">OpenAI</option>
+                <option value="ollama">Ollama (local)</option>
+              </Select>
+            </Field>
+            <Field label="Model" id="ai-model">
+              <Input
+                id="ai-model"
+                placeholder={
+                  aiProvider === 'anthropic'
+                    ? 'claude-3-5-haiku-20241022'
+                    : aiProvider === 'openai'
+                      ? 'gpt-4o-mini'
+                      : 'llama3.2'
+                }
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+              />
+            </Field>
+          </div>
           {aiProvider !== 'ollama' && (
             <Field label="API Key" id="ai-apikey">
               <Input
@@ -453,7 +554,10 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               />
             </Field>
           )}
-          <div className="flex justify-end pt-1">
+          <div className="flex justify-end gap-2 pt-1">
+            <Button size="sm" variant="outline" onClick={testAi} disabled={tests.ai === 'testing'}>
+              {tests.ai === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
             <Button size="sm" onClick={saveAi} disabled={saving.ai}>
               {saving.ai ? 'Saving...' : isAiConfigured ? 'Save' : 'Configure'}
             </Button>
@@ -488,6 +592,7 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
     String(prefs.rejectionCooldownDays ?? 30),
   )
   const [topArtistsLimit, setTopArtistsLimit] = useState(String(prefs.topArtistsLimit ?? 50))
+  const [librarySeedRatio, setLibrarySeedRatio] = useState(prefs.librarySeedRatio ?? 0.3)
   const [saving, setSaving] = useState(false)
 
   const weightSum = consensus + similarity + genreOverlap + aiConfidence + feedbackBoost
@@ -503,6 +608,7 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
           scoringWeights: { consensus, similarity, genreOverlap, aiConfidence, feedbackBoost },
           rejectionCooldownDays: parseInt(rejectionCooldown, 10) || prefs.rejectionCooldownDays,
           topArtistsLimit: parseInt(topArtistsLimit, 10) || prefs.topArtistsLimit,
+          librarySeedRatio,
         },
       })
       toast.success('Recommendation settings saved')
@@ -607,6 +713,26 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
             className="max-w-[120px]"
           />
         </Field>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+          Library Discovery
+        </h2>
+        <p className="text-xs text-muted">
+          How much of the discovery should be seeded from your existing Lidarr library vs listening
+          history. Higher values find artists similar to what you already own. Lower values rely
+          more on ListenBrainz/Last.fm listening data.
+        </p>
+        <SliderField
+          label="Library seed ratio"
+          id="library-seed-ratio"
+          value={librarySeedRatio}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={setLibrarySeedRatio}
+        />
       </section>
 
       <Button onClick={handleSave} disabled={saving}>
@@ -726,7 +852,7 @@ export function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-2xl">
+      <div className="p-8 max-w-4xl">
         <h1 className="text-2xl font-bold text-text mb-6">Settings</h1>
         <SettingsSkeleton />
       </div>
@@ -745,7 +871,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-4xl">
       <h1 className="text-2xl font-bold text-text mb-6">Settings</h1>
       <TabBar active={tab} onChange={setTab} />
       {tab === 'connections' && <ConnectionsTab settings={data} onSaved={refetch} />}

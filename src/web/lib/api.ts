@@ -39,7 +39,11 @@ export const testService = (service: string, config: Record<string, unknown>) =>
 // Pipeline
 export const triggerPipeline = () => fetchApi('/pipeline/run', { method: 'POST' })
 export const getPipelineStatus = () =>
-  fetchApi<{ running: boolean; lastRun?: unknown }>('/pipeline/status')
+  fetchApi<{ running: boolean; stage?: string; message?: string; lastRun?: unknown }>(
+    '/pipeline/status',
+  )
+export const rescanArtists = () =>
+  fetchApi<{ updated: number; total: number }>('/pipeline/rescan', { method: 'POST' })
 
 // Recommendations
 export const getRecommendations = (params?: Record<string, string>) => {
@@ -58,8 +62,32 @@ export const getBatch = (id: number) => fetchApi<unknown>(`/batches/${id}`)
 // Artists
 export const getArtist = (id: number) => fetchApi<unknown>(`/artists/${id}`)
 
+// Listening
+export const getRecentListens = () =>
+  fetchApi<{
+    tracks: Array<{
+      artist: string
+      track: string
+      source: string
+      imageUrl?: string
+      mbid?: string
+    }>
+  }>('/listening/recent')
+
+// Quick discover
+export const quickDiscover = (artistName: string) =>
+  fetchApi<{ message: string }>('/pipeline/quick-discover', {
+    method: 'POST',
+    body: JSON.stringify({ artistName }),
+  })
+
 // Lidarr
-export const getLidarrProfiles = () => fetchApi<unknown[]>('/lidarr/profiles')
+export const getLidarrStats = () =>
+  fetchApi<{ artists: number; monitored: number }>('/lidarr/stats')
+export const getLidarrProfiles = () =>
+  fetchApi<Array<{ id: number; name: string }>>('/lidarr/profiles')
+export const getLidarrMetadataProfiles = () =>
+  fetchApi<Array<{ id: number; name: string }>>('/lidarr/metadataprofiles')
 export const getLidarrRootFolders = () => fetchApi<unknown[]>('/lidarr/rootfolders')
 export const addToLidarr = (body: Record<string, unknown>) =>
   fetchApi('/lidarr/add', { method: 'POST', body: JSON.stringify(body) })

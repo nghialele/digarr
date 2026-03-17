@@ -27,7 +27,13 @@ export async function listRecommendations(
   const { status, batchId, sort = 'score_desc', limit = 20, offset = 0 } = filters
 
   const conditions = []
-  if (status !== undefined) conditions.push(eq(recommendations.status, status))
+  if (status !== undefined) {
+    if (status.includes(',')) {
+      conditions.push(inArray(recommendations.status, status.split(',')))
+    } else {
+      conditions.push(eq(recommendations.status, status))
+    }
+  }
   if (batchId !== undefined) conditions.push(eq(recommendations.batchId, batchId))
 
   const where = conditions.length > 0 ? and(...conditions) : undefined
@@ -142,4 +148,25 @@ export async function getRejectedArtistMbids(
     .where(and(eq(recommendations.status, 'rejected'), gte(recommendations.actedOnAt, cutoff)))
 
   return new Set(rows.map((r) => r.mbid))
+}
+
+export async function insertRecommendation(
+  db: Database,
+  data: {
+    artistId: number
+    batchId: number
+    score: number
+    sources: Record<string, number>
+    aiReasoning?: string
+    status: string
+  },
+): Promise<void> {
+  await db.insert(recommendations).values({
+    artistId: data.artistId,
+    batchId: data.batchId,
+    score: data.score,
+    sources: data.sources,
+    aiReasoning: data.aiReasoning,
+    status: data.status,
+  })
 }

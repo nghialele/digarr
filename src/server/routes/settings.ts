@@ -44,7 +44,7 @@ export function settingsRoutes(deps: AppDependencies) {
 
     switch (service) {
       case 'lidarr': {
-        const client = createLidarrClient(body.url ?? '', body.apiKey ?? '')
+        const client = createLidarrClient(body.url ?? '', body.apiKey ?? '', body.skipTlsVerify)
         const result = await client.testConnection()
         return c.json(result)
       }

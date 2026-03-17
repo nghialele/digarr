@@ -49,15 +49,23 @@ export function recommendationRoutes(deps: AppDependencies) {
 
       const prefs = (settings.preferences as Record<string, unknown> | null) ?? {}
       const qualityProfileId = Number(prefs.qualityProfileId ?? 1)
+      const metadataProfileId = Number(prefs.metadataProfileId ?? 1)
       const rootFolderId = Number(prefs.rootFolderId ?? 1)
 
       const lidarr = createLidarrClient(
         settings.lidarrUrl as string,
         settings.lidarrApiKey as string,
+        (settings.skipTlsVerify as boolean) ?? false,
       )
 
       try {
-        const added = await lidarr.addArtist(rec.artist.mbid, qualityProfileId, rootFolderId)
+        const added = await lidarr.addArtist(
+          rec.artist.mbid,
+          rec.artist.name,
+          qualityProfileId,
+          metadataProfileId,
+          rootFolderId,
+        )
         await deps.updateRecommendationStatus(id, 'added_to_lidarr', {
           lidarrArtistId: added.id,
         })
@@ -102,9 +110,14 @@ export function recommendationRoutes(deps: AppDependencies) {
 
     const prefs = (settings.preferences as Record<string, unknown> | null) ?? {}
     const qualityProfileId = Number(prefs.qualityProfileId ?? 1)
+    const metadataProfileId = Number(prefs.metadataProfileId ?? 1)
     const rootFolderId = Number(prefs.rootFolderId ?? 1)
 
-    const lidarr = createLidarrClient(settings.lidarrUrl as string, settings.lidarrApiKey as string)
+    const lidarr = createLidarrClient(
+      settings.lidarrUrl as string,
+      settings.lidarrApiKey as string,
+      (settings.skipTlsVerify as boolean) ?? false,
+    )
 
     const results: Array<{ id: number; status: string; error?: string }> = []
 
@@ -115,7 +128,13 @@ export function recommendationRoutes(deps: AppDependencies) {
         continue
       }
       try {
-        const added = await lidarr.addArtist(rec.artist.mbid, qualityProfileId, rootFolderId)
+        const added = await lidarr.addArtist(
+          rec.artist.mbid,
+          rec.artist.name,
+          qualityProfileId,
+          metadataProfileId,
+          rootFolderId,
+        )
         await deps.updateRecommendationStatus(id, 'added_to_lidarr', {
           lidarrArtistId: added.id,
         })
