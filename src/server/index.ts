@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { healthRoutes } from './routes/health'
 import { setupRoutes } from './routes/setup'
 import { settingsRoutes } from './routes/settings'
@@ -49,6 +50,11 @@ export function createApp(deps: AppDependencies) {
   app.route('/', batchRoutes(deps))
   app.route('/', artistRoutes(deps))
   app.route('/', lidarrRoutes(deps))
+
+  // Serve static assets from dist/web (production only -- dev uses Vite's dev server)
+  app.use('/*', serveStatic({ root: './dist/web' }))
+  // SPA fallback: serve index.html for all non-API, non-static routes
+  app.get('*', serveStatic({ root: './dist/web', path: 'index.html' }))
 
   return app
 }
