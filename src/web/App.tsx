@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-do
 import { Toaster } from 'sonner'
 import { getSetupStatus, triggerPipeline } from './lib/api'
 import { Dashboard } from './pages/dashboard'
+import { DiscoverPage } from './pages/discover'
 import { SetupWizard } from './pages/setup'
 
 function Placeholder({ name }: { name: string }) {
@@ -77,7 +78,7 @@ export function App() {
       <AppShell>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/discover" element={<Placeholder name="Discover" />} />
+          <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/settings" element={<Placeholder name="Settings" />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
