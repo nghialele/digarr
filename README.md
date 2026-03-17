@@ -7,9 +7,9 @@
 
 Think of it as Jellyseerr/Overseerr, but for music discovery.
 
-<!-- Screenshots: replace these paths with actual screenshots -->
-<!-- ![Dashboard](docs/screenshots/dashboard.png) -->
-<!-- ![Discover](docs/screenshots/discover.png) -->
+![Dashboard](docs/screenshots/dashboard.png)
+
+![Discover](docs/screenshots/discover.png)
 
 ---
 
