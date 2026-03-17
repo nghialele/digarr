@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { getSetupStatus, triggerPipeline } from './lib/api'
+import { Dashboard } from './pages/dashboard'
 import { SetupWizard } from './pages/setup'
 
 function Placeholder({ name }: { name: string }) {
@@ -75,7 +76,7 @@ export function App() {
     <BrowserRouter>
       <AppShell>
         <Routes>
-          <Route path="/" element={<Placeholder name="Dashboard" />} />
+          <Route path="/" element={<Dashboard />} />
           <Route path="/discover" element={<Placeholder name="Discover" />} />
           <Route path="/settings" element={<Placeholder name="Settings" />} />
           <Route path="*" element={<Navigate to="/" />} />
