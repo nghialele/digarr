@@ -1,0 +1,59 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/your-org/digarr
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: digarr.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # - secretName: digarr-tls
+  #   hosts:
+  #     - digarr.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+env:
+  PORT: "3000"
+  LOG_LEVEL: info
+
+# External database -- used when postgresql.enabled is false
+database:
+  host: ""
+  port: 5432
+  name: digarr
+  user: digarr
+  # Plain-text password (ignored if existingSecret is set)
+  password: ""
+  # Name of an existing Secret with key DATABASE_URL
+  existingSecret: ""
+
+# Bitnami PostgreSQL subchart
+postgresql:
+  enabled: true
+  auth:
+    username: digarr
+    password: digarr
+    database: digarr
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi

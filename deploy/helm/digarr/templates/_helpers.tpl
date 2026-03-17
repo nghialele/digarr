@@ -1,0 +1,71 @@
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "digarr.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+*/}}
+{{- define "digarr.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Chart label.
+*/}}
+{{- define "digarr.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels.
+*/}}
+{{- define "digarr.labels" -}}
+helm.sh/chart: {{ include "digarr.chart" . }}
+{{ include "digarr.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels.
+*/}}
+{{- define "digarr.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "digarr.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Database URL -- prefers existingSecret, falls back to inline values.
+*/}}
+{{- define "digarr.databaseSecretName" -}}
+{{- if .Values.database.existingSecret }}
+{{- .Values.database.existingSecret }}
+{{- else }}
+{{- include "digarr.fullname" . }}-db
+{{- end }}
+{{- end }}
+
+{{/*
+Fully qualified PostgreSQL hostname when using the subchart.
+*/}}
+{{- define "digarr.postgresHost" -}}
+{{- if .Values.postgresql.enabled }}
+{{- printf "%s-postgresql" .Release.Name }}
+{{- else }}
+{{- .Values.database.host }}
+{{- end }}
+{{- end }}
