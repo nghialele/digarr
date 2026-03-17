@@ -1,0 +1,74 @@
+import type * as React from 'react'
+import { Button } from './ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card'
+
+type ServiceStatus = 'connected' | 'not_configured' | 'error' | 'testing'
+
+export type ServiceCardProps = {
+  name: string
+  description?: string
+  status: ServiceStatus
+  onTest?: () => void
+  children: React.ReactNode
+}
+
+function StatusIndicator({ status }: { status: ServiceStatus }) {
+  if (status === 'testing') {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted">
+        <span className="inline-block h-2 w-2 rounded-full bg-muted animate-pulse" />
+        Testing...
+      </span>
+    )
+  }
+
+  const dot: Record<ServiceStatus, string> = {
+    connected: 'bg-approve',
+    not_configured: 'bg-muted',
+    error: 'bg-reject',
+    testing: 'bg-muted',
+  }
+
+  const label: Record<ServiceStatus, string> = {
+    connected: 'Connected',
+    not_configured: 'Not configured',
+    error: 'Error',
+    testing: 'Testing...',
+  }
+
+  const textColor: Record<ServiceStatus, string> = {
+    connected: 'text-approve',
+    not_configured: 'text-muted',
+    error: 'text-reject',
+    testing: 'text-muted',
+  }
+
+  return (
+    <span className={`flex items-center gap-1.5 text-xs ${textColor[status]}`}>
+      <span className={`inline-block h-2 w-2 rounded-full ${dot[status]}`} />
+      {label[status]}
+    </span>
+  )
+}
+
+export function ServiceCard({ name, description, status, onTest, children }: ServiceCardProps) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle>{name}</CardTitle>
+          <StatusIndicator status={status} />
+        </div>
+        {description && <CardDescription>{description}</CardDescription>}
+      </CardHeader>
+      <CardContent className="space-y-3">{children}</CardContent>
+      {onTest && (
+        <CardFooter>
+          <Button variant="outline" size="sm" onClick={onTest} disabled={status === 'testing'}>
+            Test Connection
+          </Button>
+        </CardFooter>
+      )}
+    </Card>
+  )
+}

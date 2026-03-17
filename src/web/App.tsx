@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { getSetupStatus, triggerPipeline } from './lib/api'
+import { SetupWizard } from './pages/setup'
 
 function Placeholder({ name }: { name: string }) {
   return (
@@ -64,7 +65,7 @@ export function App() {
   if (!setupComplete) {
     return (
       <>
-        <Placeholder name="Setup Wizard" />
+        <SetupWizard onComplete={() => setSetupComplete(true)} />
         <Toaster theme="dark" />
       </>
     )
