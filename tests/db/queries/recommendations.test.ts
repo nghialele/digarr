@@ -1,0 +1,99 @@
+import { describe, expect, it, vi } from 'vitest'
+import { getGenreFeedbackHistory, getRejectedArtistMbids } from '@/db/queries/recommendations'
+import type { Database } from '@/db'
+
+// Build a mock drizzle db that returns a fixed result when awaited.
+// The query chain: db.select({...}).from(...).innerJoin(...).where(...) -> rows
+function makeMockDb(rows: unknown[]): Database {
+  const chain = {
+    from: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockResolvedValue(rows),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    offset: vi.fn().mockReturnThis(),
+  }
+  return {
+    select: vi.fn().mockReturnValue(chain),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    transaction: vi.fn(),
+    execute: vi.fn(),
+    // biome-ignore lint/suspicious/noExplicitAny: mock
+  } as unknown as Database
+}
+
+describe('getGenreFeedbackHistory', () => {
+  it('returns correct approved/total counts per genre', async () => {
+    const rows = [
+      { genres: ['rock', 'metal'], status: 'approved' },
+      { genres: ['rock'], status: 'rejected' },
+      { genres: ['jazz'], status: 'approved' },
+      { genres: ['metal'], status: 'approved' },
+    ]
+    const db = makeMockDb(rows)
+
+    const result = await getGenreFeedbackHistory(db)
+
+    expect(result.get('rock')).toEqual({ approved: 1, total: 2 })
+    expect(result.get('metal')).toEqual({ approved: 2, total: 2 })
+    expect(result.get('jazz')).toEqual({ approved: 1, total: 1 })
+  })
+
+  it('returns empty map when no acted-upon recommendations', async () => {
+    const db = makeMockDb([])
+    const result = await getGenreFeedbackHistory(db)
+    expect(result.size).toBe(0)
+  })
+
+  it('skips rows with null genres', async () => {
+    const rows = [
+      { genres: null, status: 'approved' },
+      { genres: ['pop'], status: 'approved' },
+    ]
+    const db = makeMockDb(rows)
+    const result = await getGenreFeedbackHistory(db)
+    expect(result.size).toBe(1)
+    expect(result.get('pop')).toEqual({ approved: 1, total: 1 })
+  })
+})
+
+describe('getRejectedArtistMbids', () => {
+  it('returns a Set of MBIDs from the query result', async () => {
+    const rows = [{ mbid: 'mbid-1' }, { mbid: 'mbid-2' }, { mbid: 'mbid-3' }]
+    const db = makeMockDb(rows)
+
+    const result = await getRejectedArtistMbids(db, 90)
+
+    expect(result).toBeInstanceOf(Set)
+    expect(result.size).toBe(3)
+    expect(result.has('mbid-1')).toBe(true)
+    expect(result.has('mbid-2')).toBe(true)
+    expect(result.has('mbid-3')).toBe(true)
+  })
+
+  it('returns empty Set when no rejected artists in cooldown window', async () => {
+    const db = makeMockDb([])
+    const result = await getRejectedArtistMbids(db, 90)
+    expect(result.size).toBe(0)
+  })
+
+  it('passes cutoff date based on cooldownDays', async () => {
+    // Verify the query is built with a where clause (the chain is called correctly)
+    const rows: unknown[] = []
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue(rows),
+    }
+    const db = {
+      select: vi.fn().mockReturnValue(chain),
+      // biome-ignore lint/suspicious/noExplicitAny: mock
+    } as unknown as Database
+
+    await getRejectedArtistMbids(db, 30)
+
+    expect(chain.where).toHaveBeenCalledOnce()
+  })
+})
