@@ -50,7 +50,12 @@ export type AppDependencies = {
 export function createApp(deps: AppDependencies) {
   const app = new Hono()
 
-  app.use('*', cors())
+  app.use(
+    '*',
+    cors({
+      origin: process.env.ALLOWED_ORIGIN ?? (process.env.NODE_ENV === 'production' ? '' : '*'),
+    }),
+  )
   app.use('*', setupGuard(deps.isSetupComplete))
   app.route('/', healthRoutes())
   app.route('/', setupRoutes(deps))

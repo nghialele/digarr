@@ -1,65 +1,154 @@
 # Digarr
 
-[![CI](https://github.com/your-org/digarr/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/digarr/actions/workflows/ci.yml)
+[![CI](https://github.com/iuliandita/digarr/actions/workflows/ci.yml/badge.svg)](https://github.com/iuliandita/digarr/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Music discovery for your Lidarr library.** Digarr pulls your listening history from Last.fm or ListenBrainz, uses an AI model to find artists you might like, and pushes new additions straight to Lidarr.
+**Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
+
+Think of it as Jellyseerr/Overseerr, but for music discovery.
+
+<!-- Screenshots: replace these paths with actual screenshots -->
+<!-- ![Dashboard](docs/screenshots/dashboard.png) -->
+<!-- ![Discover](docs/screenshots/discover.png) -->
 
 ---
 
 ## Features
 
-- Connects to Last.fm or ListenBrainz for listening history
-- AI-powered artist recommendations (OpenAI or Anthropic)
-- Enriches results via MusicBrainz metadata
-- One-click Lidarr integration -- adds artists and triggers search
-- Setup wizard + web UI
-- Scheduled background runs (configurable interval)
+- **Listening history analysis** -- connects to ListenBrainz and/or Last.fm to understand your taste
+- **Multi-source discovery** -- finds similar artists via Last.fm, MusicBrainz, and your existing Lidarr library
+- **AI-powered recommendations** -- uses Anthropic (Claude), OpenAI, or Ollama to generate personalized suggestions with written explanations
+- **Smart scoring** -- weighted composite scoring across consensus, similarity, genre overlap, AI confidence, and feedback learning
+- **One-click Lidarr integration** -- approve a recommendation and it gets added to Lidarr with your preferred quality/metadata profiles
+- **Artist enrichment** -- artist images (via fanart.tv/Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata
+- **Quick discover** -- click "Find Similar" on any recent listen to get targeted recommendations
+- **Configurable pipeline** -- score thresholds, scoring weights, library seed ratio, rejection cooldowns, cron scheduling
+- **Setup wizard** -- guided 4-step setup with connection testing
+- **Dark UI** -- clean, responsive interface with keyboard shortcuts (j/k navigate, a approve, r reject)
+- **Self-hosted** -- runs as a single container alongside your existing *arr stack
 
 ---
 
-## Quick start
+## Quick Start
+
+### Docker Compose (recommended)
 
 ```sh
-# 1. Clone
-git clone https://github.com/your-org/digarr.git
+git clone https://github.com/iuliandita/digarr.git
 cd digarr/deploy/docker
-
-# 2. Copy and edit env
 cp .env.example .env
-
-# 3. Start
 docker compose up -d
-
-# 4. Open the setup wizard
-open http://localhost:3000
 ```
 
-Complete the setup wizard to connect your Lidarr instance, music source, and AI provider. Digarr will start discovering artists immediately.
+Open `http://localhost:3000` and complete the setup wizard.
+
+### Local Development
+
+```sh
+git clone https://github.com/iuliandita/digarr.git
+cd digarr
+./scripts/dev-setup.sh    # starts postgres, installs deps, runs migrations
+
+# Start in two terminals:
+bun run dev                # API server on :3000
+bun run dev:web            # Vite dev server on :5173
+```
+
+Open `http://localhost:5173`.
+
+---
+
+## How It Works
+
+Digarr runs a recommendation pipeline with 7 stages:
+
+1. **Collect** -- fetches your current Lidarr library
+2. **Analyze** -- builds a taste profile from your ListenBrainz/Last.fm listening data
+3. **Discover** -- queries multiple sources for similar artists (Last.fm similar artists, AI recommendations, library-seeded discovery)
+4. **Resolve** -- validates each candidate against MusicBrainz, fetches metadata, streaming URLs, and artist images
+5. **Score** -- applies a weighted composite formula (consensus, similarity, genre overlap, AI confidence, feedback boost)
+6. **Filter** -- removes artists already in your library, previously rejected artists (with cooldown), and below-threshold scores
+7. **Store** -- persists the batch and recommendations to the database
+
+The pipeline runs on a configurable cron schedule or manually via the "Run Scan" button.
+
+---
+
+## Requirements
+
+| Service | Required | Purpose |
+|---------|----------|---------|
+| **Lidarr** | Yes | Music library management, artist addition |
+| **ListenBrainz** or **Last.fm** | At least one | Listening history for taste analysis |
+| **AI Provider** | Yes | Artist recommendations (Anthropic, OpenAI, or Ollama) |
+| **PostgreSQL** | Yes | Data storage (included in Docker Compose) |
 
 ---
 
 ## Configuration
 
-All configuration is done through the web UI. The underlying values are stored in the database -- no config files to manage.
+All configuration is done through the web UI after initial setup. Key settings:
 
-For environment variable reference see [`deploy/docker/.env.example`](deploy/docker/.env.example).
+### Connections (Settings > Connections)
+- Lidarr URL, API key, quality/metadata profiles
+- ListenBrainz username + token
+- Last.fm username + API key
+- AI provider, model, API key
+
+### Recommendations (Settings > Recommendations)
+- **Score threshold** -- minimum score to show a recommendation (0-1)
+- **Scoring weights** -- how much each factor contributes (must sum to 1.0)
+- **Library seed ratio** -- fraction of discovery seeds from your existing library vs listening history
+- **Rejection cooldown** -- days before a rejected artist can be recommended again
+- **Top artists limit** -- how many of your top artists to use as seeds
+
+### Schedule (Settings > Schedule)
+- Preset schedules: daily, weekly, biweekly, monthly
+- Custom cron expression
+- Manual "Run Now" trigger
 
 ---
 
 ## Deployment
 
-| Method | Guide |
-|--------|-------|
-| Docker Compose | [`deploy/docker/`](deploy/docker/) |
-| Helm (Kubernetes) | [`deploy/helm/`](deploy/helm/) |
-| Raw manifests | [`deploy/k8s/`](deploy/k8s/) |
+| Method | Path | Notes |
+|--------|------|-------|
+| Docker Compose | [`deploy/docker/`](deploy/docker/) | Recommended. Includes PostgreSQL. |
+| Helm chart | [`deploy/helm/digarr/`](deploy/helm/digarr/) | Kubernetes. Includes Bitnami PostgreSQL subchart. |
+| Raw k8s manifests | [`deploy/k8s/`](deploy/k8s/) | Reference manifests for advanced setups. |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | -- | PostgreSQL connection string |
+| `PORT` | `3000` | Server port |
+| `LOG_LEVEL` | `info` | Log verbosity |
+
+---
+
+## Tech Stack
+
+- **Runtime**: [Bun](https://bun.sh)
+- **Backend**: [Hono](https://hono.dev) (API server)
+- **Frontend**: React 19, [Tailwind CSS](https://tailwindcss.com) v4, [shadcn/ui](https://ui.shadcn.com)
+- **Database**: PostgreSQL via [Drizzle ORM](https://orm.drizzle.team)
+- **Build**: [Vite](https://vite.dev)
+- **Lint/Format**: [Biome](https://biomejs.dev)
+- **Tests**: [Vitest](https://vitest.dev) (252 tests)
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR guidelines.
+
+```sh
+bun install
+bun run lint        # biome check
+bun run typecheck   # tsc --noEmit
+bun run test        # vitest (252 tests)
+```
 
 ---
 

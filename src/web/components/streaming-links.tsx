@@ -4,6 +4,10 @@ type StreamingLinksProps = {
   compact?: boolean
 }
 
+function safeUrl(url: string): string {
+  return url.startsWith('http://') || url.startsWith('https://') ? url : '#'
+}
+
 type ServiceConfig = {
   label: string
   color: string
@@ -109,7 +113,7 @@ export function StreamingLinks({
         {links.map(({ key, label, url, color }) => (
           <a
             key={key}
-            href={url}
+            href={safeUrl(url)}
             target="_blank"
             rel="noopener noreferrer"
             title={label}

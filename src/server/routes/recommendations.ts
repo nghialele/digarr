@@ -77,9 +77,9 @@ export function recommendationRoutes(deps: AppDependencies) {
       }
     }
 
-    if (status === 'rejected') {
-      await deps.updateRecommendationStatus(id, 'rejected')
-      return c.json({ status: 'rejected' })
+    const VALID_STATUSES = new Set(['rejected', 'pending', 'approved'])
+    if (!VALID_STATUSES.has(status)) {
+      return c.json({ error: `Invalid status: ${status}` }, 400)
     }
 
     await deps.updateRecommendationStatus(id, status)

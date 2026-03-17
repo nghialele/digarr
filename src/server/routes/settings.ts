@@ -28,9 +28,30 @@ export function settingsRoutes(deps: AppDependencies) {
     return c.json(maskSecrets(row as Record<string, unknown>))
   })
 
+  const MUTABLE_FIELDS = new Set([
+    'lidarrUrl',
+    'lidarrApiKey',
+    'skipTlsVerify',
+    'listenbrainzUsername',
+    'listenbrainzToken',
+    'lastfmUsername',
+    'lastfmApiKey',
+    'aiProvider',
+    'aiApiKey',
+    'aiModel',
+    'aiBaseUrl',
+    'preferences',
+  ])
+
   router.patch('/api/settings', async (c) => {
     const body = await c.req.json()
-    await deps.updateSettings(body)
+    const sanitized: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
+      if (MUTABLE_FIELDS.has(key)) {
+        sanitized[key] = value
+      }
+    }
+    await deps.updateSettings(sanitized)
     const row = await deps.getSettings()
     if (!row) {
       return c.json({ error: 'Settings not found' }, 404)
@@ -41,6 +62,19 @@ export function settingsRoutes(deps: AppDependencies) {
   router.post('/api/settings/test/:service', async (c) => {
     const service = c.req.param('service')
     const body = await c.req.json()
+
+    // Validate URLs to prevent SSRF
+    for (const field of ['url', 'baseUrl'] as const) {
+      const val = (body as Record<string, unknown>)[field]
+      if (
+        typeof val === 'string' &&
+        val &&
+        !val.startsWith('http://') &&
+        !val.startsWith('https://')
+      ) {
+        return c.json({ success: false, message: 'URL must start with http:// or https://' }, 400)
+      }
+    }
 
     switch (service) {
       case 'lidarr': {
