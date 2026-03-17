@@ -1,0 +1,19 @@
+# Digarr Service
+# ClusterIP -- internal access only.
+# To expose externally, change type to LoadBalancer or use the Ingress below.
+apiVersion: v1
+kind: Service
+metadata:
+  name: digarr
+  namespace: digarr   # match your namespace
+  labels:
+    app: digarr
+spec:
+  type: ClusterIP
+  selector:
+    app: digarr
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,30 @@
+# Digarr Ingress
+# Customize: host, TLS secret name, and cert-manager issuer annotation.
+# Prerequisites: ingress-nginx controller + cert-manager installed.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: digarr
+  namespace: digarr   # match your namespace
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    # Uncomment to enable cert-manager TLS:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx   # change if your controller differs
+  rules:
+    - host: digarr.example.com   # change to your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: digarr
+                port:
+                  number: 3000
+  # Uncomment and adjust for TLS:
+  # tls:
+  #   - hosts:
+  #       - digarr.example.com
+  #     secretName: digarr-tls
