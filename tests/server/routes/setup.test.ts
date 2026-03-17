@@ -1,17 +1,34 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { EventEmitter } from 'node:events'
 import { createApp } from '@/server'
 import type { AppDependencies } from '@/server'
+
+function makeMockOrchestrator() {
+  const emitter = new EventEmitter()
+  return Object.assign(emitter, {
+    isRunning: false,
+    run: vi.fn(async () => ({ batchId: 1 })),
+  })
+}
 
 function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
   return {
     db: {},
-    orchestrator: {},
-    scheduler: {},
+    orchestrator: makeMockOrchestrator() as unknown as AppDependencies['orchestrator'],
+    scheduler: {} as AppDependencies['scheduler'],
     isSetupComplete: vi.fn(async () => false),
     getSettings: vi.fn(async () => null),
     updateSettings: vi.fn(async () => {}),
     completeSetup: vi.fn(async () => ({ id: 1, setupComplete: true })),
+    getLastBatch: vi.fn(async () => null),
+    listRecommendations: vi.fn(async () => ({ items: [], total: 0 })),
+    getRecommendation: vi.fn(async () => null),
+    updateRecommendationStatus: vi.fn(async () => {}),
+    bulkUpdateStatus: vi.fn(async () => {}),
+    listBatches: vi.fn(async () => []),
+    getBatch: vi.fn(async () => null),
+    getArtistById: vi.fn(async () => null),
     ...overrides,
   }
 }
