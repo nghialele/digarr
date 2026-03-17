@@ -49,15 +49,9 @@ describe('createLastFmClient', () => {
       })
       const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
       const result = await client.getSimilarArtists('Radiohead')
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining('method=artist.getSimilar'),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`api_key=${TEST_API_KEY}`),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining('artist=Radiohead'),
-      )
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('method=artist.getSimilar'))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('artist=Radiohead'))
       expect(result).toHaveLength(2)
       expect(result[0]).toMatchObject({
         name: 'Portishead',
@@ -117,18 +111,10 @@ describe('createLastFmClient', () => {
       })
       const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
       const result = await client.getTopArtists('7day')
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining('method=user.getTopArtists'),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`user=${TEST_USERNAME}`),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining('period=7day'),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`api_key=${TEST_API_KEY}`),
-      )
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('method=user.getTopArtists'))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`user=${TEST_USERNAME}`))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('period=7day'))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
       expect(result).toHaveLength(2)
       expect(result[0]).toMatchObject({
         name: 'Radiohead',
@@ -156,9 +142,7 @@ describe('createLastFmClient', () => {
         mockGet.mockResolvedValueOnce({ topartists: { artist: [] } })
         const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
         await client.getTopArtists(period)
-        expect(mockGet).toHaveBeenCalledWith(
-          expect.stringContaining(`period=${period}`),
-        )
+        expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`period=${period}`))
         vi.clearAllMocks()
       }
     })
@@ -176,18 +160,10 @@ describe('createLastFmClient', () => {
       })
       const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
       const result = await client.getRecentTracks()
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining('method=user.getRecentTracks'),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`user=${TEST_USERNAME}`),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`api_key=${TEST_API_KEY}`),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining('limit=50'),
-      )
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('method=user.getRecentTracks'))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`user=${TEST_USERNAME}`))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('limit=50'))
       expect(result).toHaveLength(2)
       expect(result[0]).toMatchObject({ artist: { '#text': 'Radiohead' }, name: 'Creep' })
     })
@@ -216,20 +192,12 @@ describe('createLastFmClient', () => {
       })
       const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
       const result = await client.getArtistInfo('Radiohead')
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining('method=artist.getInfo'),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining('artist=Radiohead'),
-      )
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`api_key=${TEST_API_KEY}`),
-      )
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('method=artist.getInfo'))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('artist=Radiohead'))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
       expect(result).toMatchObject({
         bio: { summary: 'Radiohead are a British rock band.' },
-        image: expect.arrayContaining([
-          expect.objectContaining({ size: 'small' }),
-        ]),
+        image: expect.arrayContaining([expect.objectContaining({ size: 'small' })]),
         tags: { tag: expect.arrayContaining([{ name: 'alternative rock' }]) },
       })
     })
@@ -255,27 +223,21 @@ describe('createLastFmClient', () => {
       mockGet.mockResolvedValueOnce({ similarartists: { artist: [] } })
       const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
       await client.getSimilarArtists('TestArtist')
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`api_key=${TEST_API_KEY}`),
-      )
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
     })
 
     it('includes api_key in getTopArtists URL', async () => {
       mockGet.mockResolvedValueOnce({ topartists: { artist: [] } })
       const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
       await client.getTopArtists('1month')
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`api_key=${TEST_API_KEY}`),
-      )
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
     })
 
     it('includes api_key in getRecentTracks URL', async () => {
       mockGet.mockResolvedValueOnce({ recenttracks: { track: [] } })
       const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
       await client.getRecentTracks()
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`api_key=${TEST_API_KEY}`),
-      )
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
     })
 
     it('includes api_key in getArtistInfo URL', async () => {
@@ -284,9 +246,7 @@ describe('createLastFmClient', () => {
       })
       const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
       await client.getArtistInfo('TestArtist')
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining(`api_key=${TEST_API_KEY}`),
-      )
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
     })
   })
 

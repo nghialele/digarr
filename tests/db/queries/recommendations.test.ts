@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getGenreFeedbackHistory, getRejectedArtistMbids } from '@/db/queries/recommendations'
 import type { Database } from '@/db'
+import { getGenreFeedbackHistory, getRejectedArtistMbids } from '@/db/queries/recommendations'
 
 // Build a mock drizzle db that returns a fixed result when awaited.
 // The query chain: db.select({...}).from(...).innerJoin(...).where(...) -> rows
@@ -20,7 +20,6 @@ function makeMockDb(rows: unknown[]): Database {
     delete: vi.fn(),
     transaction: vi.fn(),
     execute: vi.fn(),
-    // biome-ignore lint/suspicious/noExplicitAny: mock
   } as unknown as Database
 }
 
@@ -89,7 +88,6 @@ describe('getRejectedArtistMbids', () => {
     }
     const db = {
       select: vi.fn().mockReturnValue(chain),
-      // biome-ignore lint/suspicious/noExplicitAny: mock
     } as unknown as Database
 
     await getRejectedArtistMbids(db, 30)

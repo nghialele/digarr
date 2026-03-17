@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import type { AppDependencies } from '@/server'
 import { createLidarrClient } from '@/core/clients/lidarr'
+import type { AppDependencies } from '@/server'
 
 export function recommendationRoutes(deps: AppDependencies) {
   const router = new Hono()
@@ -104,10 +104,7 @@ export function recommendationRoutes(deps: AppDependencies) {
     const qualityProfileId = Number(prefs.qualityProfileId ?? 1)
     const rootFolderId = Number(prefs.rootFolderId ?? 1)
 
-    const lidarr = createLidarrClient(
-      settings.lidarrUrl as string,
-      settings.lidarrApiKey as string,
-    )
+    const lidarr = createLidarrClient(settings.lidarrUrl as string, settings.lidarrApiKey as string)
 
     const results: Array<{ id: number; status: string; error?: string }> = []
 

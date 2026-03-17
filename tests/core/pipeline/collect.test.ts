@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { describe, it, expect, vi } from 'vitest'
-import { collect } from '@/core/pipeline/collect'
+import { describe, expect, it, vi } from 'vitest'
 import type { LidarrArtist } from '@/core/clients/lidarr'
+import { collect } from '@/core/pipeline/collect'
 
 const mockArtists: LidarrArtist[] = [
   {

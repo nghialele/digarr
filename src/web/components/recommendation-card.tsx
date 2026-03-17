@@ -132,7 +132,13 @@ function GenrePills({ genres, max = 4 }: { genres: string[] | null; max?: number
   return (
     <div className="flex flex-wrap gap-1">
       {shown.map((g, i) => (
-        <span key={g} className={cn('text-[10px] px-1.5 py-0.5 rounded-full', GENRE_COLORS[i % GENRE_COLORS.length])}>
+        <span
+          key={g}
+          className={cn(
+            'text-[10px] px-1.5 py-0.5 rounded-full',
+            GENRE_COLORS[i % GENRE_COLORS.length],
+          )}
+        >
           {g}
         </span>
       ))}
@@ -163,15 +169,14 @@ export function RecommendationCard({
   const isActed = rec.status !== 'pending'
 
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        'bg-surface border rounded-lg transition-all cursor-pointer',
+        'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left',
         isSelected ? 'border-accent' : 'border-border hover:border-border/80',
         expanded ? 'col-span-full' : '',
       )}
       onClick={() => onClick?.(rec.id)}
-      role="button"
-      tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -216,6 +221,7 @@ export function RecommendationCard({
 
         {/* Action buttons */}
         {isPending && (
+          // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
           <div
             className="flex gap-2"
             onClick={(e) => e.stopPropagation()}
@@ -244,6 +250,7 @@ export function RecommendationCard({
 
       {/* Expanded-only section */}
       {expanded && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
         <div
           className="border-t border-border px-4 pb-4 space-y-4"
           onClick={(e) => e.stopPropagation()}
@@ -328,6 +335,6 @@ export function RecommendationCard({
           )}
         </div>
       )}
-    </div>
+    </button>
   )
 }

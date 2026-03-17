@@ -1,12 +1,12 @@
 import {
+  boolean,
+  integer,
+  jsonb,
   pgTable,
+  real,
   serial,
   text,
-  boolean,
   timestamp,
-  integer,
-  real,
-  jsonb,
   uuid,
 } from 'drizzle-orm/pg-core'
 

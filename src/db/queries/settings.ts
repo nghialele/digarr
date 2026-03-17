@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { settings } from '@/db/schema'
 import type { Preferences } from '@/db/schema'
+import { settings } from '@/db/schema'
 
 type SettingsRow = typeof settings.$inferSelect
 type SettingsPartial = Partial<Omit<SettingsRow, 'id' | 'createdAt' | 'updatedAt'>>

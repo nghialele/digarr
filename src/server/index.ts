@@ -1,19 +1,24 @@
+import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { serveStatic } from '@hono/node-server/serve-static'
-import { healthRoutes } from './routes/health'
-import { setupRoutes } from './routes/setup'
-import { settingsRoutes } from './routes/settings'
-import { pipelineRoutes } from './routes/pipeline'
-import { recommendationRoutes } from './routes/recommendations'
-import { batchRoutes } from './routes/batches'
-import { artistRoutes } from './routes/artists'
-import { lidarrRoutes } from './routes/lidarr'
-import { setupGuard } from './middleware/setup-guard'
-import type { SetupConfig } from '@/db/queries/settings'
 import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
 import type { PipelineScheduler } from '@/core/pipeline/scheduler'
-import type { ListRecommendationsFilters, ListRecommendationsResult, RecommendationWithArtist, StatusUpdateExtra } from '@/db/queries/recommendations'
+import type {
+  ListRecommendationsFilters,
+  ListRecommendationsResult,
+  RecommendationWithArtist,
+  StatusUpdateExtra,
+} from '@/db/queries/recommendations'
+import type { SetupConfig } from '@/db/queries/settings'
+import { setupGuard } from './middleware/setup-guard'
+import { artistRoutes } from './routes/artists'
+import { batchRoutes } from './routes/batches'
+import { healthRoutes } from './routes/health'
+import { lidarrRoutes } from './routes/lidarr'
+import { pipelineRoutes } from './routes/pipeline'
+import { recommendationRoutes } from './routes/recommendations'
+import { settingsRoutes } from './routes/settings'
+import { setupRoutes } from './routes/setup'
 
 export type AppDependencies = {
   db: unknown
@@ -28,7 +33,11 @@ export type AppDependencies = {
   // Recommendation query functions
   listRecommendations: (filters?: ListRecommendationsFilters) => Promise<ListRecommendationsResult>
   getRecommendation: (id: number) => Promise<RecommendationWithArtist | null>
-  updateRecommendationStatus: (id: number, status: string, extra?: StatusUpdateExtra) => Promise<void>
+  updateRecommendationStatus: (
+    id: number,
+    status: string,
+    extra?: StatusUpdateExtra,
+  ) => Promise<void>
   bulkUpdateStatus: (ids: number[], status: string) => Promise<void>
   // Batch query functions
   listBatches: () => Promise<unknown[]>

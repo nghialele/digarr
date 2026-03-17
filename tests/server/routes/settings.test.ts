@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { describe, it, expect, vi } from 'vitest'
-import { createApp } from '@/server'
+import { describe, expect, it, vi } from 'vitest'
 import type { AppDependencies } from '@/server'
+import { createApp } from '@/server'
 
 const mockSettings = {
   id: 1,
@@ -162,7 +162,12 @@ describe('POST /api/settings/test/:service', () => {
     const res = await app.request('/api/settings/test/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider: 'ollama', apiKey: null, model: 'llama3', baseUrl: 'http://invalid:11434' }),
+      body: JSON.stringify({
+        provider: 'ollama',
+        apiKey: null,
+        model: 'llama3',
+        baseUrl: 'http://invalid:11434',
+      }),
     })
     expect(res.status).toBe(200)
     const body = await res.json()

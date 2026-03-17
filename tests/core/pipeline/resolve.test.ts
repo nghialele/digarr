@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { MBArtist } from '@/core/clients/musicbrainz'
 import { resolve } from '@/core/pipeline/resolve'
 import type { DiscoveredArtist } from '@/core/types'
-import type { MBArtist } from '@/core/clients/musicbrainz'
 
 function makeMbArtist(overrides: Partial<MBArtist> = {}): MBArtist {
   return {
@@ -20,21 +20,28 @@ function makeMbArtist(overrides: Partial<MBArtist> = {}): MBArtist {
   }
 }
 
-function makeMb(lookupResult?: MBArtist, searchResult?: { artists: Array<{ id: string; name: string; score: number }> }) {
+function makeMb(
+  lookupResult?: MBArtist,
+  searchResult?: { artists: Array<{ id: string; name: string; score: number }> },
+) {
   return {
     lookupArtist: vi.fn().mockResolvedValue(lookupResult ?? makeMbArtist()),
-    searchArtist: vi.fn().mockResolvedValue(
-      searchResult ?? { artists: [{ id: 'mbid-found', name: 'Found Artist', score: 90 }] },
-    ),
-    extractStreamingUrls: vi.fn().mockImplementation((relations: Array<{ type: string; url?: { resource: string } }>) => {
-      const result: Record<string, string> = {}
-      for (const rel of relations) {
-        if (rel.url?.resource?.includes('spotify')) {
-          result['spotify'] = rel.url.resource
+    searchArtist: vi
+      .fn()
+      .mockResolvedValue(
+        searchResult ?? { artists: [{ id: 'mbid-found', name: 'Found Artist', score: 90 }] },
+      ),
+    extractStreamingUrls: vi
+      .fn()
+      .mockImplementation((relations: Array<{ type: string; url?: { resource: string } }>) => {
+        const result: Record<string, string> = {}
+        for (const rel of relations) {
+          if (rel.url?.resource?.includes('spotify')) {
+            result.spotify = rel.url.resource
+          }
         }
-      }
-      return result
-    }),
+        return result
+      }),
   }
 }
 
@@ -101,7 +108,10 @@ describe('resolve()', () => {
         id: 'mbid-rh',
         name: 'Radiohead',
         relations: [
-          { type: 'streaming music', url: { resource: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb' } },
+          {
+            type: 'streaming music',
+            url: { resource: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb' },
+          },
         ],
       }),
     )

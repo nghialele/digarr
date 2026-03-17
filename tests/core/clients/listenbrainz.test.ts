@@ -34,7 +34,7 @@ describe('createListenBrainzClient', () => {
       expect(createHttpClient).toHaveBeenCalledOnce()
       const config = vi.mocked(createHttpClient).mock.calls[0]?.[0]
       expect(config?.baseUrl).toBe('https://api.listenbrainz.org')
-      expect(config?.headers?.['Authorization']).toBe(`Token ${TEST_TOKEN}`)
+      expect(config?.headers?.Authorization).toBe(`Token ${TEST_TOKEN}`)
     })
   })
 
@@ -43,15 +43,17 @@ describe('createListenBrainzClient', () => {
       mockGet.mockResolvedValueOnce({
         payload: {
           artists: [
-            { artist_name: 'Radiohead', artist_mbid: 'a74b1b7f-71a5-4011-9441-d0b5e4122711', listen_count: 42 },
+            {
+              artist_name: 'Radiohead',
+              artist_mbid: 'a74b1b7f-71a5-4011-9441-d0b5e4122711',
+              listen_count: 42,
+            },
           ],
         },
       })
       const client = createListenBrainzClient(TEST_USERNAME, TEST_TOKEN)
       const result = await client.getTopArtists('week')
-      expect(mockGet).toHaveBeenCalledWith(
-        `/1/stats/user/${TEST_USERNAME}/artists?range=week`,
-      )
+      expect(mockGet).toHaveBeenCalledWith(`/1/stats/user/${TEST_USERNAME}/artists?range=week`)
       expect(result).toEqual([
         {
           name: 'Radiohead',
@@ -78,7 +80,11 @@ describe('createListenBrainzClient', () => {
       mockGet.mockResolvedValueOnce({
         payload: {
           artists: [
-            { artist_name: 'Portishead', artist_mbid: '8f6bd1e4-fbe1-4f50-aa9b-94c450ec0a11', listen_count: 100 },
+            {
+              artist_name: 'Portishead',
+              artist_mbid: '8f6bd1e4-fbe1-4f50-aa9b-94c450ec0a11',
+              listen_count: 100,
+            },
             { artist_name: 'Massive Attack', artist_mbid: '', listen_count: 75 },
           ],
         },
@@ -86,8 +92,16 @@ describe('createListenBrainzClient', () => {
       const client = createListenBrainzClient(TEST_USERNAME, TEST_TOKEN)
       const result = await client.getTopArtists('month')
       expect(result).toHaveLength(2)
-      expect(result[0]).toMatchObject({ name: 'Portishead', playCount: 100, source: 'listenbrainz' })
-      expect(result[1]).toMatchObject({ name: 'Massive Attack', playCount: 75, source: 'listenbrainz' })
+      expect(result[0]).toMatchObject({
+        name: 'Portishead',
+        playCount: 100,
+        source: 'listenbrainz',
+      })
+      expect(result[1]).toMatchObject({
+        name: 'Massive Attack',
+        playCount: 75,
+        source: 'listenbrainz',
+      })
     })
   })
 
@@ -143,9 +157,7 @@ describe('createListenBrainzClient', () => {
     it('returns empty array on 404 (endpoint may not exist)', async () => {
       const { HttpError } = await import('@/core/clients/http')
       const mbid = 'a74b1b7f-71a5-4011-9441-d0b5e4122711'
-      mockGet.mockRejectedValueOnce(
-        new HttpError(404, 'Not Found', `/1/artist/${mbid}/similar`),
-      )
+      mockGet.mockRejectedValueOnce(new HttpError(404, 'Not Found', `/1/artist/${mbid}/similar`))
       const client = createListenBrainzClient(TEST_USERNAME, TEST_TOKEN)
       const result = await client.getSimilarArtists(mbid)
       expect(result).toEqual([])

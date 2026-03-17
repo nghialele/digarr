@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
-import { createApp } from '@/server'
+import { describe, expect, it, vi } from 'vitest'
 import type { AppDependencies } from '@/server'
+import { createApp } from '@/server'
 
 function makeMockOrchestrator() {
   const emitter = new EventEmitter()

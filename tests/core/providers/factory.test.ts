@@ -1,21 +1,21 @@
-import { describe, test, expect, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 // Mock the provider modules to avoid real SDK instantiation
 vi.mock('@/core/providers/anthropic', () => ({
   AnthropicProvider: vi.fn(function (this: Record<string, unknown>) {
-    this['_type'] = 'anthropic'
+    this._type = 'anthropic'
   }),
 }))
 
 vi.mock('@/core/providers/openai', () => ({
   OpenAIProvider: vi.fn(function (this: Record<string, unknown>) {
-    this['_type'] = 'openai'
+    this._type = 'openai'
   }),
 }))
 
 vi.mock('@/core/providers/ollama', () => ({
   OllamaProvider: vi.fn(function (this: Record<string, unknown>) {
-    this['_type'] = 'ollama'
+    this._type = 'ollama'
   }),
 }))
 
@@ -38,12 +38,7 @@ describe('createProvider', () => {
   })
 
   test('returns OllamaProvider for "ollama"', async () => {
-    const provider = await createProvider(
-      'ollama',
-      null,
-      'llama3',
-      'http://localhost:11434',
-    )
+    const provider = await createProvider('ollama', null, 'llama3', 'http://localhost:11434')
     expect(OllamaProvider).toHaveBeenCalledWith('llama3', 'http://localhost:11434')
     expect(provider).toBeDefined()
   })

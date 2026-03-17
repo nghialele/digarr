@@ -1,18 +1,18 @@
 import { EventEmitter } from 'node:events'
-import type { StoreDb } from './store'
-import { collect } from './collect'
-import { analyze } from './analyze'
-import { discover } from './discover'
-import { resolve } from './resolve'
-import { score } from './score'
-import { filter } from './filter'
-import { store } from './store'
+import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
-import { createLastFmClient } from '@/core/clients/lastfm'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
 import { createProvider } from '@/core/providers/factory'
 import type { Preferences } from '@/db/schema'
+import { analyze } from './analyze'
+import { collect } from './collect'
+import { discover } from './discover'
+import { filter } from './filter'
+import { resolve } from './resolve'
+import { score } from './score'
+import type { StoreDb } from './store'
+import { store } from './store'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -141,7 +141,7 @@ export class PipelineOrchestrator extends EventEmitter {
 
       this.emit('progress', { stage: 'resolve' })
       const resolved = await resolve(discovered, mbClient, (progress) => {
-        this.emit('progress', { stage: 'resolve', ...progress })
+        this.emit('progress', { ...progress, stage: 'resolve' })
       })
 
       // -- Stage 5: SCORE -----------------------------------------------------

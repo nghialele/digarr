@@ -19,9 +19,7 @@ export function createPipelineSSEStream(orchestrator: PipelineOrchestrator): Rea
 
       completeHandler = () => {
         try {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ stage: 'complete' })}\n\n`),
-          )
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ stage: 'complete' })}\n\n`))
           controller.close()
         } catch {
           // Already closed

@@ -1,11 +1,11 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { TasteProfile } from '@/core/types'
 
 const mockCreate = vi.fn()
 
 vi.mock('@anthropic-ai/sdk', () => {
   const MockAnthropic = vi.fn(function (this: Record<string, unknown>) {
-    this['messages'] = { create: mockCreate }
+    this.messages = { create: mockCreate }
   })
   return { default: MockAnthropic }
 })

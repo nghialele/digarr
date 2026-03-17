@@ -1,8 +1,9 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+
 import { EventEmitter } from 'node:events'
-import { createApp } from '@/server'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AppDependencies } from '@/server'
+import { createApp } from '@/server'
 
 // Hoist the mock so vitest can resolve it before imports
 vi.mock('@/core/clients/lidarr', () => ({
@@ -37,7 +38,8 @@ const mockRecommendation = {
   batchId: 1,
   score: 0.85,
   status: 'pending',
-  sources: [],
+  sources: null,
+  aiReasoning: null,
   reasons: [],
   lidarrArtistId: null,
   lidarrError: null,
@@ -82,9 +84,13 @@ const mockLidarrClient = {
 }
 
 beforeEach(() => {
-  vi.mocked(createLidarrClient).mockReturnValue(mockLidarrClient as ReturnType<typeof createLidarrClient>)
+  vi.mocked(createLidarrClient).mockReturnValue(
+    mockLidarrClient as ReturnType<typeof createLidarrClient>,
+  )
   vi.clearAllMocks()
-  vi.mocked(createLidarrClient).mockReturnValue(mockLidarrClient as ReturnType<typeof createLidarrClient>)
+  vi.mocked(createLidarrClient).mockReturnValue(
+    mockLidarrClient as ReturnType<typeof createLidarrClient>,
+  )
 })
 
 describe('GET /api/recommendations', () => {

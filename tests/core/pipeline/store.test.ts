@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { store } from '@/core/pipeline/store'
 import type { ScoredArtist } from '@/core/types'
 
@@ -47,12 +47,8 @@ describe('store()', () => {
     await store(artists, db)
 
     expect(db.upsertArtist).toHaveBeenCalledTimes(2)
-    expect(db.upsertArtist).toHaveBeenCalledWith(
-      expect.objectContaining({ mbid: 'mbid-a' }),
-    )
-    expect(db.upsertArtist).toHaveBeenCalledWith(
-      expect.objectContaining({ mbid: 'mbid-b' }),
-    )
+    expect(db.upsertArtist).toHaveBeenCalledWith(expect.objectContaining({ mbid: 'mbid-a' }))
+    expect(db.upsertArtist).toHaveBeenCalledWith(expect.objectContaining({ mbid: 'mbid-b' }))
   })
 
   it('creates a recommendation row for each artist linked to the batch', async () => {
@@ -123,7 +119,13 @@ describe('store()', () => {
       streamingUrls: { spotify: 'https://spotify.com/foo' },
       discoveries: [],
       score: 0.9,
-      sourceScores: { consensus: 1, similarity: 1, genreOverlap: 1, aiConfidence: 1, feedbackBoost: 1 },
+      sourceScores: {
+        consensus: 1,
+        similarity: 1,
+        genreOverlap: 1,
+        aiConfidence: 1,
+        feedbackBoost: 1,
+      },
     }
     const db = makeDb()
 

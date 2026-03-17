@@ -51,10 +51,7 @@ export async function listRecommendations(
       .orderBy(orderBy)
       .limit(limit)
       .offset(offset),
-    db
-      .select({ total: count() })
-      .from(recommendations)
-      .where(where),
+    db.select({ total: count() }).from(recommendations).where(where),
   ])
 
   const items = rows.map((r) => ({ ...r.recommendation, artist: r.artist }))
@@ -96,11 +93,7 @@ export async function updateRecommendationStatus(
     .where(eq(recommendations.id, id))
 }
 
-export async function bulkUpdateStatus(
-  db: Database,
-  ids: number[],
-  status: string,
-): Promise<void> {
+export async function bulkUpdateStatus(db: Database, ids: number[], status: string): Promise<void> {
   if (ids.length === 0) return
   await db
     .update(recommendations)
@@ -146,12 +139,7 @@ export async function getRejectedArtistMbids(
     .select({ mbid: artists.mbid })
     .from(recommendations)
     .innerJoin(artists, eq(recommendations.artistId, artists.id))
-    .where(
-      and(
-        eq(recommendations.status, 'rejected'),
-        gte(recommendations.actedOnAt, cutoff),
-      ),
-    )
+    .where(and(eq(recommendations.status, 'rejected'), gte(recommendations.actedOnAt, cutoff)))
 
   return new Set(rows.map((r) => r.mbid))
 }

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { score } from '@/core/pipeline/score'
 import type { ResolvedArtist } from '@/core/types'
 import type { Preferences } from '@/db/schema'
@@ -19,9 +19,7 @@ function makeArtist(overrides: Partial<ResolvedArtist> = {}): ResolvedArtist {
     tags: ['rock'],
     genres: ['rock'],
     streamingUrls: {},
-    discoveries: [
-      { name: 'Test Artist', similarityScore: 0.8, source: 'listenbrainz' },
-    ],
+    discoveries: [{ name: 'Test Artist', similarityScore: 0.8, source: 'listenbrainz' }],
     ...overrides,
   }
 }
@@ -53,7 +51,7 @@ describe('score()', () => {
     // Artist B has more sources -> higher consensus -> should be first
     expect(result[0]?.mbid).toBe('mbid-b')
     expect(result[1]?.mbid).toBe('mbid-a')
-    expect(result[0]!.score).toBeGreaterThanOrEqual(result[1]!.score)
+    expect(result[0]?.score).toBeGreaterThanOrEqual(result[1]?.score ?? 0)
   })
 
   it('computes consensus as unique source count / 4, capped at 1.0', () => {
@@ -79,9 +77,7 @@ describe('score()', () => {
 
   it('uses actual AI similarityScore for aiConfidence when AI discovery exists', () => {
     const artist = makeArtist({
-      discoveries: [
-        { name: 'X', similarityScore: 0.9, source: 'ai' },
-      ],
+      discoveries: [{ name: 'X', similarityScore: 0.9, source: 'ai' }],
     })
     const result = score([artist], [], defaultWeights, new Map())
     expect(result[0]?.sourceScores.aiConfidence).toBe(0.9)
@@ -96,8 +92,8 @@ describe('score()', () => {
   it('computes feedbackBoost from genre approve rates', () => {
     const artist = makeArtist({ genres: ['jazz', 'blues'] })
     const feedback = new Map([
-      ['jazz', { approved: 8, total: 10 }],   // 0.8
-      ['blues', { approved: 4, total: 10 }],  // 0.4
+      ['jazz', { approved: 8, total: 10 }], // 0.8
+      ['blues', { approved: 4, total: 10 }], // 0.4
     ])
     const result = score([artist], [], defaultWeights, feedback)
     // Average: (0.8 + 0.4) / 2 = 0.6
@@ -144,7 +140,7 @@ describe('score()', () => {
     const result = score([artist1source, artist4sources], [], heavyConsensus, new Map())
     // With consensus weight = 1.0, 4-source artist should score much higher
     expect(result[0]?.mbid).toBe('mbid-4')
-    expect(result[0]!.score).toBeGreaterThan(result[1]!.score)
+    expect(result[0]?.score).toBeGreaterThan(result[1]?.score ?? 0)
   })
 
   it('computes finalScore as weighted sum of all components', () => {
@@ -170,11 +166,11 @@ describe('score()', () => {
 
     const result = score([artist], ['rock'], weights, new Map())
     const expected =
-      0.3 * 0.5 +    // consensus
-      0.25 * 0.8 +   // similarity
-      0.2 * 1.0 +    // genreOverlap
-      0.15 * 0.5 +   // aiConfidence (default)
-      0.1 * 0.5      // feedbackBoost (default)
+      0.3 * 0.5 + // consensus
+      0.25 * 0.8 + // similarity
+      0.2 * 1.0 + // genreOverlap
+      0.15 * 0.5 + // aiConfidence (default)
+      0.1 * 0.5 // feedbackBoost (default)
 
     expect(result[0]?.score).toBeCloseTo(expected)
   })

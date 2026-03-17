@@ -1,6 +1,6 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { TasteProfile } from '@/core/types'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { OllamaProvider } from '@/core/providers/ollama'
+import type { TasteProfile } from '@/core/types'
 
 const sampleProfile: TasteProfile = {
   topArtists: [
@@ -182,9 +182,7 @@ describe('OllamaProvider', () => {
     })
 
     test('calls /api/tags endpoint', async () => {
-      fetchSpy.mockResolvedValueOnce(
-        new Response(JSON.stringify({ models: [] }), { status: 200 }),
-      )
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ models: [] }), { status: 200 }))
 
       await provider.testConnection()
 

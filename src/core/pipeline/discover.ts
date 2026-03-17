@@ -1,10 +1,4 @@
-import type { TasteProfile, DiscoveredArtist, AiRecommendation } from '@/core/types'
-
-interface SimilarArtistSource {
-  getSimilarArtists: (
-    ...args: [string, string?] | [string]
-  ) => Promise<Array<{ name: string; mbid?: string; similarityScore?: number; score?: number }>>
-}
+import type { AiRecommendation, DiscoveredArtist, TasteProfile } from '@/core/types'
 
 interface ListenBrainzSimilarSource {
   getSimilarArtists: (mbid: string) => Promise<Array<{ name: string; score: number }>>
@@ -14,7 +8,7 @@ interface LastFmSimilarSource {
   getSimilarArtists: (
     artist: string,
     mbid?: string,
-  ) => Promise<Array<{ name: string; mbid?: string; similarityScore: number; source: 'lastfm' }>>
+  ) => Promise<Array<{ name: string; mbid?: string; similarityScore: number; source: string }>>
 }
 
 interface MusicBrainzSimilarSource {

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { filter } from '@/core/pipeline/filter'
 import type { ScoredArtist } from '@/core/types'
 
@@ -72,10 +72,7 @@ describe('filter()', () => {
   })
 
   it('keeps valid artists that pass all filters', () => {
-    const artists = [
-      makeArtist('mbid-valid-1', 0.8),
-      makeArtist('mbid-valid-2', 0.9),
-    ]
+    const artists = [makeArtist('mbid-valid-1', 0.8), makeArtist('mbid-valid-2', 0.9)]
 
     const result = filter(artists, new Set(), new Map(), 90, 0.5)
 
@@ -84,10 +81,10 @@ describe('filter()', () => {
 
   it('applies all filters simultaneously', () => {
     const artists = [
-      makeArtist('mbid-owned', 0.9),           // removed: in library
-      makeArtist('mbid-rejected', 0.9),         // removed: in cooldown
-      makeArtist('mbid-low-score', 0.2),        // removed: below threshold
-      makeArtist('mbid-valid', 0.8),            // kept
+      makeArtist('mbid-owned', 0.9), // removed: in library
+      makeArtist('mbid-rejected', 0.9), // removed: in cooldown
+      makeArtist('mbid-low-score', 0.2), // removed: below threshold
+      makeArtist('mbid-valid', 0.8), // kept
     ]
     const libraryMbids = new Set(['mbid-owned'])
     const rejected = new Map([['mbid-rejected', new Date()]])

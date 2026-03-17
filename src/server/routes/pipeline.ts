@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { PipelineDeps } from '@/core/pipeline/orchestrator'
 import type { AppDependencies } from '@/server'
 import { createPipelineSSEStream } from '@/server/sse'
 
@@ -15,10 +16,12 @@ export function pipelineRoutes(deps: AppDependencies) {
       return c.json({ error: 'Settings not found' }, 400)
     }
 
-    // Fire-and-forget
-    deps.orchestrator.run({ db: deps.db, settings }).catch((err: unknown) => {
-      console.error('Pipeline run failed:', err)
-    })
+    // Fire-and-forget -- cast to PipelineDeps since AppDependencies uses loose types
+    deps.orchestrator
+      .run({ db: deps.db, settings } as unknown as PipelineDeps)
+      .catch((err: unknown) => {
+        console.error('Pipeline run failed:', err)
+      })
 
     return c.json({ message: 'Pipeline started' }, 202)
   })
@@ -37,7 +40,7 @@ export function pipelineRoutes(deps: AppDependencies) {
     })
   })
 
-  router.get('/api/pipeline/events', (c) => {
+  router.get('/api/pipeline/events', (_c) => {
     const stream = createPipelineSSEStream(deps.orchestrator)
     return new Response(stream, {
       headers: {

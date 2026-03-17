@@ -1,5 +1,5 @@
-import type { DiscoveredArtist, ResolvedArtist, PipelineProgress } from '@/core/types'
 import type { MBArtist, MBSearchResult } from '@/core/clients/musicbrainz'
+import type { DiscoveredArtist, PipelineProgress, ResolvedArtist } from '@/core/types'
 
 interface MusicBrainzClient {
   lookupArtist: (mbid: string) => Promise<MBArtist>

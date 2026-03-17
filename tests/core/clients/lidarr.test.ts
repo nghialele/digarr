@@ -122,11 +122,7 @@ describe('createLidarrClient', () => {
       mockPost.mockResolvedValueOnce({ ...mockArtists[0], id: 10 })
 
       const client = createLidarrClient(TEST_URL, TEST_KEY)
-      const result = await client.addArtist(
-        'a74b1b7f-71a5-4011-9441-d0b5e4122711',
-        1,
-        1,
-      )
+      const result = await client.addArtist('a74b1b7f-71a5-4011-9441-d0b5e4122711', 1, 1)
 
       expect(mockGet).toHaveBeenCalledWith('/api/v1/rootfolder')
       expect(mockPost).toHaveBeenCalledWith(
@@ -145,9 +141,7 @@ describe('createLidarrClient', () => {
     it('throws if rootFolderId does not exist', async () => {
       mockGet.mockResolvedValueOnce(mockFolders)
       const client = createLidarrClient(TEST_URL, TEST_KEY)
-      await expect(
-        client.addArtist('mbid-xyz', 1, 999),
-      ).rejects.toThrow(/root folder/i)
+      await expect(client.addArtist('mbid-xyz', 1, 999)).rejects.toThrow(/root folder/i)
     })
 
     it('caches getRootFolders() -- only calls the API once across multiple addArtist calls', async () => {
@@ -158,9 +152,7 @@ describe('createLidarrClient', () => {
       await client.addArtist('mbid-a', 1, 1)
       await client.addArtist('mbid-b', 1, 2)
 
-      const rootFolderGetCalls = mockGet.mock.calls.filter(
-        (c) => c[0] === '/api/v1/rootfolder',
-      )
+      const rootFolderGetCalls = mockGet.mock.calls.filter((c) => c[0] === '/api/v1/rootfolder')
       expect(rootFolderGetCalls).toHaveLength(1)
     })
   })

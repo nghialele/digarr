@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mock API
@@ -12,7 +13,7 @@ vi.mock('@/web/lib/api', () => ({
   bulkAction: vi.fn(),
 }))
 
-import { getRecommendations, updateRecommendation, bulkAction } from '@/web/lib/api'
+import { bulkAction, getRecommendations, updateRecommendation } from '@/web/lib/api'
 
 const mockGetRecommendations = vi.mocked(getRecommendations)
 const mockUpdateRecommendation = vi.mocked(updateRecommendation)
@@ -22,14 +23,16 @@ const mockBulkAction = vi.mocked(bulkAction)
 // Mock data
 // ---------------------------------------------------------------------------
 
-const makeRec = (overrides: Partial<{
-  id: number
-  score: number
-  status: string
-  aiReasoning: string | null
-  sources: Record<string, number> | null
-  lidarrError: string | null
-}> = {}) => ({
+const makeRec = (
+  overrides: Partial<{
+    id: number
+    score: number
+    status: string
+    aiReasoning: string | null
+    sources: Record<string, number> | null
+    lidarrError: string | null
+  }> = {},
+) => ({
   id: 1,
   score: 0.78,
   status: 'pending',
@@ -59,7 +62,9 @@ const makeRes = (recs: ReturnType<typeof makeRec>[]) => ({
 
 // useFetch calls the fetcher on mount; we need all variants to resolve
 function setupMockApi(recs: ReturnType<typeof makeRec>[] = [makeRec()]) {
-  mockGetRecommendations.mockResolvedValue(makeRes(recs) as unknown as { items: unknown[]; total: number })
+  mockGetRecommendations.mockResolvedValue(
+    makeRes(recs) as unknown as { items: unknown[]; total: number },
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -76,7 +81,14 @@ describe('DiscoverPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // sonner toast -- not rendered in jsdom, silence it
-    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    )
   })
 
   it('renders recommendation cards from API data', async () => {
@@ -113,7 +125,9 @@ describe('DiscoverPage', () => {
     mockGetRecommendations.mockImplementation((params) => {
       const p = params as Record<string, string> | undefined
       if (!p?.status || p.status === 'pending') {
-        return Promise.resolve(makeRes([makeRec()]) as unknown as { items: unknown[]; total: number })
+        return Promise.resolve(
+          makeRes([makeRec()]) as unknown as { items: unknown[]; total: number },
+        )
       }
       return Promise.resolve({ items: [], total: 0 })
     })
@@ -161,7 +175,8 @@ describe('DiscoverPage', () => {
     const approveButtons = screen.getAllByText('Approve')
     // There should be exactly one card Approve button
     expect(approveButtons.length).toBeGreaterThanOrEqual(1)
-    fireEvent.click(approveButtons[0])
+    // biome-ignore lint/style/noNonNullAssertion: checked above
+    fireEvent.click(approveButtons[0]!)
 
     await waitFor(() => {
       expect(mockUpdateRecommendation).toHaveBeenCalledWith(1, { status: 'approved' })
@@ -171,7 +186,7 @@ describe('DiscoverPage', () => {
   it('bulk approve above threshold calls bulkAction', async () => {
     mockBulkAction.mockResolvedValue(undefined as unknown as never)
     // Two recs: one above 70%, one below
-    setupMockApi([makeRec({ id: 1, score: 0.85 }), makeRec({ id: 2, score: 0.50 })])
+    setupMockApi([makeRec({ id: 1, score: 0.85 }), makeRec({ id: 2, score: 0.5 })])
 
     render(<DiscoverPage />)
 

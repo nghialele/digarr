@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { bulkUpsertArtists, upsertArtist } from '@/db/queries/artists'
 import type { Database } from '@/db'
 import type { ArtistInsert } from '@/db/queries/artists'
+import { bulkUpsertArtists, upsertArtist } from '@/db/queries/artists'
 
 type ArtistRow = {
   id: number
@@ -43,7 +43,6 @@ function makeMockDb(returnRow: ArtistRow): Database {
     update: vi.fn(),
     delete: vi.fn(),
     transaction: vi.fn(),
-    // biome-ignore lint/suspicious/noExplicitAny: mock
   } as unknown as Database
 }
 
@@ -68,7 +67,6 @@ describe('bulkUpsertArtists', () => {
           returning: vi.fn().mockResolvedValue([row]),
         }
       }),
-      // biome-ignore lint/suspicious/noExplicitAny: mock
     } as unknown as Database
 
     const results = await bulkUpsertArtists(db, sampleArtists)
@@ -83,7 +81,6 @@ describe('bulkUpsertArtists', () => {
   it('returns empty array for empty input', async () => {
     const db = {
       insert: vi.fn(),
-      // biome-ignore lint/suspicious/noExplicitAny: mock
     } as unknown as Database
 
     const results = await bulkUpsertArtists(db, [])
@@ -105,7 +102,6 @@ describe('bulkUpsertArtists', () => {
           returning: vi.fn().mockResolvedValue([row]),
         }
       }),
-      // biome-ignore lint/suspicious/noExplicitAny: mock
     } as unknown as Database
 
     const results = await bulkUpsertArtists(db, sampleArtists)
@@ -139,7 +135,6 @@ describe('upsertArtist', () => {
     }
     const db = {
       insert: vi.fn().mockReturnValue(chain),
-      // biome-ignore lint/suspicious/noExplicitAny: mock
     } as unknown as Database
 
     await upsertArtist(db, artist)

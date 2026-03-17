@@ -1,5 +1,5 @@
 import type { ServiceTestResult } from '@/core/types'
-import { HttpError, createHttpClient } from './http'
+import { createHttpClient, HttpError } from './http'
 
 const BASE_URL = 'https://api.listenbrainz.org'
 
@@ -69,9 +69,7 @@ export function createListenBrainzClient(username: string, token: string) {
   }
 
   async function getListenCount(): Promise<number> {
-    const res = await http.get<LbListenCountResponse>(
-      `/1/user/${username}/listen-count`,
-    )
+    const res = await http.get<LbListenCountResponse>(`/1/user/${username}/listen-count`)
     return res.payload.count
   }
 

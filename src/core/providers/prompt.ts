@@ -1,4 +1,4 @@
-import type { TasteProfile, AiRecommendation } from '@/core/types'
+import type { AiRecommendation, TasteProfile } from '@/core/types'
 
 export function buildRecommendationPrompt(profile: TasteProfile): string {
   const topArtistNames = profile.topArtists
@@ -91,15 +91,15 @@ export function parseRecommendationResponse(text: string): AiRecommendation[] {
     .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
     .filter(
       (item) =>
-        typeof item['artistName'] === 'string' &&
-        typeof item['reasoning'] === 'string' &&
-        typeof item['confidence'] === 'number' &&
-        Array.isArray(item['genres']),
+        typeof item.artistName === 'string' &&
+        typeof item.reasoning === 'string' &&
+        typeof item.confidence === 'number' &&
+        Array.isArray(item.genres),
     )
     .map((item) => ({
-      artistName: item['artistName'] as string,
-      reasoning: item['reasoning'] as string,
-      confidence: item['confidence'] as number,
-      genres: (item['genres'] as unknown[]).filter((g): g is string => typeof g === 'string'),
+      artistName: item.artistName as string,
+      reasoning: item.reasoning as string,
+      confidence: item.confidence as number,
+      genres: (item.genres as unknown[]).filter((g): g is string => typeof g === 'string'),
     }))
 }

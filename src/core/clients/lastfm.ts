@@ -1,5 +1,5 @@
-import type { DiscoveredArtist, ServiceTestResult } from '@/core/types'
 import PQueue from 'p-queue'
+import type { DiscoveredArtist, ServiceTestResult } from '@/core/types'
 import { createHttpClient } from './http'
 
 const BASE_URL = 'https://ws.audioscrobbler.com/2.0/'
@@ -63,7 +63,7 @@ export function createLastFmClient(username: string, apiKey: string) {
 
   async function getSimilarArtists(artist: string, mbid?: string): Promise<DiscoveredArtist[]> {
     const params: Record<string, string> = { method: 'artist.getSimilar', artist }
-    if (mbid) params['mbid'] = mbid
+    if (mbid) params.mbid = mbid
     const res = await get<LfmSimilarArtistsResponse>(params)
     return res.similarartists.artist.map((a) => ({
       name: a.name,
@@ -98,7 +98,7 @@ export function createLastFmClient(username: string, apiKey: string) {
 
   async function getArtistInfo(artist: string, mbid?: string): Promise<LastFmArtistInfo> {
     const params: Record<string, string> = { method: 'artist.getInfo', artist }
-    if (mbid) params['mbid'] = mbid
+    if (mbid) params.mbid = mbid
     const res = await get<LfmArtistInfoResponse>(params)
     return res.artist
   }

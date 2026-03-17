@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { settings, artists, recommendations, recommendationBatches, DEFAULT_PREFERENCES } from '@/db/schema'
+import { describe, expect, it } from 'vitest'
+import { artists, DEFAULT_PREFERENCES, recommendations, settings } from '@/db/schema'
 
 describe('schema', () => {
   it('settings table has expected columns', () => {

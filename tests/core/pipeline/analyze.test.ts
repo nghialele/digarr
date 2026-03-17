@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { analyze } from '@/core/pipeline/analyze'
 
 const lbArtists = [
@@ -28,10 +28,7 @@ const activityStable = [
   { listen_count: 105, from_ts: 2000, to_ts: 3000 },
 ]
 
-function makeLb(
-  artists = lbArtists,
-  activity = activityStable,
-) {
+function makeLb(artists = lbArtists, activity = activityStable) {
   return {
     getTopArtists: vi.fn().mockResolvedValue(artists),
     getListeningActivity: vi.fn().mockResolvedValue(activity),
@@ -129,7 +126,7 @@ describe('analyze()', () => {
     const lb = makeLb()
     const profile = await analyze(lb, null)
     for (let i = 1; i < profile.topArtists.length; i++) {
-      expect((profile.topArtists[i - 1]?.playCount ?? 0)).toBeGreaterThanOrEqual(
+      expect(profile.topArtists[i - 1]?.playCount ?? 0).toBeGreaterThanOrEqual(
         profile.topArtists[i]?.playCount ?? 0,
       )
     }

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import type { AppDependencies } from '@/server'
 import { createLidarrClient } from '@/core/clients/lidarr'
+import type { AppDependencies } from '@/server'
 
 export function lidarrRoutes(deps: AppDependencies) {
   const router = new Hono()

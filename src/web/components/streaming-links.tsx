@@ -47,7 +47,7 @@ type SpotifyEmbedProps = {
 
 function extractSpotifyId(url: string): { type: string; id: string } | null {
   const match = url.match(/spotify\.com\/(artist|album|track)\/([A-Za-z0-9]+)/)
-  if (!match) return null
+  if (!match || !match[1] || !match[2]) return null
   return { type: match[1], id: match[2] }
 }
 
@@ -68,7 +68,11 @@ function SpotifyEmbed({ url }: SpotifyEmbedProps) {
   )
 }
 
-export function StreamingLinks({ streamingUrls, artistName, compact = false }: StreamingLinksProps) {
+export function StreamingLinks({
+  streamingUrls,
+  artistName,
+  compact = false,
+}: StreamingLinksProps) {
   const urls = streamingUrls ?? {}
 
   // Build the list of links: prefer direct URL, fall back to search URL for known services
@@ -79,7 +83,12 @@ export function StreamingLinks({ streamingUrls, artistName, compact = false }: S
     if (direct) {
       links.push({ key, label: config.label, url: direct, color: config.color })
     } else if (config.fallback(artistName)) {
-      links.push({ key, label: config.label, url: config.fallback(artistName), color: config.color })
+      links.push({
+        key,
+        label: config.label,
+        url: config.fallback(artistName),
+        color: config.color,
+      })
     }
   }
 

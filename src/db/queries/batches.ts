@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, sql } from 'drizzle-orm'
+import { and, desc, eq, lt } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { recommendationBatches } from '@/db/schema'
 
@@ -25,11 +25,7 @@ export async function createBatch(
   return row
 }
 
-export async function completeBatch(
-  db: Database,
-  id: number,
-  stats: BatchStats,
-): Promise<void> {
+export async function completeBatch(db: Database, id: number, stats: BatchStats): Promise<void> {
   await db
     .update(recommendationBatches)
     .set({ status: 'completed', stats })
@@ -44,10 +40,7 @@ export async function failBatch(db: Database, id: number): Promise<void> {
 }
 
 export async function listBatches(db: Database): Promise<BatchRow[]> {
-  return db
-    .select()
-    .from(recommendationBatches)
-    .orderBy(desc(recommendationBatches.createdAt))
+  return db.select().from(recommendationBatches).orderBy(desc(recommendationBatches.createdAt))
 }
 
 export async function getBatch(db: Database, id: number): Promise<BatchRow | null> {
@@ -59,18 +52,12 @@ export async function getBatch(db: Database, id: number): Promise<BatchRow | nul
   return rows[0] ?? null
 }
 
-export async function cleanupStaleBatches(
-  db: Database,
-  maxAgeMinutes: number,
-): Promise<void> {
+export async function cleanupStaleBatches(db: Database, maxAgeMinutes: number): Promise<void> {
   const cutoff = new Date(Date.now() - maxAgeMinutes * 60 * 1000)
   await db
     .update(recommendationBatches)
     .set({ status: 'failed' })
     .where(
-      and(
-        eq(recommendationBatches.status, 'running'),
-        lt(recommendationBatches.createdAt, cutoff),
-      ),
+      and(eq(recommendationBatches.status, 'running'), lt(recommendationBatches.createdAt, cutoff)),
     )
 }

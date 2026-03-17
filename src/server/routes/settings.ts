@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
+import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
-import { createLastFmClient } from '@/core/clients/lastfm'
 import { createProvider } from '@/core/providers/factory'
 import type { AppDependencies } from '@/server'
 

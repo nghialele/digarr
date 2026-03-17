@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
-import type { TasteProfile, AiRecommendation } from '@/core/types'
-import type { RecommendationProvider } from './types'
+import type { AiRecommendation, TasteProfile } from '@/core/types'
 import { buildRecommendationPrompt, parseRecommendationResponse } from './prompt'
+import type { RecommendationProvider } from './types'
 
 const DEFAULT_MODEL = 'gpt-4o'
 

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { discover } from '@/core/pipeline/discover'
 import type { TasteProfile } from '@/core/types'
 
@@ -33,8 +33,18 @@ function makeLfm() {
 function makeAi() {
   return {
     getRecommendations: vi.fn().mockResolvedValue([
-      { artistName: 'Burial', reasoning: 'Similar dark electronic sound', confidence: 0.88, genres: ['electronic'] },
-      { artistName: 'Four Tet', reasoning: 'Experimental electronic', confidence: 0.72, genres: ['electronic'] },
+      {
+        artistName: 'Burial',
+        reasoning: 'Similar dark electronic sound',
+        confidence: 0.88,
+        genres: ['electronic'],
+      },
+      {
+        artistName: 'Four Tet',
+        reasoning: 'Experimental electronic',
+        confidence: 0.72,
+        genres: ['electronic'],
+      },
     ]),
   }
 }

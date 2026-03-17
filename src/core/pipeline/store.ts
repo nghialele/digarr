@@ -2,10 +2,7 @@ import type { ScoredArtist } from '@/core/types'
 
 // Minimal database interface -- only what store() needs
 export interface StoreDb {
-  insertBatch: (data: {
-    status: string
-    stats: Record<string, unknown>
-  }) => Promise<{ id: number }>
+  insertBatch: (data: { status: string; stats: Record<string, unknown> }) => Promise<{ id: number }>
 
   upsertArtist: (data: {
     mbid: string

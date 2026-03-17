@@ -1,4 +1,4 @@
-import type { TasteProfile, AiRecommendation } from '@/core/types'
+import type { AiRecommendation, TasteProfile } from '@/core/types'
 
 export interface RecommendationProvider {
   getRecommendations(profile: TasteProfile): Promise<AiRecommendation[]>

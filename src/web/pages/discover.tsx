@@ -65,7 +65,7 @@ function SkeletonGrid() {
 function EmptyState({ filter }: { filter: FilterTab }) {
   const messages: Record<FilterTab, string> = {
     all: 'No recommendations yet. Run a scan to discover new artists.',
-    pending: 'No pending recommendations. You\'re all caught up.',
+    pending: "No pending recommendations. You're all caught up.",
     approved: 'No approved recommendations yet.',
     rejected: 'No rejected recommendations.',
   }
@@ -128,39 +128,45 @@ export function DiscoverPage() {
   // Actions
   // ---------------------------------------------------------------------------
 
-  async function handleApprove(id: number) {
-    setActingIds((prev) => new Set([...prev, id]))
-    try {
-      await updateRecommendation(id, { status: 'approved' })
-      toast.success('Approved')
-      refetch()
-    } catch {
-      toast.error('Failed to approve')
-    } finally {
-      setActingIds((prev) => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
-    }
-  }
+  const handleApprove = useCallback(
+    async (id: number) => {
+      setActingIds((prev) => new Set([...prev, id]))
+      try {
+        await updateRecommendation(id, { status: 'approved' })
+        toast.success('Approved')
+        refetch()
+      } catch {
+        toast.error('Failed to approve')
+      } finally {
+        setActingIds((prev) => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
+      }
+    },
+    [refetch],
+  )
 
-  async function handleReject(id: number) {
-    setActingIds((prev) => new Set([...prev, id]))
-    try {
-      await updateRecommendation(id, { status: 'rejected' })
-      toast.success('Rejected')
-      refetch()
-    } catch {
-      toast.error('Failed to reject')
-    } finally {
-      setActingIds((prev) => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
-    }
-  }
+  const handleReject = useCallback(
+    async (id: number) => {
+      setActingIds((prev) => new Set([...prev, id]))
+      try {
+        await updateRecommendation(id, { status: 'rejected' })
+        toast.success('Rejected')
+        refetch()
+      } catch {
+        toast.error('Failed to reject')
+      } finally {
+        setActingIds((prev) => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
+      }
+    },
+    [refetch],
+  )
 
   async function handleRetry(id: number) {
     setActingIds((prev) => new Set([...prev, id]))
@@ -199,14 +205,17 @@ export function DiscoverPage() {
     }
   }
 
-  function handleCardClick(id: number) {
-    if (expandedId === id) {
-      setExpandedId(null)
-    } else {
-      setExpandedId(id)
-      setSelectedId(id)
-    }
-  }
+  const handleCardClick = useCallback(
+    (id: number) => {
+      if (expandedId === id) {
+        setExpandedId(null)
+      } else {
+        setExpandedId(id)
+        setSelectedId(id)
+      }
+    },
+    [expandedId],
+  )
 
   // ---------------------------------------------------------------------------
   // Keyboard shortcuts
@@ -229,11 +238,13 @@ export function DiscoverPage() {
       if (e.key === 'j') {
         e.preventDefault()
         const nextIndex = currentIndex < current.length - 1 ? currentIndex + 1 : 0
-        setSelectedId(current[nextIndex].id)
+        const nextItem = current[nextIndex]
+        if (nextItem) setSelectedId(nextItem.id)
       } else if (e.key === 'k') {
         e.preventDefault()
         const prevIndex = currentIndex > 0 ? currentIndex - 1 : current.length - 1
-        setSelectedId(current[prevIndex].id)
+        const prevItem = current[prevIndex]
+        if (prevItem) setSelectedId(prevItem.id)
       } else if (e.key === 'a' && selectedId != null) {
         e.preventDefault()
         handleApprove(selectedId)
@@ -248,7 +259,7 @@ export function DiscoverPage() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedId, handleApprove, handleCardClick, handleReject])
 
   // ---------------------------------------------------------------------------
   // Render
@@ -274,9 +285,7 @@ export function DiscoverPage() {
                 setSelectedId(null)
               }}
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                filter === tab
-                  ? 'bg-accent text-bg'
-                  : 'text-muted hover:text-text'
+                filter === tab ? 'bg-accent text-bg' : 'text-muted hover:text-text'
               }`}
             >
               {FILTER_LABELS[tab]}

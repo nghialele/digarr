@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mock all pipeline stages
@@ -145,7 +145,9 @@ describe('PipelineOrchestrator', () => {
 
   const libraryArtists = [{ mbid: 'mbid-1', name: 'Artist 1' }]
   const tasteProfile = {
-    topArtists: [{ name: 'Artist 1', mbid: 'mbid-1', playCount: 100, source: 'listenbrainz' as const }],
+    topArtists: [
+      { name: 'Artist 1', mbid: 'mbid-1', playCount: 100, source: 'listenbrainz' as const },
+    ],
     topGenres: [],
     listeningPatterns: { totalListens: 100, recentTrend: 'stable' as const },
   }
@@ -160,6 +162,7 @@ describe('PipelineOrchestrator', () => {
       discoveries: discovered,
     },
   ]
+  // biome-ignore lint/style/noNonNullAssertion: test fixture is always defined
   const scored = [{ ...resolved[0]!, score: 0.7, sourceScores: { consensus: 0.25 } }]
   const filtered = scored
 
@@ -184,11 +187,27 @@ describe('PipelineOrchestrator', () => {
     const { createMusicBrainzClient } = await import('@/core/clients/musicbrainz')
     const { createProvider } = await import('@/core/providers/factory')
 
-    vi.mocked(createLidarrClient).mockReturnValue({ getArtists: vi.fn() } as ReturnType<typeof createLidarrClient>)
-    vi.mocked(createListenBrainzClient).mockReturnValue({ getTopArtists: vi.fn(), getListeningActivity: vi.fn(), getSimilarArtists: vi.fn() } as unknown as ReturnType<typeof createListenBrainzClient>)
-    vi.mocked(createLastFmClient).mockReturnValue({ getTopArtists: vi.fn(), getSimilarArtists: vi.fn() } as unknown as ReturnType<typeof createLastFmClient>)
-    vi.mocked(createMusicBrainzClient).mockReturnValue({ lookupArtist: vi.fn(), searchArtist: vi.fn(), extractStreamingUrls: vi.fn() } as unknown as ReturnType<typeof createMusicBrainzClient>)
-    vi.mocked(createProvider).mockResolvedValue({ getRecommendations: vi.fn(), testConnection: vi.fn() })
+    vi.mocked(createLidarrClient).mockReturnValue({ getArtists: vi.fn() } as unknown as ReturnType<
+      typeof createLidarrClient
+    >)
+    vi.mocked(createListenBrainzClient).mockReturnValue({
+      getTopArtists: vi.fn(),
+      getListeningActivity: vi.fn(),
+      getSimilarArtists: vi.fn(),
+    } as unknown as ReturnType<typeof createListenBrainzClient>)
+    vi.mocked(createLastFmClient).mockReturnValue({
+      getTopArtists: vi.fn(),
+      getSimilarArtists: vi.fn(),
+    } as unknown as ReturnType<typeof createLastFmClient>)
+    vi.mocked(createMusicBrainzClient).mockReturnValue({
+      lookupArtist: vi.fn(),
+      searchArtist: vi.fn(),
+      extractStreamingUrls: vi.fn(),
+    } as unknown as ReturnType<typeof createMusicBrainzClient>)
+    vi.mocked(createProvider).mockResolvedValue({
+      getRecommendations: vi.fn(),
+      testConnection: vi.fn(),
+    })
 
     mockCollect.mockResolvedValue(libraryArtists)
     mockAnalyze.mockResolvedValue(tasteProfile)
@@ -203,13 +222,34 @@ describe('PipelineOrchestrator', () => {
     const db = makeDb()
     const order: string[] = []
 
-    mockCollect.mockImplementation(async () => { order.push('collect'); return libraryArtists })
-    mockAnalyze.mockImplementation(async () => { order.push('analyze'); return tasteProfile })
-    mockDiscover.mockImplementation(async () => { order.push('discover'); return discovered })
-    mockResolve.mockImplementation(async () => { order.push('resolve'); return resolved })
-    mockScore.mockImplementation(() => { order.push('score'); return scored })
-    mockFilter.mockImplementation(() => { order.push('filter'); return filtered })
-    mockStore.mockImplementation(async () => { order.push('store'); return 42 })
+    mockCollect.mockImplementation(async () => {
+      order.push('collect')
+      return libraryArtists
+    })
+    mockAnalyze.mockImplementation(async () => {
+      order.push('analyze')
+      return tasteProfile
+    })
+    mockDiscover.mockImplementation(async () => {
+      order.push('discover')
+      return discovered
+    })
+    mockResolve.mockImplementation(async () => {
+      order.push('resolve')
+      return resolved
+    })
+    mockScore.mockImplementation(() => {
+      order.push('score')
+      return scored
+    })
+    mockFilter.mockImplementation(() => {
+      order.push('filter')
+      return filtered
+    })
+    mockStore.mockImplementation(async () => {
+      order.push('store')
+      return 42
+    })
 
     await orchestrator.run({ db, settings: defaultSettings })
 
@@ -250,7 +290,9 @@ describe('PipelineOrchestrator', () => {
     const errors: unknown[] = []
     orchestrator.on('error', (err: unknown) => errors.push(err))
 
-    await expect(orchestrator.run({ db, settings: defaultSettings })).rejects.toThrow('collect exploded')
+    await expect(orchestrator.run({ db, settings: defaultSettings })).rejects.toThrow(
+      'collect exploded',
+    )
     expect(errors).toHaveLength(1)
     expect(errors[0]).toBe(boom)
   })

@@ -1,11 +1,11 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { TasteProfile } from '@/core/types'
 
 const mockChatCreate = vi.fn()
 
 vi.mock('openai', () => {
   const MockOpenAI = vi.fn(function (this: Record<string, unknown>) {
-    this['chat'] = { completions: { create: mockChatCreate } }
+    this.chat = { completions: { create: mockChatCreate } }
   })
   return { default: MockOpenAI }
 })
