@@ -36,23 +36,7 @@ export async function upsertArtist(db: Database, artist: ArtistInsert): Promise<
   return row
 }
 
-export async function getArtistByMbid(db: Database, mbid: string): Promise<ArtistRow | null> {
-  const rows = await db.select().from(artists).where(eq(artists.mbid, mbid)).limit(1)
-  return rows[0] ?? null
-}
-
 export async function getArtistById(db: Database, id: number): Promise<ArtistRow | null> {
   const rows = await db.select().from(artists).where(eq(artists.id, id)).limit(1)
   return rows[0] ?? null
-}
-
-export async function bulkUpsertArtists(
-  db: Database,
-  artistsData: ArtistInsert[],
-): Promise<ArtistRow[]> {
-  const results: ArtistRow[] = []
-  for (const artist of artistsData) {
-    results.push(await upsertArtist(db, artist))
-  }
-  return results
 }
