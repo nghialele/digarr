@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { cn } from '../lib/utils'
 import { StreamingLinks } from './streaming-links'
 import { Button } from './ui/button'
@@ -173,6 +173,62 @@ function GenrePills({ genres, max = 4 }: { genres: string[] | null; max?: number
 }
 
 // ---------------------------------------------------------------------------
+// Swipe hook (touch devices only)
+// ---------------------------------------------------------------------------
+
+const SWIPE_THRESHOLD = 50
+
+function useSwipe(onSwipeRight: (() => void) | null, onSwipeLeft: (() => void) | null) {
+  const startX = useRef(0)
+  const startY = useRef(0)
+  const deltaX = useRef(0)
+  const swiping = useRef(false)
+  const [offset, setOffset] = useState(0)
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    if (!touch) return
+    startX.current = touch.clientX
+    startY.current = touch.clientY
+    deltaX.current = 0
+    swiping.current = false
+  }, [])
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    if (!touch) return
+    const dx = touch.clientX - startX.current
+    const dy = touch.clientY - startY.current
+
+    // If vertical movement dominates, bail out -- let the page scroll
+    if (!swiping.current && Math.abs(dy) > Math.abs(dx)) return
+
+    // Lock into horizontal swipe once threshold exceeded
+    if (Math.abs(dx) > 10) swiping.current = true
+
+    if (swiping.current) {
+      deltaX.current = dx
+      setOffset(dx)
+    }
+  }, [])
+
+  const onTouchEnd = useCallback(() => {
+    if (swiping.current) {
+      if (deltaX.current > SWIPE_THRESHOLD && onSwipeRight) {
+        onSwipeRight()
+      } else if (deltaX.current < -SWIPE_THRESHOLD && onSwipeLeft) {
+        onSwipeLeft()
+      }
+    }
+    swiping.current = false
+    deltaX.current = 0
+    setOffset(0)
+  }, [onSwipeRight, onSwipeLeft])
+
+  return { offset, onTouchStart, onTouchMove, onTouchEnd }
+}
+
+// ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
 
@@ -189,6 +245,28 @@ export function RecommendationCard({
   const isPending = rec.status === 'pending' || rec.status === 'approved'
   const isActed = rec.status !== 'pending'
 
+  // Swipe: right = approve, left = reject (only for pending cards)
+  const canSwipe = isPending
+  const { offset, onTouchStart, onTouchMove, onTouchEnd } = useSwipe(
+    canSwipe ? () => onApprove(rec.id) : null,
+    canSwipe ? () => onReject(rec.id) : null,
+  )
+
+  // Visual feedback: tint card during swipe
+  const swipeStyle: React.CSSProperties =
+    offset !== 0
+      ? {
+          transform: `translateX(${offset}px)`,
+          transition: 'none',
+          backgroundColor:
+            offset > SWIPE_THRESHOLD
+              ? 'rgba(125, 184, 138, 0.08)'
+              : offset < -SWIPE_THRESHOLD
+                ? 'rgba(196, 122, 122, 0.08)'
+                : undefined,
+        }
+      : {}
+
   return (
     <button
       type="button"
@@ -197,6 +275,7 @@ export function RecommendationCard({
         isSelected ? 'border-accent' : 'border-border hover:border-border/80',
         expanded ? 'col-span-full' : '',
       )}
+      style={swipeStyle}
       onClick={() => onClick?.(rec.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -204,6 +283,9 @@ export function RecommendationCard({
           onClick?.(rec.id)
         }
       }}
+      onTouchStart={canSwipe ? onTouchStart : undefined}
+      onTouchMove={canSwipe ? onTouchMove : undefined}
+      onTouchEnd={canSwipe ? onTouchEnd : undefined}
     >
       {/* Compact layout (always shown) */}
       <div className="p-4 space-y-3 flex-1">

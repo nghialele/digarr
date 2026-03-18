@@ -360,13 +360,14 @@ export function DiscoverPage() {
         </div>
       </div>
 
-      {/* Keyboard hint */}
-      <p className="text-xs text-muted">
+      {/* Keyboard hint (hidden on small screens, swipe hint shown instead) */}
+      <p className="text-xs text-muted hidden sm:block">
         Shortcuts: <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd> navigate{' '}
         <kbd className="px-1 bg-surface border border-border rounded">a</kbd> approve{' '}
         <kbd className="px-1 bg-surface border border-border rounded">r</kbd> reject{' '}
         <kbd className="px-1 bg-surface border border-border rounded">enter</kbd> expand
       </p>
+      <p className="text-xs text-muted sm:hidden">Swipe right to approve, left to reject</p>
 
       {/* Card grid */}
       {loading ? (
