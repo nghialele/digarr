@@ -19,6 +19,7 @@ import {
 } from './db/queries/recommendations'
 import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
+import { createUser, getUserById, getUserByUsername, getUserCount } from './db/queries/users'
 import { artists, recommendationBatches, recommendations } from './db/schema'
 import { createApp } from './server'
 
@@ -96,6 +97,10 @@ const app = createApp({
     scheduler.start(cron, runPipeline)
     console.log(`Scheduler restarted with cron: ${cron}`)
   },
+  createUser: (data) => createUser(db, data),
+  getUserByUsername: (username) => getUserByUsername(db, username),
+  getUserById: (id) => getUserById(db, id),
+  getUserCount: () => getUserCount(db),
 })
 
 const port = envConfig.port

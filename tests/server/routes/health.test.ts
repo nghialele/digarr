@@ -30,6 +30,16 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     getBatch: vi.fn(async () => null),
     getArtistById: vi.fn(async () => null),
     restartScheduler: vi.fn(),
+    createUser: vi.fn(async () => ({
+      id: 1,
+      username: 'test',
+      isAdmin: false,
+      preferences: null,
+      createdAt: new Date(),
+    })),
+    getUserByUsername: vi.fn(async () => null),
+    getUserById: vi.fn(async () => null),
+    getUserCount: vi.fn(async () => 0),
     ...overrides,
   }
 }

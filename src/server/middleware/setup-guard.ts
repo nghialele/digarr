@@ -6,7 +6,7 @@ export function setupGuard(isSetupComplete: () => Promise<boolean>) {
     if (
       path.startsWith('/api/setup') ||
       path.startsWith('/api/settings/test') ||
-      path === '/api/auth/status' ||
+      path.startsWith('/api/auth/') ||
       path === '/health'
     ) {
       return next()

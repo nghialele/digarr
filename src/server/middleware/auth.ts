@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { createMiddleware } from 'hono/factory'
 import { envConfig } from '@/config/env'
+import { getSession } from '@/core/sessions'
 
 function safeCompare(a: string, b: string): boolean {
   const ab = Buffer.from(a)
@@ -9,16 +10,20 @@ function safeCompare(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb)
 }
 
-export function authGuard() {
+// Paths that never require authentication
+const PUBLIC_PATHS = new Set([
+  '/health',
+  '/api/auth/status',
+  '/api/auth/login',
+  '/api/auth/register',
+])
+
+export function authGuard(hasUsers: () => Promise<boolean>) {
   return createMiddleware(async (c, next) => {
-    const token = envConfig.authToken
-    if (!token) return next() // auth disabled
+    // Skip auth for public paths
+    if (PUBLIC_PATHS.has(c.req.path)) return next()
 
-    // Skip auth for health check and auth status
-    if (c.req.path === '/health' || c.req.path === '/api/auth/status') return next()
-
-    // Check Authorization header first, then fall back to ?token= query param
-    // (EventSource/SSE does not support custom headers)
+    // Extract token from Authorization header or query param (SSE fallback)
     const header = c.req.header('Authorization')
     let provided: string | undefined
     if (header?.startsWith('Bearer ')) {
@@ -28,10 +33,27 @@ export function authGuard() {
       if (qp) provided = qp
     }
 
-    if (!provided || !safeCompare(provided, token)) {
-      return c.json({ error: 'Unauthorized' }, 401)
+    // Try session token first
+    if (provided) {
+      const session = getSession(provided)
+      if (session) {
+        c.set('userId' as never, session.userId as never)
+        return next()
+      }
     }
 
-    return next()
+    // Fall back to legacy DIGARR_AUTH_TOKEN
+    const legacyToken = envConfig.authToken
+    if (legacyToken && provided && safeCompare(provided, legacyToken)) {
+      return next()
+    }
+
+    // Auth is required if a legacy token is configured OR users have been registered
+    const usersExist = await hasUsers()
+    if (!legacyToken && !usersExist) {
+      return next() // No auth configured at all
+    }
+
+    return c.json({ error: 'Unauthorized' }, 401)
   })
 }

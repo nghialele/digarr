@@ -11,10 +11,12 @@ import type {
   StatusUpdateExtra,
 } from '@/db/queries/recommendations'
 import type { SetupConfig } from '@/db/queries/settings'
+import type { UserPublic } from '@/db/queries/users'
 import { authGuard } from './middleware/auth'
 import { setupGuard } from './middleware/setup-guard'
 import { analyticsRoutes } from './routes/analytics'
 import { artistRoutes } from './routes/artists'
+import { authRoutes } from './routes/auth'
 import { batchRoutes } from './routes/batches'
 import { healthRoutes } from './routes/health'
 import { lidarrRoutes } from './routes/lidarr'
@@ -50,6 +52,17 @@ export type AppDependencies = {
   // Artist query functions
   getArtistById: (id: number) => Promise<unknown | null>
   restartScheduler: (cron: string | null) => void
+  // User query functions
+  createUser: (data: {
+    username: string
+    passwordHash: string
+    isAdmin?: boolean
+  }) => Promise<UserPublic>
+  getUserByUsername: (
+    username: string,
+  ) => Promise<{ id: number; username: string; passwordHash: string; isAdmin: boolean } | null>
+  getUserById: (id: number) => Promise<UserPublic | null>
+  getUserCount: () => Promise<number>
 }
 
 export function createApp(deps: AppDependencies) {
@@ -61,14 +74,19 @@ export function createApp(deps: AppDependencies) {
       origin: envConfig.allowedOrigin ?? (process.env.NODE_ENV === 'production' ? '' : '*'),
     }),
   )
-  app.use('*', authGuard())
+  app.use('*', authGuard(async () => (await deps.getUserCount()) > 0))
   app.use('*', setupGuard(deps.isSetupComplete))
 
   // Auth status (unauthenticated -- tells the frontend whether auth is required)
-  app.get('/api/auth/status', (c) => {
-    return c.json({ required: !!envConfig.authToken })
+  app.get('/api/auth/status', async (c) => {
+    const userCount = await deps.getUserCount()
+    return c.json({
+      required: userCount > 0 || !!envConfig.authToken,
+      hasUsers: userCount > 0,
+    })
   })
 
+  app.route('/', authRoutes(deps))
   app.route('/', healthRoutes({ db: deps.db }))
   app.route('/', setupRoutes(deps))
   app.route('/', settingsRoutes(deps))
