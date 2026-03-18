@@ -191,23 +191,29 @@ This project was built with the help of agentic AI coding tools. The design, arc
 
 The codebase went through multiple rounds of verification before release:
 
-- **368 unit and integration tests** across 40 test files -- API clients, pipeline stages, server routes, database queries, and UI components
-- **Static analysis** -- zero errors from TypeScript strict mode (`noUncheckedIndexedAccess`, `isolatedModules`) and Biome linter across 96 source files
-- **Security audit** -- identified and fixed critical vulnerabilities:
+- **386 unit and integration tests** across 40 test files -- API clients, pipeline stages, server routes, database queries, auth/session logic, and UI components (including RecommendationCard, PipelineProgress, Settings, Dashboard)
+- **Static analysis** -- zero errors from TypeScript strict mode (`noUncheckedIndexedAccess`, `isolatedModules`) and Biome linter across 131 checked files
+- **Security audit** -- identified and fixed vulnerabilities across multiple review cycles:
   - CORS restricted to configured origin (no wildcard in production)
   - Settings PATCH endpoint allowlisted to prevent arbitrary field injection
   - Setup endpoint locked after completion to prevent re-registration attacks
   - URL validation on connection test endpoints to prevent SSRF
   - Streaming link URLs sanitized at render time to prevent XSS
   - SSE stream lifecycle fixed to prevent server-side connection leaks
-  - Database writes wrapped with proper status transitions (running -> completed)
-  - Artist upsert uses COALESCE to prevent null values from clobbering existing data
-- **Code review** -- two full reviews covering bugs, type safety, performance, and API design. Key fixes:
-  - Rejection cooldown and feedback learning loop wired to actual database queries (were previously disconnected)
-  - Cron scheduler connected to settings (was instantiated but never started)
-  - Health check verifies database connectivity (returns 503 on failure)
-  - Default values synchronized across schema, backend, and frontend
-- **Dependency audit** -- frontend-only packages moved to devDependencies, production Docker image slimmed from 564 MB to 213 MB, container runs as non-root user
+  - Timing-safe token comparison in auth middleware to prevent timing attacks
+  - Webhook SSRF protection: private IP blocklist (RFC1918, link-local, cloud metadata 169.254.x.x), protocol validation, 10s timeout, credential scrubbing in logs
+  - Password hashing via scrypt with random salt and timing-safe verification
+  - Pagination offset/limit clamped to prevent negative or NaN values reaching the database
+  - Global 401 handler clears stale auth tokens and forces re-authentication
+- **Code reviews** -- five full reviews (after v0.1.x, v0.2.x, and v0.3.x milestones, plus per-feature spec compliance and quality checks). Notable finds and fixes:
+  - Batch stats were hardcoded to zeros -- store() now tracks real discovered/added/failed counts
+  - Genre overlap scoring (20% of recommendation score) was permanently zero -- wired Lidarr genre extraction through the pipeline
+  - Cron schedule hot-reload was broken -- saving a new cron now restarts the scheduler immediately, with validation for empty/invalid expressions
+  - Auth middleware setupGuard exemption for `/api/auth/status` was working by accident -- fixed to be explicit
+  - `safeCompare` buffer length check corrected to use byte length instead of string char length
+  - Quick-discover route had 100+ lines of duplicated pipeline logic with dynamic imports -- simplified to static imports and shared functions
+  - Dead code cleanup removed 6 unused functions across 4 files
+- **Dependency audit** -- frontend-only packages moved to devDependencies, production Docker image slimmed from 564 MB to 213 MB, container runs as non-root user. Only one runtime dependency added since initial release (@tanstack/react-query, as a dev dependency bundled by Vite)
 - **End-to-end testing** -- deployed and tested against a real Lidarr instance, ListenBrainz account, and AI provider across multiple iterations
 
 If you find issues, please [open an issue](https://github.com/iuliandita/digarr/issues).
