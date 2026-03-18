@@ -12,6 +12,18 @@
   --color-muted: #6b7084;
 }
 
+[data-theme="light"] {
+  --color-bg: #f5f5f0;
+  --color-surface: #ffffff;
+  --color-border: #d4d4d0;
+  --color-accent: #9b6b3d;
+  --color-approve: #3d7a4e;
+  --color-reject: #b85454;
+  --color-info: #4a7a9b;
+  --color-text: #1a1a24;
+  --color-muted: #6b6b78;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-text);

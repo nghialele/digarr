@@ -1,10 +1,12 @@
 import { QueryClientProvider } from '@tanstack/react-query'
+import { Moon, Monitor, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { AuthGate } from './components/auth-gate'
 import { getSetupStatus, triggerPipeline } from './lib/api'
 import { queryClient } from './lib/query-client'
+import { type Theme, applyTheme, getStoredTheme, setStoredTheme } from './lib/theme'
 import { AnalyticsPage } from './pages/analytics'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
@@ -47,8 +49,44 @@ function MobileMenuIcon({ open }: { open: boolean }) {
 // App shell
 // ---------------------------------------------------------------------------
 
+const THEME_CYCLE: Theme[] = ['dark', 'light', 'system']
+const THEME_ICONS = { dark: Moon, light: Sun, system: Monitor } as const
+const THEME_LABELS = { dark: 'Dark', light: 'Light', system: 'System' } as const
+
+function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) => void }) {
+  const Icon = THEME_ICONS[theme]
+  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length] ?? 'dark'
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(next)}
+      className="p-1.5 text-muted hover:text-text transition-colors"
+      aria-label={`Theme: ${THEME_LABELS[theme]}. Click for ${THEME_LABELS[next]}`}
+      title={`${THEME_LABELS[theme]} theme`}
+    >
+      <Icon size={18} />
+    </button>
+  )
+}
+
 function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [theme, setThemeState] = useState<Theme>(getStoredTheme)
+
+  function handleThemeChange(t: Theme) {
+    setThemeState(t)
+    setStoredTheme(t)
+    applyTheme(t)
+  }
+
+  // Listen for system preference changes when in system mode
+  useEffect(() => {
+    if (theme !== 'system') return
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    const handler = () => applyTheme('system')
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [theme])
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'text-text' : 'text-muted hover:text-text'
@@ -76,6 +114,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle theme={theme} onChange={handleThemeChange} />
             <button
               type="button"
               onClick={() =>
@@ -128,6 +167,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
 export function App() {
   const [setupComplete, setSetupComplete] = useState<boolean | null>(null)
 
+  // Apply theme immediately on mount (before first render flicker)
+  useEffect(() => {
+    applyTheme(getStoredTheme())
+  }, [])
+
   useEffect(() => {
     getSetupStatus()
       .then((s) => setSetupComplete(s.setupComplete))
@@ -140,7 +184,7 @@ export function App() {
     return (
       <AuthGate>
         <SetupWizard onComplete={() => setSetupComplete(true)} />
-        <Toaster theme="dark" />
+        <Toaster theme="system" />
       </AuthGate>
     )
   }
@@ -158,7 +202,7 @@ export function App() {
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </AppShell>
-          <Toaster theme="dark" />
+          <Toaster theme="system" />
         </BrowserRouter>
       </AuthGate>
     </QueryClientProvider>
