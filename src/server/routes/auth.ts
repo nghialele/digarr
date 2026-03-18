@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
-import { createSession, deleteSession } from '@/core/sessions'
+import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
 import type { AppDependencies } from '@/server'
 
 export function authRoutes(deps: AppDependencies) {
@@ -115,7 +115,12 @@ export function authRoutes(deps: AppDependencies) {
     const newHash = hashPassword(newPassword)
     await deps.updatePassword(userId, newHash)
 
-    return c.json({ ok: true })
+    // Invalidate all sessions for this user, then create a fresh one
+    clearUserSessions(userId)
+    const newToken = generateSessionToken()
+    createSession(userId, newToken)
+
+    return c.json({ ok: true, token: newToken })
   })
 
   return router

@@ -38,9 +38,15 @@ spec:
         {{- include "digarr.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: database
     spec:
+      securityContext:
+        fsGroup: 999
       containers:
         - name: postgresql
           image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
           ports:
             - name: postgresql
               containerPort: 5432

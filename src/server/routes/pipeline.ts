@@ -9,6 +9,7 @@ import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
 import { createProvider } from '@/core/providers/factory'
 import { upsertArtist } from '@/db/queries/artists'
+import { DEFAULT_PREFERENCES } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import { createPipelineSSEStream } from '@/server/sse'
 
@@ -140,31 +141,35 @@ export function pipelineRoutes(deps: AppDependencies) {
 
         if (discovered.length === 0) return
 
-        // Resolve, score, filter, store
-        const prefs = (settings.preferences as Record<string, unknown>) ?? {}
-        const weights = (prefs.scoringWeights as Record<string, number>) ?? {
-          consensus: 0.3,
-          similarity: 0.25,
-          genreOverlap: 0.2,
-          aiConfidence: 0.15,
-          feedbackBoost: 0.1,
+        // Merge preferences with defaults (same pattern as orchestrator)
+        const rawPrefs = (settings.preferences as Record<string, unknown>) ?? {}
+        const prefs = {
+          ...DEFAULT_PREFERENCES,
+          ...rawPrefs,
+          scoringWeights: {
+            ...DEFAULT_PREFERENCES.scoringWeights,
+            ...(rawPrefs.scoringWeights as Record<string, number> | undefined),
+          },
         }
 
         const resolved = await resolve(discovered, mb, undefined, lidarr)
-        const scored = score(resolved, [], weights as never, new Map())
+        const rejectedMbids = await deps.storeDb.getRejectedMbids(prefs.rejectionCooldownDays)
+        const feedbackHistory = await deps.storeDb.getFeedbackHistory()
+        const scored = score(resolved, [], prefs.scoringWeights, feedbackHistory)
         const existingMbids = await deps.storeDb.getExistingRecommendationMbids()
         for (const mbid of existingMbids) libraryMbids.add(mbid)
 
         const filtered = filter(
           scored,
           libraryMbids,
-          new Map(),
-          Number(prefs.rejectionCooldownDays ?? 90),
-          Number(prefs.scoreThreshold ?? 0.3),
+          rejectedMbids,
+          prefs.rejectionCooldownDays,
+          prefs.scoreThreshold,
         )
 
+        const userId = c.get('userId' as never) as number | undefined
         if (filtered.length > 0) {
-          await store(filtered, deps.storeDb)
+          await store(filtered, deps.storeDb, { userId })
         }
       } catch (err) {
         console.error('Quick discover failed:', err)

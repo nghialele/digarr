@@ -16,6 +16,7 @@ import {
   getLidarrRootFolders,
   getSettings,
   logoutUser,
+  setStoredToken,
   testService,
   testWebhook,
   updateSettings,
@@ -878,7 +879,9 @@ function AccountTab({ settings }: { settings: Settings }) {
     }
     setSaving(true)
     try {
-      await changePassword(currentPassword, newPassword)
+      const res = await changePassword(currentPassword, newPassword)
+      // Server invalidated old sessions and issued a new token
+      if (res.token) setStoredToken(res.token)
       toast.success('Password changed')
       setCurrentPassword('')
       setNewPassword('')
@@ -1015,7 +1018,7 @@ function SettingsSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex gap-1 border-b border-border mb-6">
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-9 w-28 mb-1" />
         ))}
       </div>

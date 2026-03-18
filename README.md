@@ -124,7 +124,7 @@ All configuration is done through the web UI after initial setup. Key settings:
 | Method | Path | Notes |
 |--------|------|-------|
 | Docker Compose | [`deploy/docker/`](deploy/docker/) | Recommended. Includes PostgreSQL. |
-| Helm chart | [`deploy/helm/digarr/`](deploy/helm/digarr/) | Kubernetes. Includes Bitnami PostgreSQL subchart. |
+| Helm chart | [`deploy/helm/digarr/`](deploy/helm/digarr/) | Kubernetes. Bundled PostgreSQL or bring your own. |
 | Raw k8s manifests | [`deploy/k8s/`](deploy/k8s/) | Reference manifests for advanced setups. |
 
 ### Environment Variables
@@ -155,6 +155,9 @@ See [`.env.example`](.env.example) for the full list with comments.
 | `AI_API_KEY` | -- | AI provider API key |
 | `AI_BASE_URL` | -- | Custom API base URL (for Ollama or compatible APIs) |
 | `DIGARR_AUTH_TOKEN` | -- | Bearer token for API authentication (empty = auth disabled) |
+| `DIGARR_INITIAL_USERNAME` | -- | Auto-create admin user on first boot (requires password) |
+| `DIGARR_INITIAL_PASSWORD` | -- | Password for auto-created admin (min 8 characters) |
+| `WEBHOOK_URL` | -- | Scan completion webhook (Discord, Slack, ntfy, or any HTTP endpoint) |
 
 ---
 
