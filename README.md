@@ -46,7 +46,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open `http://localhost:3000` and complete the setup wizard. Alternatively, fill in the service env vars in `.env` and setup completes automatically on first boot.
+Open `http://localhost:3000` and complete the setup wizard. Alternatively, fill in the service env vars in `.env` and setup completes automatically on first boot. Database migrations run automatically on every startup.
 
 ### Local Development
 
