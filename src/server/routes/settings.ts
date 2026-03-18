@@ -80,6 +80,7 @@ export function settingsRoutes(deps: AppDependencies) {
     const service = c.req.param('service')
     const body = await c.req.json()
 
+    // SSRF mitigation: reject non-HTTP URLs before they reach service clients
     for (const field of ['url', 'baseUrl'] as const) {
       const val = (body as Record<string, unknown>)[field]
       if (typeof val === 'string' && val && !isHttpUrl(val)) {
