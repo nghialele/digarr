@@ -5,7 +5,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-269_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-281_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
@@ -30,6 +30,7 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 - **Configurable pipeline** -- score thresholds, scoring weights, library seed ratio, rejection cooldowns, cron scheduling with hot-reload
 - **Setup wizard** -- guided 4-step setup with connection testing
 - **Dark UI** -- clean, responsive interface with keyboard shortcuts (j/k navigate, a approve, r reject), paginated discover view
+- **Optional auth** -- protect the API with a shared bearer token (`DIGARR_AUTH_TOKEN` env var)
 - **Self-hosted** -- runs as a single container alongside your existing *arr stack
 
 ---
@@ -149,6 +150,7 @@ See [`.env.example`](.env.example) for the full list with comments.
 | `AI_MODEL` | -- | AI model name |
 | `AI_API_KEY` | -- | AI provider API key |
 | `AI_BASE_URL` | -- | Custom API base URL (for Ollama or compatible APIs) |
+| `DIGARR_AUTH_TOKEN` | -- | Bearer token for API authentication (empty = auth disabled) |
 
 ---
 
@@ -160,7 +162,7 @@ See [`.env.example`](.env.example) for the full list with comments.
 - **Database**: PostgreSQL via [Drizzle ORM](https://orm.drizzle.team)
 - **Build**: [Vite](https://vite.dev)
 - **Lint/Format**: [Biome](https://biomejs.dev)
-- **Tests**: [Vitest](https://vitest.dev) (269 tests)
+- **Tests**: [Vitest](https://vitest.dev) (281 tests)
 
 ---
 
@@ -172,7 +174,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 bun install
 bun run lint        # biome check
 bun run typecheck   # tsc --noEmit
-bun run test        # vitest (269 tests)
+bun run test        # vitest (281 tests)
 ```
 
 ---
