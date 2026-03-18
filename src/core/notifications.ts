@@ -65,4 +65,3 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
     clearTimeout(timeout)
   }
 }
-
