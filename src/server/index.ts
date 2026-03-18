@@ -47,6 +47,7 @@ export type AppDependencies = {
   getBatch: (id: number) => Promise<unknown | null>
   // Artist query functions
   getArtistById: (id: number) => Promise<unknown | null>
+  restartScheduler: (cron: string) => void
 }
 
 export function createApp(deps: AppDependencies) {

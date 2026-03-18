@@ -48,6 +48,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     listBatches: vi.fn(async () => []),
     getBatch: vi.fn(async () => null),
     getArtistById: vi.fn(async () => null),
+    restartScheduler: vi.fn(),
     ...overrides,
   }
 }
@@ -104,6 +105,42 @@ describe('PATCH /api/settings', () => {
     expect(updateSettings).toHaveBeenCalledTimes(1)
     const body = await res.json()
     expect(body.lidarrUrl).toBe('http://new:8686')
+  })
+
+  it('restarts scheduler when cron is updated', async () => {
+    const restartScheduler = vi.fn()
+    const app = createApp(makeDeps({ restartScheduler }))
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { scheduleCron: '0 3 * * *' } }),
+    })
+    expect(res.status).toBe(200)
+    expect(restartScheduler).toHaveBeenCalledWith('0 3 * * *')
+  })
+
+  it('does not restart scheduler when preferences lack scheduleCron', async () => {
+    const restartScheduler = vi.fn()
+    const app = createApp(makeDeps({ restartScheduler }))
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { librarySeedRatio: 0.5 } }),
+    })
+    expect(res.status).toBe(200)
+    expect(restartScheduler).not.toHaveBeenCalled()
+  })
+
+  it('does not restart scheduler when no preferences in body', async () => {
+    const restartScheduler = vi.fn()
+    const app = createApp(makeDeps({ restartScheduler }))
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lidarrUrl: 'http://new:8686' }),
+    })
+    expect(res.status).toBe(200)
+    expect(restartScheduler).not.toHaveBeenCalled()
   })
 
   it('returns 403 when setup not complete', async () => {

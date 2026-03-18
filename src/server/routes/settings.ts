@@ -52,6 +52,12 @@ export function settingsRoutes(deps: AppDependencies) {
       }
     }
     await deps.updateSettings(sanitized)
+
+    const prefs = sanitized.preferences as Record<string, unknown> | undefined
+    if (prefs?.scheduleCron && typeof prefs.scheduleCron === 'string') {
+      deps.restartScheduler(prefs.scheduleCron)
+    }
+
     const row = await deps.getSettings()
     if (!row) {
       return c.json({ error: 'Settings not found' }, 404)

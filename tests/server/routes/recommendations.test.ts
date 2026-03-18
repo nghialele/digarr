@@ -71,6 +71,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     listBatches: vi.fn(async () => []),
     getBatch: vi.fn(async () => null),
     getArtistById: vi.fn(async () => null),
+    restartScheduler: vi.fn(),
     ...overrides,
   }
 }

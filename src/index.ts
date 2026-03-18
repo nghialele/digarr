@@ -74,6 +74,15 @@ const app = createApp({
   listBatches: () => listBatches(db),
   getBatch: (id) => getBatch(db, id),
   getArtistById: (id) => getArtistById(db, id),
+  restartScheduler: (cron: string) => {
+    scheduler.start(cron, async () => {
+      const currentSettings = await getSettings(db)
+      if (currentSettings) {
+        await orchestrator.run({ db: storeDb, settings: currentSettings })
+      }
+    })
+    console.log(`Scheduler restarted with cron: ${cron}`)
+  },
 })
 
 const port = envConfig.port
