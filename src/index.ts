@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import { eq } from 'drizzle-orm'
+import { canAutoSetup, envConfig } from './config/env'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import { PipelineScheduler } from './core/pipeline/scheduler'
 import type { StoreDb } from './core/pipeline/store'
@@ -15,6 +16,7 @@ import {
   listRecommendations,
   updateRecommendationStatus,
 } from './db/queries/recommendations'
+import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
 import { artists, recommendationBatches, recommendations } from './db/schema'
 import { createApp } from './server'
@@ -74,11 +76,31 @@ const app = createApp({
   getArtistById: (id) => getArtistById(db, id),
 })
 
-const port = Number(process.env.PORT ?? 3000)
+const port = envConfig.port
 const server = serve({ fetch: app.fetch, port })
 
-// Start scheduler if settings with a cron expression exist
-getSettings(db)
+// Auto-complete setup from env vars, then start scheduler
+isSetupComplete(db)
+  .then(async (done) => {
+    if (!done && canAutoSetup()) {
+      const config: SetupConfig = {
+        lidarrUrl: envConfig.lidarrUrl ?? '',
+        lidarrApiKey: envConfig.lidarrApiKey ?? '',
+        skipTlsVerify: envConfig.skipTlsVerify,
+        listenbrainzUsername: envConfig.listenbrainzUsername,
+        listenbrainzToken: envConfig.listenbrainzToken,
+        lastfmUsername: envConfig.lastfmUsername,
+        lastfmApiKey: envConfig.lastfmApiKey,
+        aiProvider: envConfig.aiProvider,
+        aiApiKey: envConfig.aiApiKey,
+        aiModel: envConfig.aiModel,
+        aiBaseUrl: envConfig.aiBaseUrl,
+      }
+      await completeSetup(db, config)
+      console.log('Setup auto-completed from environment variables')
+    }
+  })
+  .then(() => getSettings(db))
   .then((settings) => {
     const cron = settings?.preferences?.scheduleCron
     if (cron) {
@@ -92,7 +114,7 @@ getSettings(db)
     }
   })
   .catch((err: unknown) => {
-    console.error('Failed to load settings for scheduler:', err)
+    console.error('Failed to initialize:', err)
   })
 
 console.log(`Digarr running on http://localhost:${port}`)

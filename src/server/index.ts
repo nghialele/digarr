@@ -1,6 +1,7 @@
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { envConfig } from '@/config/env'
 import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
 import type { PipelineScheduler } from '@/core/pipeline/scheduler'
 import type {
@@ -54,7 +55,7 @@ export function createApp(deps: AppDependencies) {
   app.use(
     '*',
     cors({
-      origin: process.env.ALLOWED_ORIGIN ?? (process.env.NODE_ENV === 'production' ? '' : '*'),
+      origin: envConfig.allowedOrigin ?? (process.env.NODE_ENV === 'production' ? '' : '*'),
     }),
   )
   app.use('*', setupGuard(deps.isSetupComplete))

@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import { envSettingsOverrides } from '@/config/env'
 import type { Database } from '@/db'
 import type { Preferences } from '@/db/schema'
 import { settings } from '@/db/schema'
@@ -23,7 +24,18 @@ export type SetupConfig = {
 
 export async function getSettings(db: Database): Promise<SettingsRow | null> {
   const rows = await db.select().from(settings).limit(1)
-  return rows[0] ?? null
+  const row = rows[0]
+  if (!row) return null
+
+  // Merge env var fallbacks for null fields
+  const overrides = envSettingsOverrides()
+  const merged = { ...row }
+  for (const [key, value] of Object.entries(overrides)) {
+    if ((merged as Record<string, unknown>)[key] == null) {
+      ;(merged as Record<string, unknown>)[key] = value
+    }
+  }
+  return merged
 }
 
 export async function updateSettings(db: Database, partial: SettingsPartial): Promise<void> {

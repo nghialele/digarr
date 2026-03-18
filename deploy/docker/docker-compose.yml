@@ -6,9 +6,22 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      - DATABASE_URL=postgresql://digarr:digarr@postgres:5432/digarr
-      - PORT=3000
-      - LOG_LEVEL=info
+      - DATABASE_URL=postgresql://${DB_USER:-digarr}:${DB_PASS:-digarr}@postgres:5432/${DB_NAME:-digarr}
+      - PORT=${PORT:-3000}
+      # Service config -- set these to auto-complete setup on first boot,
+      # or leave blank and configure via the web UI.
+      - LIDARR_URL=${LIDARR_URL:-}
+      - LIDARR_API_KEY=${LIDARR_API_KEY:-}
+      - SKIP_TLS_VERIFY=${SKIP_TLS_VERIFY:-false}
+      - LISTENBRAINZ_USERNAME=${LISTENBRAINZ_USERNAME:-}
+      - LISTENBRAINZ_TOKEN=${LISTENBRAINZ_TOKEN:-}
+      - LASTFM_USERNAME=${LASTFM_USERNAME:-}
+      - LASTFM_API_KEY=${LASTFM_API_KEY:-}
+      - AI_PROVIDER=${AI_PROVIDER:-}
+      - AI_MODEL=${AI_MODEL:-}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_BASE_URL=${AI_BASE_URL:-}
+      - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -17,13 +30,13 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      - POSTGRES_USER=digarr
-      - POSTGRES_PASSWORD=digarr
-      - POSTGRES_DB=digarr
+      - POSTGRES_USER=${DB_USER:-digarr}
+      - POSTGRES_PASSWORD=${DB_PASS:-digarr}
+      - POSTGRES_DB=${DB_NAME:-digarr}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U digarr"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-digarr}"]
       interval: 5s
       timeout: 5s
       retries: 5
