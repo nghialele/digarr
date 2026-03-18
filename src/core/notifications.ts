@@ -10,7 +10,7 @@ export type WebhookPayload = {
   timestamp: string
 }
 
-function isPrivateUrl(urlString: string): boolean {
+export function isPrivateUrl(urlString: string): boolean {
   try {
     const url = new URL(urlString)
     const hostname = url.hostname
@@ -19,10 +19,13 @@ function isPrivateUrl(urlString: string): boolean {
     if (/^10\./.test(hostname)) return true
     if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true
     if (/^192\.168\./.test(hostname)) return true
+    if (/^169\.254\./.test(hostname)) return true // link-local / cloud metadata
+    if (hostname === '0.0.0.0') return true
     // IPv6 loopback and private (hostname includes brackets for IPv6)
     const bare = hostname.replace(/^\[|\]$/g, '')
     if (bare === '::1') return true
     if (/^f[cd]/i.test(bare)) return true
+    if (/^fe80/i.test(bare)) return true // link-local IPv6
     // localhost
     if (hostname === 'localhost') return true
     return false
@@ -44,6 +47,8 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 10_000)
 
+  const safeUrl = url.replace(/:\/\/[^@]*@/, '://***@')
+
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -52,14 +57,12 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
       signal: controller.signal,
     })
     if (!res.ok) {
-      console.error(`Webhook POST to ${url} failed: HTTP ${res.status}`)
+      console.error(`Webhook POST to ${safeUrl} failed: HTTP ${res.status}`)
     }
   } catch (err) {
-    console.error(`Webhook POST to ${url} failed:`, err)
+    console.error(`Webhook POST to ${safeUrl} failed:`, err)
   } finally {
     clearTimeout(timeout)
   }
 }
 
-// Re-export isPrivateUrl for testing
-export { isPrivateUrl }
