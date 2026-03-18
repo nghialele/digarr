@@ -108,26 +108,9 @@ export function createMusicBrainzClient() {
     return result
   }
 
-  function extractImageUrl(relations: MBRelation[]): string | undefined {
-    for (const rel of relations) {
-      if (!rel.url?.resource) continue
-      const url = rel.url.resource
-      // Direct image relation
-      if (rel.type === 'image' || rel.type === 'picture') {
-        return url
-      }
-      // Wikimedia commons images
-      if (url.includes('commons.wikimedia.org')) {
-        return url
-      }
-    }
-    return undefined
-  }
-
   return {
     lookupArtist,
     searchArtist,
     extractStreamingUrls,
-    extractImageUrl,
   }
 }
