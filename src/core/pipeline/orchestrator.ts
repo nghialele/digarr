@@ -1,9 +1,10 @@
 import { EventEmitter } from 'node:events'
-import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
-import { createListenBrainzClient } from '@/core/clients/listenbrainz'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
 import { sendWebhook } from '@/core/notifications'
+import { createLastFmSource } from '@/core/plugins/lastfm'
+import { createListenBrainzSource } from '@/core/plugins/listenbrainz'
+import { SourceRegistry } from '@/core/plugins/registry'
 import { createProvider } from '@/core/providers/factory'
 import type { Preferences } from '@/db/schema'
 import { analyze } from './analyze'
@@ -96,15 +97,16 @@ export class PipelineOrchestrator extends EventEmitter {
         settings.skipTlsVerify,
       )
 
-      const lbClient =
-        settings.listenbrainzUsername && settings.listenbrainzToken
-          ? createListenBrainzClient(settings.listenbrainzUsername, settings.listenbrainzToken)
-          : null
-
-      const lfmClient =
-        settings.lastfmUsername && settings.lastfmApiKey
-          ? createLastFmClient(settings.lastfmUsername, settings.lastfmApiKey)
-          : null
+      // Build listening source registry
+      const registry = new SourceRegistry()
+      if (settings.listenbrainzUsername && settings.listenbrainzToken) {
+        registry.register(
+          createListenBrainzSource(settings.listenbrainzUsername, settings.listenbrainzToken),
+        )
+      }
+      if (settings.lastfmUsername && settings.lastfmApiKey) {
+        registry.register(createLastFmSource(settings.lastfmUsername, settings.lastfmApiKey))
+      }
 
       const mbClient = createMusicBrainzClient()
 
@@ -137,7 +139,7 @@ export class PipelineOrchestrator extends EventEmitter {
       // -- Stage 2: ANALYZE ---------------------------------------------------
 
       this.emit('progress', { stage: 'analyze', message: 'Building your taste profile...' })
-      const tasteProfile = await analyze(lbClient, lfmClient)
+      const tasteProfile = await analyze(registry.all())
       this.emit('progress', {
         stage: 'analyze',
         message: `Profiled ${tasteProfile.topArtists.length} top artists, ${tasteProfile.topGenres.length} genres`,
@@ -152,8 +154,7 @@ export class PipelineOrchestrator extends EventEmitter {
       const discovered = await discover(
         tasteProfile,
         {
-          listenbrainz: lbClient,
-          lastfm: lfmClient,
+          listeningSources: registry.all(),
           musicbrainz: mbClient,
           ai: aiProvider,
         },

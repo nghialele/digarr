@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import { discover } from '@/core/pipeline/discover'
+import type { ListeningSource } from '@/core/plugins/types'
 import type { TasteProfile } from '@/core/types'
 
 const profile: TasteProfile = {
@@ -12,21 +13,29 @@ const profile: TasteProfile = {
   listeningPatterns: { totalListens: 1000, recentTrend: 'stable' },
 }
 
-function makeLb() {
+function makeLb(): ListeningSource {
   return {
+    id: 'listenbrainz',
+    name: 'ListenBrainz',
+    getTopArtists: vi.fn().mockResolvedValue([]),
     getSimilarArtists: vi.fn().mockResolvedValue([
-      { name: 'Thom Yorke', score: 0.9 },
-      { name: 'Massive Attack', score: 0.7 },
+      { name: 'Thom Yorke', similarityScore: 0.9, source: 'listenbrainz' },
+      { name: 'Massive Attack', similarityScore: 0.7, source: 'listenbrainz' },
     ]),
+    testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
   }
 }
 
-function makeLfm() {
+function makeLfm(): ListeningSource {
   return {
+    id: 'lastfm',
+    name: 'Last.fm',
+    getTopArtists: vi.fn().mockResolvedValue([]),
     getSimilarArtists: vi.fn().mockResolvedValue([
-      { name: 'Bjork', mbid: 'mbid-bj', similarityScore: 0.85, source: 'lastfm' as const },
-      { name: 'Tricky', mbid: 'mbid-tr', similarityScore: 0.75, source: 'lastfm' as const },
+      { name: 'Bjork', mbid: 'mbid-bj', similarityScore: 0.85, source: 'lastfm' },
+      { name: 'Tricky', mbid: 'mbid-tr', similarityScore: 0.75, source: 'lastfm' },
     ]),
+    testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
   }
 }
 
@@ -52,7 +61,7 @@ function makeAi() {
 describe('discover()', () => {
   it('collects similar artists from LB source', async () => {
     const lb = makeLb()
-    const results = await discover(profile, { listenbrainz: lb }, 10)
+    const results = await discover(profile, { listeningSources: [lb] }, 10)
 
     const names = results.map((r) => r.name)
     expect(names).toContain('Thom Yorke')
@@ -61,7 +70,7 @@ describe('discover()', () => {
 
   it('collects similar artists from Last.fm source', async () => {
     const lfm = makeLfm()
-    const results = await discover(profile, { lastfm: lfm }, 10)
+    const results = await discover(profile, { listeningSources: [lfm] }, 10)
 
     const names = results.map((r) => r.name)
     expect(names).toContain('Bjork')
@@ -81,7 +90,7 @@ describe('discover()', () => {
     const lb = makeLb()
     const lfm = makeLfm()
     const ai = makeAi()
-    const results = await discover(profile, { listenbrainz: lb, lastfm: lfm, ai }, 10)
+    const results = await discover(profile, { listeningSources: [lb, lfm], ai }, 10)
 
     const lbResults = results.filter((r) => r.source === 'listenbrainz')
     const lfmResults = results.filter((r) => r.source === 'lastfm')
@@ -93,11 +102,17 @@ describe('discover()', () => {
   })
 
   it('isolates LB source failure -- other sources still return results', async () => {
-    const lb = { getSimilarArtists: vi.fn().mockRejectedValue(new Error('LB down')) }
+    const lb: ListeningSource = {
+      id: 'listenbrainz',
+      name: 'ListenBrainz',
+      getTopArtists: vi.fn().mockResolvedValue([]),
+      getSimilarArtists: vi.fn().mockRejectedValue(new Error('LB down')),
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    }
     const lfm = makeLfm()
     const ai = makeAi()
 
-    const results = await discover(profile, { listenbrainz: lb, lastfm: lfm, ai }, 10)
+    const results = await discover(profile, { listeningSources: [lb, lfm], ai }, 10)
 
     // Should still get Last.fm and AI results
     expect(results.filter((r) => r.source === 'lastfm').length).toBeGreaterThan(0)
@@ -110,7 +125,7 @@ describe('discover()', () => {
     const lb = makeLb()
     const ai = { getRecommendations: vi.fn().mockRejectedValue(new Error('AI down')) }
 
-    const results = await discover(profile, { listenbrainz: lb, ai }, 10)
+    const results = await discover(profile, { listeningSources: [lb], ai }, 10)
 
     expect(results.filter((r) => r.source === 'listenbrainz').length).toBeGreaterThan(0)
     expect(results.filter((r) => r.source === 'ai').length).toBe(0)
@@ -119,11 +134,11 @@ describe('discover()', () => {
   it('respects topArtistsLimit -- skips artists beyond the limit', async () => {
     const lb = makeLb()
     // Limit to 1 artist, so only Radiohead's similar artists should be fetched
-    await discover(profile, { listenbrainz: lb }, 1)
+    await discover(profile, { listeningSources: [lb] }, 1)
 
     // getSimilarArtists should only be called once (for Radiohead)
     expect(lb.getSimilarArtists).toHaveBeenCalledTimes(1)
-    expect(lb.getSimilarArtists).toHaveBeenCalledWith('mbid-rh')
+    expect(lb.getSimilarArtists).toHaveBeenCalledWith('Radiohead', 'mbid-rh')
   })
 
   it('skips LB similar artists for artists without MBID', async () => {
@@ -131,10 +146,18 @@ describe('discover()', () => {
       ...profile,
       topArtists: [{ name: 'Unknown Artist', playCount: 100, source: 'listenbrainz' }],
     }
-    const lb = makeLb()
-    const results = await discover(profileNoMbid, { listenbrainz: lb }, 10)
+    // LB source returns empty when no MBID is provided (the plugin handles this)
+    const lb: ListeningSource = {
+      id: 'listenbrainz',
+      name: 'ListenBrainz',
+      getTopArtists: vi.fn().mockResolvedValue([]),
+      getSimilarArtists: vi.fn().mockResolvedValue([]),
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    }
+    const results = await discover(profileNoMbid, { listeningSources: [lb] }, 10)
 
-    expect(lb.getSimilarArtists).not.toHaveBeenCalled()
+    // The source's getSimilarArtists is still called (it decides what to do with no MBID)
+    expect(lb.getSimilarArtists).toHaveBeenCalledWith('Unknown Artist', undefined)
     expect(results).toEqual([])
   })
 

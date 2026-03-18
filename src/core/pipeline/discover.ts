@@ -1,15 +1,5 @@
+import type { ListeningSource } from '@/core/plugins/types'
 import type { AiRecommendation, DiscoveredArtist, TasteProfile } from '@/core/types'
-
-interface ListenBrainzSimilarSource {
-  getSimilarArtists: (mbid: string) => Promise<Array<{ name: string; score: number }>>
-}
-
-interface LastFmSimilarSource {
-  getSimilarArtists: (
-    artist: string,
-    mbid?: string,
-  ) => Promise<Array<{ name: string; mbid?: string; similarityScore: number; source: string }>>
-}
 
 interface MusicBrainzSimilarSource {
   searchArtist: (
@@ -22,8 +12,8 @@ interface AiSource {
 }
 
 export interface DiscoverSources {
-  listenbrainz?: ListenBrainzSimilarSource | null
-  lastfm?: LastFmSimilarSource | null
+  /** Listening source plugins (ListenBrainz, Last.fm, etc.) */
+  listeningSources?: ListeningSource[]
   musicbrainz?: MusicBrainzSimilarSource | null
   ai?: AiSource | null
 }
@@ -61,35 +51,20 @@ export async function discover(
     seedArtists = [...topArtists.slice(0, listeningSlots), ...librarySeeds]
   }
 
-  // For each seed artist, query each configured source for similar artists
+  const listeningSources = sources.listeningSources ?? []
+
+  // For each seed artist, query each configured listening source for similar artists
   await Promise.all(
     seedArtists.map(async (artist) => {
-      // ListenBrainz similar artists (needs MBID)
-      if (sources.listenbrainz != null && artist.mbid) {
+      for (const source of listeningSources) {
         try {
-          const similar = await sources.listenbrainz.getSimilarArtists(artist.mbid)
-          for (const s of similar) {
-            results.push({
-              name: s.name,
-              similarityScore: s.score,
-              source: 'listenbrainz',
-            })
-          }
-        } catch {
-          // Isolate source failure
-        }
-      }
-
-      // Last.fm similar artists
-      if (sources.lastfm != null) {
-        try {
-          const similar = await sources.lastfm.getSimilarArtists(artist.name, artist.mbid)
+          const similar = await source.getSimilarArtists(artist.name, artist.mbid)
           for (const s of similar) {
             results.push({
               name: s.name,
               mbid: s.mbid,
               similarityScore: s.similarityScore,
-              source: 'lastfm',
+              source: source.id,
             })
           }
         } catch {

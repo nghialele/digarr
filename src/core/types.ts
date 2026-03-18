@@ -3,7 +3,7 @@ export type TasteProfile = {
     name: string
     mbid?: string
     playCount: number
-    source: 'listenbrainz' | 'lastfm'
+    source: string
   }>
   topGenres: Array<{ name: string; weight: number }>
   listeningPatterns: {
@@ -24,7 +24,7 @@ export type DiscoveredArtist = {
   mbid?: string
   similarityScore: number
   aiReasoning?: string
-  source: 'listenbrainz' | 'lastfm' | 'musicbrainz' | 'ai'
+  source: string
 }
 
 export type ResolvedArtist = {

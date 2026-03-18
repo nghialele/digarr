@@ -34,25 +34,31 @@ vi.mock('@/core/pipeline/store', () => ({
 }))
 
 // ---------------------------------------------------------------------------
-// Mock client factories
+// Mock client/plugin factories
 // ---------------------------------------------------------------------------
 
 vi.mock('@/core/clients/lidarr', () => ({
   createLidarrClient: vi.fn(() => ({ getArtists: vi.fn() })),
 }))
 
-vi.mock('@/core/clients/listenbrainz', () => ({
-  createListenBrainzClient: vi.fn(() => ({
+vi.mock('@/core/plugins/listenbrainz', () => ({
+  createListenBrainzSource: vi.fn(() => ({
+    id: 'listenbrainz',
+    name: 'ListenBrainz',
     getTopArtists: vi.fn(),
-    getListeningActivity: vi.fn(),
     getSimilarArtists: vi.fn(),
+    testConnection: vi.fn(),
+    getListeningActivity: vi.fn(),
   })),
 }))
 
-vi.mock('@/core/clients/lastfm', () => ({
-  createLastFmClient: vi.fn(() => ({
+vi.mock('@/core/plugins/lastfm', () => ({
+  createLastFmSource: vi.fn(() => ({
+    id: 'lastfm',
+    name: 'Last.fm',
     getTopArtists: vi.fn(),
     getSimilarArtists: vi.fn(),
+    testConnection: vi.fn(),
   })),
 }))
 
@@ -67,6 +73,7 @@ vi.mock('@/core/clients/musicbrainz', () => ({
 vi.mock('@/core/providers/factory', () => ({
   createProvider: vi.fn(async () => ({
     getRecommendations: vi.fn(),
+    testConnection: vi.fn(),
   })),
 }))
 
@@ -187,8 +194,8 @@ describe('PipelineOrchestrator', () => {
     vi.clearAllMocks()
 
     // Re-apply default mock implementations after clearing
-    const { createListenBrainzClient } = await import('@/core/clients/listenbrainz')
-    const { createLastFmClient } = await import('@/core/clients/lastfm')
+    const { createListenBrainzSource } = await import('@/core/plugins/listenbrainz')
+    const { createLastFmSource } = await import('@/core/plugins/lastfm')
     const { createLidarrClient } = await import('@/core/clients/lidarr')
     const { createMusicBrainzClient } = await import('@/core/clients/musicbrainz')
     const { createProvider } = await import('@/core/providers/factory')
@@ -196,15 +203,21 @@ describe('PipelineOrchestrator', () => {
     vi.mocked(createLidarrClient).mockReturnValue({ getArtists: vi.fn() } as unknown as ReturnType<
       typeof createLidarrClient
     >)
-    vi.mocked(createListenBrainzClient).mockReturnValue({
+    vi.mocked(createListenBrainzSource).mockReturnValue({
+      id: 'listenbrainz',
+      name: 'ListenBrainz',
       getTopArtists: vi.fn(),
+      getSimilarArtists: vi.fn(),
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
       getListeningActivity: vi.fn(),
-      getSimilarArtists: vi.fn(),
-    } as unknown as ReturnType<typeof createListenBrainzClient>)
-    vi.mocked(createLastFmClient).mockReturnValue({
+    })
+    vi.mocked(createLastFmSource).mockReturnValue({
+      id: 'lastfm',
+      name: 'Last.fm',
       getTopArtists: vi.fn(),
       getSimilarArtists: vi.fn(),
-    } as unknown as ReturnType<typeof createLastFmClient>)
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    })
     vi.mocked(createMusicBrainzClient).mockReturnValue({
       lookupArtist: vi.fn(),
       searchArtist: vi.fn(),
@@ -345,14 +358,14 @@ describe('PipelineOrchestrator', () => {
     expect(orchestrator.isRunning).toBe(false)
   })
 
-  it('skips LB client when listenbrainzUsername is null', async () => {
-    const { createListenBrainzClient } = await import('@/core/clients/listenbrainz')
+  it('skips LB source when listenbrainzUsername is null', async () => {
+    const { createListenBrainzSource } = await import('@/core/plugins/listenbrainz')
     const db = makeDb()
     const settings = { ...defaultSettings, listenbrainzUsername: null, listenbrainzToken: null }
 
     await orchestrator.run({ db, settings })
 
-    expect(vi.mocked(createListenBrainzClient)).not.toHaveBeenCalled()
+    expect(vi.mocked(createListenBrainzSource)).not.toHaveBeenCalled()
   })
 
   it('passes deduplicated library genres to score()', async () => {
@@ -372,13 +385,13 @@ describe('PipelineOrchestrator', () => {
     expect(passedGenres.sort()).toEqual(['electronic', 'jazz', 'rock'])
   })
 
-  it('skips LFM client when lastfmUsername is null', async () => {
-    const { createLastFmClient } = await import('@/core/clients/lastfm')
+  it('skips LFM source when lastfmUsername is null', async () => {
+    const { createLastFmSource } = await import('@/core/plugins/lastfm')
     const db = makeDb()
     const settings = { ...defaultSettings, lastfmUsername: null, lastfmApiKey: null }
 
     await orchestrator.run({ db, settings })
 
-    expect(vi.mocked(createLastFmClient)).not.toHaveBeenCalled()
+    expect(vi.mocked(createLastFmSource)).not.toHaveBeenCalled()
   })
 })

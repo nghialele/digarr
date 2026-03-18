@@ -1,11 +1,5 @@
+import type { ListeningSource, TopArtistEntry } from '@/core/plugins/types'
 import type { TasteProfile } from '@/core/types'
-
-type TopArtistEntry = {
-  name: string
-  mbid?: string
-  playCount: number
-  source: 'listenbrainz' | 'lastfm'
-}
 
 type ListeningActivityEntry = {
   listen_count: number
@@ -13,37 +7,25 @@ type ListeningActivityEntry = {
   to_ts: number
 }
 
-// Minimal interfaces -- only what we actually need from the clients
-interface ListenBrainzSource {
-  getTopArtists: (range: 'month') => Promise<TopArtistEntry[]>
-  getListeningActivity: () => Promise<ListeningActivityEntry[]>
-}
-
-interface LastFmSource {
-  getTopArtists: (period: '1month') => Promise<TopArtistEntry[]>
-}
-
-export async function analyze(
-  listenbrainz: ListenBrainzSource | null,
-  lastfm: LastFmSource | null,
-): Promise<TasteProfile> {
+export async function analyze(sources: ListeningSource[]): Promise<TasteProfile> {
   const allArtists: TopArtistEntry[] = []
   let activityData: ListeningActivityEntry[] = []
 
-  if (listenbrainz !== null) {
-    const [lbArtists, activity] = await Promise.all([
-      listenbrainz.getTopArtists('month'),
-      listenbrainz.getListeningActivity(),
-    ])
-    allArtists.push(...lbArtists)
-    activityData = activity
-  }
+  // Collect top artists and (optionally) listening activity from all sources
+  await Promise.all(
+    sources.map(async (source) => {
+      const artists = await source.getTopArtists()
+      allArtists.push(...artists)
 
-  if (lastfm !== null) {
-    const lfmArtists = await lastfm.getTopArtists('1month')
-    // Cast source -- LastFm returns 'lastfm' but our interface uses generic TopArtistEntry
-    allArtists.push(...(lfmArtists as TopArtistEntry[]))
-  }
+      if (source.getListeningActivity) {
+        const activity = await source.getListeningActivity()
+        // Merge activity data -- first source with activity wins
+        if (activityData.length === 0) {
+          activityData = activity
+        }
+      }
+    }),
+  )
 
   // Deduplicate by name (case-insensitive), keep highest play count
   const byName = new Map<string, TopArtistEntry>()
