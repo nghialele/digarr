@@ -1,5 +1,19 @@
 const BASE = '/api'
 
+const AUTH_TOKEN_KEY = 'digarr-auth-token'
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(AUTH_TOKEN_KEY)
+}
+
+export function setStoredToken(token: string): void {
+  localStorage.setItem(AUTH_TOKEN_KEY, token)
+}
+
+export function clearStoredToken(): void {
+  localStorage.removeItem(AUTH_TOKEN_KEY)
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -10,8 +24,12 @@ export class ApiError extends Error {
 }
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = getStoredToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { ...headers, ...options?.headers },
     ...options,
   })
   if (!res.ok) {
@@ -20,6 +38,9 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   }
   return res.json() as Promise<T>
 }
+
+// Auth
+export const getAuthStatus = () => fetchApi<{ required: boolean }>('/auth/status')
 
 // Setup
 export const getSetupStatus = () => fetchApi<{ setupComplete: boolean }>('/setup/status')

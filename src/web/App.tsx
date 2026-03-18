@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
+import { AuthGate } from './components/auth-gate'
 import { getSetupStatus, triggerPipeline } from './lib/api'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
@@ -65,24 +66,26 @@ export function App() {
 
   if (!setupComplete) {
     return (
-      <>
+      <AuthGate>
         <SetupWizard onComplete={() => setSetupComplete(true)} />
         <Toaster theme="dark" />
-      </>
+      </AuthGate>
     )
   }
 
   return (
-    <BrowserRouter>
-      <AppShell>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/discover" element={<DiscoverPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </AppShell>
-      <Toaster theme="dark" />
-    </BrowserRouter>
+    <AuthGate>
+      <BrowserRouter>
+        <AppShell>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </AppShell>
+        <Toaster theme="dark" />
+      </BrowserRouter>
+    </AuthGate>
   )
 }
