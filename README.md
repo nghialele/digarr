@@ -27,9 +27,9 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 - **One-click Lidarr integration** -- approve a recommendation and it gets added to Lidarr with your preferred quality/metadata profiles
 - **Artist enrichment** -- artist images (via fanart.tv/Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata
 - **Quick discover** -- click "Find Similar" on any recent listen to get targeted recommendations
-- **Configurable pipeline** -- score thresholds, scoring weights, library seed ratio, rejection cooldowns, cron scheduling
+- **Configurable pipeline** -- score thresholds, scoring weights, library seed ratio, rejection cooldowns, cron scheduling with hot-reload
 - **Setup wizard** -- guided 4-step setup with connection testing
-- **Dark UI** -- clean, responsive interface with keyboard shortcuts (j/k navigate, a approve, r reject)
+- **Dark UI** -- clean, responsive interface with keyboard shortcuts (j/k navigate, a approve, r reject), paginated discover view
 - **Self-hosted** -- runs as a single container alongside your existing *arr stack
 
 ---
