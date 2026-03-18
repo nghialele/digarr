@@ -30,6 +30,7 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 - **Configurable pipeline** -- score thresholds, scoring weights, library seed ratio, rejection cooldowns, cron scheduling with hot-reload
 - **Setup wizard** -- guided 4-step setup with connection testing
 - **Dark UI** -- clean, responsive interface with keyboard shortcuts (j/k navigate, a approve, r reject), paginated discover view
+- **Mobile PWA** -- installable on phones, swipe-to-approve/reject on recommendation cards, responsive nav
 - **Optional auth** -- protect the API with a shared bearer token (`DIGARR_AUTH_TOKEN` env var)
 - **Analytics dashboard** -- track approval rates, genre trends, source effectiveness, and batch history over time
 - **Webhook notifications** -- get notified when scans complete (Discord, Slack, ntfy, Gotify, or any HTTP endpoint)
