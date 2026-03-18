@@ -11,8 +11,13 @@ Digarr has been deployed!
   echo "Visit http://localhost:3000"
 {{- end }}
 
-2. Run database migrations (first deploy only):
-  kubectl exec -it deploy/{{ include "digarr.fullname" . }} -- bun run db:migrate
+2. Database migrations run automatically on startup.
 
 3. Check health:
   curl http://<host>/health
+{{- if .Values.postgresql.enabled }}
+
+Note: Using bundled PostgreSQL ({{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}).
+To use your own PostgreSQL (CNPG, RDS, etc.), set postgresql.enabled=false
+and configure the database.* values or supply database.existingSecret.
+{{- end }}

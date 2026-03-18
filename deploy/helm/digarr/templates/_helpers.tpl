@@ -49,7 +49,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Database URL -- prefers existingSecret, falls back to inline values.
+Database secret name -- prefers existingSecret, falls back to chart-managed secret.
 */}}
 {{- define "digarr.databaseSecretName" -}}
 {{- if .Values.database.existingSecret }}
@@ -60,11 +60,11 @@ Database URL -- prefers existingSecret, falls back to inline values.
 {{- end }}
 
 {{/*
-Fully qualified PostgreSQL hostname when using the subchart.
+PostgreSQL hostname -- bundled service or external host.
 */}}
 {{- define "digarr.postgresHost" -}}
 {{- if .Values.postgresql.enabled }}
-{{- printf "%s-postgresql" .Release.Name }}
+{{- printf "%s-postgresql" (include "digarr.fullname" .) }}
 {{- else }}
 {{- .Values.database.host }}
 {{- end }}
