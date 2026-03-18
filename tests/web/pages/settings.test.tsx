@@ -1,0 +1,204 @@
+// @vitest-environment jsdom
+
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+// ---------------------------------------------------------------------------
+// Mock API
+// ---------------------------------------------------------------------------
+
+vi.mock('@/web/lib/api', () => ({
+  getSettings: vi.fn(),
+  updateSettings: vi.fn(),
+  testService: vi.fn(),
+  getLidarrProfiles: vi.fn(),
+  getLidarrMetadataProfiles: vi.fn(),
+  getLidarrRootFolders: vi.fn(),
+  triggerPipeline: vi.fn(),
+  getStoredToken: vi.fn(() => null),
+}))
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    promise: vi.fn(),
+  },
+}))
+
+import {
+  getLidarrMetadataProfiles,
+  getLidarrProfiles,
+  getLidarrRootFolders,
+  getSettings,
+  testService,
+  updateSettings,
+} from '@/web/lib/api'
+import { SettingsPage } from '@/web/pages/settings'
+
+const mockGetSettings = vi.mocked(getSettings)
+const mockUpdateSettings = vi.mocked(updateSettings)
+const mockTestService = vi.mocked(testService)
+const mockGetLidarrProfiles = vi.mocked(getLidarrProfiles)
+const mockGetLidarrMetadataProfiles = vi.mocked(getLidarrMetadataProfiles)
+const mockGetLidarrRootFolders = vi.mocked(getLidarrRootFolders)
+
+// ---------------------------------------------------------------------------
+// Mock data
+// ---------------------------------------------------------------------------
+
+const mockSettings = {
+  lidarrUrl: 'http://localhost:8686',
+  lidarrApiKey: '***',
+  listenbrainzUsername: 'testuser',
+  listenbrainzToken: '***',
+  lastfmUsername: '',
+  lastfmApiKey: '',
+  aiProvider: 'anthropic',
+  aiModel: 'claude-3-5-haiku-20241022',
+  aiApiKey: '***',
+  preferences: {
+    qualityProfileId: 1,
+    metadataProfileId: 1,
+    rootFolderId: 1,
+    scheduleCron: '0 0 * * *',
+    scoreThreshold: 0.5,
+  },
+  setupComplete: true,
+}
+
+function setupMocks() {
+  mockGetSettings.mockResolvedValue(mockSettings as Record<string, unknown>)
+  mockGetLidarrProfiles.mockResolvedValue([{ id: 1, name: 'Any' }])
+  mockGetLidarrMetadataProfiles.mockResolvedValue([{ id: 1, name: 'Standard' }])
+  mockGetLidarrRootFolders.mockResolvedValue([{ id: 1, path: '/data/music' }])
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('SettingsPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows loading skeleton while fetching settings', () => {
+    mockGetSettings.mockReturnValue(new Promise(() => {}))
+    render(<SettingsPage />)
+    const pulsingEls = document.querySelectorAll('.animate-pulse')
+    expect(pulsingEls.length).toBeGreaterThan(0)
+  })
+
+  it('renders tab bar with Connections, Recommendations, Schedule', async () => {
+    setupMocks()
+    render(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Connections')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Recommendations')).toBeInTheDocument()
+    expect(screen.getByText('Schedule')).toBeInTheDocument()
+  })
+
+  it('defaults to Connections tab showing Lidarr section', async () => {
+    setupMocks()
+    render(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Lidarr')).toBeInTheDocument()
+    })
+    // Lidarr URL field should be present
+    expect(screen.getByDisplayValue('http://localhost:8686')).toBeInTheDocument()
+  })
+
+  it('tab switching shows Recommendations content', async () => {
+    setupMocks()
+    render(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Connections')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Recommendations'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Score Threshold')).toBeInTheDocument()
+      expect(screen.getByText('Scoring Weights')).toBeInTheDocument()
+    })
+  })
+
+  it('tab switching shows Schedule content', async () => {
+    setupMocks()
+    render(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Connections')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Schedule'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Presets')).toBeInTheDocument()
+      expect(screen.getByText('Daily')).toBeInTheDocument()
+      expect(screen.getByText('Weekly')).toBeInTheDocument()
+      expect(screen.getByText('Custom Cron')).toBeInTheDocument()
+    })
+  })
+
+  it('Test Connection button calls testService for Lidarr', async () => {
+    setupMocks()
+    mockTestService.mockResolvedValue({ success: true, message: 'OK' })
+    render(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Lidarr')).toBeInTheDocument()
+    })
+
+    // Find the Lidarr section's Test Connection button (first one)
+    const testButtons = screen.getAllByText('Test Connection')
+    // biome-ignore lint/style/noNonNullAssertion: checked above
+    fireEvent.click(testButtons[0]!)
+
+    await waitFor(() => {
+      expect(mockTestService).toHaveBeenCalledWith(
+        'lidarr',
+        expect.objectContaining({
+          url: 'http://localhost:8686',
+        }),
+      )
+    })
+  })
+
+  it('Save button calls updateSettings for Lidarr', async () => {
+    setupMocks()
+    mockUpdateSettings.mockResolvedValue(undefined as unknown as Record<string, unknown>)
+    render(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Lidarr')).toBeInTheDocument()
+    })
+
+    // Find the Lidarr section's Save button (first one)
+    const saveButtons = screen.getAllByText('Save')
+    // biome-ignore lint/style/noNonNullAssertion: checked above
+    fireEvent.click(saveButtons[0]!)
+
+    await waitFor(() => {
+      expect(mockUpdateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ lidarrUrl: 'http://localhost:8686' }),
+      )
+    })
+  })
+
+  it('shows error state when settings fail to load', async () => {
+    mockGetSettings.mockRejectedValue(new Error('Network error'))
+    render(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to load settings/i)).toBeInTheDocument()
+    })
+    expect(screen.getByText('Retry')).toBeInTheDocument()
+  })
+})
