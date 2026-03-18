@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { recommendationBatches } from '@/db/schema'
 
@@ -50,14 +50,4 @@ export async function getBatch(db: Database, id: number): Promise<BatchRow | nul
     .where(eq(recommendationBatches.id, id))
     .limit(1)
   return rows[0] ?? null
-}
-
-export async function cleanupStaleBatches(db: Database, maxAgeMinutes: number): Promise<void> {
-  const cutoff = new Date(Date.now() - maxAgeMinutes * 60 * 1000)
-  await db
-    .update(recommendationBatches)
-    .set({ status: 'failed' })
-    .where(
-      and(eq(recommendationBatches.status, 'running'), lt(recommendationBatches.createdAt, cutoff)),
-    )
 }

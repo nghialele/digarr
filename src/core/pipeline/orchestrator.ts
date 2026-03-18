@@ -39,12 +39,6 @@ export interface PipelineDeps {
   settings: PipelineSettings
 }
 
-// Extended StoreDb for stale batch cleanup
-interface BatchManagementDb extends StoreDb {
-  updateBatch: (id: number, data: { status: string }) => Promise<void>
-  getRunningBatches: (olderThanMs: number) => Promise<Array<{ id: number }>>
-}
-
 // ---------------------------------------------------------------------------
 // Orchestrator
 // ---------------------------------------------------------------------------
@@ -245,17 +239,5 @@ export class PipelineOrchestrator extends EventEmitter {
 
   get stageMessage(): string | null {
     return this.currentMessage
-  }
-
-  /**
-   * Mark any 'running' batches older than 30 minutes as 'failed'.
-   * Call on startup to handle crashes/restarts.
-   */
-  async cleanupStaleBatches(db: BatchManagementDb): Promise<void> {
-    const thirtyMinutes = 30 * 60 * 1000
-    const staleBatches = await db.getRunningBatches(thirtyMinutes)
-    for (const batch of staleBatches) {
-      await db.updateBatch(batch.id, { status: 'failed' })
-    }
   }
 }
