@@ -1,0 +1,41 @@
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: "src/web/**"
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/server/**"
+          - "src/core/**"
+          - "src/db/**"
+          - "src/index.ts"
+
+pipeline:
+  - changed-files:
+      - any-glob-to-any-file: "src/core/pipeline/**"
+
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/db/**"
+          - "drizzle/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - ".forgejo/**"
+
+deployment:
+  - changed-files:
+      - any-glob-to-any-file: "deploy/**"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.md"
+          - "docs/**"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: "tests/**"
