@@ -5,7 +5,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-368_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-386_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
@@ -21,7 +21,7 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 ## Features
 
 - **Listening history analysis** -- connects to ListenBrainz and/or Last.fm to understand your taste
-- **Multi-source discovery** -- finds similar artists via Last.fm, MusicBrainz, and your existing Lidarr library
+- **Pluggable sources** -- ListeningSource plugin interface for music sources (ListenBrainz and Last.fm built-in, extensible)
 - **AI-powered recommendations** -- uses Anthropic (Claude), OpenAI, or Ollama to generate personalized suggestions with written explanations
 - **Smart scoring** -- weighted composite scoring across consensus, similarity, genre overlap (from Lidarr library tags), AI confidence, and feedback learning
 - **One-click Lidarr integration** -- approve a recommendation and it gets added to Lidarr with your preferred quality/metadata profiles
@@ -166,7 +166,7 @@ See [`.env.example`](.env.example) for the full list with comments.
 - **Database**: PostgreSQL via [Drizzle ORM](https://orm.drizzle.team)
 - **Build**: [Vite](https://vite.dev)
 - **Lint/Format**: [Biome](https://biomejs.dev)
-- **Tests**: [Vitest](https://vitest.dev) (368 tests)
+- **Tests**: [Vitest](https://vitest.dev) (386 tests)
 
 ---
 
@@ -178,7 +178,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 bun install
 bun run lint        # biome check
 bun run typecheck   # tsc --noEmit
-bun run test        # vitest (368 tests)
+bun run test        # vitest (386 tests)
 ```
 
 ---
@@ -191,7 +191,7 @@ This project was built with the help of agentic AI coding tools. The design, arc
 
 The codebase went through multiple rounds of verification before release:
 
-- **368 unit and integration tests** across 37 test files -- API clients, pipeline stages, server routes, database queries, and UI components
+- **368 unit and integration tests** across 40 test files -- API clients, pipeline stages, server routes, database queries, and UI components
 - **Static analysis** -- zero errors from TypeScript strict mode (`noUncheckedIndexedAccess`, `isolatedModules`) and Biome linter across 96 source files
 - **Security audit** -- identified and fixed critical vulnerabilities:
   - CORS restricted to configured origin (no wildcard in production)
