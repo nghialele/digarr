@@ -23,6 +23,9 @@ export class ApiError extends Error {
   }
 }
 
+// Fired when any fetchApi call gets 401 -- AuthGate listens and shows login
+export const AUTH_EXPIRED_EVENT = 'digarr:auth-expired'
+
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   const token = getStoredToken()
@@ -35,7 +38,7 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   if (!res.ok) {
     if (res.status === 401) {
       clearStoredToken()
-      window.location.reload()
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
       throw new ApiError(res.status, { error: 'Session expired' })
     }
     const error = await res.json().catch(() => ({ error: res.statusText }))
@@ -45,7 +48,23 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // Auth
-export const getAuthStatus = () => fetchApi<{ required: boolean }>('/auth/status')
+export type AuthStatus = { required: boolean; hasUsers: boolean }
+export const getAuthStatus = () => fetchApi<AuthStatus>('/auth/status')
+
+export type AuthResponse = {
+  user: { id: number; username: string; isAdmin: boolean }
+  token: string
+}
+export const loginUser = (username: string, password: string) =>
+  fetchApi<AuthResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+export const registerUser = (username: string, password: string) =>
+  fetchApi<AuthResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
 
 // Setup
 export const getSetupStatus = () => fetchApi<{ setupComplete: boolean }>('/setup/status')

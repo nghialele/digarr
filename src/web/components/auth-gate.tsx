@@ -1,68 +1,139 @@
 import { useEffect, useState } from 'react'
-import { clearStoredToken, getAuthStatus, getStoredToken, setStoredToken } from '../lib/api'
+import {
+  AUTH_EXPIRED_EVENT,
+  clearStoredToken,
+  getAuthStatus,
+  getStoredToken,
+  loginUser,
+  registerUser,
+  setStoredToken,
+} from '../lib/api'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
 
-type AuthState = 'loading' | 'not-required' | 'needs-token' | 'authenticated'
+type AuthState = 'loading' | 'not-required' | 'register' | 'login' | 'authenticated'
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>('loading')
-  const [token, setToken] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [hasUsers, setHasUsers] = useState(false)
 
   useEffect(() => {
-    getAuthStatus()
-      .then((s) => {
-        if (!s.required) {
+    async function checkAuth() {
+      try {
+        const status = await getAuthStatus()
+        setHasUsers(status.hasUsers)
+
+        if (!status.required) {
           setState('not-required')
           return
         }
-        // Auth is required -- check if we already have a valid token
+
         const stored = getStoredToken()
         if (stored) {
-          // Verify the stored token works by hitting a protected endpoint
-          fetch('/api/setup/status', {
+          // Verify stored token against a protected endpoint
+          const res = await fetch('/api/setup/status', {
             headers: { Authorization: `Bearer ${stored}` },
-          }).then((res) => {
-            setState(res.status === 401 ? 'needs-token' : 'authenticated')
-            if (res.status === 401) clearStoredToken()
           })
-        } else {
-          setState('needs-token')
+          if (res.ok) {
+            setState('authenticated')
+            return
+          }
+          clearStoredToken()
         }
-      })
-      .catch(() => {
-        // Can't reach the server at all -- just render children and let it fail naturally
+
+        setState(status.hasUsers ? 'login' : 'register')
+      } catch {
+        // Can't reach server -- render children and let it fail naturally
         setState('not-required')
-      })
+      }
+    }
+    checkAuth()
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-
-    if (!token.trim()) {
-      setError('Token is required')
-      return
+  // Listen for 401s from fetchApi and return to login
+  useEffect(() => {
+    const handler = () => {
+      setState(hasUsers ? 'login' : 'register')
     }
+    window.addEventListener(AUTH_EXPIRED_EVENT, handler)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handler)
+  }, [hasUsers])
 
-    // Verify the token
-    const res = await fetch('/api/setup/status', {
-      headers: { Authorization: `Bearer ${token.trim()}` },
-    })
-
-    if (res.status === 401) {
-      setError('Invalid token')
-      return
-    }
-
-    setStoredToken(token.trim())
+  function handleAuthenticated(token: string) {
+    setStoredToken(token)
     setState('authenticated')
   }
 
   if (state === 'loading') return null
   if (state === 'not-required' || state === 'authenticated') return <>{children}</>
+  if (state === 'register') {
+    return (
+      <RegisterForm onSuccess={handleAuthenticated} onSwitchToLogin={() => setState('login')} />
+    )
+  }
+  return (
+    <LoginForm onSuccess={handleAuthenticated} onSwitchToRegister={() => setState('register')} />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Login form (username/password + legacy token fallback)
+// ---------------------------------------------------------------------------
+
+function LoginForm({
+  onSuccess,
+  onSwitchToRegister,
+}: {
+  onSuccess: (token: string) => void
+  onSwitchToRegister: () => void
+}) {
+  const [mode, setMode] = useState<'credentials' | 'token'>('credentials')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [token, setToken] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleCredentialLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    if (!username.trim() || !password) {
+      setError('Username and password are required')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await loginUser(username.trim(), password)
+      onSuccess(res.token)
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message.includes('401')
+          ? 'Invalid credentials'
+          : 'Login failed',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleTokenLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    if (!token.trim()) {
+      setError('Token is required')
+      return
+    }
+    // Verify the token against a protected endpoint
+    const res = await fetch('/api/setup/status', {
+      headers: { Authorization: `Bearer ${token.trim()}` },
+    })
+    if (res.status === 401) {
+      setError('Invalid token')
+      return
+    }
+    onSuccess(token.trim())
+  }
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center p-4">
@@ -71,23 +142,171 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           <CardTitle>
             <span className="text-accent">digarr</span>
           </CardTitle>
-          <CardDescription>Enter your access token to continue.</CardDescription>
+          <CardDescription>
+            {mode === 'credentials' ? 'Sign in with your account.' : 'Enter your access token.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {mode === 'credentials' ? (
+            <form onSubmit={handleCredentialLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoFocus
+                  autoComplete="username"
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+                {error && <p className="text-sm text-reject">{error}</p>}
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </Button>
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={onSwitchToRegister}
+                  className="text-muted hover:text-text"
+                >
+                  Create account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('token')
+                    setError(null)
+                  }}
+                  className="text-muted hover:text-text"
+                >
+                  Use access token
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleTokenLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Input
+                  type="password"
+                  placeholder="Access token"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  autoFocus
+                />
+                {error && <p className="text-sm text-reject">{error}</p>}
+              </div>
+              <Button type="submit" className="w-full">
+                Sign in
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('credentials')
+                  setError(null)
+                }}
+                className="text-sm text-muted hover:text-text"
+              >
+                Use username & password
+              </button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Registration form (first-time setup)
+// ---------------------------------------------------------------------------
+
+function RegisterForm({
+  onSuccess,
+  onSwitchToLogin,
+}: {
+  onSuccess: (token: string) => void
+  onSwitchToLogin: () => void
+}) {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    if (!username.trim()) {
+      setError('Username is required')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await registerUser(username.trim(), password)
+      onSuccess(res.token)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Registration failed'
+      setError(
+        msg.includes('409')
+          ? 'Username already taken'
+          : msg.includes('400')
+            ? 'Invalid input'
+            : msg,
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>
+            <span className="text-accent">digarr</span>
+          </CardTitle>
+          <CardDescription>Create the first account to get started.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Input
-                type="password"
-                placeholder="Access token"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 autoFocus
+                autoComplete="username"
+              />
+              <Input
+                type="password"
+                placeholder="Password (min 8 characters)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
               />
               {error && <p className="text-sm text-reject">{error}</p>}
             </div>
-            <Button type="submit" className="w-full">
-              Sign in
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Creating account...' : 'Create account'}
             </Button>
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="text-sm text-muted hover:text-text"
+            >
+              Already have an account? Sign in
+            </button>
           </form>
         </CardContent>
       </Card>

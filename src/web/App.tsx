@@ -164,13 +164,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function App() {
+// Inner app -- only mounts after AuthGate has resolved auth
+function InnerApp() {
   const [setupComplete, setSetupComplete] = useState<boolean | null>(null)
-
-  // Apply theme immediately on mount (before first render flicker)
-  useEffect(() => {
-    applyTheme(getStoredTheme())
-  }, [])
 
   useEffect(() => {
     getSetupStatus()
@@ -182,29 +178,40 @@ export function App() {
 
   if (!setupComplete) {
     return (
-      <AuthGate>
+      <>
         <SetupWizard onComplete={() => setSetupComplete(true)} />
         <Toaster theme="system" />
-      </AuthGate>
+      </>
     )
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthGate>
-        <BrowserRouter>
-          <AppShell>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/discover" element={<DiscoverPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </AppShell>
-          <Toaster theme="system" />
-        </BrowserRouter>
-      </AuthGate>
+      <BrowserRouter>
+        <AppShell>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </AppShell>
+        <Toaster theme="system" />
+      </BrowserRouter>
     </QueryClientProvider>
+  )
+}
+
+export function App() {
+  // Apply theme immediately on mount (before first render flicker)
+  useEffect(() => {
+    applyTheme(getStoredTheme())
+  }, [])
+
+  return (
+    <AuthGate>
+      <InnerApp />
+    </AuthGate>
   )
 }
