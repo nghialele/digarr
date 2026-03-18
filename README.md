@@ -221,8 +221,13 @@ The codebase went through multiple rounds of verification before release:
   - Webhook SSRF protection: private IP blocklist (RFC1918, link-local, cloud metadata 169.254.x.x), protocol validation, 10s timeout, credential scrubbing in logs
   - Password hashing via scrypt with random salt and timing-safe verification
   - Pagination offset/limit clamped to prevent negative or NaN values reaching the database
-  - Global 401 handler clears stale auth tokens and forces re-authentication
-- **Code reviews** -- five full reviews (after v0.1.x, v0.2.x, and v0.3.x milestones, plus per-feature spec compliance and quality checks). Notable finds and fixes:
+  - Auth guard scoped to `/api/*` paths only -- static assets and SPA routes always public
+  - Password change verifies current password, returns 403 for legacy-token users, invalidates all other sessions
+  - Bootstrap admin user from env vars enforces 8-character password minimum
+  - Helm and Docker Compose require explicit database password -- no defaults
+  - Helm security contexts: `runAsNonRoot`, `allowPrivilegeEscalation: false` on both app and database pods
+  - Frontend 401 handler dispatches event instead of hard-reloading (was causing infinite loops)
+- **Code reviews** -- six full reviews (after v0.1.x, v0.2.x, and v0.3.x milestones, plus per-feature spec compliance, quality checks, and a deployment audit). Notable finds and fixes:
   - Batch stats were hardcoded to zeros -- store() now tracks real discovered/added/failed counts
   - Genre overlap scoring (20% of recommendation score) was permanently zero -- wired Lidarr genre extraction through the pipeline
   - Cron schedule hot-reload was broken -- saving a new cron now restarts the scheduler immediately, with validation for empty/invalid expressions
@@ -230,8 +235,13 @@ The codebase went through multiple rounds of verification before release:
   - `safeCompare` buffer length check corrected to use byte length instead of string char length
   - Quick-discover route had 100+ lines of duplicated pipeline logic with dynamic imports -- simplified to static imports and shared functions
   - Dead code cleanup removed 6 unused functions across 4 files
-- **Dependency audit** -- frontend-only packages moved to devDependencies, production Docker image slimmed from 564 MB to 213 MB, container runs as non-root user. Only one runtime dependency added since initial release (@tanstack/react-query, as a dev dependency bundled by Vite)
-- **End-to-end testing** -- deployed and tested against a real Lidarr instance, ListenBrainz account, and AI provider across multiple iterations
+  - serveStatic resolved paths relative to module directory instead of cwd -- fixed with `path.resolve`
+  - Bun bundler inlined `process.env.NODE_ENV` at build time, dead-code-eliminating the entire SPA serving block -- fixed by setting `NODE_ENV=production` in the Docker build stage
+  - Pipeline preferences merge used `??` which only caught fully-null objects -- partial preferences left `rejectionCooldownDays` undefined, causing `Invalid Date` in Drizzle's pg driver
+  - Quick-discover bypassed rejection cooldown, feedback history, and user scoping -- all three wired in
+  - Test connection endpoints sent empty API keys when credentials showed as "(saved)" -- now fall back to stored DB credentials
+- **Dependency audit** -- frontend-only packages moved to devDependencies, production Docker image slimmed from 564 MB to 213 MB, container runs as non-root user. Bitnami PostgreSQL subchart replaced with official `postgres:17-alpine` image. Only one runtime dependency added since initial release (@tanstack/react-query, as a dev dependency bundled by Vite)
+- **End-to-end testing** -- deployed and tested against a real Lidarr instance, ListenBrainz account, and AI provider across multiple iterations, including Kubernetes deployment with Helm chart validation
 
 If you find issues, please [open an issue](https://github.com/iuliandita/digarr/issues).
 
