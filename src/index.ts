@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import { eq } from 'drizzle-orm'
+import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import { PipelineScheduler } from './core/pipeline/scheduler'
@@ -20,6 +21,11 @@ import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
 import { artists, recommendationBatches, recommendations } from './db/schema'
 import { createApp } from './server'
+
+// Run pending database migrations before anything else.
+// Uses drizzle-orm's programmatic migrator -- safe to run every boot (idempotent).
+await migrate(db, { migrationsFolder: './drizzle' })
+console.log('Database migrations applied')
 
 const storeDb: StoreDb = {
   getExistingRecommendationMbids: async () => {
