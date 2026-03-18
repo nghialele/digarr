@@ -1,3 +1,4 @@
+import type { ListeningActivityEntry } from '@/core/plugins/types'
 import type { ServiceTestResult } from '@/core/types'
 import { createHttpClient, HttpError } from './http'
 
@@ -10,12 +11,6 @@ export type TopArtist = {
   mbid?: string
   playCount: number
   source: 'listenbrainz'
-}
-
-export type ListeningActivityEntry = {
-  listen_count: number
-  from_ts: number
-  to_ts: number
 }
 
 export type SimilarArtist = {
@@ -84,7 +79,7 @@ export function createListenBrainzClient(username: string, token: string) {
     try {
       const res = await http.get<LbSimilarArtistEntry[]>(`/1/artist/${mbid}/similar`)
       return res.map((a) => ({ name: a.name, score: a.score }))
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof HttpError && err.status === 404) {
         return []
       }
@@ -100,7 +95,7 @@ export function createListenBrainzClient(username: string, token: string) {
         message: `Connected to ListenBrainz -- ${count} listens for ${username}`,
         details: { listenCount: count },
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return { success: false, message }
     }

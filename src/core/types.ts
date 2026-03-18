@@ -1,3 +1,5 @@
+export type AiProvider = 'anthropic' | 'openai' | 'ollama'
+
 export type TasteProfile = {
   topArtists: Array<{
     name: string

@@ -1,11 +1,5 @@
-import type { ListeningSource, TopArtistEntry } from '@/core/plugins/types'
+import type { ListeningActivityEntry, ListeningSource, TopArtistEntry } from '@/core/plugins/types'
 import type { TasteProfile } from '@/core/types'
-
-type ListeningActivityEntry = {
-  listen_count: number
-  from_ts: number
-  to_ts: number
-}
 
 export async function analyze(sources: ListeningSource[]): Promise<TasteProfile> {
   const allArtists: TopArtistEntry[] = []

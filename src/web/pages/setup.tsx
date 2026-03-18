@@ -1,13 +1,10 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import type { AiProvider } from '@/core/types'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
 import { completeSetup, testService } from '../lib/api'
-
-// --- Types ---
-
-type AiProvider = 'anthropic' | 'openai' | 'ollama'
 
 type FormState = {
   lidarr: { url: string; apiKey: string; skipTlsVerify: boolean }
@@ -29,8 +26,6 @@ type TestingState = {
   lastfm: boolean
   ai: boolean
 }
-
-// --- Step indicator ---
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
@@ -78,8 +73,6 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
   )
 }
 
-// --- Field wrapper ---
-
 function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -90,8 +83,6 @@ function Field({ label, id, children }: { label: string; id: string; children: R
     </div>
   )
 }
-
-// --- Step 1: Lidarr ---
 
 function StepLidarr({
   form,
@@ -145,8 +136,6 @@ function StepLidarr({
     </div>
   )
 }
-
-// --- Step 2: Listening Sources ---
 
 function StepSources({
   form,
@@ -294,8 +283,6 @@ function StepSources({
   )
 }
 
-// --- Step 3: AI Provider ---
-
 function StepAi({
   form,
   onFormChange,
@@ -427,8 +414,6 @@ function StepAi({
   )
 }
 
-// --- Step 4: Done ---
-
 function StepDone({
   form,
   results,
@@ -473,8 +458,6 @@ function StepDone({
     </div>
   )
 }
-
-// --- Main wizard ---
 
 const DEFAULT_FORM: FormState = {
   lidarr: { url: '', apiKey: '', skipTlsVerify: false },

@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import type { AiProvider } from '@/core/types'
+import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { ServiceCard } from '../components/service-card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -22,31 +24,6 @@ import {
   updateSettings,
 } from '../lib/api'
 
-// --- Types ---
-
-type AiProvider = 'anthropic' | 'openai' | 'ollama'
-
-type ScoringWeights = {
-  consensus: number
-  similarity: number
-  genreOverlap: number
-  aiConfidence: number
-  feedbackBoost: number
-}
-
-type Preferences = {
-  qualityProfileId?: number
-  metadataProfileId?: number
-  rootFolderId?: number
-  scheduleCron?: string
-  scoreThreshold?: number
-  scoringWeights?: ScoringWeights
-  rejectionCooldownDays?: number
-  topArtistsLimit?: number
-  librarySeedRatio?: number
-  webhookUrl?: string
-}
-
 type Settings = {
   lidarrUrl?: string
   lidarrApiKey?: string
@@ -58,13 +35,11 @@ type Settings = {
   aiApiKey?: string
   aiModel?: string
   aiBaseUrl?: string
-  preferences?: Preferences
+  preferences?: Partial<Preferences>
   setupComplete?: boolean
 }
 
 type Tab = 'connections' | 'recommendations' | 'schedule' | 'account'
-
-// --- Field wrapper ---
 
 function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
@@ -76,8 +51,6 @@ function Field({ label, id, children }: { label: string; id: string; children: R
     </div>
   )
 }
-
-// --- Tab switcher ---
 
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   const tabs: { id: Tab; label: string }[] = [
@@ -106,8 +79,6 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
     </div>
   )
 }
-
-// --- Slider with value display ---
 
 function SliderField({
   label,
@@ -151,8 +122,6 @@ function SliderField({
     </div>
   )
 }
-
-// --- Connections Tab ---
 
 type ServiceTestState = 'idle' | 'testing' | 'ok' | 'error'
 
@@ -221,129 +190,87 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
     return 'not_configured'
   }
 
-  async function testLidarr() {
-    setTest('lidarr', 'testing')
-    try {
-      const res = await testService('lidarr', { url: lidarrUrl, apiKey: lidarrApiKey })
-      setTest('lidarr', res.success ? 'ok' : 'error')
-      if (res.success) toast.success('Lidarr connected')
-      else toast.error(res.message || 'Lidarr connection failed')
-    } catch {
-      setTest('lidarr', 'error')
-      toast.error('Could not reach Lidarr')
+  function createTester(
+    key: string,
+    label: string,
+    testFn: () => Promise<{ success: boolean; message?: string }>,
+  ) {
+    return async () => {
+      setTest(key, 'testing')
+      try {
+        const res = await testFn()
+        setTest(key, res.success ? 'ok' : 'error')
+        if (res.success) toast.success(`${label} connected`)
+        else toast.error(res.message || `${label} connection failed`)
+      } catch {
+        setTest(key, 'error')
+        toast.error(`Could not reach ${label}`)
+      }
     }
   }
 
-  async function saveLidarr() {
-    setSave('lidarr', true)
-    try {
-      await updateSettings({
-        lidarrUrl,
-        lidarrApiKey: lidarrApiKey || undefined,
-        preferences: {
-          ...prefs,
-          qualityProfileId: parseInt(qualityProfileId, 10) || prefs.qualityProfileId,
-          metadataProfileId: parseInt(metadataProfileId, 10) || prefs.metadataProfileId,
-          rootFolderId: parseInt(rootFolderId, 10) || prefs.rootFolderId,
-        },
-      })
-      toast.success('Lidarr settings saved')
-      onSaved()
-    } catch {
-      toast.error('Failed to save Lidarr settings')
-    } finally {
-      setSave('lidarr', false)
+  function createSaver(key: string, label: string, saveFn: () => Promise<unknown>) {
+    return async () => {
+      setSave(key, true)
+      try {
+        await saveFn()
+        toast.success(`${label} settings saved`)
+        onSaved()
+      } catch {
+        toast.error(`Failed to save ${label} settings`)
+      } finally {
+        setSave(key, false)
+      }
     }
   }
 
-  async function testListenbrainz() {
-    setTest('listenbrainz', 'testing')
-    try {
-      const res = await testService('listenbrainz', { username: lbUsername, token: lbToken })
-      setTest('listenbrainz', res.success ? 'ok' : 'error')
-      if (res.success) toast.success('ListenBrainz connected')
-      else toast.error(res.message || 'ListenBrainz connection failed')
-    } catch {
-      setTest('listenbrainz', 'error')
-      toast.error('Could not reach ListenBrainz')
-    }
-  }
+  const testLidarr = createTester('lidarr', 'Lidarr', () =>
+    testService('lidarr', { url: lidarrUrl, apiKey: lidarrApiKey }),
+  )
+  const saveLidarr = createSaver('lidarr', 'Lidarr', () =>
+    updateSettings({
+      lidarrUrl,
+      lidarrApiKey: lidarrApiKey || undefined,
+      preferences: {
+        ...prefs,
+        qualityProfileId: parseInt(qualityProfileId, 10) || prefs.qualityProfileId,
+        metadataProfileId: parseInt(metadataProfileId, 10) || prefs.metadataProfileId,
+        rootFolderId: parseInt(rootFolderId, 10) || prefs.rootFolderId,
+      },
+    }),
+  )
 
-  async function saveListenbrainz() {
-    setSave('listenbrainz', true)
-    try {
-      await updateSettings({
-        listenbrainzUsername: lbUsername,
-        listenbrainzToken: lbToken || undefined,
-      })
-      toast.success('ListenBrainz settings saved')
-      onSaved()
-    } catch {
-      toast.error('Failed to save ListenBrainz settings')
-    } finally {
-      setSave('listenbrainz', false)
-    }
-  }
+  const testListenbrainz = createTester('listenbrainz', 'ListenBrainz', () =>
+    testService('listenbrainz', { username: lbUsername, token: lbToken }),
+  )
+  const saveListenbrainz = createSaver('listenbrainz', 'ListenBrainz', () =>
+    updateSettings({
+      listenbrainzUsername: lbUsername,
+      listenbrainzToken: lbToken || undefined,
+    }),
+  )
 
-  async function testLastfm() {
-    setTest('lastfm', 'testing')
-    try {
-      const res = await testService('lastfm', { username: lfUsername, apiKey: lfApiKey })
-      setTest('lastfm', res.success ? 'ok' : 'error')
-      if (res.success) toast.success('Last.fm connected')
-      else toast.error(res.message || 'Last.fm connection failed')
-    } catch {
-      setTest('lastfm', 'error')
-      toast.error('Could not reach Last.fm')
-    }
-  }
+  const testLastfm = createTester('lastfm', 'Last.fm', () =>
+    testService('lastfm', { username: lfUsername, apiKey: lfApiKey }),
+  )
+  const saveLastfm = createSaver('lastfm', 'Last.fm', () =>
+    updateSettings({ lastfmUsername: lfUsername, lastfmApiKey: lfApiKey || undefined }),
+  )
 
-  async function saveLastfm() {
-    setSave('lastfm', true)
-    try {
-      await updateSettings({ lastfmUsername: lfUsername, lastfmApiKey: lfApiKey || undefined })
-      toast.success('Last.fm settings saved')
-      onSaved()
-    } catch {
-      toast.error('Failed to save Last.fm settings')
-    } finally {
-      setSave('lastfm', false)
-    }
-  }
-
-  async function testAi() {
-    setTest('ai', 'testing')
+  const testAi = createTester('ai', 'AI provider', () => {
     const config: Record<string, string> = { provider: aiProvider, model: aiModel }
     if (aiProvider !== 'ollama') config.apiKey = aiApiKey
     if (aiProvider === 'ollama') config.baseUrl = aiBaseUrl
-    try {
-      const res = await testService('ai', config)
-      setTest('ai', res.success ? 'ok' : 'error')
-      if (res.success) toast.success('AI provider connected')
-      else toast.error(res.message || 'AI connection failed')
-    } catch {
-      setTest('ai', 'error')
-      toast.error('Could not reach AI provider')
-    }
-  }
-
-  async function saveAi() {
-    setSave('ai', true)
-    try {
-      await updateSettings({
-        aiProvider,
-        aiModel: aiModel || undefined,
-        aiApiKey: aiApiKey || undefined,
-        aiBaseUrl: aiBaseUrl || undefined,
-      })
-      toast.success('AI settings saved')
-      onSaved()
-    } catch {
-      toast.error('Failed to save AI settings')
-    } finally {
-      setSave('ai', false)
-    }
-  }
+    return testService('ai', config)
+  })
+  const saveAi = createSaver('ai', 'AI', () =>
+    updateSettings({
+      aiProvider,
+      aiModel: aiModel || undefined,
+      aiApiKey: aiApiKey || undefined,
+      aiBaseUrl: aiBaseUrl || undefined,
+    }),
+  )
 
   const isLidarrConfigured = !!(lidarrUrl || settings.lidarrUrl)
   const isLbConfigured = !!(lbUsername || settings.listenbrainzUsername)
@@ -604,19 +531,9 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   )
 }
 
-// --- Recommendations Tab ---
-
-const DEFAULT_WEIGHTS: ScoringWeights = {
-  consensus: 0.3,
-  similarity: 0.25,
-  genreOverlap: 0.2,
-  aiConfidence: 0.15,
-  feedbackBoost: 0.1,
-}
-
 function RecommendationsTab({ settings }: { settings: Settings }) {
   const prefs = settings.preferences ?? {}
-  const weights = prefs.scoringWeights ?? DEFAULT_WEIGHTS
+  const weights = prefs.scoringWeights ?? DEFAULT_PREFERENCES.scoringWeights
 
   const [scoreThreshold, setScoreThreshold] = useState(prefs.scoreThreshold ?? 0.5)
   const [consensus, setConsensus] = useState(weights.consensus)
@@ -778,8 +695,6 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
   )
 }
 
-// --- Schedule Tab ---
-
 type CronPreset = { label: string; value: string }
 
 const PRESETS: CronPreset[] = [
@@ -844,8 +759,6 @@ function ScheduleTab({ settings }: { settings: Settings }) {
   )
 }
 
-// --- Account Tab ---
-
 function AccountTab({ settings }: { settings: Settings }) {
   const prefs = settings.preferences ?? {}
   const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
@@ -886,7 +799,7 @@ function AccountTab({ settings }: { settings: Settings }) {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to change password'
       toast.error(
         msg.includes('401') || msg.includes('403') ? 'Current password is incorrect' : msg,
@@ -1012,8 +925,6 @@ function AccountTab({ settings }: { settings: Settings }) {
   )
 }
 
-// --- Skeleton loader ---
-
 function SettingsSkeleton() {
   return (
     <div className="space-y-4">
@@ -1028,8 +939,6 @@ function SettingsSkeleton() {
     </div>
   )
 }
-
-// --- Main Page ---
 
 export function SettingsPage() {
   const queryClient = useQueryClient()
