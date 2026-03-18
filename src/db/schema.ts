@@ -29,6 +29,15 @@ export const settings = pgTable('settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  username: text('username').unique().notNull(),
+  passwordHash: text('password_hash').notNull(),
+  isAdmin: boolean('is_admin').default(false).notNull(),
+  preferences: jsonb('preferences').$type<Preferences>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
 export const artists = pgTable('artists', {
   id: serial('id').primaryKey(),
   mbid: uuid('mbid').unique().notNull(),
@@ -51,6 +60,7 @@ export const recommendationBatches = pgTable('recommendation_batches', {
 
 export const recommendations = pgTable('recommendations', {
   id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
   artistId: integer('artist_id')
     .references(() => artists.id)
     .notNull(),

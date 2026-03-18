@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { artists, DEFAULT_PREFERENCES, recommendations, settings } from '@/db/schema'
+import { artists, DEFAULT_PREFERENCES, recommendations, settings, users } from '@/db/schema'
 
 describe('schema', () => {
   it('settings table has expected columns', () => {
@@ -15,6 +15,19 @@ describe('schema', () => {
   it('recommendations references artists and batches', () => {
     expect(recommendations.artistId).toBeDefined()
     expect(recommendations.batchId).toBeDefined()
+  })
+
+  it('recommendations has nullable userId column', () => {
+    expect(recommendations.userId).toBeDefined()
+  })
+
+  it('users table has expected columns', () => {
+    expect(users.id).toBeDefined()
+    expect(users.username).toBeDefined()
+    expect(users.passwordHash).toBeDefined()
+    expect(users.isAdmin).toBeDefined()
+    expect(users.preferences).toBeDefined()
+    expect(users.createdAt).toBeDefined()
   })
 
   it('DEFAULT_PREFERENCES has correct scoring weights summing to 1', () => {

@@ -15,6 +15,13 @@
       "when": 1773766637590,
       "tag": "0001_massive_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773835103931,
+      "tag": "0002_dazzling_madame_web",
+      "breakpoints": true
     }
   ]
 }
