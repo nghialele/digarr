@@ -12,8 +12,9 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v6
 
@@ -42,3 +43,23 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Generate SBOM (container)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          artifact-name: sbom-container.spdx.json
+          output-file: sbom-container.spdx.json
+
+      - name: Generate SBOM (source)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          artifact-name: sbom-source.spdx.json
+          output-file: sbom-source.spdx.json
+
+      - name: Upload SBOMs to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" sbom-container.spdx.json sbom-source.spdx.json --clobber
