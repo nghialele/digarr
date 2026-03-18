@@ -15,7 +15,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - name: Dependency audit
-        run: bun audit --level high
+        run: |
+          output=$(bun audit 2>&1) || true
+          echo "$output"
+          if echo "$output" | grep -qi "high\|critical"; then
+            echo "::error::High or critical vulnerabilities found"
+            exit 1
+          fi
 
   codeql:
     runs-on: ubuntu-latest
