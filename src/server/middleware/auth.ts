@@ -20,8 +20,8 @@ const PUBLIC_PATHS = new Set([
 
 export function authGuard(hasUsers: () => Promise<boolean>) {
   return createMiddleware(async (c, next) => {
-    // Skip auth for public paths
-    if (PUBLIC_PATHS.has(c.req.path)) return next()
+    // Skip auth for non-API paths (static assets, SPA routes) and public API paths
+    if (!c.req.path.startsWith('/api/') || PUBLIC_PATHS.has(c.req.path)) return next()
 
     // Extract token from Authorization header or query param (SSE fallback)
     const header = c.req.header('Authorization')
