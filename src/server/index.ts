@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -102,9 +103,12 @@ export function createApp(deps: AppDependencies) {
   app.route('/', listeningRoutes(deps))
 
   // Serve built SPA in production (dev uses Vite's dev server with proxy)
+  // Absolute path required: @hono/node-server serveStatic resolves relative
+  // to the module directory (dist/server/), not process.cwd()
   if (process.env.NODE_ENV === 'production') {
-    app.use('/*', serveStatic({ root: './dist/web' }))
-    app.get('*', serveStatic({ root: './dist/web', path: 'index.html' }))
+    const webRoot = resolve(process.cwd(), 'dist/web')
+    app.use('/*', serveStatic({ root: webRoot }))
+    app.get('*', serveStatic({ root: webRoot, path: 'index.html' }))
   }
 
   return app
