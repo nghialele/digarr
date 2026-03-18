@@ -119,6 +119,33 @@ describe('PATCH /api/settings', () => {
     expect(restartScheduler).toHaveBeenCalledWith('0 3 * * *')
   })
 
+  it('stops scheduler when cron is set to empty string', async () => {
+    const restartScheduler = vi.fn()
+    const app = createApp(makeDeps({ restartScheduler }))
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { scheduleCron: '' } }),
+    })
+    expect(res.status).toBe(200)
+    expect(restartScheduler).toHaveBeenCalledWith(null)
+  })
+
+  it('returns warning when cron expression is invalid', async () => {
+    const restartScheduler = vi.fn(() => {
+      throw new TypeError('Invalid cron expression')
+    })
+    const app = createApp(makeDeps({ restartScheduler }))
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { scheduleCron: 'not a cron' } }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.warning).toBe('Settings saved but cron expression is invalid')
+  })
+
   it('does not restart scheduler when preferences lack scheduleCron', async () => {
     const restartScheduler = vi.fn()
     const app = createApp(makeDeps({ restartScheduler }))

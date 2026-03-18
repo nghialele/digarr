@@ -54,8 +54,17 @@ export function settingsRoutes(deps: AppDependencies) {
     await deps.updateSettings(sanitized)
 
     const prefs = sanitized.preferences as Record<string, unknown> | undefined
-    if (prefs?.scheduleCron && typeof prefs.scheduleCron === 'string') {
-      deps.restartScheduler(prefs.scheduleCron)
+    if (prefs?.scheduleCron !== undefined && typeof prefs.scheduleCron === 'string') {
+      try {
+        deps.restartScheduler(prefs.scheduleCron || null)
+      } catch (err) {
+        console.error('Failed to apply cron expression:', err)
+        const row = await deps.getSettings()
+        return c.json({
+          ...maskSecrets((row ?? {}) as Record<string, unknown>),
+          warning: 'Settings saved but cron expression is invalid',
+        })
+      }
     }
 
     const row = await deps.getSettings()

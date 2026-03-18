@@ -53,6 +53,13 @@ const storeDb: StoreDb = {
 const orchestrator = new PipelineOrchestrator()
 const scheduler = new PipelineScheduler()
 
+const runPipeline = async () => {
+  const currentSettings = await getSettings(db)
+  if (currentSettings) {
+    await orchestrator.run({ db: storeDb, settings: currentSettings })
+  }
+}
+
 const app = createApp({
   db,
   storeDb,
@@ -74,13 +81,13 @@ const app = createApp({
   listBatches: () => listBatches(db),
   getBatch: (id) => getBatch(db, id),
   getArtistById: (id) => getArtistById(db, id),
-  restartScheduler: (cron: string) => {
-    scheduler.start(cron, async () => {
-      const currentSettings = await getSettings(db)
-      if (currentSettings) {
-        await orchestrator.run({ db: storeDb, settings: currentSettings })
-      }
-    })
+  restartScheduler: (cron: string | null) => {
+    if (!cron) {
+      scheduler.stop()
+      console.log('Scheduler stopped')
+      return
+    }
+    scheduler.start(cron, runPipeline)
     console.log(`Scheduler restarted with cron: ${cron}`)
   },
 })
@@ -113,12 +120,7 @@ isSetupComplete(db)
   .then((settings) => {
     const cron = settings?.preferences?.scheduleCron
     if (cron) {
-      scheduler.start(cron, async () => {
-        const currentSettings = await getSettings(db)
-        if (currentSettings) {
-          await orchestrator.run({ db: storeDb, settings: currentSettings })
-        }
-      })
+      scheduler.start(cron, runPipeline)
       console.log(`Scheduler started with cron: ${cron}`)
     }
   })
