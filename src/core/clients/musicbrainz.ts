@@ -4,10 +4,6 @@ import { VERSION } from '@/version'
 const BASE_URL = 'https://musicbrainz.org/ws/2'
 const USER_AGENT = `Digarr/${VERSION} (https://github.com/iuliandita/digarr)`
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export type MBArtist = {
   id: string
   name: string
@@ -41,10 +37,6 @@ export type StreamingUrls = {
   bandcamp?: string
 }
 
-// ---------------------------------------------------------------------------
-// URL pattern -> streaming key map
-// ---------------------------------------------------------------------------
-
 const STREAMING_PATTERNS: Array<[RegExp, keyof StreamingUrls]> = [
   [/spotify\.com/i, 'spotify'],
   [/music\.youtube\.com/i, 'youtube'],
@@ -57,10 +49,6 @@ const STREAMING_PATTERNS: Array<[RegExp, keyof StreamingUrls]> = [
 ]
 
 const STREAMING_TYPES = new Set(['streaming music', 'free streaming'])
-
-// ---------------------------------------------------------------------------
-// Client factory
-// ---------------------------------------------------------------------------
 
 export function createMusicBrainzClient() {
   const queue = new PQueue({ concurrency: 1, interval: 1000, intervalCap: 1 })
