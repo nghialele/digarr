@@ -12,9 +12,23 @@
 
 Think of it as Jellyseerr/Overseerr, but for music discovery.
 
-![Dashboard](docs/screenshots/dashboard.png)
+![Dashboard (dark)](docs/screenshots/dashboard-dark.png)
+
+![Dashboard (light)](docs/screenshots/dashboard-light.png)
 
 ![Discover](docs/screenshots/discover.png)
+
+![Artist Detail](docs/screenshots/detail.png)
+
+![Analytics](docs/screenshots/analytics.png)
+
+![Settings - Connections](docs/screenshots/settings-connections.png)
+
+![Settings - Recommendations](docs/screenshots/settings-recs.png)
+
+![Settings - Schedule](docs/screenshots/settings-schedule.png)
+
+![Settings - Account](docs/screenshots/settings-accounts.png)
 
 ---
 
