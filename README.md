@@ -5,7 +5,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-338_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-368_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
@@ -31,7 +31,8 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 - **Setup wizard** -- guided 4-step setup with connection testing
 - **Dark UI** -- clean, responsive interface with keyboard shortcuts (j/k navigate, a approve, r reject), paginated discover view
 - **Mobile PWA** -- installable on phones, swipe-to-approve/reject on recommendation cards, responsive nav
-- **Optional auth** -- protect the API with a shared bearer token (`DIGARR_AUTH_TOKEN` env var)
+- **Multi-user** -- per-user recommendation queues, session-based auth with username/password, admin role
+- **Optional auth** -- bearer token (`DIGARR_AUTH_TOKEN`) or per-user login
 - **Analytics dashboard** -- track approval rates, genre trends, source effectiveness, and batch history over time
 - **Webhook notifications** -- get notified when scans complete (Discord, Slack, ntfy, Gotify, or any HTTP endpoint)
 - **Self-hosted** -- runs as a single container alongside your existing *arr stack
@@ -165,7 +166,7 @@ See [`.env.example`](.env.example) for the full list with comments.
 - **Database**: PostgreSQL via [Drizzle ORM](https://orm.drizzle.team)
 - **Build**: [Vite](https://vite.dev)
 - **Lint/Format**: [Biome](https://biomejs.dev)
-- **Tests**: [Vitest](https://vitest.dev) (338 tests)
+- **Tests**: [Vitest](https://vitest.dev) (368 tests)
 
 ---
 
@@ -177,7 +178,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 bun install
 bun run lint        # biome check
 bun run typecheck   # tsc --noEmit
-bun run test        # vitest (338 tests)
+bun run test        # vitest (368 tests)
 ```
 
 ---
@@ -190,7 +191,7 @@ This project was built with the help of agentic AI coding tools. The design, arc
 
 The codebase went through multiple rounds of verification before release:
 
-- **330 unit and integration tests** across 33 test files -- API clients, pipeline stages, server routes, database queries, and UI components
+- **368 unit and integration tests** across 37 test files -- API clients, pipeline stages, server routes, database queries, and UI components
 - **Static analysis** -- zero errors from TypeScript strict mode (`noUncheckedIndexedAccess`, `isolatedModules`) and Biome linter across 96 source files
 - **Security audit** -- identified and fixed critical vulnerabilities:
   - CORS restricted to configured origin (no wildcard in production)
