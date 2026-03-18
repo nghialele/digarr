@@ -185,7 +185,7 @@ This project was built with the help of agentic AI coding tools. The design, arc
 
 The codebase went through multiple rounds of verification before release:
 
-- **261 unit and integration tests** across 27 test files -- API clients, pipeline stages, server routes, database queries, and UI components
+- **267 unit and integration tests** across 27 test files -- API clients, pipeline stages, server routes, database queries, and UI components
 - **Static analysis** -- zero errors from TypeScript strict mode (`noUncheckedIndexedAccess`, `isolatedModules`) and Biome linter across 96 source files
 - **Security audit** -- identified and fixed critical vulnerabilities:
   - CORS restricted to configured origin (no wildcard in production)

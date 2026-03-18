@@ -11,8 +11,9 @@ export function recommendationRoutes(deps: AppDependencies) {
       status: query.status,
       batchId: query.batchId !== undefined ? Number(query.batchId) : undefined,
       sort: query.sort as 'score_desc' | 'score_asc' | 'created_desc' | undefined,
-      limit: query.limit !== undefined ? Number(query.limit) : undefined,
-      offset: query.offset !== undefined ? Number(query.offset) : undefined,
+      limit:
+        query.limit !== undefined ? Math.max(1, Math.min(200, Number(query.limit) || 20)) : undefined,
+      offset: query.offset !== undefined ? Math.max(0, Number(query.offset) || 0) : undefined,
     }
     const result = await deps.listRecommendations(filters)
     return c.json(result)
