@@ -95,7 +95,7 @@ The pipeline runs on a configurable cron schedule or manually via the "Run Scan"
 All configuration is done through the web UI after initial setup. Key settings:
 
 ### Connections (Settings > Connections)
-- Lidarr URL, API key, quality/metadata profiles
+- Lidarr URL, API key, quality/metadata profiles, root folder
 - ListenBrainz username + token
 - Last.fm username + API key
 - AI provider, model, API key
