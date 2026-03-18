@@ -7,9 +7,11 @@ export function recommendationRoutes(deps: AppDependencies) {
 
   router.get('/api/recommendations', async (c) => {
     const query = c.req.query()
+    const userId = c.get('userId' as never) as number | undefined
     const filters = {
       status: query.status,
       batchId: query.batchId !== undefined ? Number(query.batchId) : undefined,
+      userId,
       sort: query.sort as 'score_desc' | 'score_asc' | 'created_desc' | undefined,
       limit:
         query.limit !== undefined

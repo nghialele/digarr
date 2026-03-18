@@ -38,6 +38,7 @@ export interface PipelineSettings {
 export interface PipelineDeps {
   db: StoreDb
   settings: PipelineSettings
+  userId?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +214,7 @@ export class PipelineOrchestrator extends EventEmitter {
         stage: 'store',
         message: `Saving ${filtered.length} recommendations...`,
       })
-      const batchId = await store(filtered, db)
+      const batchId = await store(filtered, db, { userId: deps.userId })
 
       // Fire-and-forget webhook notification
       const webhookUrl = prefs.webhookUrl

@@ -74,7 +74,10 @@ export function createApp(deps: AppDependencies) {
       origin: envConfig.allowedOrigin ?? (process.env.NODE_ENV === 'production' ? '' : '*'),
     }),
   )
-  app.use('*', authGuard(async () => (await deps.getUserCount()) > 0))
+  app.use(
+    '*',
+    authGuard(async () => (await deps.getUserCount()) > 0),
+  )
   app.use('*', setupGuard(deps.isSetupComplete))
 
   // Auth status (unauthenticated -- tells the frontend whether auth is required)

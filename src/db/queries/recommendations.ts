@@ -10,6 +10,7 @@ export type RecommendationWithArtist = RecommendationRow & { artist: ArtistRow }
 export type ListRecommendationsFilters = {
   status?: string
   batchId?: number
+  userId?: number
   sort?: 'score_desc' | 'score_asc' | 'created_desc'
   limit?: number
   offset?: number
@@ -24,7 +25,7 @@ export async function listRecommendations(
   db: Database,
   filters: ListRecommendationsFilters = {},
 ): Promise<ListRecommendationsResult> {
-  const { status, batchId, sort = 'score_desc', limit = 20, offset = 0 } = filters
+  const { status, batchId, userId, sort = 'score_desc', limit = 20, offset = 0 } = filters
 
   const conditions = []
   if (status !== undefined) {
@@ -35,6 +36,7 @@ export async function listRecommendations(
     }
   }
   if (batchId !== undefined) conditions.push(eq(recommendations.batchId, batchId))
+  if (userId !== undefined) conditions.push(eq(recommendations.userId, userId))
 
   const where = conditions.length > 0 ? and(...conditions) : undefined
 
@@ -159,6 +161,7 @@ export async function insertRecommendation(
     sources: Record<string, number>
     aiReasoning?: string
     status: string
+    userId?: number
   },
 ): Promise<void> {
   await db.insert(recommendations).values({
@@ -168,5 +171,6 @@ export async function insertRecommendation(
     sources: data.sources,
     aiReasoning: data.aiReasoning,
     status: data.status,
+    userId: data.userId,
   })
 }

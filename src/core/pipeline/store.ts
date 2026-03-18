@@ -28,6 +28,7 @@ export interface StoreDb {
     sources: Record<string, number>
     aiReasoning?: string
     status: string
+    userId?: number
   }) => Promise<void>
 
   getRejectedMbids: (cooldownDays: number) => Promise<Set<string>>
@@ -35,7 +36,15 @@ export interface StoreDb {
   getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
 }
 
-export async function store(artists: ScoredArtist[], db: StoreDb): Promise<number> {
+export type StoreOptions = {
+  userId?: number
+}
+
+export async function store(
+  artists: ScoredArtist[],
+  db: StoreDb,
+  options: StoreOptions = {},
+): Promise<number> {
   // Create the batch row in running state
   const batch = await db.insertBatch({
     status: 'running',
@@ -70,6 +79,7 @@ export async function store(artists: ScoredArtist[], db: StoreDb): Promise<numbe
         sources: artist.sourceScores,
         aiReasoning: artist.aiReasoning,
         status: 'pending',
+        userId: options.userId,
       })
 
       added++

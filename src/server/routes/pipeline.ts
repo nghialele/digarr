@@ -25,9 +25,11 @@ export function pipelineRoutes(deps: AppDependencies) {
       return c.json({ error: 'Settings not found' }, 400)
     }
 
+    const userId = c.get('userId' as never) as number | undefined
+
     // Fire-and-forget
     deps.orchestrator
-      .run({ db: deps.storeDb, settings } as unknown as PipelineDeps)
+      .run({ db: deps.storeDb, settings, userId } as unknown as PipelineDeps)
       .catch((err: unknown) => {
         console.error('Pipeline run failed:', err)
       })
