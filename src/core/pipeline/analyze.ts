@@ -57,22 +57,10 @@ export async function analyze(
 
   const topArtists = Array.from(byName.values()).sort((a, b) => b.playCount - a.playCount)
 
-  // Compute genre weights from artist names used as proxy tags.
-  // Real genre extraction would require MB lookups; for now we use empty genres.
-  // The weight aggregation below is a hook for when tags are injected.
-  const genreWeightMap = new Map<string, number>()
-  const totalArtists = topArtists.length || 1
-
-  for (const [index, _artist] of topArtists.entries()) {
-    // Rank-weighted contribution -- top artist contributes most
-    const rankWeight = (totalArtists - index) / totalArtists
-    // Tags would be enumerated here if available; skip for now
-    void rankWeight
-  }
-
-  const topGenres = Array.from(genreWeightMap.entries())
-    .map(([name, weight]) => ({ name, weight }))
-    .sort((a, b) => b.weight - a.weight)
+  // Genre extraction from listening data is not yet implemented.
+  // Library genre overlap (the main genre scoring path) works via the
+  // orchestrator passing libraryGenres from Lidarr to score().
+  const topGenres: Array<{ name: string; weight: number }> = []
 
   // Determine recentTrend from listening activity
   const recentTrend = computeRecentTrend(activityData)
