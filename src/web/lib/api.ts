@@ -88,6 +88,7 @@ export const getLidarrProfiles = () =>
   fetchApi<Array<{ id: number; name: string }>>('/lidarr/profiles')
 export const getLidarrMetadataProfiles = () =>
   fetchApi<Array<{ id: number; name: string }>>('/lidarr/metadataprofiles')
-export const getLidarrRootFolders = () => fetchApi<unknown[]>('/lidarr/rootfolders')
+export const getLidarrRootFolders = () =>
+  fetchApi<Array<{ id: number; path: string; freeSpace?: number }>>('/lidarr/rootfolders')
 export const addToLidarr = (body: Record<string, unknown>) =>
   fetchApi('/lidarr/add', { method: 'POST', body: JSON.stringify(body) })

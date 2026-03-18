@@ -8,6 +8,7 @@ import { Skeleton } from '../components/ui/skeleton'
 import {
   getLidarrMetadataProfiles,
   getLidarrProfiles,
+  getLidarrRootFolders,
   getSettings,
   testService,
   triggerPipeline,
@@ -155,6 +156,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   )
   const [qualityProfileId, setQualityProfileId] = useState(String(prefs.qualityProfileId ?? 1))
   const [metadataProfileId, setMetadataProfileId] = useState(String(prefs.metadataProfileId ?? 1))
+  const [rootFolderId, setRootFolderId] = useState(String(prefs.rootFolderId ?? 1))
   const [lbUsername, setLbUsername] = useState(settings.listenbrainzUsername ?? '')
   const [lbToken, setLbToken] = useState(
     settings.listenbrainzToken === '***' ? '' : (settings.listenbrainzToken ?? ''),
@@ -178,6 +180,9 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   const { data: qualityProfiles } = useFetch<Array<{ id: number; name: string }>>(profilesFetcher)
   const metadataFetcher = useCallback(() => getLidarrMetadataProfiles(), [])
   const { data: metadataProfiles } = useFetch<Array<{ id: number; name: string }>>(metadataFetcher)
+  const rootFoldersFetcher = useCallback(() => getLidarrRootFolders(), [])
+  const { data: rootFolders } =
+    useFetch<Array<{ id: number; path: string; freeSpace?: number }>>(rootFoldersFetcher)
 
   function setTest(key: string, val: ServiceTestState) {
     setTests((prev) => ({ ...prev, [key]: val }))
@@ -226,6 +231,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           ...prefs,
           qualityProfileId: parseInt(qualityProfileId, 10) || prefs.qualityProfileId,
           metadataProfileId: parseInt(metadataProfileId, 10) || prefs.metadataProfileId,
+          rootFolderId: parseInt(rootFolderId, 10) || prefs.rootFolderId,
         },
       })
       toast.success('Lidarr settings saved')
@@ -360,7 +366,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Field label="Quality Profile" id="quality-profile">
               <Select
                 id="quality-profile"
@@ -392,6 +398,23 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
                   ))
                 ) : (
                   <option value={metadataProfileId}>Loading...</option>
+                )}
+              </Select>
+            </Field>
+            <Field label="Root Folder" id="root-folder">
+              <Select
+                id="root-folder"
+                value={rootFolderId}
+                onChange={(e) => setRootFolderId(e.target.value)}
+              >
+                {rootFolders ? (
+                  rootFolders.map((f) => (
+                    <option key={f.id} value={String(f.id)}>
+                      {f.path}
+                    </option>
+                  ))
+                ) : (
+                  <option value={rootFolderId}>Loading...</option>
                 )}
               </Select>
             </Field>
