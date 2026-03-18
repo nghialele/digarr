@@ -5,7 +5,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-299_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-330_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
@@ -163,7 +163,7 @@ See [`.env.example`](.env.example) for the full list with comments.
 - **Database**: PostgreSQL via [Drizzle ORM](https://orm.drizzle.team)
 - **Build**: [Vite](https://vite.dev)
 - **Lint/Format**: [Biome](https://biomejs.dev)
-- **Tests**: [Vitest](https://vitest.dev) (299 tests)
+- **Tests**: [Vitest](https://vitest.dev) (330 tests)
 
 ---
 
@@ -175,7 +175,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 bun install
 bun run lint        # biome check
 bun run typecheck   # tsc --noEmit
-bun run test        # vitest (299 tests)
+bun run test        # vitest (330 tests)
 ```
 
 ---
@@ -188,7 +188,7 @@ This project was built with the help of agentic AI coding tools. The design, arc
 
 The codebase went through multiple rounds of verification before release:
 
-- **267 unit and integration tests** across 27 test files -- API clients, pipeline stages, server routes, database queries, and UI components
+- **330 unit and integration tests** across 33 test files -- API clients, pipeline stages, server routes, database queries, and UI components
 - **Static analysis** -- zero errors from TypeScript strict mode (`noUncheckedIndexedAccess`, `isolatedModules`) and Biome linter across 96 source files
 - **Security audit** -- identified and fixed critical vulnerabilities:
   - CORS restricted to configured origin (no wildcard in production)
