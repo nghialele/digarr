@@ -1,5 +1,14 @@
 import { Hono } from 'hono'
+import { createLastFmClient } from '@/core/clients/lastfm'
+import { createLidarrClient } from '@/core/clients/lidarr'
+import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
+import { filter } from '@/core/pipeline/filter'
 import type { PipelineDeps } from '@/core/pipeline/orchestrator'
+import { resolve } from '@/core/pipeline/resolve'
+import { score } from '@/core/pipeline/score'
+import { store } from '@/core/pipeline/store'
+import { createProvider } from '@/core/providers/factory'
+import { upsertArtist } from '@/db/queries/artists'
 import type { AppDependencies } from '@/server'
 import { createPipelineSSEStream } from '@/server/sse'
 
@@ -72,15 +81,6 @@ export function pipelineRoutes(deps: AppDependencies) {
     // Fire-and-forget a focused pipeline run with just this artist as seed
     ;(async () => {
       try {
-        const { createLastFmClient } = await import('@/core/clients/lastfm')
-        const { createMusicBrainzClient } = await import('@/core/clients/musicbrainz')
-        const { createLidarrClient } = await import('@/core/clients/lidarr')
-        const { resolve } = await import('@/core/pipeline/resolve')
-        const { score } = await import('@/core/pipeline/score')
-        const { filter } = await import('@/core/pipeline/filter')
-        const { store } = await import('@/core/pipeline/store')
-        const { createProvider } = await import('@/core/providers/factory')
-
         const lidarr = createLidarrClient(
           settings.lidarrUrl as string,
           settings.lidarrApiKey as string,
@@ -181,10 +181,6 @@ export function pipelineRoutes(deps: AppDependencies) {
       return c.json({ error: 'Lidarr not configured' }, 400)
     }
 
-    // Import dynamically to avoid circular deps
-    const { createLidarrClient } = await import('@/core/clients/lidarr')
-    const { createMusicBrainzClient } = await import('@/core/clients/musicbrainz')
-
     const lidarr = createLidarrClient(
       settings.lidarrUrl as string,
       settings.lidarrApiKey as string,
@@ -216,10 +212,7 @@ export function pipelineRoutes(deps: AppDependencies) {
           images.find((i) => i.remoteUrl)
 
         if (img?.remoteUrl) {
-          // Update artist in DB
-          const { upsertArtist } = await import('@/db/queries/artists')
-          const { db } = await import('@/db')
-          await upsertArtist(db, {
+          await upsertArtist(deps.db, {
             mbid,
             name: artist.name as string,
             imageUrl: img.remoteUrl,
@@ -232,9 +225,7 @@ export function pipelineRoutes(deps: AppDependencies) {
           try {
             const mbArtist = await mb.lookupArtist(mbid)
             if (mbArtist.disambiguation) {
-              const { upsertArtist } = await import('@/db/queries/artists')
-              const { db } = await import('@/db')
-              await upsertArtist(db, {
+              await upsertArtist(deps.db, {
                 mbid,
                 name: artist.name as string,
                 disambiguation: mbArtist.disambiguation,

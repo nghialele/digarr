@@ -199,7 +199,6 @@ describe('createLastFmClient', () => {
       await client.getRecentTracks()
       expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
     })
-
   })
 
   describe('testConnection()', () => {
