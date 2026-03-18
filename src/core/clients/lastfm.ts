@@ -18,12 +18,6 @@ export type LastFmRecentTrack = {
   name: string
 }
 
-export type LastFmArtistInfo = {
-  bio: { summary: string }
-  image: Array<{ '#text': string; size: string }>
-  tags: { tag: Array<{ name: string }> }
-}
-
 // Raw Last.fm response shapes
 type LfmSimilarArtistsResponse = {
   similarartists: {
@@ -41,10 +35,6 @@ type LfmRecentTracksResponse = {
   recenttracks: {
     track: LastFmRecentTrack[]
   }
-}
-
-type LfmArtistInfoResponse = {
-  artist: LastFmArtistInfo
 }
 
 export function createLastFmClient(username: string, apiKey: string) {
@@ -96,13 +86,6 @@ export function createLastFmClient(username: string, apiKey: string) {
     return res.recenttracks.track
   }
 
-  async function getArtistInfo(artist: string, mbid?: string): Promise<LastFmArtistInfo> {
-    const params: Record<string, string> = { method: 'artist.getInfo', artist }
-    if (mbid) params.mbid = mbid
-    const res = await get<LfmArtistInfoResponse>(params)
-    return res.artist
-  }
-
   async function testConnection(): Promise<ServiceTestResult> {
     try {
       const artists = await getTopArtists('7day')
@@ -121,7 +104,6 @@ export function createLastFmClient(username: string, apiKey: string) {
     getSimilarArtists,
     getTopArtists,
     getRecentTracks,
-    getArtistInfo,
     testConnection,
   }
 }
