@@ -6,7 +6,7 @@ import { createLastFmSource } from '@/core/plugins/lastfm'
 import { createListenBrainzSource } from '@/core/plugins/listenbrainz'
 import { SourceRegistry } from '@/core/plugins/registry'
 import { createProvider } from '@/core/providers/factory'
-import type { Preferences } from '@/db/schema'
+import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { analyze } from './analyze'
 import { collect } from './collect'
 import { discover } from './discover'
@@ -68,22 +68,14 @@ export class PipelineOrchestrator extends EventEmitter {
 
     try {
       const { db, settings } = deps
-      const prefs: Preferences = settings.preferences ?? {
-        qualityProfileId: 1,
-        metadataProfileId: 1,
-        rootFolderId: 1,
-        scheduleCron: '0 0 * * 0',
-        scoreThreshold: 0.5,
+      // Merge with defaults so partially-saved preferences don't leave fields undefined
+      const prefs: Preferences = {
+        ...DEFAULT_PREFERENCES,
+        ...settings.preferences,
         scoringWeights: {
-          consensus: 0.3,
-          similarity: 0.25,
-          genreOverlap: 0.2,
-          aiConfidence: 0.15,
-          feedbackBoost: 0.1,
+          ...DEFAULT_PREFERENCES.scoringWeights,
+          ...settings.preferences?.scoringWeights,
         },
-        rejectionCooldownDays: 90,
-        topArtistsLimit: 30,
-        librarySeedRatio: 0.3,
       }
 
       // -- Build clients from settings ----------------------------------------

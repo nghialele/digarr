@@ -50,6 +50,13 @@ export const envConfig = {
 
   // Auth
   authToken: env('DIGARR_AUTH_TOKEN') ?? null,
+
+  // Initial user (created on boot if no users exist)
+  initialUsername: env('DIGARR_INITIAL_USERNAME'),
+  initialPassword: env('DIGARR_INITIAL_PASSWORD'),
+
+  // Webhook (injected into preferences during auto-setup only)
+  webhookUrl: env('WEBHOOK_URL'),
 } as const
 
 export type EnvConfig = typeof envConfig

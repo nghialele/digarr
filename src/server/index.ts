@@ -64,6 +64,7 @@ export type AppDependencies = {
   ) => Promise<{ id: number; username: string; passwordHash: string; isAdmin: boolean } | null>
   getUserById: (id: number) => Promise<UserPublic | null>
   getUserCount: () => Promise<number>
+  updatePassword: (id: number, passwordHash: string) => Promise<void>
 }
 
 export function createApp(deps: AppDependencies) {

@@ -7,6 +7,8 @@ import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
 import {
+  changePassword,
+  getCurrentUser,
   getLidarrMetadataProfiles,
   getLidarrProfiles,
   getLidarrRootFolders,
@@ -56,7 +58,7 @@ type Settings = {
   setupComplete?: boolean
 }
 
-type Tab = 'connections' | 'recommendations' | 'schedule'
+type Tab = 'connections' | 'recommendations' | 'schedule' | 'account'
 
 // --- Field wrapper ---
 
@@ -78,6 +80,7 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
     { id: 'connections', label: 'Connections' },
     { id: 'recommendations', label: 'Recommendations' },
     { id: 'schedule', label: 'Schedule' },
+    { id: 'account', label: 'Account' },
   ]
   return (
     <div className="flex gap-1 border-b border-border mb-6">
@@ -875,6 +878,94 @@ function ScheduleTab({ settings }: { settings: Settings }) {
   )
 }
 
+// --- Account Tab ---
+
+function AccountTab() {
+  const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match')
+      return
+    }
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters')
+      return
+    }
+    setSaving(true)
+    try {
+      await changePassword(currentPassword, newPassword)
+      toast.success('Password changed')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to change password'
+      toast.error(msg.includes('401') ? 'Current password is incorrect' : msg)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Profile</h2>
+        <div className="text-sm text-muted">
+          Signed in as <span className="text-text font-medium">{user?.username ?? '...'}</span>
+          {user?.isAdmin && (
+            <span className="ml-2 text-xs bg-accent/20 text-accent px-1.5 py-0.5 rounded">
+              admin
+            </span>
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Change Password</h2>
+        <form onSubmit={handleChangePassword} className="space-y-3">
+          <Field label="Current password" id="current-pw">
+            <Input
+              id="current-pw"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </Field>
+          <Field label="New password" id="new-pw">
+            <Input
+              id="new-pw"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="Min 8 characters"
+            />
+          </Field>
+          <Field label="Confirm new password" id="confirm-pw">
+            <Input
+              id="confirm-pw"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </Field>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Changing...' : 'Change Password'}
+          </Button>
+        </form>
+      </section>
+    </div>
+  )
+}
+
 // --- Skeleton loader ---
 
 function SettingsSkeleton() {
@@ -937,6 +1028,7 @@ export function SettingsPage() {
       {tab === 'connections' && <ConnectionsTab settings={data} onSaved={refetch} />}
       {tab === 'recommendations' && <RecommendationsTab settings={data} />}
       {tab === 'schedule' && <ScheduleTab settings={data} />}
+      {tab === 'account' && <AccountTab />}
     </div>
   )
 }

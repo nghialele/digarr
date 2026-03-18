@@ -50,6 +50,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       createdAt: new Date(),
     })),
     getUserCount: vi.fn(async () => 0),
+    updatePassword: vi.fn(async () => {}),
     ...overrides,
   }
 }

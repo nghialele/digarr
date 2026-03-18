@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server'
 import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
+import { hashPassword } from './core/auth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import { PipelineScheduler } from './core/pipeline/scheduler'
 import type { StoreDb } from './core/pipeline/store'
@@ -19,8 +20,14 @@ import {
 } from './db/queries/recommendations'
 import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
-import { createUser, getUserById, getUserByUsername, getUserCount } from './db/queries/users'
-import { artists, recommendationBatches, recommendations } from './db/schema'
+import {
+  createUser,
+  getUserById,
+  getUserByUsername,
+  getUserCount,
+  updatePassword,
+} from './db/queries/users'
+import { artists, DEFAULT_PREFERENCES, recommendationBatches, recommendations } from './db/schema'
 import { createApp } from './server'
 
 // Run pending database migrations before anything else.
@@ -101,12 +108,13 @@ const app = createApp({
   getUserByUsername: (username) => getUserByUsername(db, username),
   getUserById: (id) => getUserById(db, id),
   getUserCount: () => getUserCount(db),
+  updatePassword: (id, hash) => updatePassword(db, id, hash),
 })
 
 const port = envConfig.port
 const server = serve({ fetch: app.fetch, port })
 
-// Auto-complete setup from env vars, then start scheduler
+// Auto-complete setup from env vars, then bootstrap user, then start scheduler
 isSetupComplete(db)
   .then(async (done) => {
     if (!done && canAutoSetup()) {
@@ -123,8 +131,30 @@ isSetupComplete(db)
         aiModel: envConfig.aiModel,
         aiBaseUrl: envConfig.aiBaseUrl,
       }
+      // Include webhook URL in initial preferences with full defaults
+      if (envConfig.webhookUrl) {
+        config.preferences = { ...DEFAULT_PREFERENCES, webhookUrl: envConfig.webhookUrl }
+      }
       await completeSetup(db, config)
       console.log('Setup auto-completed from environment variables')
+    }
+  })
+  .then(async () => {
+    // Bootstrap initial admin user from env vars if no users exist
+    const { initialUsername, initialPassword } = envConfig
+    if (initialUsername && initialPassword) {
+      if (initialPassword.length < 8) {
+        console.error(
+          'DIGARR_INITIAL_PASSWORD must be at least 8 characters -- skipping user creation',
+        )
+      } else {
+        const count = await getUserCount(db)
+        if (count === 0) {
+          const passwordHash = hashPassword(initialPassword)
+          await createUser(db, { username: initialUsername, passwordHash, isAdmin: true })
+          console.log(`Initial admin user "${initialUsername}" created from environment variables`)
+        }
+      }
     }
   })
   .then(() => getSettings(db))

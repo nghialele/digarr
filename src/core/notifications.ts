@@ -34,6 +34,35 @@ export function isPrivateUrl(urlString: string): boolean {
   }
 }
 
+function isDiscordWebhook(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.hostname.endsWith('discord.com') || u.hostname.endsWith('discordapp.com')
+  } catch {
+    return false
+  }
+}
+
+function formatDiscordPayload(payload: WebhookPayload): Record<string, unknown> {
+  const { stats, message } = payload
+  return {
+    embeds: [
+      {
+        title: 'Scan Complete',
+        description: message,
+        color: 0x7c3aed, // accent purple
+        fields: [
+          { name: 'Discovered', value: String(stats.discovered), inline: true },
+          { name: 'Added', value: String(stats.added), inline: true },
+          { name: 'Failed', value: String(stats.failed), inline: true },
+        ],
+        timestamp: payload.timestamp,
+        footer: { text: 'digarr' },
+      },
+    ],
+  }
+}
+
 export async function sendWebhook(url: string, payload: WebhookPayload): Promise<void> {
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     console.error('Webhook URL must use http:// or https://')
@@ -48,12 +77,13 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
   const timeout = setTimeout(() => controller.abort(), 10_000)
 
   const safeUrl = url.replace(/:\/\/[^@]*@/, '://***@')
+  const body = isDiscordWebhook(url) ? formatDiscordPayload(payload) : payload
 
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
       signal: controller.signal,
     })
     if (!res.ok) {

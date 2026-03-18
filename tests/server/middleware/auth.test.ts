@@ -42,6 +42,7 @@ function makeDeps() {
     getUserByUsername: vi.fn(async () => null),
     getUserById: vi.fn(async () => null),
     getUserCount: vi.fn(async () => 0),
+    updatePassword: vi.fn(async () => {}),
   } satisfies AppDependencies
 }
 

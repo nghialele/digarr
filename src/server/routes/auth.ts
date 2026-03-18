@@ -70,7 +70,6 @@ export function authRoutes(deps: AppDependencies) {
 
   // Get current user from session token
   router.get('/api/auth/me', async (c) => {
-    // The user is set on the context by the auth middleware
     const userId = c.get('userId' as never) as number | undefined
     if (!userId) {
       return c.json({ error: 'Not authenticated' }, 401)
@@ -80,6 +79,43 @@ export function authRoutes(deps: AppDependencies) {
       return c.json({ error: 'User not found' }, 404)
     }
     return c.json(user)
+  })
+
+  // Change password for the current session user (requires session auth, not legacy token)
+  router.post('/api/auth/change-password', async (c) => {
+    const userId = c.get('userId' as never) as number | undefined
+    if (!userId) {
+      return c.json({ error: 'Password change requires a user account' }, 403)
+    }
+
+    const body = await c.req.json()
+    const { currentPassword, newPassword } = body as {
+      currentPassword?: string
+      newPassword?: string
+    }
+
+    if (!currentPassword || !newPassword) {
+      return c.json({ error: 'Current password and new password are required' }, 400)
+    }
+    if (newPassword.length < 8) {
+      return c.json({ error: 'New password must be at least 8 characters' }, 400)
+    }
+
+    const user = await deps.getUserById(userId)
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+
+    // Need the full row with passwordHash for verification
+    const fullUser = await deps.getUserByUsername(user.username)
+    if (!fullUser || !verifyPassword(currentPassword, fullUser.passwordHash)) {
+      return c.json({ error: 'Current password is incorrect' }, 401)
+    }
+
+    const newHash = hashPassword(newPassword)
+    await deps.updatePassword(userId, newHash)
+
+    return c.json({ ok: true })
   })
 
   return router

@@ -65,6 +65,13 @@ export const registerUser = (username: string, password: string) =>
     method: 'POST',
     body: JSON.stringify({ username, password }),
   })
+export type UserProfile = { id: number; username: string; isAdmin: boolean }
+export const getCurrentUser = () => fetchApi<UserProfile>('/auth/me')
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  fetchApi<{ ok: boolean }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
 
 // Setup
 export const getSetupStatus = () => fetchApi<{ setupComplete: boolean }>('/setup/status')
