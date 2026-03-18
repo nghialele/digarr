@@ -1,7 +1,22 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import type { ReactElement, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+function createQueryWrapper() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  )
+}
+
+function renderWithQuery(ui: ReactElement) {
+  return render(ui, { wrapper: createQueryWrapper() })
+}
 
 // ---------------------------------------------------------------------------
 // Mock API and hooks
@@ -46,7 +61,7 @@ describe('PipelineProgress', () => {
     mockGetPipelineStatus.mockResolvedValue({ running: false })
     mockUseSSE.mockReturnValue({ data: null, connected: false })
 
-    const { container } = render(<PipelineProgress />)
+    const { container } = renderWithQuery(<PipelineProgress />)
 
     await waitFor(() => {
       expect(container.firstChild).toBeNull()
@@ -57,7 +72,7 @@ describe('PipelineProgress', () => {
     mockGetPipelineStatus.mockResolvedValue({ running: true, stage: 'analyze' })
     mockUseSSE.mockReturnValue({ data: null, connected: false })
 
-    render(<PipelineProgress />)
+    renderWithQuery(<PipelineProgress />)
 
     await waitFor(() => {
       expect(screen.getByText('Analyzing Taste')).toBeInTheDocument()
@@ -73,7 +88,7 @@ describe('PipelineProgress', () => {
       connected: true,
     })
 
-    render(<PipelineProgress />)
+    renderWithQuery(<PipelineProgress />)
 
     await waitFor(() => {
       expect(screen.getByText('Resolving via MusicBrainz')).toBeInTheDocument()
@@ -89,7 +104,7 @@ describe('PipelineProgress', () => {
       connected: true,
     })
 
-    render(<PipelineProgress />)
+    renderWithQuery(<PipelineProgress />)
 
     await waitFor(() => {
       expect(screen.getByText('Complete')).toBeInTheDocument()
@@ -105,7 +120,9 @@ describe('PipelineProgress', () => {
       connected: true,
     })
 
-    const { rerender } = render(<PipelineProgress onComplete={onComplete} />)
+    const { rerender } = render(<PipelineProgress onComplete={onComplete} />, {
+      wrapper: createQueryWrapper(),
+    })
 
     // The component uses setTimeout(onComplete, 500) -- advance timers
     await waitFor(() => {

@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+function renderWithQuery(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+}
 
 // ---------------------------------------------------------------------------
 // Mock API
@@ -60,7 +69,7 @@ const makeRes = (recs: ReturnType<typeof makeRec>[]) => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-// useFetch calls the fetcher on mount; we need all variants to resolve
+// useQuery calls the queryFn on mount; we need all variants to resolve
 function setupMockApi(recs: ReturnType<typeof makeRec>[] = [makeRec()]) {
   mockGetRecommendations.mockResolvedValue(
     makeRes(recs) as unknown as { items: unknown[]; total: number },
@@ -93,7 +102,7 @@ describe('DiscoverPage', () => {
 
   it('renders recommendation cards from API data', async () => {
     setupMockApi()
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Test Artist')).toBeInTheDocument()
@@ -105,7 +114,7 @@ describe('DiscoverPage', () => {
   it('shows skeleton cards while loading', () => {
     // Never resolves during this test
     mockGetRecommendations.mockReturnValue(new Promise(() => {}))
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
     // Skeleton elements are present (animate-pulse divs)
     const pulsingEls = document.querySelectorAll('.animate-pulse')
     expect(pulsingEls.length).toBeGreaterThan(0)
@@ -113,7 +122,7 @@ describe('DiscoverPage', () => {
 
   it('shows empty state when no recommendations match filter', async () => {
     mockGetRecommendations.mockResolvedValue({ items: [], total: 0 })
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       expect(screen.getByText(/No pending recommendations/i)).toBeInTheDocument()
@@ -132,7 +141,7 @@ describe('DiscoverPage', () => {
       return Promise.resolve({ items: [], total: 0 })
     })
 
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Test Artist')).toBeInTheDocument()
@@ -147,7 +156,7 @@ describe('DiscoverPage', () => {
 
   it('clicking a card expands it', async () => {
     setupMockApi()
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Test Artist')).toBeInTheDocument()
@@ -165,7 +174,7 @@ describe('DiscoverPage', () => {
     mockUpdateRecommendation.mockResolvedValue(undefined as unknown as never)
     setupMockApi()
 
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Test Artist')).toBeInTheDocument()
@@ -188,7 +197,7 @@ describe('DiscoverPage', () => {
     // Two recs: one above 70%, one below
     setupMockApi([makeRec({ id: 1, score: 0.85 }), makeRec({ id: 2, score: 0.5 })])
 
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       expect(screen.getAllByText('Test Artist')).toHaveLength(2)
@@ -206,7 +215,7 @@ describe('DiscoverPage', () => {
     mockUpdateRecommendation.mockResolvedValue(undefined as unknown as never)
     setupMockApi()
 
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Test Artist')).toBeInTheDocument()
@@ -223,7 +232,7 @@ describe('DiscoverPage', () => {
 
   it('renders genre tags', async () => {
     setupMockApi()
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       expect(screen.getByText('rock')).toBeInTheDocument()
@@ -233,7 +242,7 @@ describe('DiscoverPage', () => {
 
   it('renders streaming links', async () => {
     setupMockApi()
-    render(<DiscoverPage />)
+    renderWithQuery(<DiscoverPage />)
 
     await waitFor(() => {
       // SP link for Spotify

@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+function renderWithQuery(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+}
 
 // ---------------------------------------------------------------------------
 // Mock API
@@ -86,14 +95,14 @@ describe('SettingsPage', () => {
 
   it('shows loading skeleton while fetching settings', () => {
     mockGetSettings.mockReturnValue(new Promise(() => {}))
-    render(<SettingsPage />)
+    renderWithQuery(<SettingsPage />)
     const pulsingEls = document.querySelectorAll('.animate-pulse')
     expect(pulsingEls.length).toBeGreaterThan(0)
   })
 
   it('renders tab bar with Connections, Recommendations, Schedule', async () => {
     setupMocks()
-    render(<SettingsPage />)
+    renderWithQuery(<SettingsPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Connections')).toBeInTheDocument()
@@ -104,7 +113,7 @@ describe('SettingsPage', () => {
 
   it('defaults to Connections tab showing Lidarr section', async () => {
     setupMocks()
-    render(<SettingsPage />)
+    renderWithQuery(<SettingsPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Lidarr')).toBeInTheDocument()
@@ -115,7 +124,7 @@ describe('SettingsPage', () => {
 
   it('tab switching shows Recommendations content', async () => {
     setupMocks()
-    render(<SettingsPage />)
+    renderWithQuery(<SettingsPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Connections')).toBeInTheDocument()
@@ -131,7 +140,7 @@ describe('SettingsPage', () => {
 
   it('tab switching shows Schedule content', async () => {
     setupMocks()
-    render(<SettingsPage />)
+    renderWithQuery(<SettingsPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Connections')).toBeInTheDocument()
@@ -150,7 +159,7 @@ describe('SettingsPage', () => {
   it('Test Connection button calls testService for Lidarr', async () => {
     setupMocks()
     mockTestService.mockResolvedValue({ success: true, message: 'OK' })
-    render(<SettingsPage />)
+    renderWithQuery(<SettingsPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Lidarr')).toBeInTheDocument()
@@ -174,7 +183,7 @@ describe('SettingsPage', () => {
   it('Save button calls updateSettings for Lidarr', async () => {
     setupMocks()
     mockUpdateSettings.mockResolvedValue(undefined as unknown as Record<string, unknown>)
-    render(<SettingsPage />)
+    renderWithQuery(<SettingsPage />)
 
     await waitFor(() => {
       expect(screen.getByText('Lidarr')).toBeInTheDocument()
@@ -194,7 +203,7 @@ describe('SettingsPage', () => {
 
   it('shows error state when settings fail to load', async () => {
     mockGetSettings.mockRejectedValue(new Error('Network error'))
-    render(<SettingsPage />)
+    renderWithQuery(<SettingsPage />)
 
     await waitFor(() => {
       expect(screen.getByText(/Failed to load settings/i)).toBeInTheDocument()

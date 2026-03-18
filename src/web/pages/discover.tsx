@@ -1,9 +1,9 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { type Recommendation, RecommendationCard } from '../components/recommendation-card'
 import { Skeleton } from '../components/ui/skeleton'
 import { bulkAction, getRecommendations, rescanArtists, updateRecommendation } from '../lib/api'
-import { useFetch } from '../lib/hooks'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,6 +83,7 @@ function EmptyState({ filter }: { filter: FilterTab }) {
 // ---------------------------------------------------------------------------
 
 export function DiscoverPage() {
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState<FilterTab>('pending')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -90,41 +91,44 @@ export function DiscoverPage() {
   const [actingIds, setActingIds] = useState<Set<number>>(new Set())
   const [page, setPage] = useState(0)
 
-  const fetcher = useCallback(() => {
-    const params: Record<string, string> = {
-      sort: 'score_desc',
-      limit: String(PAGE_SIZE),
-      offset: String(page * PAGE_SIZE),
-    }
-    const status = STATUS_PARAM[filter]
-    if (status) params.status = status
-    return getRecommendations(params)
-  }, [filter, page])
+  const queryParams: Record<string, string> = {
+    sort: 'score_desc',
+    limit: String(PAGE_SIZE),
+    offset: String(page * PAGE_SIZE),
+  }
+  const statusParam = STATUS_PARAM[filter]
+  if (statusParam) queryParams.status = statusParam
 
-  const { data, loading, refetch } = useFetch<{ items: unknown[]; total: number }>(fetcher)
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['recommendations', { filter, page }],
+    queryFn: () => getRecommendations(queryParams),
+  })
 
   const items = (data?.items ?? []) as Recommendation[]
   const total = data?.total ?? 0
 
-  // Count per filter for tab badges -- fetch all counts independently
-  const allCountFetcher = useCallback(() => getRecommendations({ limit: '1' }), [])
-  const pendingCountFetcher = useCallback(
-    () => getRecommendations({ status: 'pending', limit: '1' }),
-    [],
-  )
-  const approvedCountFetcher = useCallback(
-    () => getRecommendations({ status: 'added_to_lidarr,add_failed,approved', limit: '1' }),
-    [],
-  )
-  const rejectedCountFetcher = useCallback(
-    () => getRecommendations({ status: 'rejected', limit: '1' }),
-    [],
-  )
+  const refetch = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['recommendations'] })
+  }, [queryClient])
 
-  const { data: allCountData } = useFetch<{ total: number }>(allCountFetcher)
-  const { data: pendingCountData } = useFetch<{ total: number }>(pendingCountFetcher)
-  const { data: approvedCountData } = useFetch<{ total: number }>(approvedCountFetcher)
-  const { data: rejectedCountData } = useFetch<{ total: number }>(rejectedCountFetcher)
+  // Count per filter for tab badges -- fetch all counts independently
+  const { data: allCountData } = useQuery({
+    queryKey: ['recommendations', 'count', 'all'],
+    queryFn: () => getRecommendations({ limit: '1' }),
+  })
+  const { data: pendingCountData } = useQuery({
+    queryKey: ['recommendations', 'count', 'pending'],
+    queryFn: () => getRecommendations({ status: 'pending', limit: '1' }),
+  })
+  const { data: approvedCountData } = useQuery({
+    queryKey: ['recommendations', 'count', 'approved'],
+    queryFn: () =>
+      getRecommendations({ status: 'added_to_lidarr,add_failed,approved', limit: '1' }),
+  })
+  const { data: rejectedCountData } = useQuery({
+    queryKey: ['recommendations', 'count', 'rejected'],
+    queryFn: () => getRecommendations({ status: 'rejected', limit: '1' }),
+  })
 
   const counts: Record<FilterTab, number> = {
     all: allCountData?.total ?? 0,

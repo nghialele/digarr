@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PipelineProgress } from '../components/pipeline-progress'
@@ -14,7 +15,6 @@ import {
   quickDiscover,
   updateRecommendation,
 } from '../lib/api'
-import { useFetch } from '../lib/hooks'
 
 // ---------------------------------------------------------------------------
 // Local types (API returns unknown[], we narrow here)
@@ -193,67 +193,43 @@ function LatestBatchPanel({
 
 export function Dashboard() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [actedIds, setActedIds] = useState<Set<number>>(new Set())
 
   // Pending recommendations (top 5 for latest batch panel)
-  const pendingFetcher = useCallback(
-    () => getRecommendations({ status: 'pending', sort: 'score_desc', limit: '5' }),
-    [],
-  )
-  const {
-    data: pendingData,
-    loading: pendingLoading,
-    refetch: refetchPending,
-  } = useFetch<{
-    items: unknown[]
-    total: number
-  }>(pendingFetcher)
+  const { data: pendingData, isLoading: pendingLoading } = useQuery({
+    queryKey: ['recommendations', { status: 'pending', sort: 'score_desc', limit: '5' }],
+    queryFn: () => getRecommendations({ status: 'pending', sort: 'score_desc', limit: '5' }),
+  })
 
   // All-time stats: approved + added_to_lidarr = "approved", rejected = "rejected"
-  const approvedFetcher = useCallback(
-    () => getRecommendations({ status: 'added_to_lidarr', limit: '1' }),
-    [],
-  )
-  const { data: approvedData, loading: approvedLoading } = useFetch<{
-    items: unknown[]
-    total: number
-  }>(approvedFetcher)
+  const { data: approvedData, isLoading: approvedLoading } = useQuery({
+    queryKey: ['recommendations', { status: 'added_to_lidarr', limit: '1' }],
+    queryFn: () => getRecommendations({ status: 'added_to_lidarr', limit: '1' }),
+  })
 
-  const rejectedFetcher = useCallback(
-    () => getRecommendations({ status: 'rejected', limit: '1' }),
-    [],
-  )
-  const { data: rejectedData, loading: rejectedLoading } = useFetch<{
-    items: unknown[]
-    total: number
-  }>(rejectedFetcher)
+  const { data: rejectedData, isLoading: rejectedLoading } = useQuery({
+    queryKey: ['recommendations', { status: 'rejected', limit: '1' }],
+    queryFn: () => getRecommendations({ status: 'rejected', limit: '1' }),
+  })
 
   // Batches for "last scan"
-  const batchesFetcher = useCallback(() => getBatches(), [])
-  const {
-    data: batchesData,
-    loading: batchesLoading,
-    refetch: refetchBatches,
-  } = useFetch<unknown[]>(batchesFetcher)
+  const { data: batchesData, isLoading: batchesLoading } = useQuery({
+    queryKey: ['batches'],
+    queryFn: getBatches,
+  })
 
   // Recent listens
-  const listensFetcher = useCallback(() => getRecentListens(), [])
-  const { data: listensData } = useFetch<{
-    tracks: Array<{
-      artist: string
-      track: string
-      source: string
-      imageUrl?: string
-      mbid?: string
-    }>
-  }>(listensFetcher)
+  const { data: listensData } = useQuery({
+    queryKey: ['recentListens'],
+    queryFn: getRecentListens,
+  })
 
   // Lidarr library stats
-  const lidarrStatsFetcher = useCallback(() => getLidarrStats(), [])
-  const { data: lidarrStats, loading: lidarrLoading } = useFetch<{
-    artists: number
-    monitored: number
-  }>(lidarrStatsFetcher)
+  const { data: lidarrStats, isLoading: lidarrLoading } = useQuery({
+    queryKey: ['lidarrStats'],
+    queryFn: getLidarrStats,
+  })
 
   // ---------------------------------------------------------------------------
   // Derive stats
@@ -282,7 +258,7 @@ export function Dashboard() {
     try {
       await updateRecommendation(id, { status: action })
       toast.success(action === 'approved' ? 'Added to Lidarr' : 'Rejected')
-      refetchPending()
+      queryClient.invalidateQueries({ queryKey: ['recommendations'] })
     } catch {
       toast.error('Action failed -- please try again')
       setActedIds((prev) => {
@@ -327,8 +303,8 @@ export function Dashboard() {
       {/* Pipeline progress (self-hides when not running) */}
       <PipelineProgress
         onComplete={() => {
-          refetchPending()
-          refetchBatches()
+          queryClient.invalidateQueries({ queryKey: ['recommendations'] })
+          queryClient.invalidateQueries({ queryKey: ['batches'] })
         }}
       />
 

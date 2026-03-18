@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+function renderWithQuery(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+}
 
 // ---------------------------------------------------------------------------
 // Mock dependencies
@@ -117,7 +126,7 @@ describe('Dashboard', () => {
 
   it('renders stat cards with library stats', async () => {
     setupMocks()
-    render(<Dashboard />)
+    renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
       expect(screen.getByText('Lidarr Library')).toBeInTheDocument()
@@ -128,7 +137,7 @@ describe('Dashboard', () => {
 
   it('renders pending count', async () => {
     setupMocks()
-    render(<Dashboard />)
+    renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
       expect(screen.getByText('Pending Recs')).toBeInTheDocument()
@@ -138,7 +147,7 @@ describe('Dashboard', () => {
 
   it('renders recommendation with artist name and score', async () => {
     setupMocks()
-    render(<Dashboard />)
+    renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
       expect(screen.getByText('Sigur Ros')).toBeInTheDocument()
@@ -148,7 +157,7 @@ describe('Dashboard', () => {
 
   it('renders recent listening activity', async () => {
     setupMocks()
-    render(<Dashboard />)
+    renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
       expect(screen.getByText('Recent Listening Activity')).toBeInTheDocument()
@@ -160,7 +169,7 @@ describe('Dashboard', () => {
 
   it('shows Find Similar buttons for recent listens', async () => {
     setupMocks()
-    render(<Dashboard />)
+    renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
       const buttons = screen.getAllByText('Find Similar')
@@ -175,7 +184,7 @@ describe('Dashboard', () => {
     mockGetLidarrStats.mockResolvedValue({ artists: 0, monitored: 0 })
     mockGetPipelineStatus.mockResolvedValue({ running: false })
 
-    render(<Dashboard />)
+    renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
       expect(screen.getByText(/No pending recommendations/i)).toBeInTheDocument()
@@ -184,7 +193,7 @@ describe('Dashboard', () => {
 
   it('renders last scan time', async () => {
     setupMocks()
-    render(<Dashboard />)
+    renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
       expect(screen.getByText('Last Scan')).toBeInTheDocument()

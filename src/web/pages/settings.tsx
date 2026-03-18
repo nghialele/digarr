@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { ServiceCard } from '../components/service-card'
 import { Button } from '../components/ui/button'
@@ -14,7 +15,6 @@ import {
   triggerPipeline,
   updateSettings,
 } from '../lib/api'
-import { useFetch } from '../lib/hooks'
 
 // --- Types ---
 
@@ -177,13 +177,18 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   const [saving, setSaving] = useState<Record<string, boolean>>({})
 
   // Fetch Lidarr profiles
-  const profilesFetcher = useCallback(() => getLidarrProfiles(), [])
-  const { data: qualityProfiles } = useFetch<Array<{ id: number; name: string }>>(profilesFetcher)
-  const metadataFetcher = useCallback(() => getLidarrMetadataProfiles(), [])
-  const { data: metadataProfiles } = useFetch<Array<{ id: number; name: string }>>(metadataFetcher)
-  const rootFoldersFetcher = useCallback(() => getLidarrRootFolders(), [])
-  const { data: rootFolders } =
-    useFetch<Array<{ id: number; path: string; freeSpace?: number }>>(rootFoldersFetcher)
+  const { data: qualityProfiles } = useQuery({
+    queryKey: ['lidarrProfiles'],
+    queryFn: getLidarrProfiles,
+  })
+  const { data: metadataProfiles } = useQuery({
+    queryKey: ['lidarrMetadataProfiles'],
+    queryFn: getLidarrMetadataProfiles,
+  })
+  const { data: rootFolders } = useQuery({
+    queryKey: ['lidarrRootFolders'],
+    queryFn: getLidarrRootFolders,
+  })
 
   function setTest(key: string, val: ServiceTestState) {
     setTests((prev) => ({ ...prev, [key]: val }))
@@ -890,9 +895,20 @@ function SettingsSkeleton() {
 // --- Main Page ---
 
 export function SettingsPage() {
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('connections')
-  const fetcher = useCallback(() => getSettings(), [])
-  const { data, loading, error, refetch } = useFetch<Settings>(fetcher)
+  const {
+    data,
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings,
+  })
+
+  function refetch() {
+    queryClient.invalidateQueries({ queryKey: ['settings'] })
+  }
 
   if (loading) {
     return (

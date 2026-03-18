@@ -1,17 +1,15 @@
-import { useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { StatCard } from '../components/stat-card'
 import { Skeleton } from '../components/ui/skeleton'
 import {
   type AnalyticsBatch,
   type AnalyticsGenre,
-  type AnalyticsOverview,
   type AnalyticsSource,
   getAnalyticsBatches,
   getAnalyticsGenres,
   getAnalyticsOverview,
   getAnalyticsSources,
 } from '../lib/api'
-import { useFetch } from '../lib/hooks'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -206,15 +204,22 @@ function SourceScores({
 // ---------------------------------------------------------------------------
 
 export function AnalyticsPage() {
-  const overviewFetcher = useCallback(() => getAnalyticsOverview(), [])
-  const batchesFetcher = useCallback(() => getAnalyticsBatches(), [])
-  const genresFetcher = useCallback(() => getAnalyticsGenres(), [])
-  const sourcesFetcher = useCallback(() => getAnalyticsSources(), [])
-
-  const { data: overview, loading: overviewLoading } = useFetch<AnalyticsOverview>(overviewFetcher)
-  const { data: batches, loading: batchesLoading } = useFetch<AnalyticsBatch[]>(batchesFetcher)
-  const { data: genres, loading: genresLoading } = useFetch<AnalyticsGenre[]>(genresFetcher)
-  const { data: sources, loading: sourcesLoading } = useFetch<AnalyticsSource[]>(sourcesFetcher)
+  const { data: overview, isLoading: overviewLoading } = useQuery({
+    queryKey: ['analytics', 'overview'],
+    queryFn: getAnalyticsOverview,
+  })
+  const { data: batches, isLoading: batchesLoading } = useQuery({
+    queryKey: ['analytics', 'batches'],
+    queryFn: getAnalyticsBatches,
+  })
+  const { data: genres, isLoading: genresLoading } = useQuery({
+    queryKey: ['analytics', 'genres'],
+    queryFn: getAnalyticsGenres,
+  })
+  const { data: sources, isLoading: sourcesLoading } = useQuery({
+    queryKey: ['analytics', 'sources'],
+    queryFn: getAnalyticsSources,
+  })
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
@@ -246,7 +251,7 @@ export function AnalyticsPage() {
       {/* Batch history */}
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Batch History</h2>
-        <BatchHistoryTable batches={batches} loading={batchesLoading} />
+        <BatchHistoryTable batches={batches ?? null} loading={batchesLoading} />
       </div>
 
       {/* Genre breakdown + Source scores side by side on large screens */}
@@ -255,13 +260,13 @@ export function AnalyticsPage() {
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
             Top Genres by Approval Rate
           </h2>
-          <GenreBreakdown genres={genres} loading={genresLoading} />
+          <GenreBreakdown genres={genres ?? null} loading={genresLoading} />
         </div>
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
             Source Effectiveness
           </h2>
-          <SourceScores sources={sources} loading={sourcesLoading} />
+          <SourceScores sources={sources ?? null} loading={sourcesLoading} />
         </div>
       </div>
     </div>

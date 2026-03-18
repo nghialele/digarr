@@ -1,8 +1,10 @@
+import { QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { AuthGate } from './components/auth-gate'
 import { getSetupStatus, triggerPipeline } from './lib/api'
+import { queryClient } from './lib/query-client'
 import { AnalyticsPage } from './pages/analytics'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
@@ -81,19 +83,21 @@ export function App() {
   }
 
   return (
-    <AuthGate>
-      <BrowserRouter>
-        <AppShell>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/discover" element={<DiscoverPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </AppShell>
-        <Toaster theme="dark" />
-      </BrowserRouter>
-    </AuthGate>
+    <QueryClientProvider client={queryClient}>
+      <AuthGate>
+        <BrowserRouter>
+          <AppShell>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/discover" element={<DiscoverPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </AppShell>
+          <Toaster theme="dark" />
+        </BrowserRouter>
+      </AuthGate>
+    </QueryClientProvider>
   )
 }

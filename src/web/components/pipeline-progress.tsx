@@ -1,13 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 import { getPipelineStatus } from '../lib/api'
-import { useFetch, useSSE } from '../lib/hooks'
-
-type PipelineStatus = {
-  running: boolean
-  stage?: string
-  message?: string
-  progress?: { current: number; total: number }
-}
+import { useSSE } from '../lib/hooks'
 
 type SSEProgress = {
   stage: string
@@ -35,8 +29,10 @@ function stageIndex(stage: string): number {
 }
 
 export function PipelineProgress({ onComplete }: { onComplete?: () => void }) {
-  const fetcher = useCallback(() => getPipelineStatus(), [])
-  const { data: status } = useFetch<PipelineStatus>(fetcher)
+  const { data: status } = useQuery({
+    queryKey: ['pipelineStatus'],
+    queryFn: getPipelineStatus,
+  })
   const { data: sseData } = useSSE('/api/pipeline/events')
   const completeFired = useRef(false)
 
