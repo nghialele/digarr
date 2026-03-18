@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-do
 import { Toaster, toast } from 'sonner'
 import { AuthGate } from './components/auth-gate'
 import { getSetupStatus, triggerPipeline } from './lib/api'
+import { AnalyticsPage } from './pages/analytics'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
 import { SettingsPage } from './pages/settings'
@@ -25,6 +26,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
             className={({ isActive }) => (isActive ? 'text-text' : 'text-muted hover:text-text')}
           >
             Discover
+          </NavLink>
+          <NavLink
+            to="/analytics"
+            className={({ isActive }) => (isActive ? 'text-text' : 'text-muted hover:text-text')}
+          >
+            Analytics
           </NavLink>
           <NavLink
             to="/settings"
@@ -80,6 +87,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
