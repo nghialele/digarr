@@ -27,6 +27,8 @@ const STATUS_PARAM: Record<FilterTab, string | undefined> = {
 
 const APPROVE_THRESHOLD_OPTIONS = [50, 60, 70, 80, 90]
 
+const PAGE_SIZE = 50
+
 // ---------------------------------------------------------------------------
 // Skeleton grid
 // ---------------------------------------------------------------------------
@@ -86,13 +88,18 @@ export function DiscoverPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [approveThreshold, setApproveThreshold] = useState(70)
   const [actingIds, setActingIds] = useState<Set<number>>(new Set())
+  const [page, setPage] = useState(0)
 
   const fetcher = useCallback(() => {
-    const params: Record<string, string> = { sort: 'score_desc', limit: '50' }
+    const params: Record<string, string> = {
+      sort: 'score_desc',
+      limit: String(PAGE_SIZE),
+      offset: String(page * PAGE_SIZE),
+    }
     const status = STATUS_PARAM[filter]
     if (status) params.status = status
     return getRecommendations(params)
-  }, [filter])
+  }, [filter, page])
 
   const { data, loading, refetch } = useFetch<{ items: unknown[]; total: number }>(fetcher)
 
@@ -286,6 +293,7 @@ export function DiscoverPage() {
                 setFilter(tab)
                 setExpandedId(null)
                 setSelectedId(null)
+                setPage(0)
               }}
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                 filter === tab ? 'bg-accent text-bg' : 'text-muted hover:text-text'
@@ -383,6 +391,31 @@ export function DiscoverPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-4 pt-4">
+          <button
+            type="button"
+            disabled={page === 0}
+            onClick={() => setPage((p) => p - 1)}
+            className="px-3 py-1.5 text-sm bg-surface border border-border rounded text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-muted tabular-nums">
+            {page * PAGE_SIZE + 1}--{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+          </span>
+          <button
+            type="button"
+            disabled={(page + 1) * PAGE_SIZE >= total}
+            onClick={() => setPage((p) => p + 1)}
+            className="px-3 py-1.5 text-sm bg-surface border border-border rounded text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>
