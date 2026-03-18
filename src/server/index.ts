@@ -11,6 +11,7 @@ import type {
   StatusUpdateExtra,
 } from '@/db/queries/recommendations'
 import type { SetupConfig } from '@/db/queries/settings'
+import { authGuard } from './middleware/auth'
 import { setupGuard } from './middleware/setup-guard'
 import { artistRoutes } from './routes/artists'
 import { batchRoutes } from './routes/batches'
@@ -59,7 +60,14 @@ export function createApp(deps: AppDependencies) {
       origin: envConfig.allowedOrigin ?? (process.env.NODE_ENV === 'production' ? '' : '*'),
     }),
   )
+  app.use('*', authGuard())
   app.use('*', setupGuard(deps.isSetupComplete))
+
+  // Auth status (unauthenticated -- tells the frontend whether auth is required)
+  app.get('/api/auth/status', (c) => {
+    return c.json({ required: !!envConfig.authToken })
+  })
+
   app.route('/', healthRoutes({ db: deps.db }))
   app.route('/', setupRoutes(deps))
   app.route('/', settingsRoutes(deps))

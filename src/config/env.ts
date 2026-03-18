@@ -47,6 +47,9 @@ export const envConfig = {
   aiApiKey: env('AI_API_KEY'),
   aiModel: env('AI_MODEL'),
   aiBaseUrl: env('AI_BASE_URL'),
+
+  // Auth
+  authToken: env('DIGARR_AUTH_TOKEN') ?? null,
 } as const
 
 export type EnvConfig = typeof envConfig
