@@ -6,6 +6,7 @@ import {
   type MBRelation,
   type MBSearchResult,
 } from '@/core/clients/musicbrainz'
+import { VERSION } from '@/version'
 
 // ---------------------------------------------------------------------------
 // Mock fetch globally so nothing ever hits a real server.
@@ -42,7 +43,7 @@ function makeJsonResponse(data: unknown, status = 200): Response {
 }
 
 const MB_BASE = 'https://musicbrainz.org/ws/2'
-const USER_AGENT = 'Digarr/0.1.0 (https://github.com/digarr/digarr)'
+const USER_AGENT = `Digarr/${VERSION} (https://github.com/iuliandita/digarr)`
 
 const MOCK_ARTIST_MBID = 'a74b1b7f-71a5-4011-9441-d0b5e4122711'
 
@@ -107,6 +108,11 @@ describe('createMusicBrainzClient', () => {
   })
 
   describe('User-Agent header', () => {
+    it('contains the current package.json version', () => {
+      expect(USER_AGENT).toMatch(/^Digarr\/\d+\.\d+\.\d+/)
+      expect(USER_AGENT).toContain(VERSION)
+    })
+
     it('sends the correct User-Agent on lookupArtist', async () => {
       mockFetch.mockResolvedValueOnce(makeJsonResponse(MOCK_ARTIST_RESPONSE))
       const client = createMusicBrainzClient()

@@ -1,7 +1,8 @@
 import PQueue from 'p-queue'
+import { VERSION } from '@/version'
 
 const BASE_URL = 'https://musicbrainz.org/ws/2'
-const USER_AGENT = 'Digarr/0.1.0 (https://github.com/digarr/digarr)'
+const USER_AGENT = `Digarr/${VERSION} (https://github.com/iuliandita/digarr)`
 
 // ---------------------------------------------------------------------------
 // Types
