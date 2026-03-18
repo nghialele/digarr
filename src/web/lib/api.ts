@@ -107,6 +107,41 @@ export const quickDiscover = (artistName: string) =>
     body: JSON.stringify({ artistName }),
   })
 
+// Analytics
+export type AnalyticsOverview = {
+  totalRecs: number
+  approvalRate: number
+  avgScore: number
+  totalBatches: number
+}
+export type AnalyticsBatch = {
+  id: number
+  createdAt: string
+  status: string
+  stats: unknown
+  total: number
+  approved: number
+  rejected: number
+  pending: number
+}
+export type AnalyticsGenre = {
+  genre: string
+  count: number
+  approved: number
+  approvalRate: number
+}
+export type AnalyticsSource = {
+  source: string
+  count: number
+  avgScore: number
+  approved: number
+  approvalRate: number
+}
+export const getAnalyticsOverview = () => fetchApi<AnalyticsOverview>('/analytics/overview')
+export const getAnalyticsBatches = () => fetchApi<AnalyticsBatch[]>('/analytics/batches')
+export const getAnalyticsGenres = () => fetchApi<AnalyticsGenre[]>('/analytics/genres')
+export const getAnalyticsSources = () => fetchApi<AnalyticsSource[]>('/analytics/sources')
+
 // Lidarr
 export const getLidarrStats = () =>
   fetchApi<{ artists: number; monitored: number }>('/lidarr/stats')

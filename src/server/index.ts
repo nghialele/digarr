@@ -13,6 +13,7 @@ import type {
 import type { SetupConfig } from '@/db/queries/settings'
 import { authGuard } from './middleware/auth'
 import { setupGuard } from './middleware/setup-guard'
+import { analyticsRoutes } from './routes/analytics'
 import { artistRoutes } from './routes/artists'
 import { batchRoutes } from './routes/batches'
 import { healthRoutes } from './routes/health'
@@ -74,6 +75,7 @@ export function createApp(deps: AppDependencies) {
   app.route('/', pipelineRoutes(deps))
   app.route('/', recommendationRoutes(deps))
   app.route('/', batchRoutes(deps))
+  app.route('/', analyticsRoutes(deps))
   app.route('/', artistRoutes(deps))
   app.route('/', lidarrRoutes(deps))
   app.route('/', listeningRoutes(deps))
