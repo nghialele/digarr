@@ -6,6 +6,7 @@ import { PipelineProgress } from '../components/pipeline-progress'
 import { StatCard } from '../components/stat-card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import {
   getBatches,
@@ -195,6 +196,8 @@ export function Dashboard() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [actedIds, setActedIds] = useState<Set<number>>(new Set())
+  const [listenRange, setListenRange] = useState<'week' | 'month' | 'year'>('month')
+  const [listenLimit, setListenLimit] = useState(5)
 
   // Pending recommendations (top 5 for latest batch panel)
   const { data: pendingData, isLoading: pendingLoading } = useQuery({
@@ -221,8 +224,8 @@ export function Dashboard() {
 
   // Recent listens
   const { data: listensData } = useQuery({
-    queryKey: ['recentListens'],
-    queryFn: getRecentListens,
+    queryKey: ['recentListens', listenRange, listenLimit],
+    queryFn: () => getRecentListens(listenRange, listenLimit),
   })
 
   // Lidarr library stats
@@ -332,9 +335,31 @@ export function Dashboard() {
       {/* Recent listens */}
       {listensData && listensData.tracks.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-            Recent Listening Activity
-          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+              Listening Activity
+            </h2>
+            <div className="flex items-center gap-2">
+              {(['week', 'month', 'year'] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setListenRange(r)}
+                  className={`text-xs px-2 py-0.5 rounded ${listenRange === r ? 'bg-accent/20 text-accent' : 'text-muted hover:text-text'}`}
+                >
+                  {r}
+                </button>
+              ))}
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                value={listenLimit}
+                onChange={(e) => setListenLimit(Math.max(1, Number(e.target.value) || 5))}
+                className="w-14 h-6 text-xs text-center px-1"
+              />
+            </div>
+          </div>
           <div className="bg-surface border border-border rounded-lg divide-y divide-border">
             {listensData.tracks.map((t) => (
               <div

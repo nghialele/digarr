@@ -160,7 +160,7 @@ describe('Dashboard', () => {
     renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('Recent Listening Activity')).toBeInTheDocument()
+      expect(screen.getByText('Listening Activity')).toBeInTheDocument()
       expect(screen.getByText('Bon Iver')).toBeInTheDocument()
       expect(screen.getByText('Holocene')).toBeInTheDocument()
       expect(screen.getByText('Fleet Foxes')).toBeInTheDocument()

@@ -7,14 +7,17 @@ import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
 import {
+  AUTH_EXPIRED_EVENT,
   changePassword,
+  clearStoredToken,
   getCurrentUser,
   getLidarrMetadataProfiles,
   getLidarrProfiles,
   getLidarrRootFolders,
   getSettings,
+  logoutUser,
   testService,
-  triggerPipeline,
+  testWebhook,
   updateSettings,
 } from '../lib/api'
 
@@ -788,33 +791,17 @@ const PRESETS: CronPreset[] = [
 function ScheduleTab({ settings }: { settings: Settings }) {
   const prefs = settings.preferences ?? {}
   const [cron, setCron] = useState(prefs.scheduleCron ?? '0 0 * * *')
-  const [webhookUrl, setWebhookUrl] = useState(prefs.webhookUrl ?? '')
   const [saving, setSaving] = useState(false)
-  const [running, setRunning] = useState(false)
 
   async function handleSave() {
     setSaving(true)
     try {
-      await updateSettings({
-        preferences: { ...prefs, scheduleCron: cron, webhookUrl: webhookUrl || undefined },
-      })
+      await updateSettings({ preferences: { ...prefs, scheduleCron: cron } })
       toast.success('Schedule saved')
     } catch {
       toast.error('Failed to save schedule')
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function handleRunNow() {
-    setRunning(true)
-    try {
-      await triggerPipeline()
-      toast.success('Pipeline started')
-    } catch {
-      toast.error('Failed to trigger pipeline')
-    } finally {
-      setRunning(false)
     }
   }
 
@@ -849,43 +836,35 @@ function ScheduleTab({ settings }: { settings: Settings }) {
         </Field>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Webhook</h2>
-        <p className="text-xs text-muted">
-          Receive a POST notification when a scan completes. Works with Discord, Slack, ntfy,
-          Gotify, or any HTTP endpoint that accepts JSON.
-        </p>
-        <Field label="Webhook URL" id="webhook-url">
-          <Input
-            id="webhook-url"
-            type="url"
-            placeholder="https://ntfy.sh/my-topic"
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-          />
-        </Field>
-      </section>
-
-      <div className="flex items-center gap-3">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
-        <Button variant="outline" onClick={handleRunNow} disabled={running}>
-          {running ? 'Starting...' : 'Run Now'}
-        </Button>
-      </div>
+      <Button onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving...' : 'Save'}
+      </Button>
     </div>
   )
 }
 
 // --- Account Tab ---
 
-function AccountTab() {
+function AccountTab({ settings }: { settings: Settings }) {
+  const prefs = settings.preferences ?? {}
   const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
+  const [webhookUrl, setWebhookUrl] = useState(prefs.webhookUrl ?? '')
+  const [savingWebhook, setSavingWebhook] = useState(false)
+  const [testingWebhook, setTestingWebhook] = useState(false)
+
+  async function handleLogout() {
+    try {
+      await logoutUser()
+    } catch {
+      // Session might already be invalid
+    }
+    clearStoredToken()
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+  }
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
@@ -906,9 +885,38 @@ function AccountTab() {
       setConfirmPassword('')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to change password'
-      toast.error(msg.includes('401') ? 'Current password is incorrect' : msg)
+      toast.error(
+        msg.includes('401') || msg.includes('403') ? 'Current password is incorrect' : msg,
+      )
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSaveWebhook() {
+    setSavingWebhook(true)
+    try {
+      await updateSettings({
+        preferences: { ...prefs, webhookUrl: webhookUrl || undefined },
+      })
+      toast.success('Webhook saved')
+    } catch {
+      toast.error('Failed to save webhook')
+    } finally {
+      setSavingWebhook(false)
+    }
+  }
+
+  async function handleTestWebhook() {
+    setTestingWebhook(true)
+    try {
+      const res = await testWebhook()
+      if (res.success) toast.success('Test notification sent')
+      else toast.error(res.message || 'Webhook test failed')
+    } catch {
+      toast.error('Failed to send test notification')
+    } finally {
+      setTestingWebhook(false)
     }
   }
 
@@ -916,13 +924,18 @@ function AccountTab() {
     <div className="space-y-6 max-w-lg">
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Profile</h2>
-        <div className="text-sm text-muted">
-          Signed in as <span className="text-text font-medium">{user?.username ?? '...'}</span>
-          {user?.isAdmin && (
-            <span className="ml-2 text-xs bg-accent/20 text-accent px-1.5 py-0.5 rounded">
-              admin
-            </span>
-          )}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted">
+            Signed in as <span className="text-text font-medium">{user?.username ?? '...'}</span>
+            {user?.isAdmin && (
+              <span className="ml-2 text-xs bg-accent/20 text-accent px-1.5 py-0.5 rounded">
+                admin
+              </span>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            Log out
+          </Button>
         </div>
       </section>
 
@@ -961,6 +974,36 @@ function AccountTab() {
             {saving ? 'Changing...' : 'Change Password'}
           </Button>
         </form>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Notifications</h2>
+        <p className="text-xs text-muted">
+          Receive a POST notification when a scan completes. Works with Discord, Slack, ntfy,
+          Gotify, or any HTTP endpoint that accepts JSON.
+        </p>
+        <Field label="Webhook URL" id="webhook-url">
+          <Input
+            id="webhook-url"
+            type="url"
+            placeholder="https://ntfy.sh/my-topic"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+          />
+        </Field>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={handleSaveWebhook} disabled={savingWebhook}>
+            {savingWebhook ? 'Saving...' : 'Save'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleTestWebhook}
+            disabled={testingWebhook || !webhookUrl}
+          >
+            {testingWebhook ? 'Sending...' : 'Test Webhook'}
+          </Button>
+        </div>
       </section>
     </div>
   )
@@ -1028,7 +1071,7 @@ export function SettingsPage() {
       {tab === 'connections' && <ConnectionsTab settings={data} onSaved={refetch} />}
       {tab === 'recommendations' && <RecommendationsTab settings={data} />}
       {tab === 'schedule' && <ScheduleTab settings={data} />}
-      {tab === 'account' && <AccountTab />}
+      {tab === 'account' && <AccountTab settings={data} />}
     </div>
   )
 }

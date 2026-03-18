@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
+import { sendWebhook } from '@/core/notifications'
 import { createProvider } from '@/core/providers/factory'
 import type { AppDependencies } from '@/server'
 
@@ -91,29 +92,38 @@ export function settingsRoutes(deps: AppDependencies) {
       }
     }
 
+    // Fall back to stored credentials when the request sends empty keys
+    const stored = (await deps.getSettings()) as Record<string, unknown> | null
+
     switch (service) {
       case 'lidarr': {
-        const client = createLidarrClient(body.url ?? '', body.apiKey ?? '', body.skipTlsVerify)
+        const url = body.url || (stored?.lidarrUrl as string) || ''
+        const apiKey = body.apiKey || (stored?.lidarrApiKey as string) || ''
+        const client = createLidarrClient(url, apiKey, body.skipTlsVerify)
         const result = await client.testConnection()
         return c.json(result)
       }
       case 'listenbrainz': {
-        const client = createListenBrainzClient(body.username ?? '', body.token ?? '')
+        const username = body.username || (stored?.listenbrainzUsername as string) || ''
+        const token = body.token || (stored?.listenbrainzToken as string) || ''
+        const client = createListenBrainzClient(username, token)
         const result = await client.testConnection()
         return c.json(result)
       }
       case 'lastfm': {
-        const client = createLastFmClient(body.username ?? '', body.apiKey ?? '')
+        const username = body.username || (stored?.lastfmUsername as string) || ''
+        const apiKey = body.apiKey || (stored?.lastfmApiKey as string) || ''
+        const client = createLastFmClient(username, apiKey)
         const result = await client.testConnection()
         return c.json(result)
       }
       case 'ai': {
         try {
           const provider = await createProvider(
-            body.provider ?? '',
-            body.apiKey ?? null,
-            body.model ?? '',
-            body.baseUrl ?? null,
+            body.provider || (stored?.aiProvider as string) || '',
+            body.apiKey || (stored?.aiApiKey as string) || null,
+            body.model || (stored?.aiModel as string) || '',
+            body.baseUrl || (stored?.aiBaseUrl as string) || null,
           )
           const result = await provider.testConnection()
           return c.json(result)
@@ -124,6 +134,31 @@ export function settingsRoutes(deps: AppDependencies) {
       }
       default:
         return c.json({ error: `Unknown service: ${service}` }, 400)
+    }
+  })
+
+  // Test webhook by sending a test payload to the configured URL
+  router.post('/api/settings/test-webhook', async (c) => {
+    const stored = await deps.getSettings()
+    const prefs = (stored as Record<string, unknown> | null)?.preferences as
+      | Record<string, unknown>
+      | undefined
+    const url = prefs?.webhookUrl as string | undefined
+    if (!url) {
+      return c.json({ success: false, message: 'No webhook URL configured' })
+    }
+    try {
+      await sendWebhook(url, {
+        event: 'batch_complete',
+        batchId: 0,
+        stats: { discovered: 3, added: 3, failed: 0 },
+        message: 'Test notification from digarr.',
+        timestamp: new Date().toISOString(),
+      })
+      return c.json({ success: true, message: 'Test webhook sent' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return c.json({ success: false, message })
     }
   })
 

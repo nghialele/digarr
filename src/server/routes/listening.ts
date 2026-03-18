@@ -19,6 +19,11 @@ export function listeningRoutes(deps: AppDependencies) {
     const settings = await deps.getSettings()
     if (!settings) return c.json({ tracks: [] })
 
+    const range = (c.req.query('range') as 'week' | 'month' | 'year') || 'month'
+    const limit = Math.min(Math.max(Number(c.req.query('limit')) || 5, 1), 50)
+    const rangeLabel =
+      range === 'week' ? 'this week' : range === 'year' ? 'this year' : 'this month'
+
     const tracks: ListenTrack[] = []
 
     // Try Last.fm first (usually has richer recent track data)
@@ -29,7 +34,7 @@ export function listeningRoutes(deps: AppDependencies) {
           settings.lastfmApiKey as string,
         )
         const recentTracks = await client.getRecentTracks()
-        for (const t of recentTracks.slice(0, 10)) {
+        for (const t of recentTracks.slice(0, limit)) {
           tracks.push({
             artist: t.artist['#text'] ?? 'Unknown',
             track: t.name ?? 'Unknown',
@@ -53,11 +58,11 @@ export function listeningRoutes(deps: AppDependencies) {
           settings.listenbrainzUsername as string,
           settings.listenbrainzToken as string,
         )
-        const topArtists = await client.getTopArtists('week')
-        for (const a of topArtists.slice(0, 10)) {
+        const topArtists = await client.getTopArtists(range)
+        for (const a of topArtists.slice(0, limit)) {
           tracks.push({
             artist: a.name,
-            track: `${a.playCount} plays this week`,
+            track: `${a.playCount} plays ${rangeLabel}`,
             source: 'listenbrainz',
             mbid: a.mbid,
           })

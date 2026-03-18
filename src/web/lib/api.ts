@@ -73,6 +73,8 @@ export const changePassword = (currentPassword: string, newPassword: string) =>
     body: JSON.stringify({ currentPassword, newPassword }),
   })
 
+export const logoutUser = () => fetchApi<{ ok: boolean }>('/auth/logout', { method: 'POST' })
+
 // Setup
 export const getSetupStatus = () => fetchApi<{ setupComplete: boolean }>('/setup/status')
 export const completeSetup = (config: Record<string, unknown>) =>
@@ -87,6 +89,8 @@ export const testService = (service: string, config: Record<string, unknown>) =>
     method: 'POST',
     body: JSON.stringify(config),
   })
+export const testWebhook = () =>
+  fetchApi<{ success: boolean; message: string }>('/settings/test-webhook', { method: 'POST' })
 
 // Pipeline
 export const triggerPipeline = () => fetchApi('/pipeline/run', { method: 'POST' })
@@ -115,8 +119,9 @@ export const getBatch = (id: number) => fetchApi<unknown>(`/batches/${id}`)
 export const getArtist = (id: number) => fetchApi<unknown>(`/artists/${id}`)
 
 // Listening
-export const getRecentListens = () =>
-  fetchApi<{
+export const getRecentListens = (range = 'month', limit = 5) => {
+  const qs = new URLSearchParams({ range, limit: String(limit) })
+  return fetchApi<{
     tracks: Array<{
       artist: string
       track: string
@@ -124,7 +129,8 @@ export const getRecentListens = () =>
       imageUrl?: string
       mbid?: string
     }>
-  }>('/listening/recent')
+  }>(`/listening/recent?${qs}`)
+}
 
 // Quick discover
 export const quickDiscover = (artistName: string) =>
