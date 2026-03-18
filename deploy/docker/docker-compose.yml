@@ -6,7 +6,7 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-digarr}:${DB_PASS:-digarr}@postgres:5432/${DB_NAME:-digarr}
+      - DATABASE_URL=postgresql://${DB_USER:-digarr}:${DB_PASS:?DB_PASS is required -- set it in .env}@postgres:5432/${DB_NAME:-digarr}
       - PORT=${PORT:-3000}
       # Service config -- set these to auto-complete setup on first boot,
       # or leave blank and configure via the web UI.
@@ -22,6 +22,10 @@ services:
       - AI_API_KEY=${AI_API_KEY:-}
       - AI_BASE_URL=${AI_BASE_URL:-}
       - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-}
+      - DIGARR_AUTH_TOKEN=${DIGARR_AUTH_TOKEN:-}
+      - DIGARR_INITIAL_USERNAME=${DIGARR_INITIAL_USERNAME:-}
+      - DIGARR_INITIAL_PASSWORD=${DIGARR_INITIAL_PASSWORD:-}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -31,7 +35,7 @@ services:
     image: postgres:17-alpine
     environment:
       - POSTGRES_USER=${DB_USER:-digarr}
-      - POSTGRES_PASSWORD=${DB_PASS:-digarr}
+      - POSTGRES_PASSWORD=${DB_PASS:?DB_PASS is required -- set it in .env}
       - POSTGRES_DB=${DB_NAME:-digarr}
     volumes:
       - pgdata:/var/lib/postgresql/data
