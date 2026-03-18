@@ -5,7 +5,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-252_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-264_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
@@ -45,7 +45,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open `http://localhost:3000` and complete the setup wizard.
+Open `http://localhost:3000` and complete the setup wizard. Alternatively, fill in the service env vars in `.env` and setup completes automatically on first boot.
 
 ### Local Development
 
@@ -124,11 +124,31 @@ All configuration is done through the web UI after initial setup. Key settings:
 
 ### Environment Variables
 
+All service config can be set via env vars. These act as **fallbacks** -- values set through the web UI (stored in the database) always take precedence. If all required vars are set, setup completes automatically on first boot.
+
+See [`.env.example`](.env.example) for the full list with comments.
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | -- | PostgreSQL connection string |
+| `DATABASE_URL` | -- | PostgreSQL connection string (or use `DB_*` vars below) |
+| `DB_HOST` | -- | PostgreSQL host (alternative to `DATABASE_URL`) |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `DB_USER` | -- | PostgreSQL user |
+| `DB_PASS` | -- | PostgreSQL password |
+| `DB_NAME` | -- | PostgreSQL database name |
 | `PORT` | `3000` | Server port |
-| `LOG_LEVEL` | `info` | Log verbosity |
+| `ALLOWED_ORIGIN` | -- | CORS origin (empty = same-origin in prod, `*` in dev) |
+| `LIDARR_URL` | -- | Lidarr server URL |
+| `LIDARR_API_KEY` | -- | Lidarr API key |
+| `SKIP_TLS_VERIFY` | `false` | Skip TLS certificate verification |
+| `LISTENBRAINZ_USERNAME` | -- | ListenBrainz username |
+| `LISTENBRAINZ_TOKEN` | -- | ListenBrainz API token |
+| `LASTFM_USERNAME` | -- | Last.fm username |
+| `LASTFM_API_KEY` | -- | Last.fm API key |
+| `AI_PROVIDER` | -- | AI provider (`openai`, `anthropic`, or `ollama`) |
+| `AI_MODEL` | -- | AI model name |
+| `AI_API_KEY` | -- | AI provider API key |
+| `AI_BASE_URL` | -- | Custom API base URL (for Ollama or compatible APIs) |
 
 ---
 
@@ -140,7 +160,7 @@ All configuration is done through the web UI after initial setup. Key settings:
 - **Database**: PostgreSQL via [Drizzle ORM](https://orm.drizzle.team)
 - **Build**: [Vite](https://vite.dev)
 - **Lint/Format**: [Biome](https://biomejs.dev)
-- **Tests**: [Vitest](https://vitest.dev) (252 tests)
+- **Tests**: [Vitest](https://vitest.dev) (264 tests)
 
 ---
 
@@ -152,7 +172,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 bun install
 bun run lint        # biome check
 bun run typecheck   # tsc --noEmit
-bun run test        # vitest (252 tests)
+bun run test        # vitest (264 tests)
 ```
 
 ---
@@ -165,7 +185,7 @@ This project was built with the help of agentic AI coding tools. The design, arc
 
 The codebase went through multiple rounds of verification before release:
 
-- **252 unit and integration tests** across 26 test files -- API clients, pipeline stages, server routes, database queries, and UI components
+- **264 unit and integration tests** across 27 test files -- API clients, pipeline stages, server routes, database queries, and UI components
 - **Static analysis** -- zero errors from TypeScript strict mode (`noUncheckedIndexedAccess`, `isolatedModules`) and Biome linter across 96 source files
 - **Security audit** -- identified and fixed critical vulnerabilities:
   - CORS restricted to configured origin (no wildcard in production)
