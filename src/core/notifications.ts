@@ -1,3 +1,5 @@
+import { isHttpUrl } from './validation'
+
 export type WebhookPayload = {
   event: 'batch_complete'
   batchId: number
@@ -64,7 +66,7 @@ function formatDiscordPayload(payload: WebhookPayload): Record<string, unknown> 
 }
 
 export async function sendWebhook(url: string, payload: WebhookPayload): Promise<void> {
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+  if (!isHttpUrl(url)) {
     console.error('Webhook URL must use http:// or https://')
     return
   }
@@ -89,7 +91,7 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
     if (!res.ok) {
       console.error(`Webhook POST to ${safeUrl} failed: HTTP ${res.status}`)
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.error(`Webhook POST to ${safeUrl} failed:`, err)
   } finally {
     clearTimeout(timeout)

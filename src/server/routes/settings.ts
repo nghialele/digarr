@@ -4,6 +4,7 @@ import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
 import { sendWebhook } from '@/core/notifications'
 import { createProvider } from '@/core/providers/factory'
+import { isHttpUrl } from '@/core/validation'
 import type { AppDependencies } from '@/server'
 
 const SECRET_FIELDS = ['lidarrApiKey', 'listenbrainzToken', 'lastfmApiKey', 'aiApiKey'] as const
@@ -58,7 +59,7 @@ export function settingsRoutes(deps: AppDependencies) {
     if (prefs?.scheduleCron !== undefined && typeof prefs.scheduleCron === 'string') {
       try {
         deps.restartScheduler(prefs.scheduleCron || null)
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to apply cron expression:', err)
         const row = await deps.getSettings()
         return c.json({
@@ -79,15 +80,9 @@ export function settingsRoutes(deps: AppDependencies) {
     const service = c.req.param('service')
     const body = await c.req.json()
 
-    // Validate URLs to prevent SSRF
     for (const field of ['url', 'baseUrl'] as const) {
       const val = (body as Record<string, unknown>)[field]
-      if (
-        typeof val === 'string' &&
-        val &&
-        !val.startsWith('http://') &&
-        !val.startsWith('https://')
-      ) {
+      if (typeof val === 'string' && val && !isHttpUrl(val)) {
         return c.json({ success: false, message: 'URL must start with http:// or https://' }, 400)
       }
     }
@@ -127,7 +122,7 @@ export function settingsRoutes(deps: AppDependencies) {
           )
           const result = await provider.testConnection()
           return c.json(result)
-        } catch (err) {
+        } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err)
           return c.json({ success: false, message })
         }
@@ -156,7 +151,7 @@ export function settingsRoutes(deps: AppDependencies) {
         timestamp: new Date().toISOString(),
       })
       return c.json({ success: true, message: 'Test webhook sent' })
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return c.json({ success: false, message })
     }

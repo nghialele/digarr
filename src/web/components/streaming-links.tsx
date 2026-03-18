@@ -1,3 +1,5 @@
+import { isHttpUrl } from '@/core/validation'
+
 type StreamingLinksProps = {
   streamingUrls: Record<string, string> | null
   artistName: string
@@ -5,7 +7,7 @@ type StreamingLinksProps = {
 }
 
 function safeUrl(url: string): string {
-  return url.startsWith('http://') || url.startsWith('https://') ? url : '#'
+  return isHttpUrl(url) ? url : '#'
 }
 
 type ServiceConfig = {
