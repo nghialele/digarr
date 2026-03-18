@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 COPY . .
+ENV NODE_ENV=production
 RUN bun run build
 
 # Runtime stage -- production deps only
