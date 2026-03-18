@@ -33,6 +33,11 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   })
   if (!res.ok) {
+    if (res.status === 401) {
+      clearStoredToken()
+      window.location.reload()
+      throw new ApiError(res.status, { error: 'Session expired' })
+    }
     const error = await res.json().catch(() => ({ error: res.statusText }))
     throw new ApiError(res.status, error)
   }

@@ -3,8 +3,10 @@ import { createMiddleware } from 'hono/factory'
 import { envConfig } from '@/config/env'
 
 function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+  const ab = Buffer.from(a)
+  const bb = Buffer.from(b)
+  if (ab.byteLength !== bb.byteLength) return false
+  return timingSafeEqual(ab, bb)
 }
 
 export function authGuard() {
