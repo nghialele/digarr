@@ -3,6 +3,7 @@ import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
+import { sendWebhook } from '@/core/notifications'
 import { createProvider } from '@/core/providers/factory'
 import type { Preferences } from '@/db/schema'
 import { analyze } from './analyze'
@@ -65,8 +66,9 @@ export class PipelineOrchestrator extends EventEmitter {
 
     try {
       const { db, settings } = deps
-      const prefs = settings.preferences ?? {
+      const prefs: Preferences = settings.preferences ?? {
         qualityProfileId: 1,
+        metadataProfileId: 1,
         rootFolderId: 1,
         scheduleCron: '0 0 * * 0',
         scoreThreshold: 0.5,
@@ -212,6 +214,18 @@ export class PipelineOrchestrator extends EventEmitter {
         message: `Saving ${filtered.length} recommendations...`,
       })
       const batchId = await store(filtered, db)
+
+      // Fire-and-forget webhook notification
+      const webhookUrl = prefs.webhookUrl
+      if (webhookUrl) {
+        sendWebhook(webhookUrl, {
+          event: 'batch_complete',
+          batchId,
+          stats: { discovered: filtered.length, added: filtered.length, failed: 0 },
+          message: `Scan complete: ${filtered.length} new recommendations found.`,
+          timestamp: new Date().toISOString(),
+        }).catch((err) => console.error('Webhook send failed:', err))
+      }
 
       this.emit('progress', {
         stage: 'complete',

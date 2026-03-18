@@ -84,6 +84,7 @@ export type Preferences = {
   rejectionCooldownDays: number
   topArtistsLimit: number
   librarySeedRatio: number // 0-1: fraction of seed artists from Lidarr library
+  webhookUrl?: string
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {

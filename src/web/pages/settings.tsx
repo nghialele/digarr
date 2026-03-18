@@ -38,6 +38,7 @@ type Preferences = {
   rejectionCooldownDays?: number
   topArtistsLimit?: number
   librarySeedRatio?: number
+  webhookUrl?: string
 }
 
 type Settings = {
@@ -779,13 +780,16 @@ const PRESETS: CronPreset[] = [
 function ScheduleTab({ settings }: { settings: Settings }) {
   const prefs = settings.preferences ?? {}
   const [cron, setCron] = useState(prefs.scheduleCron ?? '0 0 * * *')
+  const [webhookUrl, setWebhookUrl] = useState(prefs.webhookUrl ?? '')
   const [saving, setSaving] = useState(false)
   const [running, setRunning] = useState(false)
 
   async function handleSave() {
     setSaving(true)
     try {
-      await updateSettings({ preferences: { ...prefs, scheduleCron: cron } })
+      await updateSettings({
+        preferences: { ...prefs, scheduleCron: cron, webhookUrl: webhookUrl || undefined },
+      })
       toast.success('Schedule saved')
     } catch {
       toast.error('Failed to save schedule')
@@ -833,6 +837,23 @@ function ScheduleTab({ settings }: { settings: Settings }) {
             value={cron}
             onChange={(e) => setCron(e.target.value)}
             className="font-mono"
+          />
+        </Field>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Webhook</h2>
+        <p className="text-xs text-muted">
+          Receive a POST notification when a scan completes. Works with Discord, Slack, ntfy,
+          Gotify, or any HTTP endpoint that accepts JSON.
+        </p>
+        <Field label="Webhook URL" id="webhook-url">
+          <Input
+            id="webhook-url"
+            type="url"
+            placeholder="https://ntfy.sh/my-topic"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
           />
         </Field>
       </section>
