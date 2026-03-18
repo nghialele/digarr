@@ -30,6 +30,7 @@ const mockArtists: LidarrArtist[] = [
     rootFolderPath: '/music',
     monitored: true,
     status: 'ended',
+    genres: ['alternative rock', 'art rock'],
   },
   {
     id: 2,
@@ -39,6 +40,7 @@ const mockArtists: LidarrArtist[] = [
     rootFolderPath: '/music',
     monitored: true,
     status: 'continuing',
+    genres: ['trip hop', 'electronic'],
   },
 ]
 

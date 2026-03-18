@@ -149,7 +149,7 @@ describe('PipelineOrchestrator', () => {
   let mockFilter: ReturnType<typeof vi.fn>
   let mockStore: ReturnType<typeof vi.fn>
 
-  const libraryArtists = [{ mbid: 'mbid-1', name: 'Artist 1' }]
+  const libraryArtists = [{ mbid: 'mbid-1', name: 'Artist 1', genres: ['rock', 'electronic'] }]
   const tasteProfile = {
     topArtists: [
       { name: 'Artist 1', mbid: 'mbid-1', playCount: 100, source: 'listenbrainz' as const },
@@ -353,6 +353,23 @@ describe('PipelineOrchestrator', () => {
     await orchestrator.run({ db, settings })
 
     expect(vi.mocked(createListenBrainzClient)).not.toHaveBeenCalled()
+  })
+
+  it('passes deduplicated library genres to score()', async () => {
+    const db = makeDb()
+    const artistsWithGenres = [
+      { mbid: 'mbid-1', name: 'Artist 1', genres: ['rock', 'electronic'] },
+      { mbid: 'mbid-2', name: 'Artist 2', genres: ['electronic', 'jazz'] },
+    ]
+    mockCollect.mockResolvedValue(artistsWithGenres)
+
+    await orchestrator.run({ db, settings: defaultSettings })
+
+    // score() is the 5th stage -- check its second argument (libraryGenres)
+    const scoreCall = mockScore.mock.calls[0]
+    const passedGenres = scoreCall?.[1] as string[]
+    expect(passedGenres).toBeDefined()
+    expect(passedGenres.sort()).toEqual(['electronic', 'jazz', 'rock'])
   })
 
   it('skips LFM client when lastfmUsername is null', async () => {

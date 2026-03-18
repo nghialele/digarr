@@ -126,10 +126,7 @@ export class PipelineOrchestrator extends EventEmitter {
 
       // Build lookup structures for score + filter
       const libraryMbids = new Set(libraryArtists.map((a) => a.mbid))
-      // Library genres are not available at this stage -- MB lookup happens in
-      // resolve. Pass an empty array; genre overlap scoring will be zero for
-      // library genres until task-12 query modules populate this.
-      const libraryGenres: string[] = []
+      const libraryGenres = [...new Set(libraryArtists.flatMap((a) => a.genres))]
       // Load rejection cooldown list and feedback history from DB
       const rejectedMbids = await db.getRejectedMbids(prefs.rejectionCooldownDays)
       const feedbackHistory = await db.getFeedbackHistory()

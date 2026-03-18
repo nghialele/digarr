@@ -9,6 +9,7 @@ export type LidarrArtist = {
   rootFolderPath: string
   monitored: boolean
   status: string
+  genres?: string[]
 }
 
 export type QualityProfile = {
