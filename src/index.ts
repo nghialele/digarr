@@ -38,8 +38,8 @@ const storeDb: StoreDb = {
     if (!row) throw new Error('insertBatch: no row returned')
     return row
   },
-  completeBatch: async (id) => {
-    await completeBatch(db, id, { discovered: 0, filtered: 0, scored: 0, added: 0, failed: 0 })
+  completeBatch: async (id, stats) => {
+    await completeBatch(db, id, { ...stats, filtered: 0, scored: 0 })
   },
   upsertArtist: async (data) => {
     const row = await upsertArtist(db, data)

@@ -112,6 +112,47 @@ describe('store()', () => {
     expect(db.insertRecommendation).not.toHaveBeenCalled()
   })
 
+  it('calls completeBatch with real stats on success', async () => {
+    const db = makeDb(1)
+    await store([makeArtist('a'), makeArtist('b'), makeArtist('c')], db)
+
+    expect(db.completeBatch).toHaveBeenCalledOnce()
+    expect(db.completeBatch).toHaveBeenCalledWith(1, {
+      discovered: 3,
+      added: 3,
+      failed: 0,
+    })
+  })
+
+  it('counts failures when upsertArtist throws', async () => {
+    const db = makeDb(1)
+    db.upsertArtist
+      .mockResolvedValueOnce({ id: 100 }) // first succeeds
+      .mockRejectedValueOnce(new Error('db error')) // second fails
+      .mockResolvedValueOnce({ id: 101 }) // third succeeds
+
+    await store([makeArtist('ok-1'), makeArtist('fail'), makeArtist('ok-2')], db)
+
+    expect(db.completeBatch).toHaveBeenCalledWith(1, {
+      discovered: 3,
+      added: 2,
+      failed: 1,
+    })
+    // The failed artist should not have a recommendation inserted
+    expect(db.insertRecommendation).toHaveBeenCalledTimes(2)
+  })
+
+  it('calls completeBatch with zeros for empty artist list', async () => {
+    const db = makeDb(5)
+    await store([], db)
+
+    expect(db.completeBatch).toHaveBeenCalledWith(5, {
+      discovered: 0,
+      added: 0,
+      failed: 0,
+    })
+  })
+
   it('passes all artist fields to upsertArtist', async () => {
     const artist: ScoredArtist = {
       mbid: 'mbid-full',

@@ -6,7 +6,10 @@ export interface StoreDb {
 
   insertBatch: (data: { status: string; stats: Record<string, unknown> }) => Promise<{ id: number }>
 
-  completeBatch: (id: number) => Promise<void>
+  completeBatch: (
+    id: number,
+    stats: { discovered: number; added: number; failed: number },
+  ) => Promise<void>
 
   upsertArtist: (data: {
     mbid: string
@@ -45,29 +48,43 @@ export async function store(artists: ScoredArtist[], db: StoreDb): Promise<numbe
   const batchId = batch.id
 
   // Upsert each artist and create a recommendation row
-  for (const artist of artists) {
-    const upserted = await db.upsertArtist({
-      mbid: artist.mbid,
-      name: artist.name,
-      disambiguation: artist.disambiguation,
-      tags: artist.tags,
-      genres: artist.genres,
-      imageUrl: artist.imageUrl,
-      streamingUrls: artist.streamingUrls,
-    })
+  let added = 0
+  let failed = 0
 
-    await db.insertRecommendation({
-      artistId: upserted.id,
-      batchId,
-      score: artist.score,
-      sources: artist.sourceScores,
-      aiReasoning: artist.aiReasoning,
-      status: 'pending',
-    })
+  for (const artist of artists) {
+    try {
+      const upserted = await db.upsertArtist({
+        mbid: artist.mbid,
+        name: artist.name,
+        disambiguation: artist.disambiguation,
+        tags: artist.tags,
+        genres: artist.genres,
+        imageUrl: artist.imageUrl,
+        streamingUrls: artist.streamingUrls,
+      })
+
+      await db.insertRecommendation({
+        artistId: upserted.id,
+        batchId,
+        score: artist.score,
+        sources: artist.sourceScores,
+        aiReasoning: artist.aiReasoning,
+        status: 'pending',
+      })
+
+      added++
+    } catch (err) {
+      failed++
+      console.error(`Failed to store artist ${artist.mbid}:`, err)
+    }
   }
 
-  // Mark batch as completed after all inserts succeed
-  await db.completeBatch(batchId)
+  // Mark batch as completed with real stats
+  await db.completeBatch(batchId, {
+    discovered: artists.length,
+    added,
+    failed,
+  })
 
   return batchId
 }
