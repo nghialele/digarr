@@ -29,7 +29,7 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 - **Quick discover** -- click "Find Similar" on any recent listen to get targeted recommendations
 - **Configurable pipeline** -- score thresholds, scoring weights, library seed ratio, rejection cooldowns, cron scheduling with hot-reload
 - **Setup wizard** -- guided 4-step setup with connection testing
-- **Dark UI** -- clean, responsive interface with keyboard shortcuts (j/k navigate, a approve, r reject), paginated discover view
+- **Dark/light/system themes** -- clean, responsive interface with keyboard shortcuts (j/k navigate, a approve, r reject), paginated discover view
 - **Mobile PWA** -- installable on phones, swipe-to-approve/reject on recommendation cards, responsive nav
 - **Multi-user** -- per-user recommendation queues, session-based auth with username/password, admin role
 - **Optional auth** -- bearer token (`DIGARR_AUTH_TOKEN`) or per-user login
