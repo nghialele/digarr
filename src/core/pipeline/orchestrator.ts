@@ -16,11 +16,6 @@ import { score } from './score'
 import type { StoreDb } from './store'
 import { store } from './store'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-// Settings row shape -- all fields from the DB settings table we actually need
 export interface PipelineSettings {
   lidarrUrl: string | null
   lidarrApiKey: string | null
@@ -41,10 +36,6 @@ export interface PipelineDeps {
   settings: PipelineSettings
   userId?: number
 }
-
-// ---------------------------------------------------------------------------
-// Orchestrator
-// ---------------------------------------------------------------------------
 
 export class PipelineOrchestrator extends EventEmitter {
   private running = false
@@ -78,8 +69,6 @@ export class PipelineOrchestrator extends EventEmitter {
         },
       }
 
-      // -- Build clients from settings ----------------------------------------
-
       if (!settings.lidarrUrl || !settings.lidarrApiKey) {
         throw new Error('Lidarr URL and API key are required')
       }
@@ -89,7 +78,6 @@ export class PipelineOrchestrator extends EventEmitter {
         settings.skipTlsVerify,
       )
 
-      // Build listening source registry
       const registry = new SourceRegistry()
       if (settings.listenbrainzUsername && settings.listenbrainzToken) {
         registry.register(
@@ -112,8 +100,6 @@ export class PipelineOrchestrator extends EventEmitter {
             )
           : null
 
-      // -- Stage 1: COLLECT ---------------------------------------------------
-
       this.emit('progress', { stage: 'collect', message: 'Fetching your Lidarr library...' })
       const libraryArtists = await collect(lidarrClient)
       this.emit('progress', {
@@ -121,14 +107,10 @@ export class PipelineOrchestrator extends EventEmitter {
         message: `Found ${libraryArtists.length} artists in your library`,
       })
 
-      // Build lookup structures for score + filter
       const libraryMbids = new Set(libraryArtists.map((a) => a.mbid))
       const libraryGenres = [...new Set(libraryArtists.flatMap((a) => a.genres))]
-      // Load rejection cooldown list and feedback history from DB
       const rejectedMbids = await db.getRejectedMbids(prefs.rejectionCooldownDays)
       const feedbackHistory = await db.getFeedbackHistory()
-
-      // -- Stage 2: ANALYZE ---------------------------------------------------
 
       this.emit('progress', { stage: 'analyze', message: 'Building your taste profile...' })
       const tasteProfile = await analyze(registry.all())
@@ -136,8 +118,6 @@ export class PipelineOrchestrator extends EventEmitter {
         stage: 'analyze',
         message: `Profiled ${tasteProfile.topArtists.length} top artists, ${tasteProfile.topGenres.length} genres`,
       })
-
-      // -- Stage 3: DISCOVER --------------------------------------------------
 
       this.emit('progress', {
         stage: 'discover',
@@ -159,8 +139,6 @@ export class PipelineOrchestrator extends EventEmitter {
         message: `Discovered ${discovered.length} candidate artists`,
       })
 
-      // -- Stage 4: RESOLVE ---------------------------------------------------
-
       this.emit('progress', {
         stage: 'resolve',
         message: `Resolving ${discovered.length} artists via MusicBrainz...`,
@@ -174,21 +152,16 @@ export class PipelineOrchestrator extends EventEmitter {
         lidarrClient,
       )
 
-      // -- Stage 5: SCORE -----------------------------------------------------
-
       this.emit('progress', {
         stage: 'score',
         message: `Scoring ${resolved.length} resolved artists...`,
       })
       const scored = score(resolved, libraryGenres, prefs.scoringWeights, feedbackHistory)
 
-      // -- Stage 6: FILTER ----------------------------------------------------
-
       this.emit('progress', {
         stage: 'filter',
         message: `Filtering ${scored.length} scored artists...`,
       })
-      // Also exclude artists that already have recommendations (any status)
       const existingMbids = await db.getExistingRecommendationMbids()
       for (const mbid of existingMbids) {
         libraryMbids.add(mbid)
@@ -200,8 +173,6 @@ export class PipelineOrchestrator extends EventEmitter {
         prefs.rejectionCooldownDays,
         prefs.scoreThreshold,
       )
-
-      // -- Stage 7: STORE -----------------------------------------------------
 
       this.emit('progress', {
         stage: 'store',
@@ -226,7 +197,7 @@ export class PipelineOrchestrator extends EventEmitter {
         message: `Done! ${filtered.length} new recommendations found.`,
       })
       return { batchId }
-    } catch (err) {
+    } catch (err: unknown) {
       this.emit('error', err)
       throw err
     } finally {

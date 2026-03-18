@@ -25,7 +25,7 @@ export function lidarrRoutes(deps: AppDependencies) {
         artists: artists.length,
         monitored: artists.filter((a) => a.monitored).length,
       })
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return c.json({ error: message }, 500)
     }
@@ -36,7 +36,7 @@ export function lidarrRoutes(deps: AppDependencies) {
       const client = await getClient()
       const profiles = await client.getMetadataProfiles()
       return c.json(profiles)
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return c.json({ error: message }, 500)
     }
@@ -47,7 +47,7 @@ export function lidarrRoutes(deps: AppDependencies) {
       const client = await getClient()
       const profiles = await client.getQualityProfiles()
       return c.json(profiles)
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return c.json({ error: message }, 500)
     }
@@ -58,7 +58,7 @@ export function lidarrRoutes(deps: AppDependencies) {
       const client = await getClient()
       const folders = await client.getRootFolders()
       return c.json(folders)
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return c.json({ error: message }, 500)
     }
@@ -89,7 +89,7 @@ export function lidarrRoutes(deps: AppDependencies) {
         rootFolderId ?? 1,
       )
       return c.json(artist)
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return c.json({ error: message }, 500)
     }

@@ -83,7 +83,7 @@ export async function store(
       })
 
       added++
-    } catch (err) {
+    } catch (err: unknown) {
       failed++
       console.error(`Failed to store artist ${artist.mbid}:`, err)
     }

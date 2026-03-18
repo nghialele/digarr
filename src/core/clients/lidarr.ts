@@ -97,7 +97,7 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
         message: `Connected to Lidarr -- ${profiles.length} quality profile(s) found`,
         details: { profileCount: profiles.length },
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return { success: false, message }
     }

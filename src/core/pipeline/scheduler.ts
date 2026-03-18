@@ -8,7 +8,7 @@ export class PipelineScheduler {
     this.cron = new Cron(cronExpression, async () => {
       try {
         await runFn()
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Scheduled pipeline run failed:', err)
       }
     })

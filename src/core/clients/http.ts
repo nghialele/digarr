@@ -49,7 +49,7 @@ export function createHttpClient(config: HttpClientConfig) {
         }
 
         throw new HttpError(res.status, await res.text(), url)
-      } catch (err) {
+      } catch (err: unknown) {
         clearTimeout(timer)
         if (err instanceof HttpError) throw err
         if (attempt >= retries) throw err

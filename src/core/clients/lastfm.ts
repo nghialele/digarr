@@ -94,7 +94,7 @@ export function createLastFmClient(username: string, apiKey: string) {
         message: `Connected to Last.fm -- ${artists.length} top artists for ${username}`,
         details: { artistCount: artists.length },
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return { success: false, message }
     }

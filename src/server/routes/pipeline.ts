@@ -171,7 +171,7 @@ export function pipelineRoutes(deps: AppDependencies) {
         if (filtered.length > 0) {
           await store(filtered, deps.storeDb, { userId })
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Quick discover failed:', err)
       }
     })()

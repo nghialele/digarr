@@ -13,7 +13,7 @@ export function healthRoutes(deps: HealthDeps) {
     try {
       await deps.db.execute(sql`SELECT 1`)
       return c.json({ status: 'ok' })
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       return c.json({ status: 'error', db: message }, 503)
     }

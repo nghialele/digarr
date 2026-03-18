@@ -106,7 +106,7 @@ function LoginForm({
     try {
       const res = await loginUser(username.trim(), password)
       onSuccess(res.token)
-    } catch (err) {
+    } catch (err: unknown) {
       setError(
         err instanceof Error && err.message.includes('401')
           ? 'Invalid credentials'
@@ -254,7 +254,7 @@ function RegisterForm({
     try {
       const res = await registerUser(username.trim(), password)
       onSuccess(res.token)
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed'
       setError(
         msg.includes('409')

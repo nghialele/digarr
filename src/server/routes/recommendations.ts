@@ -75,7 +75,7 @@ export function recommendationRoutes(deps: AppDependencies) {
           lidarrArtistId: added.id,
         })
         return c.json({ status: 'added_to_lidarr' })
-      } catch (err) {
+      } catch (err: unknown) {
         const lidarrError = err instanceof Error ? err.message : String(err)
         await deps.updateRecommendationStatus(id, 'add_failed', { lidarrError })
         return c.json({ status: 'add_failed', lidarrError })
@@ -144,7 +144,7 @@ export function recommendationRoutes(deps: AppDependencies) {
           lidarrArtistId: added.id,
         })
         results.push({ id, status: 'added_to_lidarr' })
-      } catch (err) {
+      } catch (err: unknown) {
         const lidarrError = err instanceof Error ? err.message : String(err)
         await deps.updateRecommendationStatus(id, 'add_failed', { lidarrError })
         results.push({ id, status: 'add_failed', error: lidarrError })
