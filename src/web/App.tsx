@@ -10,6 +10,8 @@ import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/th
 import { AnalyticsPage } from './pages/analytics'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
+import { GenreDetailPage } from './pages/genre-detail'
+import { GenresPage } from './pages/genres'
 import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
 
@@ -107,6 +109,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <NavLink to="/discover" className={navLinkClass}>
                 Discover
               </NavLink>
+              <NavLink to="/genres" className={navLinkClass}>
+                Genres
+              </NavLink>
               <NavLink to="/analytics" className={navLinkClass}>
                 Analytics
               </NavLink>
@@ -152,6 +157,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <NavLink to="/discover" className={navLinkClass} onClick={() => setMenuOpen(false)}>
               Discover
             </NavLink>
+            <NavLink to="/genres" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+              Genres
+            </NavLink>
             <NavLink to="/analytics" className={navLinkClass} onClick={() => setMenuOpen(false)}>
               Analytics
             </NavLink>
@@ -194,6 +202,8 @@ function InnerApp() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/genres" element={<GenresPage />} />
+            <Route path="/genres/:slug" element={<GenreDetailPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" />} />
