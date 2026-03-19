@@ -57,6 +57,16 @@ export const envConfig = {
 
   // Webhook (injected into preferences during auto-setup only)
   webhookUrl: env('WEBHOOK_URL'),
+
+  // Proxy auth
+  proxyAuthEnabled: envBool('PROXY_AUTH_ENABLED'),
+  proxyAuthTrustedProxies: env('PROXY_AUTH_TRUSTED_PROXIES'), // comma-separated CIDRs
+
+  // OIDC (fallbacks for DB settings)
+  oidcIssuerUrl: env('OIDC_ISSUER_URL'),
+  oidcClientId: env('OIDC_CLIENT_ID'),
+  oidcClientSecret: env('OIDC_CLIENT_SECRET'),
+  oidcScopes: env('OIDC_SCOPES'),
 } as const
 
 export type EnvConfig = typeof envConfig
@@ -93,6 +103,10 @@ export function envSettingsOverrides(): Record<string, unknown> {
   if (envConfig.aiApiKey) overrides.aiApiKey = envConfig.aiApiKey
   if (envConfig.aiModel) overrides.aiModel = envConfig.aiModel
   if (envConfig.aiBaseUrl) overrides.aiBaseUrl = envConfig.aiBaseUrl
+  if (envConfig.oidcIssuerUrl) overrides.oidcIssuerUrl = envConfig.oidcIssuerUrl
+  if (envConfig.oidcClientId) overrides.oidcClientId = envConfig.oidcClientId
+  if (envConfig.oidcClientSecret) overrides.oidcClientSecret = envConfig.oidcClientSecret
+  if (envConfig.oidcScopes) overrides.oidcScopes = envConfig.oidcScopes
   return overrides
 }
 

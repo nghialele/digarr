@@ -34,6 +34,16 @@ export function clearUserSessions(userId: number): void {
   }
 }
 
+/** Find an active (non-expired) session for a user. Used by proxy auth to reuse sessions. */
+export function getActiveSessionForUser(userId: number): string | null {
+  for (const [token, session] of sessions) {
+    if (session.userId === userId && Date.now() - session.createdAt < SESSION_TTL_MS) {
+      return token
+    }
+  }
+  return null
+}
+
 /** Visible for testing. */
 export function clearAllSessions(): void {
   sessions.clear()

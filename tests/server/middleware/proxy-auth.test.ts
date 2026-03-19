@@ -1,0 +1,103 @@
+import { Hono } from 'hono'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { proxyAuthMiddleware } from '@/server/middleware/proxy-auth'
+
+vi.mock('@/core/sessions', () => ({
+  createSession: vi.fn(),
+  getActiveSessionForUser: vi.fn(() => null),
+}))
+vi.mock('@/core/auth', () => ({
+  generateSessionToken: vi.fn(() => 'test-token-123'),
+  hashPassword: vi.fn(() => 'dummy-hash'),
+}))
+
+describe('proxyAuthMiddleware', () => {
+  const mockGetUserByUsername = vi.fn()
+  const mockCreateUser = vi.fn(async (data: { username: string }) => ({
+    id: 1,
+    username: data.username,
+    isAdmin: false,
+    createdAt: new Date(),
+  }))
+  const mockGetUserCount = vi.fn(async () => 0)
+
+  function buildApp(trustedProxies: string[]) {
+    const app = new Hono()
+    app.use(
+      '*',
+      proxyAuthMiddleware({
+        enabled: true,
+        trustedProxies,
+        getUserByUsername: mockGetUserByUsername,
+        createUser: mockCreateUser,
+        getUserCount: mockGetUserCount,
+      }),
+    )
+    app.get('/test', (c) => {
+      const userId = c.get('userId' as never)
+      const proxyAuth = c.get('proxyAuth' as never)
+      return c.json({ userId, proxyAuth })
+    })
+    return app
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetUserByUsername.mockResolvedValue(null)
+    mockGetUserCount.mockResolvedValue(0)
+  })
+
+  // Note: In tests, getSocketIp() returns '127.0.0.1' (no real socket).
+  // Trust '127.0.0.0/8' to test the happy path. For untrusted scenarios,
+  // use a CIDR that excludes 127.x.x.x (e.g., '10.0.0.0/8').
+
+  it('auto-provisions user when X-Forwarded-User is present from trusted proxy', async () => {
+    const app = buildApp(['127.0.0.0/8'])
+    const res = await app.request('/test', {
+      headers: { 'X-Forwarded-User': 'alice' },
+    })
+    expect(res.status).toBe(200)
+    expect(mockCreateUser).toHaveBeenCalled()
+  })
+
+  it('reuses existing user when found', async () => {
+    mockGetUserByUsername.mockResolvedValue({
+      id: 42,
+      username: 'bob',
+      passwordHash: 'h',
+      isAdmin: true,
+      createdAt: new Date(),
+    })
+    const app = buildApp(['127.0.0.0/8'])
+    const res = await app.request('/test', {
+      headers: { 'X-Forwarded-User': 'bob' },
+    })
+    expect(res.status).toBe(200)
+    expect(mockCreateUser).not.toHaveBeenCalled()
+  })
+
+  it('silently falls through when proxy IP is not trusted', async () => {
+    const app = buildApp(['10.0.0.0/8'])
+    const res = await app.request('/test', {
+      headers: { 'X-Forwarded-User': 'mallory' },
+    })
+    const body = await res.json()
+    expect(body.proxyAuth).toBeUndefined()
+  })
+
+  it('silently falls through when no X-Forwarded-User header', async () => {
+    const app = buildApp(['127.0.0.0/8'])
+    const res = await app.request('/test')
+    const body = await res.json()
+    expect(body.proxyAuth).toBeUndefined()
+  })
+
+  it('first proxy user becomes admin', async () => {
+    mockGetUserCount.mockResolvedValue(0)
+    const app = buildApp(['127.0.0.0/8'])
+    await app.request('/test', {
+      headers: { 'X-Forwarded-User': 'firstuser' },
+    })
+    expect(mockCreateUser).toHaveBeenCalledWith(expect.objectContaining({ isAdmin: true }))
+  })
+})
