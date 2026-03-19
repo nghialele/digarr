@@ -404,4 +404,45 @@ describe('PipelineOrchestrator', () => {
 
     expect(vi.mocked(createLastFmSource)).not.toHaveBeenCalled()
   })
+
+  it('succeeds without Lidarr when a listening source is configured', async () => {
+    const db = makeDb()
+    const settings = {
+      ...defaultSettings,
+      lidarrUrl: null,
+      lidarrApiKey: null,
+    }
+
+    // collect() should receive null and return []
+    mockCollect.mockResolvedValue([])
+
+    const result = await orchestrator.run({ db, settings, providerRegistry })
+
+    expect(result).toEqual({ batchId: 42 })
+    // Lidarr client must NOT have been created
+    const { createLidarrClient } = await import('@/core/clients/lidarr')
+    expect(vi.mocked(createLidarrClient)).not.toHaveBeenCalled()
+    // collect was called with null
+    expect(mockCollect).toHaveBeenCalledWith(null)
+  })
+
+  it('throws when neither Lidarr nor listening sources nor AI are configured', async () => {
+    const db = makeDb()
+    const settings = {
+      ...defaultSettings,
+      lidarrUrl: null,
+      lidarrApiKey: null,
+      listenbrainzUsername: null,
+      listenbrainzToken: null,
+      lastfmUsername: null,
+      lastfmApiKey: null,
+      aiProvider: null,
+      aiApiKey: null,
+      aiModel: null,
+    }
+
+    await expect(orchestrator.run({ db, settings, providerRegistry })).rejects.toThrow(
+      'At least one listening source or AI provider must be configured',
+    )
+  })
 })

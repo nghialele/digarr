@@ -70,14 +70,10 @@ export class PipelineOrchestrator extends EventEmitter {
         },
       }
 
-      if (!settings.lidarrUrl || !settings.lidarrApiKey) {
-        throw new Error('Lidarr URL and API key are required')
-      }
-      const lidarrClient = createLidarrClient(
-        settings.lidarrUrl,
-        settings.lidarrApiKey,
-        settings.skipTlsVerify,
-      )
+      const lidarrClient =
+        settings.lidarrUrl && settings.lidarrApiKey
+          ? createLidarrClient(settings.lidarrUrl, settings.lidarrApiKey, settings.skipTlsVerify)
+          : null
 
       const registry = new SourceRegistry()
       if (settings.listenbrainzUsername && settings.listenbrainzToken) {
@@ -89,8 +85,6 @@ export class PipelineOrchestrator extends EventEmitter {
         registry.register(createLastFmSource(settings.lastfmUsername, settings.lastfmApiKey))
       }
 
-      const mbClient = createMusicBrainzClient()
-
       const aiProvider =
         providerRegistry && settings.aiProvider && settings.aiModel
           ? await providerRegistry.create(settings.aiProvider, {
@@ -99,6 +93,12 @@ export class PipelineOrchestrator extends EventEmitter {
               baseUrl: settings.aiBaseUrl ?? null,
             })
           : null
+
+      if (registry.all().length === 0 && !lidarrClient && !aiProvider) {
+        throw new Error('At least one listening source or AI provider must be configured')
+      }
+
+      const mbClient = createMusicBrainzClient()
 
       this.emit('progress', { stage: 'collect', message: 'Fetching your Lidarr library...' })
       const libraryArtists = await collect(lidarrClient)
