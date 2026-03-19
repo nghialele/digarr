@@ -3,4 +3,4 @@ name: digarr
 description: Music discovery app -- finds new artists based on your listening history
 type: application
 version: 0.5.9
-appVersion: "0.6.0"
+appVersion: "0.6.7"
