@@ -37,6 +37,12 @@ type LfmRecentTracksResponse = {
   }
 }
 
+type LfmTagTopArtistsResponse = {
+  topartists: {
+    artist: Array<{ name: string; mbid?: string; listeners?: string }>
+  }
+}
+
 export function createLastFmClient(username: string, apiKey: string) {
   const http = createHttpClient({ baseUrl: BASE_URL })
 
@@ -90,18 +96,12 @@ export function createLastFmClient(username: string, apiKey: string) {
     tag: string,
     limit = 20,
   ): Promise<Array<{ name: string; mbid?: string; listeners: number }>> {
-    const params = new URLSearchParams({
+    const res = await get<LfmTagTopArtistsResponse>({
       method: 'tag.gettopartists',
       tag,
       limit: String(limit),
-      api_key: apiKey,
-      format: 'json',
     })
-    const res = await fetch(`https://ws.audioscrobbler.com/2.0/?${params}`)
-    const data = (await res.json()) as {
-      topartists?: { artist?: Array<{ name: string; mbid?: string; listeners?: string }> }
-    }
-    const artists = data?.topartists?.artist ?? []
+    const artists = res?.topartists?.artist ?? []
     return artists.map((a) => ({
       name: a.name,
       mbid: a.mbid || undefined,

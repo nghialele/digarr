@@ -51,6 +51,8 @@ export interface DiscoverySource {
   getListeningActivity?(): Promise<ListeningActivityEntry[]>
   /** Get top artists for a genre/tag (optional -- only sources with genreArtists capability) */
   getGenreArtists?(genre: string, options?: { limit?: number }): Promise<GenreArtistEntry[]>
+  /** Get recently listened tracks/artists (optional -- only sources with recentListening capability) */
+  getRecentListening?(limit?: number): Promise<{ name: string; track?: string; playedAt: Date }[]>
 }
 
 /** @deprecated Use DiscoverySource instead */
