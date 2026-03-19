@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { LibraryHealthService } from '@/core/library/health'
+import type { SkyHookWarmer } from '@/core/library/skyhook-warmer'
 import type { HealthCheckId } from '@/core/library/types'
 
 const VALID_CHECK_IDS: Set<string> = new Set([
@@ -14,6 +15,7 @@ const VALID_CHECK_IDS: Set<string> = new Set([
 
 type LibraryRouteDeps = {
   libraryHealth: LibraryHealthService
+  skyhookWarmer?: SkyHookWarmer | null
 }
 
 export function libraryRoutes(deps: LibraryRouteDeps) {
@@ -52,6 +54,37 @@ export function libraryRoutes(deps: LibraryRouteDeps) {
   app.get('/api/library/stats', async (c) => {
     const stats = await deps.libraryHealth.getStats()
     return c.json(stats)
+  })
+
+  // POST /api/library/warm -- trigger background warming for a batch of MBIDs
+  app.post('/api/library/warm', async (c) => {
+    if (!deps.skyhookWarmer) {
+      return c.json({ error: 'SkyHook warming not available (Lidarr not configured)' }, 400)
+    }
+    const body = await c.req.json()
+    const mbids = body.mbids as string[]
+    if (!Array.isArray(mbids) || mbids.length === 0) {
+      return c.json({ error: 'mbids array required' }, 400)
+    }
+    const batch = mbids.slice(0, 50) // Limit batch size
+    for (const mbid of batch) {
+      deps.skyhookWarmer.warmInBackground(mbid)
+    }
+    return c.json({ queued: batch.length }, 202)
+  })
+
+  // GET /api/library/warm/status -- check warm status for MBIDs
+  app.get('/api/library/warm/status', async (c) => {
+    if (!deps.skyhookWarmer) {
+      return c.json({ statuses: {} })
+    }
+    const mbidsParam = c.req.query('mbids') ?? ''
+    const mbids = mbidsParam.split(',').filter(Boolean).slice(0, 100)
+    const statuses: Record<string, string> = {}
+    for (const mbid of mbids) {
+      statuses[mbid] = deps.skyhookWarmer.getStatus(mbid)
+    }
+    return c.json({ statuses })
   })
 
   return app

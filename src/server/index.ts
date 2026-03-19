@@ -130,7 +130,10 @@ export function createApp(deps: AppDependencies) {
   app.route('/', listeningRoutes(deps))
   app.route('/', genreRoutes(deps))
   app.route('/', subscriptionRoutes(deps))
-  app.route('/', libraryRoutes({ libraryHealth: deps.libraryHealth }))
+  app.route(
+    '/',
+    libraryRoutes({ libraryHealth: deps.libraryHealth, skyhookWarmer: deps.skyhookWarmer }),
+  )
 
   // Serve built SPA in production (dev uses Vite's dev server with proxy)
   // Absolute path required: @hono/node-server serveStatic resolves relative

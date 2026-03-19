@@ -233,3 +233,118 @@ describe('GET /api/library/stats', () => {
     expect(body.rootFolders).toHaveLength(1)
   })
 })
+
+function makeMockWarmer() {
+  return {
+    warmInBackground: vi.fn(),
+    getStatus: vi.fn((mbid: string) => (mbid === 'mbid-1' ? 'warm' : 'unknown')),
+    isWarm: vi.fn(),
+    warm: vi.fn(),
+    warmBatch: vi.fn(),
+  }
+}
+
+describe('POST /api/library/warm', () => {
+  it('queues background warming and returns 202', async () => {
+    const mockWarmer = makeMockWarmer()
+    const app = createApp(
+      makeDeps({ skyhookWarmer: mockWarmer as unknown as AppDependencies['skyhookWarmer'] }),
+    )
+    const res = await app.request('/api/library/warm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mbids: ['mbid-1', 'mbid-2'] }),
+    })
+    expect(res.status).toBe(202)
+    const body = await res.json()
+    expect(body.queued).toBe(2)
+    const warmCalls = mockWarmer.warmInBackground.mock.calls
+    expect(warmCalls).toHaveLength(2)
+    expect(warmCalls[0]?.[0]).toBe('mbid-1')
+    expect(warmCalls[1]?.[0]).toBe('mbid-2')
+  })
+
+  it('returns 400 when warmer not available', async () => {
+    const app = createApp(makeDeps({ skyhookWarmer: null }))
+    const res = await app.request('/api/library/warm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mbids: ['mbid-1'] }),
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/not available/i)
+  })
+
+  it('returns 400 for missing mbids', async () => {
+    const skyhookWarmer = makeMockWarmer() as unknown as AppDependencies['skyhookWarmer']
+    const app = createApp(makeDeps({ skyhookWarmer }))
+    const res = await app.request('/api/library/warm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/mbids array required/i)
+  })
+
+  it('returns 400 for empty mbids array', async () => {
+    const skyhookWarmer = makeMockWarmer() as unknown as AppDependencies['skyhookWarmer']
+    const app = createApp(makeDeps({ skyhookWarmer }))
+    const res = await app.request('/api/library/warm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mbids: [] }),
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/mbids array required/i)
+  })
+
+  it('limits batch to 50 MBIDs', async () => {
+    const mockWarmer = makeMockWarmer()
+    const app = createApp(
+      makeDeps({ skyhookWarmer: mockWarmer as unknown as AppDependencies['skyhookWarmer'] }),
+    )
+    const mbids = Array.from({ length: 60 }, (_, i) => `mbid-${i}`)
+    const res = await app.request('/api/library/warm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mbids }),
+    })
+    expect(res.status).toBe(202)
+    const body = await res.json()
+    expect(body.queued).toBe(50)
+    expect(mockWarmer.warmInBackground.mock.calls).toHaveLength(50)
+  })
+})
+
+describe('GET /api/library/warm/status', () => {
+  it('returns statuses for requested MBIDs', async () => {
+    const skyhookWarmer = makeMockWarmer() as unknown as AppDependencies['skyhookWarmer']
+    const app = createApp(makeDeps({ skyhookWarmer }))
+    const res = await app.request('/api/library/warm/status?mbids=mbid-1,mbid-2')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.statuses['mbid-1']).toBe('warm')
+    expect(body.statuses['mbid-2']).toBe('unknown')
+  })
+
+  it('returns empty statuses object when warmer not available', async () => {
+    const app = createApp(makeDeps({ skyhookWarmer: null }))
+    const res = await app.request('/api/library/warm/status?mbids=mbid-1')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.statuses).toEqual({})
+  })
+
+  it('returns empty statuses when no mbids param', async () => {
+    const skyhookWarmer = makeMockWarmer() as unknown as AppDependencies['skyhookWarmer']
+    const app = createApp(makeDeps({ skyhookWarmer }))
+    const res = await app.request('/api/library/warm/status')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.statuses).toEqual({})
+  })
+})
