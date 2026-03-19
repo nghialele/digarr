@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { Monitor, Moon, Sun } from 'lucide-react'
+import { HeartPulse, Monitor, Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
@@ -15,6 +15,7 @@ import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
 import { GenreDetailPage } from './pages/genre-detail'
 import { GenresPage } from './pages/genres'
+import { LibraryHealthPage } from './pages/library-health'
 import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
 
@@ -118,6 +119,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <NavLink to="/genres" className={navLinkClass}>
                 Genres
               </NavLink>
+              <NavLink to="/library/health" className={navLinkClass}>
+                <span className="flex items-center gap-1">
+                  <HeartPulse size={14} aria-hidden="true" />
+                  Library
+                </span>
+              </NavLink>
               <NavLink to="/analytics" className={navLinkClass}>
                 Analytics
               </NavLink>
@@ -166,6 +173,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <NavLink to="/genres" className={navLinkClass} onClick={() => setMenuOpen(false)}>
               Genres
             </NavLink>
+            <NavLink
+              to="/library/health"
+              className={navLinkClass}
+              onClick={() => setMenuOpen(false)}
+            >
+              Library
+            </NavLink>
             <NavLink to="/analytics" className={navLinkClass} onClick={() => setMenuOpen(false)}>
               Analytics
             </NavLink>
@@ -213,6 +227,7 @@ function InnerApp() {
             <Route path="/discover" element={<DiscoverPage />} />
             <Route path="/genres" element={<GenresPage />} />
             <Route path="/genres/:slug" element={<GenreDetailPage />} />
+            <Route path="/library/health" element={<LibraryHealthPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" />} />

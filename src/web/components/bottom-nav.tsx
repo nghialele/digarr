@@ -1,3 +1,4 @@
+import { HeartPulse } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '../lib/utils'
 
@@ -65,6 +66,10 @@ function GenresIcon({ className }: { className?: string }) {
   )
 }
 
+function LibraryIcon({ className }: { className?: string }) {
+  return <HeartPulse className={cn('w-5 h-5', className)} aria-hidden="true" strokeWidth={2} />
+}
+
 function SettingsIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -92,6 +97,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon, exact: true },
   { to: '/discover', label: 'Discover', Icon: DiscoverIcon, exact: false },
   { to: '/genres', label: 'Genres', Icon: GenresIcon, exact: false },
+  { to: '/library/health', label: 'Library', Icon: LibraryIcon, exact: false },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon, exact: false },
 ] as const
 

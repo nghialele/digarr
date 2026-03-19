@@ -197,6 +197,40 @@ export const getLidarrRootFolders = () =>
 export const addToLidarr = (body: Record<string, unknown>) =>
   fetchApi('/lidarr/add', { method: 'POST', body: JSON.stringify(body) })
 
+// Library Health
+export type HealthCheckItem = {
+  artistId: number
+  artistName: string
+  mbid: string
+  detail: string
+}
+export type HealthCheckResult = {
+  id: string
+  name: string
+  description: string
+  severity: 'info' | 'warning' | 'error'
+  count: number
+  items: HealthCheckItem[]
+  fixable: boolean
+}
+export type HealthCheckResponse = {
+  checks: HealthCheckResult[]
+  cached: boolean
+}
+export type LibraryStats = {
+  totalArtists: number
+  totalAlbums: number
+  monitoredArtists: number
+  genreDistribution: Array<{ genre: string; count: number }>
+  rootFolders: Array<{ path: string; freeSpace: number }>
+}
+export const getLibraryHealth = () => fetchApi<HealthCheckResponse>('/library/health')
+export const scanLibraryHealth = () =>
+  fetchApi<HealthCheckResponse>('/library/health/scan', { method: 'POST' })
+export const fixHealthCheck = (checkId: string) =>
+  fetchApi<unknown>(`/library/health/${encodeURIComponent(checkId)}/fix`, { method: 'POST' })
+export const getLibraryStats = () => fetchApi<LibraryStats>('/library/stats')
+
 // Genres
 export const getGenres = () => fetchApi<GenreInfo[]>('/genres')
 export const searchGenres = (q: string) =>
