@@ -11,6 +11,7 @@ import {
   AUTH_EXPIRED_EVENT,
   changePassword,
   clearStoredToken,
+  getAuthStatus,
   getCurrentUser,
   getLidarrMetadataProfiles,
   getLidarrProfiles,
@@ -34,11 +35,15 @@ type Settings = {
   aiApiKey?: string
   aiModel?: string
   aiBaseUrl?: string
+  oidcIssuerUrl?: string
+  oidcClientId?: string
+  oidcClientSecret?: string
+  oidcScopes?: string
   preferences?: Partial<Preferences>
   setupComplete?: boolean
 }
 
-type Tab = 'connections' | 'recommendations' | 'schedule' | 'account'
+type Tab = 'connections' | 'recommendations' | 'schedule' | 'account' | 'auth'
 
 function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
@@ -57,6 +62,7 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
     { id: 'recommendations', label: 'Recommendations' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'account', label: 'Account' },
+    { id: 'auth', label: 'Authentication' },
   ]
   return (
     <div className="flex gap-1 border-b border-border mb-6">
@@ -924,6 +930,97 @@ function AccountTab({ settings }: { settings: Settings }) {
   )
 }
 
+function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => void }) {
+  const [oidcIssuerUrl, setOidcIssuerUrl] = useState(settings.oidcIssuerUrl ?? '')
+  const [oidcClientId, setOidcClientId] = useState(settings.oidcClientId ?? '')
+  const [oidcClientSecret, setOidcClientSecret] = useState(
+    settings.oidcClientSecret === '***' ? '' : (settings.oidcClientSecret ?? ''),
+  )
+  const [oidcScopes, setOidcScopes] = useState(settings.oidcScopes ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const { data: authStatus } = useQuery({
+    queryKey: ['authStatus'],
+    queryFn: getAuthStatus,
+  })
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await updateSettings({
+        oidcIssuerUrl: oidcIssuerUrl || undefined,
+        oidcClientId: oidcClientId || undefined,
+        oidcClientSecret: oidcClientSecret || undefined,
+        oidcScopes: oidcScopes || undefined,
+      })
+      toast.success('Authentication settings saved')
+      onSaved()
+    } catch {
+      toast.error('Failed to save authentication settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      {authStatus?.proxyAuthEnabled && (
+        <div className="text-sm text-muted p-3 rounded bg-surface border border-border">
+          Proxy authentication is enabled via environment variables. Users are auto-provisioned from
+          X-Forwarded-User headers.
+        </div>
+      )}
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">OIDC / SSO</h2>
+          <p className="text-xs text-muted mt-1">
+            Configure OpenID Connect for single sign-on. Requires a restart to take effect.
+          </p>
+        </div>
+        <Field label="Issuer URL" id="oidc-issuer-url">
+          <Input
+            id="oidc-issuer-url"
+            type="url"
+            placeholder="https://auth.example.com"
+            value={oidcIssuerUrl}
+            onChange={(e) => setOidcIssuerUrl(e.target.value)}
+          />
+        </Field>
+        <Field label="Client ID" id="oidc-client-id">
+          <Input
+            id="oidc-client-id"
+            placeholder="your-client-id"
+            value={oidcClientId}
+            onChange={(e) => setOidcClientId(e.target.value)}
+          />
+        </Field>
+        <Field label="Client Secret" id="oidc-client-secret">
+          <Input
+            id="oidc-client-secret"
+            type="password"
+            placeholder={settings.oidcClientSecret === '***' ? '(saved)' : 'your-client-secret'}
+            value={oidcClientSecret}
+            onChange={(e) => setOidcClientSecret(e.target.value)}
+          />
+        </Field>
+        <Field label="Scopes" id="oidc-scopes">
+          <Input
+            id="oidc-scopes"
+            placeholder="openid profile email"
+            value={oidcScopes}
+            onChange={(e) => setOidcScopes(e.target.value)}
+          />
+        </Field>
+      </section>
+
+      <Button onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving...' : 'Save'}
+      </Button>
+    </div>
+  )
+}
+
 function SettingsSkeleton() {
   return (
     <div className="space-y-4">
@@ -983,6 +1080,7 @@ export function SettingsPage() {
       {tab === 'recommendations' && <RecommendationsTab settings={data} />}
       {tab === 'schedule' && <ScheduleTab settings={data} />}
       {tab === 'account' && <AccountTab settings={data} />}
+      {tab === 'auth' && <AuthTab settings={data} onSaved={refetch} />}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { HeartPulse, Monitor, Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
@@ -9,7 +9,7 @@ import { KeyboardShortcuts } from './components/keyboard-shortcuts'
 import { PreviewPlayer } from './components/preview-player'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
 import { usePreview } from './hooks/use-preview'
-import { getSetupStatus, triggerPipeline } from './lib/api'
+import { getCurrentUser, getSetupStatus, triggerPipeline } from './lib/api'
 import { PreviewContext } from './lib/preview-context'
 import { queryClient } from './lib/query-client'
 import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
@@ -21,6 +21,7 @@ import { GenresPage } from './pages/genres'
 import { LibraryHealthPage } from './pages/library-health'
 import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
+import { UserManagementPage } from './pages/user-management'
 
 // ---------------------------------------------------------------------------
 // Service worker registration
@@ -83,6 +84,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const preview = usePreview()
+  const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
 
   useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
 
@@ -144,6 +146,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <NavLink to="/settings" className={navLinkClass}>
                   Settings
                 </NavLink>
+                {currentUser?.isAdmin && (
+                  <NavLink to="/users" className={navLinkClass}>
+                    Users
+                  </NavLink>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -199,6 +206,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <NavLink to="/settings" className={navLinkClass} onClick={() => setMenuOpen(false)}>
                 Settings
               </NavLink>
+              {currentUser?.isAdmin && (
+                <NavLink to="/users" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+                  Users
+                </NavLink>
+              )}
             </div>
           )}
         </nav>
@@ -251,6 +263,7 @@ function InnerApp() {
             <Route path="/library/health" element={<LibraryHealthPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/users" element={<UserManagementPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </AppShell>
