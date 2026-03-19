@@ -23,7 +23,7 @@ export async function upsertGenre(db: Database, data: GenreInsert): Promise<Genr
         name: data.name,
         source: data.source,
         artistCount: data.artistCount ?? 0,
-        cachedAt: data.cachedAt ?? new Date(),
+        cachedAt: data.cachedAt !== undefined ? data.cachedAt : new Date(),
       },
     })
     .returning()

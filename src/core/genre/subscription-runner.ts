@@ -6,7 +6,18 @@ import { store } from '@/core/pipeline/store'
 import { resolveWeights } from '@/core/pipeline/weight-presets'
 import type { DiscoverySource } from '@/core/plugins/types'
 import type { DiscoveredArtist } from '@/core/types'
-import type { completeRun, insertRun, updateSubscription } from '@/db/queries/subscriptions'
+import type { RunComplete, RunInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
+
+type SubscriptionRunRow = {
+  id: number
+  subscriptionId: number
+  startedAt: Date
+  completedAt: Date | null
+  artistsFound: number | null
+  artistsNew: number | null
+  error: string | null
+  batchId: number | null
+}
 
 type MusicBrainzClient = {
   lookupArtist: (mbid: string) => Promise<unknown>
@@ -31,15 +42,9 @@ export type SubscriptionConfig = {
 }
 
 export type SubscriptionQueries = {
-  insertRun: (
-    ...args: Parameters<typeof insertRun> extends [unknown, ...infer Rest] ? Rest : never
-  ) => ReturnType<typeof insertRun>
-  completeRun: (
-    ...args: Parameters<typeof completeRun> extends [unknown, ...infer Rest] ? Rest : never
-  ) => ReturnType<typeof completeRun>
-  updateSubscription: (
-    ...args: Parameters<typeof updateSubscription> extends [unknown, ...infer Rest] ? Rest : never
-  ) => ReturnType<typeof updateSubscription>
+  insertRun: (data: RunInsert) => Promise<SubscriptionRunRow>
+  completeRun: (id: number, data: RunComplete) => Promise<void>
+  updateSubscription: (id: number, data: SubscriptionUpdate) => Promise<void>
 }
 
 export type GenreSubscriptionDeps = {
@@ -56,6 +61,9 @@ export type GenreSubscriptionDeps = {
   cooldownDays: number
   defaultScoreThreshold: number
 }
+
+const LISTENER_SCALE = 1_000_000
+const DEFAULT_SIMILARITY = 0.5
 
 export async function runGenreSubscription(
   deps: GenreSubscriptionDeps,
@@ -112,7 +120,10 @@ export async function runGenreSubscription(
           discovered.push({
             name: entry.name,
             mbid: entry.mbid,
-            similarityScore: entry.listeners > 0 ? Math.min(entry.listeners / 1_000_000, 1.0) : 0.5,
+            similarityScore:
+              entry.listeners > 0
+                ? Math.min(entry.listeners / LISTENER_SCALE, 1.0)
+                : DEFAULT_SIMILARITY,
             source: `genre-subscription:${source.id}`,
           })
         }

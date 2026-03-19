@@ -25,7 +25,7 @@ describe('resolveWeights()', () => {
   it('returns genre preset for "genre"', () => {
     const result = resolveWeights('genre')
     expect(result).toEqual(WEIGHT_PRESETS.genre)
-    expect(result.genreOverlap).toBe(0.05)
+    expect(result.genreOverlap).toBe(WEIGHT_PRESETS.genre.genreOverlap)
   })
 
   it('falls back to default for unknown preset name', () => {

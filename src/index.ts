@@ -150,7 +150,14 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   }
 
   const settings = await getSettings(db)
-  const prefs = { ...DEFAULT_PREFERENCES, ...settings?.preferences }
+  const prefs = {
+    ...DEFAULT_PREFERENCES,
+    ...settings?.preferences,
+    scoringWeights: {
+      ...DEFAULT_PREFERENCES.scoringWeights,
+      ...settings?.preferences?.scoringWeights,
+    },
+  }
 
   const lidarrClient =
     settings?.lidarrUrl && settings?.lidarrApiKey

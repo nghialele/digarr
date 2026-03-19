@@ -14,14 +14,7 @@ import type {
   StatusUpdateExtra,
 } from '@/db/queries/recommendations'
 import type { SetupConfig } from '@/db/queries/settings'
-import type {
-  createSubscription,
-  deleteSubscription,
-  getRunsForSubscription,
-  getSubscription,
-  getSubscriptionsByUser,
-  updateSubscription,
-} from '@/db/queries/subscriptions'
+import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
 import type { UserPublic } from '@/db/queries/users'
 import { authGuard } from './middleware/auth'
 import { setupGuard } from './middleware/setup-guard'
@@ -82,28 +75,12 @@ export type AppDependencies = {
   genreService: GenreService
   // Subscription query functions
   subscriptionQueries: {
-    createSubscription: (
-      ...args: Parameters<typeof createSubscription> extends [unknown, ...infer Rest] ? Rest : never
-    ) => ReturnType<typeof createSubscription>
-    getSubscription: (
-      ...args: Parameters<typeof getSubscription> extends [unknown, ...infer Rest] ? Rest : never
-    ) => ReturnType<typeof getSubscription>
-    getSubscriptionsByUser: (
-      ...args: Parameters<typeof getSubscriptionsByUser> extends [unknown, ...infer Rest]
-        ? Rest
-        : never
-    ) => ReturnType<typeof getSubscriptionsByUser>
-    updateSubscription: (
-      ...args: Parameters<typeof updateSubscription> extends [unknown, ...infer Rest] ? Rest : never
-    ) => ReturnType<typeof updateSubscription>
-    deleteSubscription: (
-      ...args: Parameters<typeof deleteSubscription> extends [unknown, ...infer Rest] ? Rest : never
-    ) => ReturnType<typeof deleteSubscription>
-    getRunsForSubscription: (
-      ...args: Parameters<typeof getRunsForSubscription> extends [unknown, ...infer Rest]
-        ? Rest
-        : never
-    ) => ReturnType<typeof getRunsForSubscription>
+    createSubscription: (data: SubscriptionInsert) => Promise<{ id: number; userId: number | null }>
+    getSubscription: (id: number) => Promise<{ id: number; userId: number | null } | null>
+    getSubscriptionsByUser: (userId: number) => Promise<{ id: number; userId: number | null }[]>
+    updateSubscription: (id: number, data: SubscriptionUpdate) => Promise<void>
+    deleteSubscription: (id: number) => Promise<void>
+    getRunsForSubscription: (id: number, limit?: number) => Promise<unknown[]>
   }
   // Manual subscription trigger
   runSubscription: (id: number) => Promise<void>

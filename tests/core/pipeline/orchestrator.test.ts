@@ -191,10 +191,7 @@ describe('PipelineOrchestrator', () => {
   const scored = [{ ...resolved[0]!, score: 0.7, sourceScores: { consensus: 0.25 } }]
   const filtered = scored
 
-  beforeEach(async () => {
-    orchestrator = new PipelineOrchestrator()
-    providerRegistry = makeProviderRegistry()
-
+  function setupPipelineMocks() {
     mockCollect = vi.mocked(collect)
     mockAnalyze = vi.mocked(analyze)
     mockDiscover = vi.mocked(discover)
@@ -203,10 +200,16 @@ describe('PipelineOrchestrator', () => {
     mockFilter = vi.mocked(filter)
     mockStore = vi.mocked(store)
 
-    // Clear all mocks so call counts don't accumulate across tests
-    vi.clearAllMocks()
+    mockCollect.mockResolvedValue(libraryArtists)
+    mockAnalyze.mockResolvedValue(tasteProfile)
+    mockDiscover.mockResolvedValue(discovered)
+    mockResolve.mockResolvedValue(resolved)
+    mockScore.mockReturnValue(scored)
+    mockFilter.mockReturnValue(filtered)
+    mockStore.mockResolvedValue(42)
+  }
 
-    // Re-apply default mock implementations after clearing
+  async function setupClientMocks() {
     const { createListenBrainzSource } = await import('@/core/plugins/listenbrainz')
     const { createLastFmSource } = await import('@/core/plugins/lastfm')
     const { createLidarrClient } = await import('@/core/clients/lidarr')
@@ -237,14 +240,14 @@ describe('PipelineOrchestrator', () => {
       searchArtist: vi.fn(),
       extractStreamingUrls: vi.fn(),
     } as unknown as ReturnType<typeof createMusicBrainzClient>)
+  }
 
-    mockCollect.mockResolvedValue(libraryArtists)
-    mockAnalyze.mockResolvedValue(tasteProfile)
-    mockDiscover.mockResolvedValue(discovered)
-    mockResolve.mockResolvedValue(resolved)
-    mockScore.mockReturnValue(scored)
-    mockFilter.mockReturnValue(filtered)
-    mockStore.mockResolvedValue(42)
+  beforeEach(async () => {
+    orchestrator = new PipelineOrchestrator()
+    providerRegistry = makeProviderRegistry()
+    vi.clearAllMocks()
+    setupPipelineMocks()
+    await setupClientMocks()
   })
 
   it('runs all pipeline stages in order', async () => {

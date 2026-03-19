@@ -11,7 +11,7 @@ export class SubscriptionScheduler {
       try {
         await fn()
       } catch (err: unknown) {
-        console.error(`[scheduler] Job '${name}' failed:`, err)
+        console.error(`[scheduler] Job '${name}' (${cronExpression}) failed:`, err)
       }
     })
     this.jobs.set(name, { name, cron, expression: cronExpression })

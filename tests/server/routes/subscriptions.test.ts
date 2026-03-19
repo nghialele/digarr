@@ -189,60 +189,19 @@ describe('POST /api/subscriptions', () => {
     )
   })
 
-  it('returns 400 when name is missing', async () => {
-    const app = createTestApp(makeDeps(), USER_ID)
-    const { name: _n, ...noName } = validBody
-    const res = await app.request('/api/subscriptions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(noName),
+  for (const field of ['name', 'sourceType', 'sourceProvider', 'sourceConfig', 'cron'] as const) {
+    it(`returns 400 when ${field} is missing`, async () => {
+      const app = createTestApp(makeDeps(), USER_ID)
+      const body = { ...validBody }
+      delete (body as Record<string, unknown>)[field]
+      const res = await app.request('/api/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      expect(res.status).toBe(400)
     })
-    expect(res.status).toBe(400)
-  })
-
-  it('returns 400 when sourceType is missing', async () => {
-    const app = createTestApp(makeDeps(), USER_ID)
-    const { sourceType: _st, ...noType } = validBody
-    const res = await app.request('/api/subscriptions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(noType),
-    })
-    expect(res.status).toBe(400)
-  })
-
-  it('returns 400 when sourceProvider is missing', async () => {
-    const app = createTestApp(makeDeps(), USER_ID)
-    const { sourceProvider: _sp, ...noProvider } = validBody
-    const res = await app.request('/api/subscriptions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(noProvider),
-    })
-    expect(res.status).toBe(400)
-  })
-
-  it('returns 400 when sourceConfig is missing', async () => {
-    const app = createTestApp(makeDeps(), USER_ID)
-    const { sourceConfig: _sc, ...noConfig } = validBody
-    const res = await app.request('/api/subscriptions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(noConfig),
-    })
-    expect(res.status).toBe(400)
-  })
-
-  it('returns 400 when cron is missing', async () => {
-    const app = createTestApp(makeDeps(), USER_ID)
-    const { cron: _c, ...noCron } = validBody
-    const res = await app.request('/api/subscriptions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(noCron),
-    })
-    expect(res.status).toBe(400)
-  })
+  }
 
   it('returns 400 for invalid cron expression', async () => {
     const app = createTestApp(makeDeps(), USER_ID)

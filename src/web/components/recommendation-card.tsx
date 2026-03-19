@@ -184,6 +184,96 @@ function GenrePills({
 }
 
 // ---------------------------------------------------------------------------
+// Action buttons (shared between compact and expanded views)
+// ---------------------------------------------------------------------------
+
+function ActionButtons({
+  rec,
+  bulkMode,
+  isPending,
+  isApproved,
+  onApprove,
+  onReject,
+}: {
+  rec: Recommendation
+  bulkMode: boolean
+  isPending: boolean
+  isApproved: boolean
+  onApprove: (id: number) => void
+  onReject: (id: number) => void
+}) {
+  if (bulkMode) return null
+
+  function stop(e: React.MouseEvent | React.KeyboardEvent) {
+    e.stopPropagation()
+  }
+
+  if (isPending) {
+    return (
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
+          onClick={(e) => {
+            stop(e)
+            onApprove(rec.id)
+          }}
+        >
+          Approve
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
+          onClick={(e) => {
+            stop(e)
+            onReject(rec.id)
+          }}
+        >
+          Reject
+        </Button>
+      </div>
+    )
+  }
+  if (isApproved) {
+    return (
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
+          onClick={(e) => {
+            stop(e)
+            onReject(rec.id)
+          }}
+        >
+          Reject
+        </Button>
+      </div>
+    )
+  }
+  if (rec.status === 'rejected') {
+    return (
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-muted border-border/60 hover:bg-surface hover:text-text"
+          onClick={(e) => {
+            stop(e)
+            onApprove(rec.id)
+          }}
+        >
+          Restore
+        </Button>
+      </div>
+    )
+  }
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
 
@@ -217,18 +307,12 @@ export function RecommendationCard({
     <div className="relative group">
       {/* Bulk mode checkbox overlay */}
       {bulkMode && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: checkbox overlay
-        <div
-          className="absolute top-2 left-2 z-20"
+        <button
+          type="button"
+          className="absolute top-2 left-2 z-20 bg-transparent border-none p-0"
           onClick={(e) => {
             e.stopPropagation()
             onToggleSelect?.(rec.id)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.stopPropagation()
-              onToggleSelect?.(rec.id)
-            }
           }}
         >
           <input
@@ -237,36 +321,24 @@ export function RecommendationCard({
             onChange={() => onToggleSelect?.(rec.id)}
             className="w-4 h-4 accent-accent cursor-pointer"
             aria-label={`Select ${rec.artist.name}`}
+            tabIndex={-1}
           />
-        </div>
+        </button>
       )}
       {/* Hover edge buttons -- desktop only, only for pending cards */}
       {!bulkMode && isPending && (
         <>
           {/* Left edge: reject */}
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: edge action button */}
-          <div
-            className="hidden md:group-hover:flex absolute left-0 top-0 bottom-0 z-10 items-center justify-center w-10 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150"
+          <button
+            type="button"
+            className="hidden md:group-hover:flex absolute left-0 top-0 bottom-0 z-10 items-center justify-center w-10 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150 bg-transparent border-none p-0"
             onClick={(e) => {
               e.stopPropagation()
               onReject(rec.id)
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.stopPropagation()
-                onReject(rec.id)
-              }
-            }}
+            aria-label="Reject"
           >
-            <button
-              type="button"
-              aria-label="Reject"
-              className="w-8 h-8 rounded-full bg-reject/20 border border-reject/40 text-reject hover:bg-reject/40 transition-colors flex items-center justify-center shadow-md"
-              onClick={(e) => {
-                e.stopPropagation()
-                onReject(rec.id)
-              }}
-            >
+            <span className="w-8 h-8 rounded-full bg-reject/20 border border-reject/40 text-reject hover:bg-reject/40 transition-colors flex items-center justify-center shadow-md">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -281,32 +353,19 @@ export function RecommendationCard({
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
-            </button>
-          </div>
+            </span>
+          </button>
           {/* Right edge: approve */}
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: edge action button */}
-          <div
-            className="hidden md:group-hover:flex absolute right-0 top-0 bottom-0 z-10 items-center justify-center w-10 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150"
+          <button
+            type="button"
+            className="hidden md:group-hover:flex absolute right-0 top-0 bottom-0 z-10 items-center justify-center w-10 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150 bg-transparent border-none p-0"
             onClick={(e) => {
               e.stopPropagation()
               onApprove(rec.id)
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.stopPropagation()
-                onApprove(rec.id)
-              }
-            }}
+            aria-label="Approve"
           >
-            <button
-              type="button"
-              aria-label="Approve"
-              className="w-8 h-8 rounded-full bg-approve/20 border border-approve/40 text-approve hover:bg-approve/40 transition-colors flex items-center justify-center shadow-md"
-              onClick={(e) => {
-                e.stopPropagation()
-                onApprove(rec.id)
-              }}
-            >
+            <span className="w-8 h-8 rounded-full bg-approve/20 border border-approve/40 text-approve hover:bg-approve/40 transition-colors flex items-center justify-center shadow-md">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -320,8 +379,8 @@ export function RecommendationCard({
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-            </button>
-          </div>
+            </span>
+          </button>
         </>
       )}
       <button
@@ -390,79 +449,19 @@ export function RecommendationCard({
           )}
 
           {/* Action buttons -- hidden in bulk mode */}
-          {!bulkMode && isPending && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
-            <div
-              className="flex gap-2"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              role="presentation"
-            >
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
-                onClick={() => onApprove(rec.id)}
-              >
-                Approve
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
-                onClick={() => onReject(rec.id)}
-              >
-                Reject
-              </Button>
-            </div>
-          )}
-          {!bulkMode && isApproved && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
-            <div
-              className="flex gap-2"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              role="presentation"
-            >
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
-                onClick={() => onReject(rec.id)}
-              >
-                Reject
-              </Button>
-            </div>
-          )}
-          {!bulkMode && rec.status === 'rejected' && (
-            // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
-            <div
-              className="flex gap-2"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              role="presentation"
-            >
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-muted border-border/60 hover:bg-surface hover:text-text"
-                onClick={() => onApprove(rec.id)}
-              >
-                Restore
-              </Button>
-            </div>
-          )}
+          <ActionButtons
+            rec={rec}
+            bulkMode={bulkMode}
+            isPending={isPending}
+            isApproved={isApproved}
+            onApprove={onApprove}
+            onReject={onReject}
+          />
         </div>
 
         {/* Expanded-only section */}
         {expanded && (
-          // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
-          <div
-            className="border-t border-border px-4 pb-4 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="presentation"
-          >
+          <div className="border-t border-border px-4 pb-4 space-y-4">
             {/* MusicBrainz link */}
             <div className="mt-4 flex items-center gap-2">
               <a
@@ -470,6 +469,7 @@ export function RecommendationCard({
                 target="_blank"
                 rel="noreferrer"
                 className="text-xs text-accent hover:underline"
+                onClick={(e) => e.stopPropagation()}
               >
                 View on MusicBrainz
               </a>
@@ -531,50 +531,14 @@ export function RecommendationCard({
             )}
 
             {/* Action buttons (re-shown in expanded too) -- hidden in bulk mode */}
-            {!bulkMode && isPending && (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
-                  onClick={() => onApprove(rec.id)}
-                >
-                  Approve
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
-                  onClick={() => onReject(rec.id)}
-                >
-                  Reject
-                </Button>
-              </div>
-            )}
-            {!bulkMode && isApproved && (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
-                  onClick={() => onReject(rec.id)}
-                >
-                  Reject
-                </Button>
-              </div>
-            )}
-            {!bulkMode && rec.status === 'rejected' && (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-muted border-border/60 hover:bg-surface hover:text-text"
-                  onClick={() => onApprove(rec.id)}
-                >
-                  Restore
-                </Button>
-              </div>
-            )}
+            <ActionButtons
+              rec={rec}
+              bulkMode={bulkMode}
+              isPending={isPending}
+              isApproved={isApproved}
+              onApprove={onApprove}
+              onReject={onReject}
+            />
           </div>
         )}
       </button>

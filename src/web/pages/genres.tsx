@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { GenreInfo } from '../../core/genre/types'
 import { GenreGrid } from '../components/genre-grid'
 import { Input } from '../components/ui/input'
+import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import { getGenres, searchGenres, seedGenres } from '../lib/api'
 
 export function GenresPage() {
@@ -12,37 +13,14 @@ export function GenresPage() {
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [seeding, setSeeding] = useState(false)
 
-  // Pull-to-refresh
-  const [pullY, setPullY] = useState(0)
-  const pullStartY = useRef(0)
-  const pullActive = useRef(false)
-  const PULL_THRESHOLD = 80
-
-  function handleTouchStart(e: React.TouchEvent) {
-    const touch = e.touches[0]
-    if (!touch) return
-    if (window.scrollY === 0) {
-      pullStartY.current = touch.clientY
-      pullActive.current = true
-    }
-  }
-
-  function handleTouchMove(e: React.TouchEvent) {
-    if (!pullActive.current) return
-    const touch = e.touches[0]
-    if (!touch) return
-    const dy = touch.clientY - pullStartY.current
-    if (dy > 0) setPullY(Math.min(dy, PULL_THRESHOLD + 20))
-  }
-
-  function handleTouchEnd() {
-    if (pullActive.current && pullY >= PULL_THRESHOLD) {
-      queryClient.invalidateQueries({ queryKey: ['genres'] })
-      toast.info('Refreshing...')
-    }
-    pullActive.current = false
-    setPullY(0)
-  }
+  const {
+    pullY,
+    pullThreshold: PULL_THRESHOLD,
+    handlers: pullHandlers,
+  } = usePullToRefresh(() => {
+    queryClient.invalidateQueries({ queryKey: ['genres'] })
+    toast.info('Refreshing...')
+  })
 
   // Debounce search input ~300ms
   useEffect(() => {
@@ -84,12 +62,7 @@ export function GenresPage() {
   }
 
   return (
-    <div
-      className="p-6 space-y-6 max-w-6xl mx-auto pb-24 md:pb-6"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="p-6 space-y-6 max-w-6xl mx-auto pb-24 md:pb-6" {...pullHandlers}>
       {/* Pull-to-refresh indicator */}
       {pullY > 0 && (
         <div

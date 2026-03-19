@@ -6,6 +6,7 @@ import { type Recommendation, RecommendationCard } from '../components/recommend
 import { SwipeCard } from '../components/swipe-card'
 import { Skeleton } from '../components/ui/skeleton'
 import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
+import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import {
   bulkAction,
   getRecommendations,
@@ -185,39 +186,18 @@ export function DiscoverPage() {
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set())
   const [bulkActing, setBulkActing] = useState(false)
 
-  // Pull-to-refresh state
-  const [pullY, setPullY] = useState(0)
-  const pullStartY = useRef(0)
-  const pullActive = useRef(false)
-  const PULL_THRESHOLD = 80
+  const refetch = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['recommendations'] })
+  }, [queryClient])
 
-  function handleTouchStart(e: React.TouchEvent) {
-    const touch = e.touches[0]
-    if (!touch) return
-    if (window.scrollY === 0) {
-      pullStartY.current = touch.clientY
-      pullActive.current = true
-    }
-  }
-
-  function handleTouchMove(e: React.TouchEvent) {
-    if (!pullActive.current) return
-    const touch = e.touches[0]
-    if (!touch) return
-    const dy = touch.clientY - pullStartY.current
-    if (dy > 0) {
-      setPullY(Math.min(dy, PULL_THRESHOLD + 20))
-    }
-  }
-
-  function handleTouchEnd() {
-    if (pullActive.current && pullY >= PULL_THRESHOLD) {
-      refetch()
-      toast.info('Refreshing...')
-    }
-    pullActive.current = false
-    setPullY(0)
-  }
+  const {
+    pullY,
+    pullThreshold: PULL_THRESHOLD,
+    handlers: pullHandlers,
+  } = usePullToRefresh(() => {
+    refetch()
+    toast.info('Refreshing...')
+  })
 
   function handleSetViewMode(mode: ViewMode) {
     setViewMode(mode)
@@ -248,10 +228,6 @@ export function DiscoverPage() {
 
   const items = (data?.items ?? []) as Recommendation[]
   const total = data?.total ?? 0
-
-  const refetch = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['recommendations'] })
-  }, [queryClient])
 
   // ---------------------------------------------------------------------------
   // Undo toast
@@ -523,9 +499,7 @@ export function DiscoverPage() {
   return (
     <div
       className={`space-y-6 max-w-6xl mx-auto${bulkMode ? ' pb-24' : ' pb-6'} md:pb-6`}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      {...pullHandlers}
     >
       {/* Pull-to-refresh indicator */}
       {pullY > 0 && (
@@ -708,22 +682,19 @@ export function DiscoverPage() {
                 const isExpanded = expandedId === rec.id
                 const isActing = actingIds.has(rec.id)
                 const isPending = rec.status === 'pending'
+                const swipeEnabled = !bulkMode && isPending && !isActing
                 return (
                   <div
                     key={rec.id}
                     className={isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''}
                   >
                     <SwipeCard
-                      enabled={!bulkMode && isPending && !isActing}
+                      enabled={swipeEnabled}
                       onSwipeRight={
-                        !bulkMode && isPending && !isActing
-                          ? () => handleApprove(rec.id, rec.status)
-                          : undefined
+                        swipeEnabled ? () => handleApprove(rec.id, rec.status) : undefined
                       }
                       onSwipeLeft={
-                        !bulkMode && isPending && !isActing
-                          ? () => handleReject(rec.id, rec.status)
-                          : undefined
+                        swipeEnabled ? () => handleReject(rec.id, rec.status) : undefined
                       }
                     >
                       <RecommendationCard
@@ -756,20 +727,15 @@ export function DiscoverPage() {
               {items.map((rec) => {
                 const isActing = actingIds.has(rec.id)
                 const isPending = rec.status === 'pending'
+                const swipeEnabled = !bulkMode && isPending && !isActing
                 return (
                   <SwipeCard
                     key={rec.id}
-                    enabled={!bulkMode && isPending && !isActing}
+                    enabled={swipeEnabled}
                     onSwipeRight={
-                      !bulkMode && isPending && !isActing
-                        ? () => handleApprove(rec.id, rec.status)
-                        : undefined
+                      swipeEnabled ? () => handleApprove(rec.id, rec.status) : undefined
                     }
-                    onSwipeLeft={
-                      !bulkMode && isPending && !isActing
-                        ? () => handleReject(rec.id, rec.status)
-                        : undefined
-                    }
+                    onSwipeLeft={swipeEnabled ? () => handleReject(rec.id, rec.status) : undefined}
                   >
                     <RecommendationCard
                       recommendation={rec}
