@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { GenreInfo } from '../../core/genre/types'
+import { ArtistThumb } from '../components/artist-thumb'
 import { Skeleton } from '../components/ui/skeleton'
 import type { LibraryArtist } from '../lib/api'
 import { getGenre, warmArtists } from '../lib/api'
@@ -20,35 +21,6 @@ const TABS: { id: DetailTab; label: string }[] = [
   { id: 'trending', label: 'Trending' },
   { id: 'deep_cuts', label: 'Deep Cuts' },
 ]
-
-// ---------------------------------------------------------------------------
-// Artist thumbnail
-// ---------------------------------------------------------------------------
-
-function ArtistThumb({ name, imageUrl }: { name: string; imageUrl: string | null }) {
-  const hue = Math.abs([...name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
-  const [imgError, setImgError] = useState(false)
-
-  if (imageUrl && !imgError) {
-    return (
-      <img
-        src={imageUrl}
-        alt={name}
-        className="w-10 h-10 rounded-md shrink-0 object-cover bg-bg"
-        onError={() => setImgError(true)}
-      />
-    )
-  }
-
-  return (
-    <div
-      className="w-10 h-10 rounded-md shrink-0 flex items-center justify-center font-bold text-bg text-sm"
-      style={{ background: `hsl(${hue}, 40%, 45%)` }}
-    >
-      {name.slice(0, 2).toUpperCase()}
-    </div>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Library artist card
