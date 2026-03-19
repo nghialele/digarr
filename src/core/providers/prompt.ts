@@ -33,6 +33,7 @@ Return ONLY a JSON array with no additional text. Each element must have these f
 - reasoning: string (2-3 sentences: first describe what this artist sounds like and what they're known for, then explain why they match this listener's taste)
 - confidence: number (0.0 to 1.0, how confident you are in this recommendation)
 - genres: string[] (list of genres this artist represents)
+- suggestedAlbum: string (optional -- the best album to start with for a new listener)
 
 Example:
 [
@@ -40,7 +41,8 @@ Example:
     "artistName": "Grouper",
     "reasoning": "Grouper is the project of Portland-based artist Liz Harris, known for hazy, lo-fi ambient folk layered with ethereal vocals and droning guitars. Fans of ambient and drone music with introspective themes often connect deeply with her immersive, meditative soundscapes.",
     "confidence": 0.87,
-    "genres": ["ambient", "drone", "indie folk"]
+    "genres": ["ambient", "drone", "indie folk"],
+    "suggestedAlbum": "Dragging a Dead Deer Up a Hill"
   }
 ]
 
@@ -101,5 +103,6 @@ export function parseRecommendationResponse(text: string): AiRecommendation[] {
       reasoning: item.reasoning as string,
       confidence: item.confidence as number,
       genres: (item.genres as unknown[]).filter((g): g is string => typeof g === 'string'),
+      suggestedAlbum: typeof item.suggestedAlbum === 'string' ? item.suggestedAlbum : undefined,
     }))
 }

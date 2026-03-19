@@ -7,6 +7,9 @@ interface MusicBrainzClient {
   extractStreamingUrls: (
     relations: Array<{ type: string; url?: { resource: string } }>,
   ) => Record<string, string>
+  getReleaseGroups?: (
+    artistMbid: string,
+  ) => Promise<Array<{ id: string; title: string; type: string; firstReleaseDate?: string }>>
 }
 
 interface LidarrLookupClient {
@@ -93,6 +96,47 @@ export async function resolve(
   })
 }
 
+function normalizeTitle(title: string): string {
+  return title
+    .replace(/\s*\(.*\)\s*$/, '')
+    .trim()
+    .toLowerCase()
+}
+
+async function matchSuggestedAlbum(
+  suggestedAlbum: string,
+  artistMbid: string,
+  mb: MusicBrainzClient,
+): Promise<{ releaseGroupId?: string; title: string; type?: string }> {
+  if (!mb.getReleaseGroups) {
+    return { title: suggestedAlbum }
+  }
+
+  try {
+    const releaseGroups = await mb.getReleaseGroups(artistMbid)
+
+    // Step 1: exact title match (case-insensitive)
+    const exact = releaseGroups.find(
+      (rg) => rg.title.toLowerCase() === suggestedAlbum.toLowerCase(),
+    )
+    if (exact) {
+      return { releaseGroupId: exact.id, title: exact.title, type: exact.type }
+    }
+
+    // Step 2: normalized match (strip parenthetical suffixes)
+    const normalizedSuggestion = normalizeTitle(suggestedAlbum)
+    const normalized = releaseGroups.find((rg) => normalizeTitle(rg.title) === normalizedSuggestion)
+    if (normalized) {
+      return { releaseGroupId: normalized.id, title: normalized.title, type: normalized.type }
+    }
+
+    // Step 3: no match -- return free text without releaseGroupId
+    return { title: suggestedAlbum }
+  } catch {
+    return { title: suggestedAlbum }
+  }
+}
+
 async function buildResolvedArtist(
   mbArtist: MBArtist,
   discoveries: DiscoveredArtist[],
@@ -105,6 +149,12 @@ async function buildResolvedArtist(
   // Get artist image from Lidarr's metadata (fanart.tv)
   const imageUrl = await fetchLidarrImage(mbArtist.id, lidarr)
 
+  // Resolve suggested album from AI discoveries
+  const aiSuggestion = discoveries.find((d) => d.suggestedAlbum)?.suggestedAlbum
+  const suggestedAlbum = aiSuggestion
+    ? await matchSuggestedAlbum(aiSuggestion, mbArtist.id, mb)
+    : undefined
+
   return {
     mbid: mbArtist.id,
     name: mbArtist.name,
@@ -113,6 +163,7 @@ async function buildResolvedArtist(
     genres: tags,
     imageUrl,
     streamingUrls,
+    suggestedAlbum,
     discoveries,
   }
 }

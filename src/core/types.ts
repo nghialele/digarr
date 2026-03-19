@@ -17,6 +17,7 @@ export type AiRecommendation = {
   reasoning: string
   confidence: number
   genres: string[]
+  suggestedAlbum?: string
 }
 
 export type DiscoveredArtist = {
@@ -24,6 +25,7 @@ export type DiscoveredArtist = {
   mbid?: string
   similarityScore: number
   aiReasoning?: string
+  suggestedAlbum?: string
   source: string
 }
 
@@ -35,6 +37,7 @@ export type ResolvedArtist = {
   genres: string[]
   imageUrl?: string
   streamingUrls: Record<string, string>
+  suggestedAlbum?: { releaseGroupId?: string; title: string; type?: string }
   discoveries: DiscoveredArtist[]
 }
 

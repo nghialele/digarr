@@ -83,6 +83,7 @@ export async function discover(
           name: rec.artistName,
           similarityScore: rec.confidence,
           aiReasoning: rec.reasoning,
+          suggestedAlbum: rec.suggestedAlbum,
           source: 'ai',
         })
       }

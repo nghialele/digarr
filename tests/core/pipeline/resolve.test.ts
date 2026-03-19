@@ -42,6 +42,11 @@ function makeMb(
         }
         return result
       }),
+    getReleaseGroups: undefined as
+      | ((
+          artistMbid: string,
+        ) => Promise<Array<{ id: string; title: string; type: string; firstReleaseDate?: string }>>)
+      | undefined,
   }
 }
 
@@ -168,5 +173,131 @@ describe('resolve()', () => {
 
     expect(result[0]?.tags).toContain('alternative rock')
     expect(result[0]?.genres).toContain('art rock')
+  })
+
+  describe('suggestedAlbum resolution', () => {
+    it('exact album title match -> gets releaseGroupId', async () => {
+      const discovered: DiscoveredArtist[] = [
+        {
+          name: 'Radiohead',
+          mbid: 'mbid-rh',
+          similarityScore: 0.9,
+          source: 'ai',
+          suggestedAlbum: 'OK Computer',
+        },
+      ]
+      const mb = makeMb(makeMbArtist({ id: 'mbid-rh', name: 'Radiohead' }))
+      mb.getReleaseGroups = vi.fn().mockResolvedValue([
+        { id: 'rg-okc', title: 'OK Computer', type: 'Album', firstReleaseDate: '1997-06-16' },
+        { id: 'rg-kid', title: 'Kid A', type: 'Album', firstReleaseDate: '2000-10-02' },
+      ])
+
+      const result = await resolve(discovered, mb)
+
+      expect(result[0]?.suggestedAlbum).toEqual({
+        releaseGroupId: 'rg-okc',
+        title: 'OK Computer',
+        type: 'Album',
+      })
+    })
+
+    it('normalized match strips parenthetical suffix -> gets releaseGroupId', async () => {
+      const discovered: DiscoveredArtist[] = [
+        {
+          name: 'Radiohead',
+          mbid: 'mbid-rh',
+          similarityScore: 0.9,
+          source: 'ai',
+          suggestedAlbum: 'OK Computer',
+        },
+      ]
+      const mb = makeMb(makeMbArtist({ id: 'mbid-rh', name: 'Radiohead' }))
+      mb.getReleaseGroups = vi.fn().mockResolvedValue([
+        {
+          id: 'rg-okc-deluxe',
+          title: 'OK Computer (Deluxe Edition)',
+          type: 'Album',
+          firstReleaseDate: '1997-06-16',
+        },
+      ])
+
+      const result = await resolve(discovered, mb)
+
+      expect(result[0]?.suggestedAlbum).toEqual({
+        releaseGroupId: 'rg-okc-deluxe',
+        title: 'OK Computer (Deluxe Edition)',
+        type: 'Album',
+      })
+    })
+
+    it('unmatched album -> stored as free text without releaseGroupId', async () => {
+      const discovered: DiscoveredArtist[] = [
+        {
+          name: 'Radiohead',
+          mbid: 'mbid-rh',
+          similarityScore: 0.9,
+          source: 'ai',
+          suggestedAlbum: 'Nonexistent Album',
+        },
+      ]
+      const mb = makeMb(makeMbArtist({ id: 'mbid-rh', name: 'Radiohead' }))
+      mb.getReleaseGroups = vi
+        .fn()
+        .mockResolvedValue([{ id: 'rg-okc', title: 'OK Computer', type: 'Album' }])
+
+      const result = await resolve(discovered, mb)
+
+      expect(result[0]?.suggestedAlbum).toEqual({ title: 'Nonexistent Album' })
+      expect(result[0]?.suggestedAlbum?.releaseGroupId).toBeUndefined()
+    })
+
+    it('no suggestedAlbum -> result has no suggestedAlbum', async () => {
+      const discovered: DiscoveredArtist[] = [
+        { name: 'Radiohead', mbid: 'mbid-rh', similarityScore: 0.9, source: 'ai' },
+      ]
+      const mb = makeMb(makeMbArtist({ id: 'mbid-rh', name: 'Radiohead' }))
+      mb.getReleaseGroups = vi.fn()
+
+      const result = await resolve(discovered, mb)
+
+      expect(result[0]?.suggestedAlbum).toBeUndefined()
+      expect(mb.getReleaseGroups).not.toHaveBeenCalled()
+    })
+
+    it('getReleaseGroups not available -> falls back to free text', async () => {
+      const discovered: DiscoveredArtist[] = [
+        {
+          name: 'Radiohead',
+          mbid: 'mbid-rh',
+          similarityScore: 0.9,
+          source: 'ai',
+          suggestedAlbum: 'OK Computer',
+        },
+      ]
+      // makeMb() does not include getReleaseGroups by default
+      const mb = makeMb(makeMbArtist({ id: 'mbid-rh', name: 'Radiohead' }))
+
+      const result = await resolve(discovered, mb)
+
+      expect(result[0]?.suggestedAlbum).toEqual({ title: 'OK Computer' })
+    })
+
+    it('getReleaseGroups throws -> falls back to free text', async () => {
+      const discovered: DiscoveredArtist[] = [
+        {
+          name: 'Radiohead',
+          mbid: 'mbid-rh',
+          similarityScore: 0.9,
+          source: 'ai',
+          suggestedAlbum: 'OK Computer',
+        },
+      ]
+      const mb = makeMb(makeMbArtist({ id: 'mbid-rh', name: 'Radiohead' }))
+      mb.getReleaseGroups = vi.fn().mockRejectedValue(new Error('MB rate limited'))
+
+      const result = await resolve(discovered, mb)
+
+      expect(result[0]?.suggestedAlbum).toEqual({ title: 'OK Computer' })
+    })
   })
 })
