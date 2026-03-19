@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CardStack } from '../components/card-stack'
 import { type Recommendation, RecommendationCard } from '../components/recommendation-card'
 import { SwipeCard } from '../components/swipe-card'
 import { Skeleton } from '../components/ui/skeleton'
+import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import {
   bulkAction,
   getRecommendations,
@@ -468,42 +469,48 @@ export function DiscoverPage() {
   const itemsRef = useRef(items)
   itemsRef.current = items
 
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      // Skip if an input/textarea/select is focused
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+  const selectedIdRef = useRef(selectedId)
+  selectedIdRef.current = selectedId
 
-      const current = itemsRef.current
-      if (current.length === 0) return
-
-      const currentIndex = selectedId != null ? current.findIndex((r) => r.id === selectedId) : -1
-
-      if (e.key === 'j') {
-        e.preventDefault()
+  useKeyboardShortcuts(
+    {
+      j: () => {
+        const current = itemsRef.current
+        if (current.length === 0) return
+        const currentIndex =
+          selectedIdRef.current != null
+            ? current.findIndex((r) => r.id === selectedIdRef.current)
+            : -1
         const nextIndex = currentIndex < current.length - 1 ? currentIndex + 1 : 0
         const nextItem = current[nextIndex]
         if (nextItem) setSelectedId(nextItem.id)
-      } else if (e.key === 'k') {
-        e.preventDefault()
+      },
+      k: () => {
+        const current = itemsRef.current
+        if (current.length === 0) return
+        const currentIndex =
+          selectedIdRef.current != null
+            ? current.findIndex((r) => r.id === selectedIdRef.current)
+            : -1
         const prevIndex = currentIndex > 0 ? currentIndex - 1 : current.length - 1
         const prevItem = current[prevIndex]
         if (prevItem) setSelectedId(prevItem.id)
-      } else if (e.key === 'a' && selectedId != null) {
-        e.preventDefault()
-        handleApprove(selectedId)
-      } else if (e.key === 'r' && selectedId != null) {
-        e.preventDefault()
-        handleReject(selectedId)
-      } else if (e.key === 'Enter' && selectedId != null) {
-        e.preventDefault()
-        handleCardClick(selectedId)
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedId, handleApprove, handleCardClick, handleReject])
+      },
+      a: () => {
+        if (selectedIdRef.current != null) handleApprove(selectedIdRef.current)
+      },
+      r: () => {
+        if (selectedIdRef.current != null) handleReject(selectedIdRef.current)
+      },
+      d: () => {
+        if (selectedIdRef.current != null) handleCardClick(selectedIdRef.current)
+      },
+      Enter: () => {
+        if (selectedIdRef.current != null) handleCardClick(selectedIdRef.current)
+      },
+    },
+    viewMode !== 'stack',
+  )
 
   // ---------------------------------------------------------------------------
   // Render
@@ -661,7 +668,8 @@ export function DiscoverPage() {
               Shortcuts: <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
               navigate <kbd className="px-1 bg-surface border border-border rounded">a</kbd> approve{' '}
               <kbd className="px-1 bg-surface border border-border rounded">r</kbd> reject{' '}
-              <kbd className="px-1 bg-surface border border-border rounded">enter</kbd> expand
+              <kbd className="px-1 bg-surface border border-border rounded">d</kbd> expand{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">?</kbd> shortcuts
             </p>
             <p className="text-xs text-muted sm:hidden mb-4">
               Swipe right to approve, left to reject

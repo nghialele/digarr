@@ -5,6 +5,8 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-do
 import { Toaster, toast } from 'sonner'
 import { AuthGate } from './components/auth-gate'
 import { BottomNav } from './components/bottom-nav'
+import { KeyboardShortcuts } from './components/keyboard-shortcuts'
+import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
 import { getSetupStatus, triggerPipeline } from './lib/api'
 import { queryClient } from './lib/query-client'
 import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
@@ -75,6 +77,9 @@ function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
 function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [theme, setThemeState] = useState<Theme>(getStoredTheme)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
 
   function handleThemeChange(t: Theme) {
     setThemeState(t)
@@ -173,6 +178,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main content -- add pb-16 on mobile so bottom nav doesn't overlap */}
       <main className="pb-16 md:pb-0">{children}</main>
       <BottomNav />
+      <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   )
 }
