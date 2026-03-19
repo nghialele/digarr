@@ -201,6 +201,62 @@ describe('createLastFmClient', () => {
     })
   })
 
+  describe('getTopArtistsByTag(tag, limit)', () => {
+    it('fetches tag.gettopartists with correct params', async () => {
+      mockGet.mockResolvedValueOnce({
+        topartists: {
+          artist: [
+            { name: 'Portishead', mbid: 'mbid-pt', listeners: '1200000' },
+            { name: 'Massive Attack', mbid: 'mbid-ma', listeners: '980000' },
+          ],
+        },
+      })
+      const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
+      const result = await client.getTopArtistsByTag('trip-hop')
+
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('method=tag.gettopartists'))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('tag=trip-hop'))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining(`api_key=${TEST_API_KEY}`))
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('format=json'))
+      expect(result).toHaveLength(2)
+      expect(result[0]).toEqual({ name: 'Portishead', mbid: 'mbid-pt', listeners: 1200000 })
+    })
+
+    it('uses default limit of 20', async () => {
+      mockGet.mockResolvedValueOnce({ topartists: { artist: [] } })
+      const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
+      await client.getTopArtistsByTag('electronic')
+
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('limit=20'))
+    })
+
+    it('passes custom limit', async () => {
+      mockGet.mockResolvedValueOnce({ topartists: { artist: [] } })
+      const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
+      await client.getTopArtistsByTag('ambient', 10)
+
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('limit=10'))
+    })
+
+    it('returns empty array when topartists is missing', async () => {
+      mockGet.mockResolvedValueOnce({})
+      const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
+      const result = await client.getTopArtistsByTag('unknowntag')
+      expect(result).toEqual([])
+    })
+
+    it('converts listeners to number and omits empty mbid', async () => {
+      mockGet.mockResolvedValueOnce({
+        topartists: {
+          artist: [{ name: 'Boards of Canada', mbid: '', listeners: '450000' }],
+        },
+      })
+      const client = createLastFmClient(TEST_USERNAME, TEST_API_KEY)
+      const result = await client.getTopArtistsByTag('idm')
+      expect(result[0]).toEqual({ name: 'Boards of Canada', mbid: undefined, listeners: 450000 })
+    })
+  })
+
   describe('testConnection()', () => {
     it('returns success:true when getTopArtists resolves', async () => {
       mockGet.mockResolvedValueOnce({

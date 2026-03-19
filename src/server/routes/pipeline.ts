@@ -7,7 +7,6 @@ import type { PipelineDeps } from '@/core/pipeline/orchestrator'
 import { resolve } from '@/core/pipeline/resolve'
 import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
-import { createProvider } from '@/core/providers/factory'
 import { upsertArtist } from '@/db/queries/artists'
 import { DEFAULT_PREFERENCES } from '@/db/schema'
 import type { AppDependencies } from '@/server'
@@ -30,7 +29,12 @@ export function pipelineRoutes(deps: AppDependencies) {
 
     // Fire-and-forget
     deps.orchestrator
-      .run({ db: deps.storeDb, settings, userId } as unknown as PipelineDeps)
+      .run({
+        db: deps.storeDb,
+        settings,
+        userId,
+        providerRegistry: deps.providerRegistry,
+      } as unknown as PipelineDeps)
       .catch((err: unknown) => {
         console.error('Pipeline run failed:', err)
       })
@@ -115,12 +119,11 @@ export function pipelineRoutes(deps: AppDependencies) {
         // Get AI recommendations focused on this artist
         if (settings.aiProvider && settings.aiModel) {
           try {
-            const provider = await createProvider(
-              settings.aiProvider as string,
-              (settings.aiApiKey as string) ?? null,
-              settings.aiModel as string,
-              (settings.aiBaseUrl as string) ?? undefined,
-            )
+            const provider = await deps.providerRegistry.create(settings.aiProvider as string, {
+              apiKey: (settings.aiApiKey as string) ?? null,
+              model: settings.aiModel as string,
+              baseUrl: (settings.aiBaseUrl as string) ?? null,
+            })
             const aiRecs = await provider.getRecommendations({
               topArtists: [{ name: artistName, playCount: 100, source: 'listenbrainz' as const }],
               topGenres: [],

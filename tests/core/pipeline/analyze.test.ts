@@ -33,6 +33,7 @@ function makeLb(artists = lbArtists, activity = activityStable): ListeningSource
   return {
     id: 'listenbrainz',
     name: 'ListenBrainz',
+    capabilities: ['topArtists', 'similarArtists', 'listeningActivity'],
     getTopArtists: vi.fn().mockResolvedValue(artists),
     getSimilarArtists: vi.fn().mockResolvedValue([]),
     testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
@@ -44,6 +45,7 @@ function makeLfm(artists = lfmArtists): ListeningSource {
   return {
     id: 'lastfm',
     name: 'Last.fm',
+    capabilities: ['topArtists', 'similarArtists', 'genreArtists'],
     getTopArtists: vi.fn().mockResolvedValue(artists),
     getSimilarArtists: vi.fn().mockResolvedValue([]),
     testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),

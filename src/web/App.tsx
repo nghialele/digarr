@@ -4,12 +4,17 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { AuthGate } from './components/auth-gate'
+import { BottomNav } from './components/bottom-nav'
+import { KeyboardShortcuts } from './components/keyboard-shortcuts'
+import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
 import { getSetupStatus, triggerPipeline } from './lib/api'
 import { queryClient } from './lib/query-client'
 import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
 import { AnalyticsPage } from './pages/analytics'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
+import { GenreDetailPage } from './pages/genre-detail'
+import { GenresPage } from './pages/genres'
 import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
 
@@ -72,6 +77,9 @@ function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
 function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [theme, setThemeState] = useState<Theme>(getStoredTheme)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
 
   function handleThemeChange(t: Theme) {
     setThemeState(t)
@@ -93,7 +101,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-bg">
-      <nav className="border-b border-border px-4 sm:px-6 py-3">
+      <nav className="border-b border-border px-4 sm:px-6 py-3" aria-label="Main navigation">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
             <NavLink to="/" className="text-xl font-bold text-accent hover:opacity-90">
@@ -106,6 +114,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </NavLink>
               <NavLink to="/discover" className={navLinkClass}>
                 Discover
+              </NavLink>
+              <NavLink to="/genres" className={navLinkClass}>
+                Genres
               </NavLink>
               <NavLink to="/analytics" className={navLinkClass}>
                 Analytics
@@ -152,6 +163,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <NavLink to="/discover" className={navLinkClass} onClick={() => setMenuOpen(false)}>
               Discover
             </NavLink>
+            <NavLink to="/genres" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+              Genres
+            </NavLink>
             <NavLink to="/analytics" className={navLinkClass} onClick={() => setMenuOpen(false)}>
               Analytics
             </NavLink>
@@ -161,7 +175,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
       </nav>
-      <main>{children}</main>
+      {/* Main content -- add pb-16 on mobile so bottom nav doesn't overlap */}
+      <main className="pb-16 md:pb-0">{children}</main>
+      <BottomNav />
+      <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   )
 }
@@ -194,6 +211,8 @@ function InnerApp() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/genres" element={<GenresPage />} />
+            <Route path="/genres/:slug" element={<GenreDetailPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" />} />

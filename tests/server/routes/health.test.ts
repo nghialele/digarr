@@ -17,6 +17,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     storeDb: {} as unknown as AppDependencies['storeDb'],
     orchestrator: makeMockOrchestrator() as unknown as AppDependencies['orchestrator'],
     scheduler: {} as AppDependencies['scheduler'],
+    providerRegistry: {} as unknown as AppDependencies['providerRegistry'],
     isSetupComplete: async () => true,
     getSettings: vi.fn(async () => null),
     updateSettings: vi.fn(async () => {}),
@@ -41,6 +42,16 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     getUserById: vi.fn(async () => null),
     getUserCount: vi.fn(async () => 0),
     updatePassword: vi.fn(async () => {}),
+    genreService: {} as unknown as AppDependencies['genreService'],
+    subscriptionQueries: {
+      createSubscription: vi.fn(async () => ({}) as never),
+      getSubscription: vi.fn(async () => null),
+      getSubscriptionsByUser: vi.fn(async () => []),
+      updateSubscription: vi.fn(async () => {}),
+      deleteSubscription: vi.fn(async () => {}),
+      getRunsForSubscription: vi.fn(async () => []),
+    },
+    runSubscription: vi.fn(async () => {}),
     ...overrides,
   }
 }

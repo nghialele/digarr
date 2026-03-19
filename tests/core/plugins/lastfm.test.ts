@@ -21,6 +21,10 @@ describe('createLastFmSource()', () => {
       ]),
       testConnection: vi.fn().mockResolvedValue({ success: true, message: 'Connected' }),
       getRecentTracks: vi.fn().mockResolvedValue([]),
+      getTopArtistsByTag: vi.fn().mockResolvedValue([
+        { name: 'Portishead', mbid: 'mbid-pt', listeners: 1200000 },
+        { name: 'Massive Attack', mbid: 'mbid-ma', listeners: 980000 },
+      ]),
     }
     vi.mocked(createLastFmClient).mockReturnValue(client)
     return client
@@ -31,6 +35,16 @@ describe('createLastFmSource()', () => {
     const source = createLastFmSource('user', 'key')
     expect(source.id).toBe('lastfm')
     expect(source.name).toBe('Last.fm')
+  })
+
+  it('has correct capabilities', () => {
+    mockClient()
+    const source = createLastFmSource('user', 'key')
+    expect(source.capabilities).toContain('topArtists')
+    expect(source.capabilities).toContain('similarArtists')
+    expect(source.capabilities).toContain('genreArtists')
+    expect(source.capabilities).not.toContain('listeningActivity')
+    expect(source.capabilities).not.toContain('recentListening')
   })
 
   it('getTopArtists() maps client response to TopArtistEntry[]', async () => {
@@ -83,5 +97,34 @@ describe('createLastFmSource()', () => {
     mockClient()
     const source = createLastFmSource('user', 'key')
     expect(source.getListeningActivity).toBeUndefined()
+  })
+
+  it('getGenreArtists() is defined on lastfm source', () => {
+    mockClient()
+    const source = createLastFmSource('user', 'key')
+    expect(source.getGenreArtists).toBeDefined()
+  })
+
+  it('getGenreArtists() maps client response to GenreArtistEntry[]', async () => {
+    const client = mockClient()
+    const source = createLastFmSource('user', 'key')
+    const artists = await source.getGenreArtists?.('trip-hop')
+
+    expect(artists).toHaveLength(2)
+    expect(artists?.[0]).toEqual({
+      name: 'Portishead',
+      mbid: 'mbid-pt',
+      listeners: 1200000,
+      source: 'lastfm',
+    })
+    expect(client.getTopArtistsByTag).toHaveBeenCalledWith('trip-hop', undefined)
+  })
+
+  it('getGenreArtists() passes limit option to client', async () => {
+    const client = mockClient()
+    const source = createLastFmSource('user', 'key')
+    await source.getGenreArtists?.('electronic', { limit: 10 })
+
+    expect(client.getTopArtistsByTag).toHaveBeenCalledWith('electronic', 10)
   })
 })

@@ -1,12 +1,13 @@
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
-import type { ListeningSource } from './types'
+import type { DiscoverySource } from './types'
 
-export function createListenBrainzSource(username: string, token: string): ListeningSource {
+export function createListenBrainzSource(username: string, token: string): DiscoverySource {
   const client = createListenBrainzClient(username, token)
 
   return {
     id: 'listenbrainz',
     name: 'ListenBrainz',
+    capabilities: ['topArtists', 'similarArtists', 'listeningActivity'],
 
     async getTopArtists() {
       const artists = await client.getTopArtists('month')

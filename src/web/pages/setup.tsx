@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import type { AiProvider } from '@/core/types'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
@@ -10,7 +9,7 @@ type FormState = {
   lidarr: { url: string; apiKey: string; skipTlsVerify: boolean }
   listenbrainz: { username: string; token: string }
   lastfm: { username: string; apiKey: string }
-  ai: { provider: AiProvider; model: string; apiKey: string; baseUrl: string }
+  ai: { provider: string; model: string; apiKey: string; baseUrl: string }
 }
 
 type TestResults = {
@@ -297,7 +296,7 @@ function StepAi({
   const needsApiKey = form.provider !== 'ollama'
   const needsBaseUrl = form.provider === 'ollama'
 
-  const modelOptions: Record<AiProvider, Array<{ value: string; label: string }>> = {
+  const modelOptions: Record<string, Array<{ value: string; label: string }>> = {
     anthropic: [
       { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (fast, cheapest)' },
       { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (balanced)' },
@@ -320,7 +319,7 @@ function StepAi({
   }
 
   const link = apiKeyLinks[form.provider]
-  const models = modelOptions[form.provider]
+  const models = modelOptions[form.provider] ?? []
 
   return (
     <div className="space-y-4">
@@ -332,9 +331,7 @@ function StepAi({
         <Select
           id="ai-provider"
           value={form.provider}
-          onChange={(e) =>
-            onFormChange({ ...form, provider: e.target.value as AiProvider, model: '' })
-          }
+          onChange={(e) => onFormChange({ ...form, provider: e.target.value, model: '' })}
         >
           <option value="anthropic">Anthropic</option>
           <option value="openai">OpenAI</option>

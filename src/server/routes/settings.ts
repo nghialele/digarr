@@ -3,7 +3,6 @@ import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
 import { sendWebhook } from '@/core/notifications'
-import { createProvider } from '@/core/providers/factory'
 import { isHttpUrl } from '@/core/validation'
 import type { AppDependencies } from '@/server'
 
@@ -115,11 +114,13 @@ export function settingsRoutes(deps: AppDependencies) {
       }
       case 'ai': {
         try {
-          const provider = await createProvider(
+          const provider = await deps.providerRegistry.create(
             body.provider || (stored?.aiProvider as string) || '',
-            body.apiKey || (stored?.aiApiKey as string) || null,
-            body.model || (stored?.aiModel as string) || '',
-            body.baseUrl || (stored?.aiBaseUrl as string) || null,
+            {
+              apiKey: body.apiKey || (stored?.aiApiKey as string) || null,
+              model: body.model || (stored?.aiModel as string) || '',
+              baseUrl: body.baseUrl || (stored?.aiBaseUrl as string) || null,
+            },
           )
           const result = await provider.testConnection()
           return c.json(result)

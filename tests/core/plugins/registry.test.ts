@@ -1,12 +1,17 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import { SourceRegistry } from '@/core/plugins/registry'
-import type { ListeningSource } from '@/core/plugins/types'
+import type { DiscoverySource, SourceCapability } from '@/core/plugins/types'
 
-function makeFakeSource(id: string, name: string): ListeningSource {
+function makeFakeSource(
+  id: string,
+  name: string,
+  capabilities: SourceCapability[] = [],
+): DiscoverySource {
   return {
     id,
     name,
+    capabilities,
     getTopArtists: vi.fn().mockResolvedValue([]),
     getSimilarArtists: vi.fn().mockResolvedValue([]),
     testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
@@ -64,5 +69,74 @@ describe('SourceRegistry', () => {
   it('returns empty array when no sources registered', () => {
     const registry = new SourceRegistry()
     expect(registry.all()).toEqual([])
+  })
+
+  describe('withCapability()', () => {
+    it('returns sources that have the requested capability', () => {
+      const registry = new SourceRegistry()
+      const lbz = makeFakeSource('listenbrainz', 'ListenBrainz', [
+        'topArtists',
+        'similarArtists',
+        'listeningActivity',
+      ])
+      const lfm = makeFakeSource('lastfm', 'Last.fm', [
+        'topArtists',
+        'similarArtists',
+        'genreArtists',
+      ])
+      registry.register(lbz)
+      registry.register(lfm)
+
+      const topArtistSources = registry.withCapability('topArtists')
+      expect(topArtistSources).toHaveLength(2)
+      expect(topArtistSources).toContain(lbz)
+      expect(topArtistSources).toContain(lfm)
+    })
+
+    it('filters to only sources with the requested capability', () => {
+      const registry = new SourceRegistry()
+      const lbz = makeFakeSource('listenbrainz', 'ListenBrainz', [
+        'topArtists',
+        'similarArtists',
+        'listeningActivity',
+      ])
+      const lfm = makeFakeSource('lastfm', 'Last.fm', [
+        'topArtists',
+        'similarArtists',
+        'genreArtists',
+      ])
+      registry.register(lbz)
+      registry.register(lfm)
+
+      const genreSources = registry.withCapability('genreArtists')
+      expect(genreSources).toHaveLength(1)
+      expect(genreSources).toContain(lfm)
+      expect(genreSources).not.toContain(lbz)
+
+      const activitySources = registry.withCapability('listeningActivity')
+      expect(activitySources).toHaveLength(1)
+      expect(activitySources).toContain(lbz)
+      expect(activitySources).not.toContain(lfm)
+    })
+
+    it('returns empty array when no sources have the capability', () => {
+      const registry = new SourceRegistry()
+      registry.register(makeFakeSource('a', 'A', ['topArtists']))
+      registry.register(makeFakeSource('b', 'B', ['similarArtists']))
+
+      expect(registry.withCapability('recentListening')).toEqual([])
+    })
+
+    it('returns empty array when registry is empty', () => {
+      const registry = new SourceRegistry()
+      expect(registry.withCapability('topArtists')).toEqual([])
+    })
+
+    it('handles source with no capabilities', () => {
+      const registry = new SourceRegistry()
+      registry.register(makeFakeSource('empty', 'Empty', []))
+
+      expect(registry.withCapability('topArtists')).toEqual([])
+    })
   })
 })

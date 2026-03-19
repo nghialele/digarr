@@ -17,6 +17,7 @@ function makeLb(): ListeningSource {
   return {
     id: 'listenbrainz',
     name: 'ListenBrainz',
+    capabilities: ['topArtists', 'similarArtists', 'listeningActivity'],
     getTopArtists: vi.fn().mockResolvedValue([]),
     getSimilarArtists: vi.fn().mockResolvedValue([
       { name: 'Thom Yorke', similarityScore: 0.9, source: 'listenbrainz' },
@@ -30,6 +31,7 @@ function makeLfm(): ListeningSource {
   return {
     id: 'lastfm',
     name: 'Last.fm',
+    capabilities: ['topArtists', 'similarArtists', 'genreArtists'],
     getTopArtists: vi.fn().mockResolvedValue([]),
     getSimilarArtists: vi.fn().mockResolvedValue([
       { name: 'Bjork', mbid: 'mbid-bj', similarityScore: 0.85, source: 'lastfm' },
@@ -105,6 +107,7 @@ describe('discover()', () => {
     const lb: ListeningSource = {
       id: 'listenbrainz',
       name: 'ListenBrainz',
+      capabilities: ['topArtists', 'similarArtists', 'listeningActivity'],
       getTopArtists: vi.fn().mockResolvedValue([]),
       getSimilarArtists: vi.fn().mockRejectedValue(new Error('LB down')),
       testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
@@ -150,6 +153,7 @@ describe('discover()', () => {
     const lb: ListeningSource = {
       id: 'listenbrainz',
       name: 'ListenBrainz',
+      capabilities: ['topArtists', 'similarArtists', 'listeningActivity'],
       getTopArtists: vi.fn().mockResolvedValue([]),
       getSimilarArtists: vi.fn().mockResolvedValue([]),
       testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),

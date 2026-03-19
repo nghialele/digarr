@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useState } from 'react'
 import { cn } from '../lib/utils'
 import { StreamingLinks } from './streaming-links'
 import { Button } from './ui/button'
@@ -78,6 +78,9 @@ type RecommendationCardProps = {
   isSelected?: boolean
   expanded?: boolean
   onRetry?: (id: number) => void
+  bulkMode?: boolean
+  isChecked?: boolean
+  onToggleSelect?: (id: number) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -181,62 +184,6 @@ function GenrePills({
 }
 
 // ---------------------------------------------------------------------------
-// Swipe hook (touch devices only)
-// ---------------------------------------------------------------------------
-
-const SWIPE_THRESHOLD = 50
-
-function useSwipe(onSwipeRight: (() => void) | null, onSwipeLeft: (() => void) | null) {
-  const startX = useRef(0)
-  const startY = useRef(0)
-  const deltaX = useRef(0)
-  const swiping = useRef(false)
-  const [offset, setOffset] = useState(0)
-
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0]
-    if (!touch) return
-    startX.current = touch.clientX
-    startY.current = touch.clientY
-    deltaX.current = 0
-    swiping.current = false
-  }, [])
-
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0]
-    if (!touch) return
-    const dx = touch.clientX - startX.current
-    const dy = touch.clientY - startY.current
-
-    // If vertical movement dominates, bail out -- let the page scroll
-    if (!swiping.current && Math.abs(dy) > Math.abs(dx)) return
-
-    // Lock into horizontal swipe once threshold exceeded
-    if (Math.abs(dx) > 10) swiping.current = true
-
-    if (swiping.current) {
-      deltaX.current = dx
-      setOffset(dx)
-    }
-  }, [])
-
-  const onTouchEnd = useCallback(() => {
-    if (swiping.current) {
-      if (deltaX.current > SWIPE_THRESHOLD && onSwipeRight) {
-        onSwipeRight()
-      } else if (deltaX.current < -SWIPE_THRESHOLD && onSwipeLeft) {
-        onSwipeLeft()
-      }
-    }
-    swiping.current = false
-    deltaX.current = 0
-    setOffset(0)
-  }, [onSwipeRight, onSwipeLeft])
-
-  return { offset, onTouchStart, onTouchMove, onTouchEnd }
-}
-
-// ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
 
@@ -248,67 +195,153 @@ export function RecommendationCard({
   isSelected = false,
   expanded = false,
   onRetry,
+  bulkMode = false,
+  isChecked = false,
+  onToggleSelect,
 }: RecommendationCardProps) {
   const pct = `${Math.round(rec.score * 100)}%`
   const isPending = rec.status === 'pending' || rec.status === 'approved'
   const isActed = rec.status !== 'pending'
+  const isApproved =
+    rec.status === 'added_to_lidarr' || rec.status === 'add_failed' || rec.status === 'approved'
 
-  // Swipe: right = approve, left = reject (only for pending cards)
-  const canSwipe = isPending
-  const { offset, onTouchStart, onTouchMove, onTouchEnd } = useSwipe(
-    canSwipe ? () => onApprove(rec.id) : null,
-    canSwipe ? () => onReject(rec.id) : null,
-  )
-
-  // Swipe visual state
-  const pastThreshold = Math.abs(offset) > SWIPE_THRESHOLD
-  const swipeDirection = offset > 0 ? 'right' : 'left'
-  const swipeStyle: React.CSSProperties =
-    offset !== 0 ? { transform: `translateX(${offset}px)`, transition: 'none' } : {}
+  function handleCardClick() {
+    if (bulkMode) {
+      onToggleSelect?.(rec.id)
+    } else {
+      onClick?.(rec.id)
+    }
+  }
 
   return (
-    <div className="relative overflow-hidden rounded-lg">
-      {/* Swipe action reveal (stays in place while card slides) */}
-      {canSwipe && offset !== 0 && (
+    <div className="relative group">
+      {/* Bulk mode checkbox overlay */}
+      {bulkMode && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: checkbox overlay
         <div
-          className={cn(
-            'absolute inset-0 flex items-center rounded-lg transition-colors',
-            pastThreshold
-              ? swipeDirection === 'right'
-                ? 'bg-approve/15'
-                : 'bg-reject/15'
-              : 'bg-surface',
-          )}
+          className="absolute top-2 left-2 z-20"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleSelect?.(rec.id)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation()
+              onToggleSelect?.(rec.id)
+            }
+          }}
         >
-          {pastThreshold && (
-            <span
-              className={cn(
-                'text-sm font-bold uppercase tracking-wide absolute',
-                swipeDirection === 'right' ? 'left-4 text-approve' : 'right-4 text-reject',
-              )}
-            >
-              {swipeDirection === 'right' ? 'Approve' : 'Reject'}
-            </span>
-          )}
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={() => onToggleSelect?.(rec.id)}
+            className="w-4 h-4 accent-accent cursor-pointer"
+            aria-label={`Select ${rec.artist.name}`}
+          />
         </div>
+      )}
+      {/* Hover edge buttons -- desktop only, only for pending cards */}
+      {!bulkMode && isPending && (
+        <>
+          {/* Left edge: reject */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: edge action button */}
+          <div
+            className="hidden md:group-hover:flex absolute left-0 top-0 bottom-0 z-10 items-center justify-center w-10 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150"
+            onClick={(e) => {
+              e.stopPropagation()
+              onReject(rec.id)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation()
+                onReject(rec.id)
+              }
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Reject"
+              className="w-8 h-8 rounded-full bg-reject/20 border border-reject/40 text-reject hover:bg-reject/40 transition-colors flex items-center justify-center shadow-md"
+              onClick={(e) => {
+                e.stopPropagation()
+                onReject(rec.id)
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          {/* Right edge: approve */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: edge action button */}
+          <div
+            className="hidden md:group-hover:flex absolute right-0 top-0 bottom-0 z-10 items-center justify-center w-10 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150"
+            onClick={(e) => {
+              e.stopPropagation()
+              onApprove(rec.id)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation()
+                onApprove(rec.id)
+              }
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Approve"
+              className="w-8 h-8 rounded-full bg-approve/20 border border-approve/40 text-approve hover:bg-approve/40 transition-colors flex items-center justify-center shadow-md"
+              onClick={(e) => {
+                e.stopPropagation()
+                onApprove(rec.id)
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4"
+                aria-hidden="true"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+          </div>
+        </>
       )}
       <button
         type="button"
+        data-testid="rec-card-button"
         className={cn(
           'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left flex flex-col relative',
-          isSelected ? 'border-accent' : 'border-border hover:border-border/80',
+          bulkMode && isChecked
+            ? 'border-accent bg-accent/5'
+            : isSelected
+              ? 'border-accent'
+              : 'border-border hover:border-border/80',
         )}
-        style={swipeStyle}
-        onClick={() => onClick?.(rec.id)}
+        onClick={handleCardClick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            onClick?.(rec.id)
+            handleCardClick()
           }
         }}
-        onTouchStart={canSwipe ? onTouchStart : undefined}
-        onTouchMove={canSwipe ? onTouchMove : undefined}
-        onTouchEnd={canSwipe ? onTouchEnd : undefined}
       >
         {/* Compact layout (always shown) */}
         <div className="p-4 space-y-3 flex-1">
@@ -356,8 +389,8 @@ export function RecommendationCard({
             />
           )}
 
-          {/* Action buttons */}
-          {isPending && (
+          {/* Action buttons -- hidden in bulk mode */}
+          {!bulkMode && isPending && (
             // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
             <div
               className="flex gap-2"
@@ -383,7 +416,25 @@ export function RecommendationCard({
               </Button>
             </div>
           )}
-          {rec.status === 'rejected' && (
+          {!bulkMode && isApproved && (
+            // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
+            <div
+              className="flex gap-2"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              role="presentation"
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
+                onClick={() => onReject(rec.id)}
+              >
+                Reject
+              </Button>
+            </div>
+          )}
+          {!bulkMode && rec.status === 'rejected' && (
             // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
             <div
               className="flex gap-2"
@@ -479,8 +530,8 @@ export function RecommendationCard({
               />
             )}
 
-            {/* Action buttons (re-shown in expanded too for non-acted) */}
-            {isPending && (
+            {/* Action buttons (re-shown in expanded too) -- hidden in bulk mode */}
+            {!bulkMode && isPending && (
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -500,7 +551,19 @@ export function RecommendationCard({
                 </Button>
               </div>
             )}
-            {rec.status === 'rejected' && (
+            {!bulkMode && isApproved && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
+                  onClick={() => onReject(rec.id)}
+                >
+                  Reject
+                </Button>
+              </div>
+            )}
+            {!bulkMode && rec.status === 'rejected' && (
               <div className="flex gap-2">
                 <Button
                   size="sm"

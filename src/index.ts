@@ -3,12 +3,27 @@ import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
+import { createLidarrClient } from './core/clients/lidarr'
+import { createMusicBrainzClient } from './core/clients/musicbrainz'
+import { GenreService } from './core/genre/service'
+import { runGenreSubscription } from './core/genre/subscription-runner'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
-import { PipelineScheduler } from './core/pipeline/scheduler'
 import type { StoreDb } from './core/pipeline/store'
+import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
+import { createLastFmSource } from './core/plugins/lastfm'
+import { createListenBrainzSource } from './core/plugins/listenbrainz'
+import { SourceRegistry } from './core/plugins/registry'
+import { createDefaultRegistry } from './core/providers/registry'
 import { db, pool } from './db'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
+import {
+  getAllGenres,
+  getChildGenres,
+  getGenreBySlug,
+  searchGenres,
+  upsertGenre,
+} from './db/queries/genres'
 import {
   bulkUpdateStatus,
   getGenreFeedbackHistory,
@@ -20,6 +35,17 @@ import {
 } from './db/queries/recommendations'
 import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
+import {
+  completeRun,
+  createSubscription,
+  deleteSubscription,
+  getEnabledSubscriptions,
+  getRunsForSubscription,
+  getSubscription,
+  getSubscriptionsByUser,
+  insertRun,
+  updateSubscription,
+} from './db/queries/subscriptions'
 import {
   createUser,
   getUserById,
@@ -65,13 +91,112 @@ const storeDb: StoreDb = {
 }
 
 const orchestrator = new PipelineOrchestrator()
-const scheduler = new PipelineScheduler()
+const scheduler = new SubscriptionScheduler()
+const providerRegistry = createDefaultRegistry()
+
+// Map DB genre rows (artistCount: number | null) to GenreInfo (artistCount: number)
+function mapGenreRow(row: Awaited<ReturnType<typeof upsertGenre>>) {
+  return { ...row, artistCount: row.artistCount ?? 0 }
+}
+
+const genreService = new GenreService({
+  genreQueries: {
+    upsertGenre: async (data) => mapGenreRow(await upsertGenre(db, data)),
+    getGenreBySlug: async (slug) => {
+      const row = await getGenreBySlug(db, slug)
+      return row ? mapGenreRow(row) : null
+    },
+    getChildGenres: async (parentId) => {
+      const rows = await getChildGenres(db, parentId)
+      return rows.map(mapGenreRow)
+    },
+    searchGenres: async (query, limit) => {
+      const rows = await searchGenres(db, query, limit)
+      return rows.map(mapGenreRow)
+    },
+    getAllGenres: async () => {
+      const rows = await getAllGenres(db)
+      return rows.map(mapGenreRow)
+    },
+  },
+})
 
 const runPipeline = async () => {
   const currentSettings = await getSettings(db)
   if (currentSettings) {
-    await orchestrator.run({ db: storeDb, settings: currentSettings })
+    await orchestrator.run({ db: storeDb, settings: currentSettings, providerRegistry })
   }
+}
+
+// Shared subscription query facade (used both by routes and scheduler)
+const subscriptionQueriesImpl = {
+  createSubscription: (data: Parameters<typeof createSubscription>[1]) =>
+    createSubscription(db, data),
+  getSubscription: (id: number) => getSubscription(db, id),
+  getSubscriptionsByUser: (userId: number) => getSubscriptionsByUser(db, userId),
+  updateSubscription: (id: number, data: Parameters<typeof updateSubscription>[2]) =>
+    updateSubscription(db, id, data),
+  deleteSubscription: (id: number) => deleteSubscription(db, id),
+  getRunsForSubscription: (id: number, limit?: number) => getRunsForSubscription(db, id, limit),
+  insertRun: (data: Parameters<typeof insertRun>[1]) => insertRun(db, data),
+  completeRun: (id: number, data: Parameters<typeof completeRun>[2]) => completeRun(db, id, data),
+}
+
+async function executeSubscription(subscriptionId: number): Promise<void> {
+  const sub = await getSubscription(db, subscriptionId)
+  if (!sub) {
+    console.warn(`[subscription-runner] Subscription ${subscriptionId} not found -- skipping`)
+    return
+  }
+
+  const settings = await getSettings(db)
+  const prefs = { ...DEFAULT_PREFERENCES, ...settings?.preferences }
+
+  const lidarrClient =
+    settings?.lidarrUrl && settings?.lidarrApiKey
+      ? createLidarrClient(
+          settings.lidarrUrl,
+          settings.lidarrApiKey,
+          settings.skipTlsVerify ?? false,
+        )
+      : null
+
+  const rejectedMbids = await storeDb.getRejectedMbids(prefs.rejectionCooldownDays)
+  const feedbackHistory = await storeDb.getFeedbackHistory()
+
+  // Build source registry fresh per run (same pattern as orchestrator)
+  const sourceRegistry = new SourceRegistry()
+  if (settings?.listenbrainzUsername && settings?.listenbrainzToken) {
+    sourceRegistry.register(
+      createListenBrainzSource(settings.listenbrainzUsername, settings.listenbrainzToken),
+    )
+  }
+  if (settings?.lastfmUsername && settings?.lastfmApiKey) {
+    sourceRegistry.register(createLastFmSource(settings.lastfmUsername, settings.lastfmApiKey))
+  }
+
+  await runGenreSubscription({
+    subscription: {
+      id: sub.id,
+      userId: sub.userId,
+      sourceConfig: sub.sourceConfig,
+      maxArtistsPerRun: sub.maxArtistsPerRun,
+      scoreThreshold: sub.scoreThreshold,
+      scoringWeightPreset: sub.scoringWeightPreset,
+      scoringWeightOverrides: sub.scoringWeightOverrides,
+    },
+    sources: sourceRegistry.withCapability('genreArtists'),
+    mbClient: createMusicBrainzClient(),
+    lidarrClient,
+    storeDb,
+    subscriptionQueries: subscriptionQueriesImpl,
+    libraryMbids: new Set<string>(),
+    libraryGenres: [],
+    rejectedMbids,
+    feedbackHistory,
+    cooldownDays: prefs.rejectionCooldownDays,
+    defaultScoreThreshold: prefs.scoreThreshold,
+  })
 }
 
 const app = createApp({
@@ -79,6 +204,7 @@ const app = createApp({
   storeDb,
   orchestrator,
   scheduler,
+  providerRegistry,
   isSetupComplete: () => isSetupComplete(db),
   getSettings: () => getSettings(db),
   updateSettings: (partial) => updateSettings(db, partial),
@@ -97,11 +223,11 @@ const app = createApp({
   getArtistById: (id) => getArtistById(db, id),
   restartScheduler: (cron: string | null) => {
     if (!cron) {
-      scheduler.stop()
+      scheduler.remove('main-pipeline')
       console.log('Scheduler stopped')
       return
     }
-    scheduler.start(cron, runPipeline)
+    scheduler.schedule('main-pipeline', cron, runPipeline)
     console.log(`Scheduler restarted with cron: ${cron}`)
   },
   createUser: (data) => createUser(db, data),
@@ -109,6 +235,9 @@ const app = createApp({
   getUserById: (id) => getUserById(db, id),
   getUserCount: () => getUserCount(db),
   updatePassword: (id, hash) => updatePassword(db, id, hash),
+  genreService,
+  subscriptionQueries: subscriptionQueriesImpl,
+  runSubscription: (id) => executeSubscription(id),
 })
 
 const port = envConfig.port
@@ -161,8 +290,15 @@ isSetupComplete(db)
   .then((settings) => {
     const cron = settings?.preferences?.scheduleCron
     if (cron) {
-      scheduler.start(cron, runPipeline)
+      scheduler.schedule('main-pipeline', cron, runPipeline)
       console.log(`Scheduler started with cron: ${cron}`)
+    }
+  })
+  .then(() => getEnabledSubscriptions(db))
+  .then((subs) => {
+    for (const sub of subs) {
+      scheduler.schedule(`subscription-${sub.id}`, sub.cron, () => executeSubscription(sub.id))
+      console.log(`Subscription '${sub.name}' (id=${sub.id}) scheduled with cron: ${sub.cron}`)
     }
   })
   .catch((err: unknown) => {
@@ -175,7 +311,7 @@ console.log(`Digarr running on http://localhost:${port}`)
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, async () => {
     console.log(`${signal} received, shutting down...`)
-    scheduler.stop()
+    scheduler.stopAll()
     server.close()
     await new Promise((resolve) => setTimeout(resolve, 5000))
     await pool.end()

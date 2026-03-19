@@ -1,3 +1,5 @@
+import type { GenreInfo } from '../../core/genre/types'
+
 const BASE = '/api'
 
 const AUTH_TOKEN_KEY = 'digarr-auth-token'
@@ -185,3 +187,11 @@ export const getLidarrRootFolders = () =>
   fetchApi<Array<{ id: number; path: string; freeSpace?: number }>>('/lidarr/rootfolders')
 export const addToLidarr = (body: Record<string, unknown>) =>
   fetchApi('/lidarr/add', { method: 'POST', body: JSON.stringify(body) })
+
+// Genres
+export const getGenres = () => fetchApi<GenreInfo[]>('/genres')
+export const searchGenres = (q: string) =>
+  fetchApi<GenreInfo[]>(`/genres/search?q=${encodeURIComponent(q)}`)
+export const getGenre = (slug: string) =>
+  fetchApi<GenreInfo & { subGenres: GenreInfo[] }>(`/genres/${encodeURIComponent(slug)}`)
+export const seedGenres = () => fetchApi<{ message: string }>('/genres/seed', { method: 'POST' })

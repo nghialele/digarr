@@ -1,0 +1,189 @@
+// @vitest-environment node
+
+import { EventEmitter } from 'node:events'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AppDependencies } from '@/server'
+import { createApp } from '@/server'
+
+vi.mock('@/core/clients/lidarr', () => ({
+  createLidarrClient: vi.fn(() => ({
+    getArtists: vi.fn(async () => []),
+  })),
+}))
+
+vi.mock('@/core/pipeline/collect', () => ({
+  collect: vi.fn(async () => []),
+}))
+
+function makeMockOrchestrator() {
+  const emitter = new EventEmitter()
+  return Object.assign(emitter, {
+    isRunning: false,
+    run: vi.fn(async () => ({ batchId: 1 })),
+  })
+}
+
+const mockGenres = [
+  {
+    id: 1,
+    name: 'Rock',
+    slug: 'rock',
+    source: 'library',
+    parentGenreId: null,
+    artistCount: 42,
+    cachedAt: new Date('2024-01-01'),
+  },
+  {
+    id: 2,
+    name: 'Alternative Rock',
+    slug: 'alternative-rock',
+    source: 'library',
+    parentGenreId: 1,
+    artistCount: 10,
+    cachedAt: new Date('2024-01-01'),
+  },
+]
+
+const mockGenreService = {
+  getLibraryGenres: vi.fn(async () => mockGenres),
+  search: vi.fn(async () => [mockGenres[0]]),
+  getOrFetchGenre: vi.fn(async (slug: string) => mockGenres.find((g) => g.slug === slug) ?? null),
+  getSubGenres: vi.fn(async () => [mockGenres[1]]),
+  seedFromLibrary: vi.fn(async () => {}),
+  slugify: vi.fn((name: string) => name.toLowerCase().replace(/\s+/g, '-')),
+  isStale: vi.fn(() => false),
+}
+
+function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
+  return {
+    db: { execute: vi.fn(async () => []) } as unknown as AppDependencies['db'],
+    storeDb: {} as unknown as AppDependencies['storeDb'],
+    orchestrator: makeMockOrchestrator() as unknown as AppDependencies['orchestrator'],
+    scheduler: {} as AppDependencies['scheduler'],
+    providerRegistry: {} as unknown as AppDependencies['providerRegistry'],
+    isSetupComplete: async () => true,
+    getSettings: vi.fn(async () => ({
+      id: 1,
+      lidarrUrl: 'http://lidarr:8686',
+      lidarrApiKey: 'key',
+      preferences: {},
+    })),
+    updateSettings: vi.fn(async () => {}),
+    completeSetup: vi.fn(async () => ({ id: 1, setupComplete: true })),
+    getLastBatch: vi.fn(async () => null),
+    listRecommendations: vi.fn(async () => ({ items: [], total: 0 })),
+    getRecommendation: vi.fn(async () => null),
+    updateRecommendationStatus: vi.fn(async () => {}),
+    bulkUpdateStatus: vi.fn(async () => {}),
+    listBatches: vi.fn(async () => []),
+    getBatch: vi.fn(async () => null),
+    getArtistById: vi.fn(async () => null),
+    restartScheduler: vi.fn(),
+    createUser: vi.fn(async () => ({
+      id: 1,
+      username: 'test',
+      isAdmin: false,
+      preferences: null,
+      createdAt: new Date(),
+    })),
+    getUserByUsername: vi.fn(async () => null),
+    getUserById: vi.fn(async () => null),
+    getUserCount: vi.fn(async () => 0),
+    updatePassword: vi.fn(async () => {}),
+    genreService: mockGenreService as unknown as AppDependencies['genreService'],
+    subscriptionQueries: {
+      createSubscription: vi.fn(async () => ({}) as never),
+      getSubscription: vi.fn(async () => null),
+      getSubscriptionsByUser: vi.fn(async () => []),
+      updateSubscription: vi.fn(async () => {}),
+      deleteSubscription: vi.fn(async () => {}),
+      getRunsForSubscription: vi.fn(async () => []),
+    },
+    runSubscription: vi.fn(async () => {}),
+    ...overrides,
+  }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockGenreService.getLibraryGenres.mockResolvedValue(mockGenres)
+  mockGenreService.search.mockResolvedValue([mockGenres[0]])
+  mockGenreService.getOrFetchGenre.mockImplementation(
+    async (slug: string) => mockGenres.find((g) => g.slug === slug) ?? null,
+  )
+  mockGenreService.getSubGenres.mockResolvedValue([mockGenres[1]])
+})
+
+describe('GET /api/genres', () => {
+  it('returns all genres', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/genres')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(Array.isArray(body)).toBe(true)
+    expect(body).toHaveLength(2)
+    expect(body[0].slug).toBe('rock')
+  })
+})
+
+describe('GET /api/genres/search', () => {
+  it('returns search results for valid query', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/genres/search?q=rock')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(Array.isArray(body)).toBe(true)
+    expect(mockGenreService.search).toHaveBeenCalledWith('rock')
+  })
+
+  it('returns 400 for query shorter than 2 chars', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/genres/search?q=r')
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 for missing query', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/genres/search')
+    expect(res.status).toBe(400)
+  })
+})
+
+describe('GET /api/genres/:slug', () => {
+  it('returns genre with sub-genres when found', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/genres/rock')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.slug).toBe('rock')
+    expect(Array.isArray(body.subGenres)).toBe(true)
+    expect(body.subGenres).toHaveLength(1)
+    expect(body.subGenres[0].slug).toBe('alternative-rock')
+  })
+
+  it('returns 404 for unknown slug', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/genres/does-not-exist')
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('POST /api/genres/seed', () => {
+  it('returns 202 when Lidarr is configured', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/genres/seed', { method: 'POST' })
+    expect(res.status).toBe(202)
+    const body = await res.json()
+    expect(body.message).toBeDefined()
+  })
+
+  it('returns 400 when Lidarr is not configured', async () => {
+    const app = createApp(
+      makeDeps({
+        getSettings: vi.fn(async () => ({ id: 1 })),
+      }),
+    )
+    const res = await app.request('/api/genres/seed', { method: 'POST' })
+    expect(res.status).toBe(400)
+  })
+})
