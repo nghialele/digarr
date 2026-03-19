@@ -96,7 +96,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="border-b border-border px-4 sm:px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <span className="text-xl font-bold text-accent">digarr</span>
+            <NavLink to="/" className="text-xl font-bold text-accent hover:opacity-90">
+              digarr
+            </NavLink>
             {/* Desktop nav links */}
             <div className="hidden sm:flex items-center gap-6">
               <NavLink to="/" className={navLinkClass}>

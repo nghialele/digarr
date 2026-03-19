@@ -139,12 +139,12 @@ function LatestBatchPanel({
             <ArtistThumb name={rec.artist.name} imageUrl={rec.artist.imageUrl} />
             <div className="min-w-0">
               <p className="text-sm font-medium text-text truncate">{rec.artist.name}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-accent font-medium">
+              <div className="flex items-center gap-2 mt-0.5 overflow-hidden">
+                <span className="text-xs text-accent font-medium shrink-0">
                   {Math.round((rec.score ?? 0) * 100)}%
                 </span>
-                {rec.artist.genres?.slice(0, 3).map((g) => (
-                  <Badge key={g} variant="outline">
+                {rec.artist.genres?.slice(0, 3).map((g, i) => (
+                  <Badge key={g} variant="outline" className={i > 0 ? 'hidden sm:inline-flex' : ''}>
                     {g}
                   </Badge>
                 ))}

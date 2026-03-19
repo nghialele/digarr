@@ -147,16 +147,24 @@ function StatusBadge({
 // Genre pills
 // ---------------------------------------------------------------------------
 
-function GenrePills({ genres, max = 4 }: { genres: string[] | null; max?: number }) {
+function GenrePills({
+  genres,
+  max = 4,
+  compact = false,
+}: {
+  genres: string[] | null
+  max?: number
+  compact?: boolean
+}) {
   if (!genres || genres.length === 0) return null
   const shown = genres.slice(0, max)
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className={cn('flex gap-1', compact ? 'overflow-hidden' : 'flex-wrap')}>
       {shown.map((g, i) => (
         <span
           key={g}
           className={cn(
-            'text-[10px] px-1.5 py-0.5 rounded-full',
+            'text-[10px] px-1.5 py-0.5 rounded-full shrink-0',
             GENRE_COLORS[i % GENRE_COLORS.length],
           )}
         >
@@ -164,7 +172,7 @@ function GenrePills({ genres, max = 4 }: { genres: string[] | null; max?: number
         </span>
       ))}
       {genres.length > max && (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface text-muted">
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface text-muted shrink-0">
           +{genres.length - max}
         </span>
       )}
@@ -252,199 +260,91 @@ export function RecommendationCard({
     canSwipe ? () => onReject(rec.id) : null,
   )
 
-  // Visual feedback: tint card during swipe
+  // Swipe visual state
+  const pastThreshold = Math.abs(offset) > SWIPE_THRESHOLD
+  const swipeDirection = offset > 0 ? 'right' : 'left'
   const swipeStyle: React.CSSProperties =
-    offset !== 0
-      ? {
-          transform: `translateX(${offset}px)`,
-          transition: 'none',
-          backgroundColor:
-            offset > SWIPE_THRESHOLD
-              ? 'rgba(125, 184, 138, 0.08)'
-              : offset < -SWIPE_THRESHOLD
-                ? 'rgba(196, 122, 122, 0.08)'
-                : undefined,
-        }
-      : {}
+    offset !== 0 ? { transform: `translateX(${offset}px)`, transition: 'none' } : {}
 
   return (
-    <button
-      type="button"
-      className={cn(
-        'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left flex flex-col',
-        isSelected ? 'border-accent' : 'border-border hover:border-border/80',
-        expanded ? 'col-span-full' : '',
-      )}
-      style={swipeStyle}
-      onClick={() => onClick?.(rec.id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onClick?.(rec.id)
-        }
-      }}
-      onTouchStart={canSwipe ? onTouchStart : undefined}
-      onTouchMove={canSwipe ? onTouchMove : undefined}
-      onTouchEnd={canSwipe ? onTouchEnd : undefined}
-    >
-      {/* Compact layout (always shown) */}
-      <div className="p-4 space-y-3 flex-1">
-        {/* Header row */}
-        <div className="flex items-start gap-3">
-          <ArtistThumb
-            name={rec.artist.name}
-            imageUrl={rec.artist.imageUrl}
-            size={expanded ? 14 : 10}
-          />
-          <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
-            <div>
-              <h3 className="text-lg font-semibold text-text leading-tight">{rec.artist.name}</h3>
-              {rec.artist.disambiguation && (
-                <p className="text-xs text-muted mt-0.5">{rec.artist.disambiguation}</p>
-              )}
-            </div>
-            <span className="shrink-0 bg-accent/20 text-accent text-xs font-semibold px-2 py-0.5 rounded">
-              {pct}
-            </span>
-          </div>
-        </div>
-
-        {/* Genre tags (single line, overflow hidden) */}
-        <div className="flex items-center gap-1.5 overflow-hidden">
-          <GenrePills genres={rec.artist.genres} max={expanded ? 8 : 3} />
-        </div>
-
-        {/* Streaming links (compact) */}
-        {!expanded && (
-          <StreamingLinks
-            streamingUrls={rec.artist.streamingUrls}
-            artistName={rec.artist.name}
-            compact
-          />
-        )}
-
-        {/* Status for acted-on recs */}
-        {isActed && (
-          <StatusBadge
-            status={rec.status}
-            lidarrError={rec.lidarrError}
-            onRetry={onRetry}
-            id={rec.id}
-          />
-        )}
-
-        {/* Action buttons */}
-        {isPending && (
-          // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
-          <div
-            className="flex gap-2"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="presentation"
-          >
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
-              onClick={() => onApprove(rec.id)}
-            >
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
-              onClick={() => onReject(rec.id)}
-            >
-              Reject
-            </Button>
-          </div>
-        )}
-        {rec.status === 'rejected' && (
-          // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
-          <div
-            className="flex gap-2"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="presentation"
-          >
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-muted border-border/60 hover:bg-surface hover:text-text"
-              onClick={() => onApprove(rec.id)}
-            >
-              Restore
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Expanded-only section */}
-      {expanded && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
+    <div className="relative overflow-hidden rounded-lg">
+      {/* Swipe action reveal (stays in place while card slides) */}
+      {canSwipe && offset !== 0 && (
         <div
-          className="border-t border-border px-4 pb-4 space-y-4"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-          role="presentation"
+          className={cn(
+            'absolute inset-0 flex items-center rounded-lg transition-colors',
+            pastThreshold
+              ? swipeDirection === 'right'
+                ? 'bg-approve/15'
+                : 'bg-reject/15'
+              : 'bg-surface',
+          )}
         >
-          {/* MusicBrainz link */}
-          <div className="mt-4 flex items-center gap-2">
-            <a
-              href={`https://musicbrainz.org/artist/${rec.artist.mbid}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-accent hover:underline"
+          {pastThreshold && (
+            <span
+              className={cn(
+                'text-sm font-bold uppercase tracking-wide absolute',
+                swipeDirection === 'right' ? 'left-4 text-approve' : 'right-4 text-reject',
+              )}
             >
-              View on MusicBrainz
-            </a>
+              {swipeDirection === 'right' ? 'Approve' : 'Reject'}
+            </span>
+          )}
+        </div>
+      )}
+      <button
+        type="button"
+        className={cn(
+          'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left flex flex-col relative',
+          isSelected ? 'border-accent' : 'border-border hover:border-border/80',
+        )}
+        style={swipeStyle}
+        onClick={() => onClick?.(rec.id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick?.(rec.id)
+          }
+        }}
+        onTouchStart={canSwipe ? onTouchStart : undefined}
+        onTouchMove={canSwipe ? onTouchMove : undefined}
+        onTouchEnd={canSwipe ? onTouchEnd : undefined}
+      >
+        {/* Compact layout (always shown) */}
+        <div className="p-4 space-y-3 flex-1">
+          {/* Header row */}
+          <div className="flex items-start gap-3">
+            <ArtistThumb
+              name={rec.artist.name}
+              imageUrl={rec.artist.imageUrl}
+              size={expanded ? 14 : 10}
+            />
+            <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-lg font-semibold text-text leading-tight">{rec.artist.name}</h3>
+                {rec.artist.disambiguation && (
+                  <p className="text-xs text-muted mt-0.5">{rec.artist.disambiguation}</p>
+                )}
+              </div>
+              <span className="shrink-0 bg-accent/20 text-accent text-xs font-semibold px-2 py-0.5 rounded">
+                {pct}
+              </span>
+            </div>
           </div>
 
-          {/* AI reasoning */}
-          {rec.aiReasoning && (
-            <div className="border-l-2 border-accent bg-surface/50 px-3 py-2 rounded-r">
-              <p className="text-xs text-muted uppercase tracking-wide mb-1">AI Reasoning</p>
-              <p className="text-sm text-text italic">{rec.aiReasoning}</p>
-            </div>
-          )}
+          {/* Genre tags */}
+          <div className="flex items-center gap-1.5 overflow-hidden">
+            <GenrePills genres={rec.artist.genres} max={expanded ? 8 : 3} compact={!expanded} />
+          </div>
 
-          {/* Per-source scores */}
-          {rec.sources && Object.keys(rec.sources).length > 0 && (
-            <div>
-              <p className="text-xs text-muted uppercase tracking-wide mb-2">Source Scores</p>
-              <div className="flex flex-wrap gap-3">
-                {Object.entries(rec.sources).map(([key, score]) => {
-                  const cfg = SOURCE_COLORS[key] ?? {
-                    label: key.toUpperCase(),
-                    color: '#6b7084',
-                  }
-                  return (
-                    <div key={key} className="flex items-center gap-1.5">
-                      <span
-                        style={{ backgroundColor: cfg.color }}
-                        className="w-2 h-2 rounded-full inline-block"
-                      />
-                      <span className="text-xs text-muted">{cfg.label}</span>
-                      <span className="text-xs text-text font-medium">
-                        {(score * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Full streaming links with optional Spotify embed */}
-          <div>
-            <p className="text-xs text-muted uppercase tracking-wide mb-2">Streaming</p>
+          {/* Streaming links (compact) */}
+          {!expanded && (
             <StreamingLinks
               streamingUrls={rec.artist.streamingUrls}
               artistName={rec.artist.name}
-              compact={false}
+              compact
             />
-          </div>
+          )}
 
           {/* Status for acted-on recs */}
           {isActed && (
@@ -456,9 +356,15 @@ export function RecommendationCard({
             />
           )}
 
-          {/* Action buttons (re-shown in expanded too for non-acted) */}
+          {/* Action buttons */}
           {isPending && (
-            <div className="flex gap-2">
+            // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
+            <div
+              className="flex gap-2"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              role="presentation"
+            >
               <Button
                 size="sm"
                 variant="outline"
@@ -478,7 +384,13 @@ export function RecommendationCard({
             </div>
           )}
           {rec.status === 'rejected' && (
-            <div className="flex gap-2">
+            // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
+            <div
+              className="flex gap-2"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              role="presentation"
+            >
               <Button
                 size="sm"
                 variant="outline"
@@ -490,7 +402,119 @@ export function RecommendationCard({
             </div>
           )}
         </div>
-      )}
-    </button>
+
+        {/* Expanded-only section */}
+        {expanded && (
+          // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
+          <div
+            className="border-t border-border px-4 pb-4 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            {/* MusicBrainz link */}
+            <div className="mt-4 flex items-center gap-2">
+              <a
+                href={`https://musicbrainz.org/artist/${rec.artist.mbid}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-accent hover:underline"
+              >
+                View on MusicBrainz
+              </a>
+            </div>
+
+            {/* AI reasoning */}
+            {rec.aiReasoning && (
+              <div className="border-l-2 border-accent bg-surface/50 px-3 py-2 rounded-r">
+                <p className="text-xs text-muted uppercase tracking-wide mb-1">AI Reasoning</p>
+                <p className="text-sm text-text italic">{rec.aiReasoning}</p>
+              </div>
+            )}
+
+            {/* Per-source scores */}
+            {rec.sources && Object.keys(rec.sources).length > 0 && (
+              <div>
+                <p className="text-xs text-muted uppercase tracking-wide mb-2">Source Scores</p>
+                <div className="flex flex-wrap gap-3">
+                  {Object.entries(rec.sources).map(([key, score]) => {
+                    const cfg = SOURCE_COLORS[key] ?? {
+                      label: key.toUpperCase(),
+                      color: '#6b7084',
+                    }
+                    return (
+                      <div key={key} className="flex items-center gap-1.5">
+                        <span
+                          style={{ backgroundColor: cfg.color }}
+                          className="w-2 h-2 rounded-full inline-block"
+                        />
+                        <span className="text-xs text-muted">{cfg.label}</span>
+                        <span className="text-xs text-text font-medium">
+                          {(score * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Full streaming links with optional Spotify embed */}
+            <div>
+              <p className="text-xs text-muted uppercase tracking-wide mb-2">Streaming</p>
+              <StreamingLinks
+                streamingUrls={rec.artist.streamingUrls}
+                artistName={rec.artist.name}
+                compact={false}
+              />
+            </div>
+
+            {/* Status for acted-on recs */}
+            {isActed && (
+              <StatusBadge
+                status={rec.status}
+                lidarrError={rec.lidarrError}
+                onRetry={onRetry}
+                id={rec.id}
+              />
+            )}
+
+            {/* Action buttons (re-shown in expanded too for non-acted) */}
+            {isPending && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
+                  onClick={() => onApprove(rec.id)}
+                >
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
+                  onClick={() => onReject(rec.id)}
+                >
+                  Reject
+                </Button>
+              </div>
+            )}
+            {rec.status === 'rejected' && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-muted border-border/60 hover:bg-surface hover:text-text"
+                  onClick={() => onApprove(rec.id)}
+                >
+                  Restore
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </button>
+    </div>
   )
 }

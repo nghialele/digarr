@@ -139,7 +139,8 @@ describe('RecommendationCard', () => {
         isSelected
       />,
     )
-    const card = container.firstElementChild as HTMLElement
+    const wrapper = container.firstElementChild as HTMLElement
+    const card = wrapper.querySelector('button') as HTMLElement
     expect(card.className).toContain('border-accent')
   })
 
