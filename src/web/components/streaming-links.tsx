@@ -4,6 +4,8 @@ type StreamingLinksProps = {
   streamingUrls: Record<string, string> | null
   artistName: string
   compact?: boolean
+  onPlay?: () => void
+  isPlaying?: boolean
 }
 
 function safeUrl(url: string): string {
@@ -96,6 +98,8 @@ export function StreamingLinks({
   streamingUrls,
   artistName,
   compact = false,
+  onPlay,
+  isPlaying = false,
 }: StreamingLinksProps) {
   const urls = streamingUrls ?? {}
 
@@ -130,6 +134,15 @@ export function StreamingLinks({
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap gap-1.5">
+        {onPlay && (
+          <button
+            type="button"
+            onClick={onPlay}
+            className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold border border-green-500/40 text-green-500 bg-surface/50 hover:opacity-80 transition-opacity"
+          >
+            {isPlaying ? 'STOP' : 'PLAY'}
+          </button>
+        )}
         {links.map(({ key, label, url, color }) => (
           <a
             key={key}

@@ -1,4 +1,6 @@
+import { Pause, Play } from 'lucide-react'
 import { useState } from 'react'
+import { usePreviewContext } from '../lib/preview-context'
 import { cn } from '../lib/utils'
 import { StreamingLinks } from './streaming-links'
 import { Button } from './ui/button'
@@ -289,11 +291,23 @@ export function RecommendationCard({
   isChecked = false,
   onToggleSelect,
 }: RecommendationCardProps) {
+  const preview = usePreviewContext()
   const pct = `${Math.round(rec.score * 100)}%`
   const isPending = rec.status === 'pending' || rec.status === 'approved'
   const isActed = rec.status !== 'pending'
   const isApproved =
     rec.status === 'added_to_lidarr' || rec.status === 'add_failed' || rec.status === 'approved'
+  const artistIsPlaying = preview.playing && preview.currentMbid === rec.artist.mbid
+  const hasPreview = preview.hasPreview(rec.artist.streamingUrls)
+
+  function handlePlayClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    preview.play(rec.artist.mbid, rec.artist.name, rec.artist.streamingUrls)
+  }
+
+  function handlePlayFromLinks() {
+    preview.play(rec.artist.mbid, rec.artist.name, rec.artist.streamingUrls)
+  }
 
   function handleCardClick() {
     if (bulkMode) {
@@ -429,13 +443,29 @@ export function RecommendationCard({
             <GenrePills genres={rec.artist.genres} max={expanded ? 8 : 3} compact={!expanded} />
           </div>
 
-          {/* Streaming links (compact) */}
+          {/* Streaming links (compact) + play button */}
           {!expanded && (
-            <StreamingLinks
-              streamingUrls={rec.artist.streamingUrls}
-              artistName={rec.artist.name}
-              compact
-            />
+            <div className="flex items-center gap-2">
+              {hasPreview && !bulkMode && (
+                <button
+                  type="button"
+                  aria-label={artistIsPlaying ? 'Pause preview' : 'Play preview'}
+                  onClick={handlePlayClick}
+                  className="shrink-0 text-muted hover:text-text transition-colors"
+                >
+                  {artistIsPlaying ? (
+                    <Pause size={14} aria-hidden="true" />
+                  ) : (
+                    <Play size={14} aria-hidden="true" />
+                  )}
+                </button>
+              )}
+              <StreamingLinks
+                streamingUrls={rec.artist.streamingUrls}
+                artistName={rec.artist.name}
+                compact
+              />
+            </div>
           )}
 
           {/* Status for acted-on recs */}
@@ -517,6 +547,8 @@ export function RecommendationCard({
                 streamingUrls={rec.artist.streamingUrls}
                 artistName={rec.artist.name}
                 compact={false}
+                onPlay={hasPreview && !bulkMode ? handlePlayFromLinks : undefined}
+                isPlaying={artistIsPlaying}
               />
             </div>
 
