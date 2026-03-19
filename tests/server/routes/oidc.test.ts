@@ -44,12 +44,13 @@ function makeMockOidcService() {
 }
 
 function makeDeps(overrides: Record<string, unknown> = {}) {
-  const oidcService = makeMockOidcService() as unknown as OidcService & {
+  const mockOidcService = makeMockOidcService() as unknown as OidcService & {
     getAuthorizationUrl: ReturnType<typeof vi.fn>
     handleCallback: ReturnType<typeof vi.fn>
   }
   return {
-    oidcService,
+    mockOidcService,
+    getOidcService: vi.fn(async () => mockOidcService as OidcService),
     getUserByOidcSubject: vi.fn(async () => null),
     getUserByEmail: vi.fn(async () => null),
     getUserByUsername: vi.fn(async () => null),
@@ -90,7 +91,7 @@ describe('GET /api/auth/oidc/login', () => {
       'https://idp.example.com/authorize?state=abc&code_challenge=xyz',
     )
     // Hono's test client uses localhost with a dynamic port
-    expect(deps.oidcService.getAuthorizationUrl).toHaveBeenCalledWith(
+    expect(deps.mockOidcService.getAuthorizationUrl).toHaveBeenCalledWith(
       expect.stringContaining('/api/auth/oidc/callback'),
     )
   })
@@ -189,7 +190,7 @@ describe('GET /api/auth/oidc/callback', () => {
 
   it('falls back to email prefix for username when preferredUsername is absent', async () => {
     const deps = makeDeps()
-    deps.oidcService.handleCallback.mockResolvedValue({
+    deps.mockOidcService.handleCallback.mockResolvedValue({
       claims: {
         sub: 'oidc-subject-456',
         email: 'bob@example.com',
@@ -207,7 +208,7 @@ describe('GET /api/auth/oidc/callback', () => {
 
   it('falls back to oidc-{sub} when no username or email', async () => {
     const deps = makeDeps()
-    deps.oidcService.handleCallback.mockResolvedValue({
+    deps.mockOidcService.handleCallback.mockResolvedValue({
       claims: {
         sub: 'abcdefghijklmnop',
       },
@@ -225,7 +226,7 @@ describe('GET /api/auth/oidc/callback', () => {
 
   it('handles errors and redirects with oidc_error', async () => {
     const deps = makeDeps()
-    deps.oidcService.handleCallback.mockRejectedValue(new Error('Unknown or expired OIDC state'))
+    deps.mockOidcService.handleCallback.mockRejectedValue(new Error('Unknown or expired OIDC state'))
     const app = createTestApp(deps)
 
     const res = await app.request('/api/auth/oidc/callback?state=bad&code=auth-code-123')
@@ -239,7 +240,7 @@ describe('GET /api/auth/oidc/callback', () => {
 
   it('handles non-Error thrown values', async () => {
     const deps = makeDeps()
-    deps.oidcService.handleCallback.mockRejectedValue('string-error')
+    deps.mockOidcService.handleCallback.mockRejectedValue('string-error')
     const app = createTestApp(deps)
 
     const res = await app.request('/api/auth/oidc/callback?state=bad&code=auth-code-123')

@@ -4,7 +4,7 @@ import type { OidcService } from '@/core/auth/oidc'
 import { createSession } from '@/core/sessions'
 
 type OidcRouteDeps = {
-  oidcService: OidcService
+  getOidcService: () => Promise<OidcService | null>
   getUserByOidcSubject: (subject: string) => Promise<{ id: number; username: string } | null>
   getUserByEmail: (email: string) => Promise<{ id: number; username: string } | null>
   getUserByUsername: (username: string) => Promise<{ id: number; username: string } | null>
@@ -24,20 +24,24 @@ export function oidcRoutes(deps: OidcRouteDeps) {
   const router = new Hono()
 
   router.get('/api/auth/oidc/login', async (c) => {
+    const oidcService = await deps.getOidcService()
+    if (!oidcService) return c.json({ error: 'OIDC not configured' }, 400)
     const protocol = c.req.header('X-Forwarded-Proto') ?? 'http'
     const host = c.req.header('Host') ?? 'localhost:3000'
     const redirectUri = `${protocol}://${host}/api/auth/oidc/callback`
-    const { url } = await deps.oidcService.getAuthorizationUrl(redirectUri)
+    const { url } = await oidcService.getAuthorizationUrl(redirectUri)
     return c.redirect(url)
   })
 
   router.get('/api/auth/oidc/callback', async (c) => {
     try {
+      const oidcService = await deps.getOidcService()
+      if (!oidcService) return c.json({ error: 'OIDC not configured' }, 400)
       const protocol = c.req.header('X-Forwarded-Proto') ?? 'http'
       const host = c.req.header('Host') ?? 'localhost:3000'
       const reqUrl = new URL(c.req.url)
       const callbackUrl = new URL(`${protocol}://${host}${reqUrl.pathname}${reqUrl.search}`)
-      const result = await deps.oidcService.handleCallback(callbackUrl)
+      const result = await oidcService.handleCallback(callbackUrl)
 
       // User matching: OIDC subject -> email -> username -> auto-create
       let user = await deps.getUserByOidcSubject(result.claims.sub)

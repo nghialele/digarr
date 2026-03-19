@@ -80,7 +80,7 @@ export type AppDependencies = {
   getUserCount: () => Promise<number>
   updatePassword: (id: number, passwordHash: string) => Promise<void>
   // OIDC + user management
-  oidcService?: OidcService | null
+  getOidcService: () => Promise<OidcService | null>
   getUserByOidcSubject: (subject: string) => Promise<{ id: number; username: string } | null>
   getUserByEmail: (email: string) => Promise<{ id: number; username: string } | null>
   updateUser: (
@@ -168,20 +168,18 @@ export function createApp(deps: AppDependencies) {
     return c.json(response)
   })
 
-  if (deps.oidcService) {
-    app.route(
-      '/',
-      oidcRoutes({
-        oidcService: deps.oidcService,
-        getUserByOidcSubject: deps.getUserByOidcSubject,
-        getUserByEmail: deps.getUserByEmail,
-        getUserByUsername: deps.getUserByUsername,
-        createUser: deps.createUser,
-        getUserCount: deps.getUserCount,
-        updateUser: deps.updateUser,
-      }),
-    )
-  }
+  app.route(
+    '/',
+    oidcRoutes({
+      getOidcService: deps.getOidcService,
+      getUserByOidcSubject: deps.getUserByOidcSubject,
+      getUserByEmail: deps.getUserByEmail,
+      getUserByUsername: deps.getUserByUsername,
+      createUser: deps.createUser,
+      getUserCount: deps.getUserCount,
+      updateUser: deps.updateUser,
+    }),
+  )
   app.route('/', authRoutes(deps))
   app.route('/', healthRoutes({ db: deps.db }))
   app.route('/', setupRoutes(deps))

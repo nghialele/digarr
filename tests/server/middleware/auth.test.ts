@@ -58,7 +58,7 @@ function makeDeps() {
       getRunsForSubscription: vi.fn(async () => []),
     },
     runSubscription: vi.fn(async () => {}),
-    oidcService: null,
+    getOidcService: vi.fn(async () => null),
     getUserByOidcSubject: vi.fn(async () => null),
     getUserByEmail: vi.fn(async () => null),
     updateUser: vi.fn(async () => {}),

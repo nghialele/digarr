@@ -257,15 +257,33 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   })
 }
 
-// OIDC service (optional -- only created if issuer and client ID are configured)
-let oidcService: OidcService | null = null
-if (envConfig.oidcIssuerUrl && envConfig.oidcClientId) {
-  oidcService = new OidcService({
-    issuerUrl: envConfig.oidcIssuerUrl,
-    clientId: envConfig.oidcClientId,
-    clientSecret: envConfig.oidcClientSecret,
-    scopes: envConfig.oidcScopes ?? 'openid profile email',
-  })
+// Lazy OIDC service getter -- reads current settings from DB on each call,
+// reconstructs the service only when the config (issuer/client/secret/scopes) changes.
+// This ensures settings-UI changes to OIDC config take effect without a restart.
+let oidcServiceCache: { service: OidcService; configKey: string } | null = null
+
+async function getOidcService(): Promise<OidcService | null> {
+  const settings = await getSettings(db)
+
+  // DB settings take precedence; env vars are fallback
+  const issuerUrl =
+    (settings?.oidcIssuerUrl as string | undefined) ?? envConfig.oidcIssuerUrl ?? ''
+  const clientId = (settings?.oidcClientId as string | undefined) ?? envConfig.oidcClientId ?? ''
+  const clientSecret =
+    (settings?.oidcClientSecret as string | undefined) ?? envConfig.oidcClientSecret ?? ''
+  const scopes =
+    (settings?.oidcScopes as string | undefined) ?? envConfig.oidcScopes ?? 'openid profile email'
+
+  if (!issuerUrl || !clientId) return null
+
+  const configKey = `${issuerUrl}|${clientId}|${clientSecret}|${scopes}`
+  if (oidcServiceCache?.configKey === configKey) {
+    return oidcServiceCache.service
+  }
+
+  const service = new OidcService({ issuerUrl, clientId, clientSecret, scopes })
+  oidcServiceCache = { service, configKey }
+  return service
 }
 
 const app = createApp({
@@ -304,7 +322,7 @@ const app = createApp({
   getUserById: (id) => getUserById(db, id),
   getUserCount: () => getUserCount(db),
   updatePassword: (id, hash) => updatePassword(db, id, hash),
-  oidcService,
+  getOidcService,
   getUserByOidcSubject: (subject) => getUserByOidcSubject(db, subject),
   getUserByEmail: (email) => getUserByEmail(db, email),
   updateUser: (id, data) => updateUser(db, id, data),
