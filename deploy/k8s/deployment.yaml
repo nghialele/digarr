@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: digarr
-          image: ghcr.io/iuliandita/digarr:0.3.16
+          image: ghcr.io/iuliandita/digarr:0.4.0-alpha
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
