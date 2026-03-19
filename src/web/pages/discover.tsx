@@ -10,6 +10,7 @@ import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import {
   bulkAction,
   getRecommendations,
+  getWarmStatuses,
   rescanArtists,
   triggerPipeline,
   updateRecommendation,
@@ -228,6 +229,25 @@ export function DiscoverPage() {
 
   const items = (data?.items ?? []) as Recommendation[]
   const total = data?.total ?? 0
+
+  // ---------------------------------------------------------------------------
+  // Warm status
+  // ---------------------------------------------------------------------------
+
+  const mbids = items
+    .map((r) => r.artist.mbid)
+    .filter(Boolean)
+    .join(',')
+
+  const { data: warmData } = useQuery({
+    queryKey: ['warm-status', mbids],
+    queryFn: () => getWarmStatuses(mbids),
+    enabled: !!mbids,
+    refetchInterval: 5000,
+    staleTime: 2000,
+  })
+
+  const warmStatuses = warmData?.statuses ?? {}
 
   // ---------------------------------------------------------------------------
   // Undo toast
@@ -708,6 +728,13 @@ export function DiscoverPage() {
                         bulkMode={bulkMode}
                         isChecked={checkedIds.has(rec.id)}
                         onToggleSelect={handleToggleSelect}
+                        warmStatus={
+                          warmStatuses[rec.artist.mbid] as
+                            | 'warm'
+                            | 'warming'
+                            | 'unknown'
+                            | undefined
+                        }
                       />
                     </SwipeCard>
                   </div>
@@ -748,6 +775,9 @@ export function DiscoverPage() {
                       bulkMode={bulkMode}
                       isChecked={checkedIds.has(rec.id)}
                       onToggleSelect={handleToggleSelect}
+                      warmStatus={
+                        warmStatuses[rec.artist.mbid] as 'warm' | 'warming' | 'unknown' | undefined
+                      }
                     />
                   </SwipeCard>
                 )

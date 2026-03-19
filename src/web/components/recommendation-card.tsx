@@ -83,6 +83,7 @@ type RecommendationCardProps = {
   bulkMode?: boolean
   isChecked?: boolean
   onToggleSelect?: (id: number) => void
+  warmStatus?: 'warm' | 'warming' | 'unknown'
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +291,7 @@ export function RecommendationCard({
   bulkMode = false,
   isChecked = false,
   onToggleSelect,
+  warmStatus,
 }: RecommendationCardProps) {
   const preview = usePreviewContext()
   const pct = `${Math.round(rec.score * 100)}%`
@@ -432,9 +434,27 @@ export function RecommendationCard({
                   <p className="text-xs text-muted mt-0.5">{rec.artist.disambiguation}</p>
                 )}
               </div>
-              <span className="shrink-0 bg-accent/20 text-accent text-xs font-semibold px-2 py-0.5 rounded">
-                {pct}
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {warmStatus === 'warm' && (
+                  <span
+                    className="w-2 h-2 rounded-full bg-green-500"
+                    title="Metadata cached"
+                    role="img"
+                    aria-label="Metadata cached"
+                  />
+                )}
+                {warmStatus === 'warming' && (
+                  <span
+                    className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"
+                    title="Warming cache..."
+                    role="img"
+                    aria-label="Warming cache..."
+                  />
+                )}
+                <span className="bg-accent/20 text-accent text-xs font-semibold px-2 py-0.5 rounded">
+                  {pct}
+                </span>
+              </div>
             </div>
           </div>
 

@@ -240,3 +240,13 @@ export const getGenre = (slug: string) =>
     `/genres/${encodeURIComponent(slug)}`,
   )
 export const seedGenres = () => fetchApi<{ message: string }>('/genres/seed', { method: 'POST' })
+
+// Library warm status
+export const getWarmStatuses = (mbids: string) =>
+  fetchApi<{ statuses: Record<string, string> }>(`/library/warm/status?mbids=${mbids}`)
+export const warmArtists = (mbids: string[]) =>
+  fetchApi('/library/warm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mbids }),
+  })

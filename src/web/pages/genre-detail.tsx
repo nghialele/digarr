@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { GenreInfo } from '../../core/genre/types'
 import { Skeleton } from '../components/ui/skeleton'
 import type { LibraryArtist } from '../lib/api'
-import { getGenre } from '../lib/api'
+import { getGenre, warmArtists } from '../lib/api'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,6 +107,17 @@ export function GenreDetailPage() {
     queryFn: () => getGenre(slug ?? ''),
     enabled: Boolean(slug),
   })
+
+  const artists = data?.libraryArtists
+
+  useEffect(() => {
+    if (artists && artists.length > 0) {
+      const mbids = artists.filter((a) => a.mbid).map((a) => a.mbid)
+      if (mbids.length > 0) {
+        warmArtists(mbids).catch(() => {}) // Fire-and-forget
+      }
+    }
+  }, [artists])
 
   if (isLoading) return <DetailSkeleton />
 
