@@ -19,6 +19,7 @@ import type { SetupConfig } from '@/db/queries/settings'
 import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
 import type { UserPublic } from '@/db/queries/users'
 import { authGuard } from './middleware/auth'
+import { requestLogger } from './middleware/logger'
 import { setupGuard } from './middleware/setup-guard'
 import { analyticsRoutes } from './routes/analytics'
 import { artistRoutes } from './routes/artists'
@@ -96,10 +97,13 @@ export type AppDependencies = {
 export function createApp(deps: AppDependencies) {
   const app = new Hono()
 
+  // Log all requests first -- before auth/cors so we capture everything
+  app.use('*', requestLogger())
+
   app.use(
     '*',
     cors({
-      origin: envConfig.allowedOrigin ?? (process.env.NODE_ENV === 'production' ? '' : '*'),
+      origin: envConfig.allowedOrigin ?? '*',
     }),
   )
   app.use(

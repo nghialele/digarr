@@ -360,6 +360,11 @@ isSetupComplete(db)
   })
 
 console.log(`Digarr running on http://localhost:${port}`)
+if (!envConfig.allowedOrigin && process.env.NODE_ENV === 'production') {
+  console.warn(
+    'ALLOWED_ORIGIN not set -- CORS allows all origins. Set ALLOWED_ORIGIN for production security.',
+  )
+}
 
 // Graceful shutdown
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
