@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/iuliandita/digarr
-  tag: "0.6.4-alpha"
+  tag: "0.6.5-alpha"
   pullPolicy: IfNotPresent
 
 service:
