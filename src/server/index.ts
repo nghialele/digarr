@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import { envConfig } from '@/config/env'
 import type { GenreService } from '@/core/genre/service'
 import type { LibraryHealthService } from '@/core/library/health'
+import type { SkyHookWarmer } from '@/core/library/skyhook-warmer'
 import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
 import type { SubscriptionScheduler } from '@/core/pipeline/subscription-scheduler'
 import type { AiProviderRegistry } from '@/core/providers/registry'
@@ -77,6 +78,8 @@ export type AppDependencies = {
   genreService: GenreService
   // Library health service
   libraryHealth: LibraryHealthService
+  // SkyHook cache warmer (optional -- absent if Lidarr is not configured)
+  skyhookWarmer?: SkyHookWarmer | null
   // Subscription query functions
   subscriptionQueries: {
     createSubscription: (data: SubscriptionInsert) => Promise<{ id: number; userId: number | null }>

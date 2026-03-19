@@ -63,6 +63,15 @@ export function recommendationRoutes(deps: AppDependencies) {
         (settings.skipTlsVerify as boolean) ?? false,
       )
 
+      // Pre-warm SkyHook cache before adding to Lidarr to avoid 503s
+      if (deps.skyhookWarmer && rec.artist?.mbid) {
+        try {
+          await deps.skyhookWarmer.warm(rec.artist.mbid)
+        } catch {
+          // Best-effort -- continue with add even if warming fails
+        }
+      }
+
       try {
         const added = await lidarr.addArtist(
           rec.artist.mbid,

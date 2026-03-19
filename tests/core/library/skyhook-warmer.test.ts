@@ -6,7 +6,9 @@ describe('SkyHookWarmer', () => {
   let lookupArtist: ReturnType<typeof vi.fn<(term: string) => Promise<unknown[]>>>
 
   beforeEach(() => {
-    lookupArtist = vi.fn<(term: string) => Promise<unknown[]>>(async () => [{ id: 1, artistName: 'Test' }])
+    lookupArtist = vi.fn<(term: string) => Promise<unknown[]>>(async () => [
+      { id: 1, artistName: 'Test' },
+    ])
     warmer = new SkyHookWarmer({ lookupArtist })
   })
 

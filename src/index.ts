@@ -8,6 +8,7 @@ import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
 import { runGenreSubscription } from './core/genre/subscription-runner'
 import { LibraryHealthService } from './core/library/health'
+import { SkyHookWarmer } from './core/library/skyhook-warmer'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
@@ -154,12 +155,16 @@ function makeLazyLidarrClient() {
   }
 }
 
+const lazyLidarrClient = makeLazyLidarrClient()
+
 const libraryHealth = new LibraryHealthService({
-  lidarrClient: makeLazyLidarrClient(),
+  lidarrClient: lazyLidarrClient,
   artistCache: {
     getAll: async () => db.select().from(artists),
   },
 })
+
+const skyhookWarmer = new SkyHookWarmer({ lookupArtist: lazyLidarrClient.lookupArtist })
 
 const runPipeline = async () => {
   const currentSettings = await getSettings(db)
@@ -284,6 +289,7 @@ const app = createApp({
   updatePassword: (id, hash) => updatePassword(db, id, hash),
   genreService,
   libraryHealth,
+  skyhookWarmer,
   subscriptionQueries: subscriptionQueriesImpl,
   runSubscription: (id) => executeSubscription(id),
 })
