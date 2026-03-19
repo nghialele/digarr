@@ -35,7 +35,11 @@ export function recommendationRoutes(deps: AppDependencies) {
   router.patch('/api/recommendations/:id', async (c) => {
     const id = Number(c.req.param('id'))
     const body = await c.req.json()
-    const { status } = body as { status: string }
+    const { status, monitorOption, selectedAlbumIds } = body as {
+      status: string
+      monitorOption?: 'all' | 'new' | 'none' | 'selected'
+      selectedAlbumIds?: string[]
+    }
 
     if (!status) {
       return c.json({ error: 'status is required' }, 400)
@@ -72,6 +76,9 @@ export function recommendationRoutes(deps: AppDependencies) {
         }
       }
 
+      // Map 'selected' to 'none' for initial add -- we'll monitor individual albums after
+      const effectiveMonitor = monitorOption === 'selected' ? 'none' : (monitorOption ?? 'all')
+
       try {
         const added = await lidarr.addArtist(
           rec.artist.mbid,
@@ -79,7 +86,24 @@ export function recommendationRoutes(deps: AppDependencies) {
           qualityProfileId,
           metadataProfileId,
           rootFolderId,
+          { monitorOption: effectiveMonitor },
         )
+
+        // If 'selected' mode, monitor specific albums after the add
+        if (monitorOption === 'selected' && selectedAlbumIds?.length && added.id) {
+          try {
+            const albums = await lidarr.getAlbums(added.id)
+            for (const albumMbid of selectedAlbumIds) {
+              const album = albums.find((a) => a.foreignAlbumId === albumMbid)
+              if (album) {
+                await lidarr.updateAlbum(album.id, { monitored: true })
+              }
+            }
+          } catch {
+            // Best-effort -- artist was added, album monitoring is secondary
+          }
+        }
+
         await deps.updateRecommendationStatus(id, 'added_to_lidarr', {
           lidarrArtistId: added.id,
         })

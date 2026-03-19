@@ -162,6 +162,8 @@ export async function insertRecommendation(
     aiReasoning?: string
     status: string
     userId?: number
+    recommendedReleaseGroupId?: string
+    recommendedReleaseGroupTitle?: string
   },
 ): Promise<void> {
   await db.insert(recommendations).values({
@@ -172,5 +174,7 @@ export async function insertRecommendation(
     aiReasoning: data.aiReasoning,
     status: data.status,
     userId: data.userId,
+    recommendedReleaseGroupId: data.recommendedReleaseGroupId,
+    recommendedReleaseGroupTitle: data.recommendedReleaseGroupTitle,
   })
 }

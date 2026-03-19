@@ -29,6 +29,8 @@ export interface StoreDb {
     aiReasoning?: string
     status: string
     userId?: number
+    recommendedReleaseGroupId?: string
+    recommendedReleaseGroupTitle?: string
   }) => Promise<void>
 
   getRejectedMbids: (cooldownDays: number) => Promise<Set<string>>
@@ -80,6 +82,8 @@ export async function store(
         aiReasoning: artist.aiReasoning,
         status: 'pending',
         userId: options.userId,
+        recommendedReleaseGroupId: artist.suggestedAlbum?.releaseGroupId,
+        recommendedReleaseGroupTitle: artist.suggestedAlbum?.title,
       })
 
       added++
