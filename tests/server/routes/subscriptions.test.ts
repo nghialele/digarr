@@ -112,6 +112,12 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     libraryHealth: {} as unknown as AppDependencies['libraryHealth'],
     subscriptionQueries: mockSubQueries as unknown as AppDependencies['subscriptionQueries'],
     runSubscription: vi.fn(async () => {}),
+    oidcService: null,
+    getUserByOidcSubject: vi.fn(async () => null),
+    getUserByEmail: vi.fn(async () => null),
+    updateUser: vi.fn(async () => {}),
+    listUsers: vi.fn(async () => []),
+    deleteUser: vi.fn(async () => {}),
     ...overrides,
   }
 }

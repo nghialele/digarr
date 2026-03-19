@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
+import { OidcService } from './core/auth/oidc'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
@@ -50,10 +51,15 @@ import {
 } from './db/queries/subscriptions'
 import {
   createUser,
+  deleteUser,
+  getUserByEmail,
   getUserById,
+  getUserByOidcSubject,
   getUserByUsername,
   getUserCount,
+  listUsers,
   updatePassword,
+  updateUser,
 } from './db/queries/users'
 import { artists, DEFAULT_PREFERENCES, recommendationBatches, recommendations } from './db/schema'
 import { createApp } from './server'
@@ -251,6 +257,17 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   })
 }
 
+// OIDC service (optional -- only created if issuer and client ID are configured)
+let oidcService: OidcService | null = null
+if (envConfig.oidcIssuerUrl && envConfig.oidcClientId) {
+  oidcService = new OidcService({
+    issuerUrl: envConfig.oidcIssuerUrl,
+    clientId: envConfig.oidcClientId,
+    clientSecret: envConfig.oidcClientSecret,
+    scopes: envConfig.oidcScopes ?? 'openid profile email',
+  })
+}
+
 const app = createApp({
   db,
   storeDb,
@@ -287,6 +304,12 @@ const app = createApp({
   getUserById: (id) => getUserById(db, id),
   getUserCount: () => getUserCount(db),
   updatePassword: (id, hash) => updatePassword(db, id, hash),
+  oidcService,
+  getUserByOidcSubject: (subject) => getUserByOidcSubject(db, subject),
+  getUserByEmail: (email) => getUserByEmail(db, email),
+  updateUser: (id, data) => updateUser(db, id, data),
+  listUsers: () => listUsers(db),
+  deleteUser: (id) => deleteUser(db, id),
   genreService,
   libraryHealth,
   skyhookWarmer,

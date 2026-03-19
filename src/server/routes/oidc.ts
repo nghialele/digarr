@@ -1,0 +1,90 @@
+import { Hono } from 'hono'
+import { generateSessionToken, hashPassword } from '@/core/auth'
+import type { OidcService } from '@/core/auth/oidc'
+import { createSession } from '@/core/sessions'
+
+type OidcRouteDeps = {
+  oidcService: OidcService
+  getUserByOidcSubject: (subject: string) => Promise<{ id: number; username: string } | null>
+  getUserByEmail: (email: string) => Promise<{ id: number; username: string } | null>
+  getUserByUsername: (username: string) => Promise<{ id: number; username: string } | null>
+  createUser: (data: {
+    username: string
+    passwordHash: string
+    isAdmin?: boolean
+    email?: string
+    oidcSubject?: string
+    authProvider?: string
+  }) => Promise<{ id: number; username: string }>
+  getUserCount: () => Promise<number>
+  updateUser: (id: number, data: { oidcSubject?: string; email?: string }) => Promise<void>
+}
+
+export function oidcRoutes(deps: OidcRouteDeps) {
+  const router = new Hono()
+
+  router.get('/api/auth/oidc/login', async (c) => {
+    const protocol = c.req.header('X-Forwarded-Proto') ?? 'http'
+    const host = c.req.header('Host') ?? 'localhost:3000'
+    const redirectUri = `${protocol}://${host}/api/auth/oidc/callback`
+    const { url } = await deps.oidcService.getAuthorizationUrl(redirectUri)
+    return c.redirect(url)
+  })
+
+  router.get('/api/auth/oidc/callback', async (c) => {
+    try {
+      const protocol = c.req.header('X-Forwarded-Proto') ?? 'http'
+      const host = c.req.header('Host') ?? 'localhost:3000'
+      const reqUrl = new URL(c.req.url)
+      const callbackUrl = new URL(`${protocol}://${host}${reqUrl.pathname}${reqUrl.search}`)
+      const result = await deps.oidcService.handleCallback(callbackUrl)
+
+      // User matching: OIDC subject -> email -> username -> auto-create
+      let user = await deps.getUserByOidcSubject(result.claims.sub)
+
+      if (!user && result.claims.email) {
+        const emailUser = await deps.getUserByEmail(result.claims.email)
+        if (emailUser) {
+          await deps.updateUser(emailUser.id, { oidcSubject: result.claims.sub })
+          user = emailUser
+        }
+      }
+
+      if (!user && result.claims.preferredUsername) {
+        const usernameUser = await deps.getUserByUsername(result.claims.preferredUsername)
+        if (usernameUser) {
+          await deps.updateUser(usernameUser.id, {
+            oidcSubject: result.claims.sub,
+            email: result.claims.email,
+          })
+          user = usernameUser
+        }
+      }
+
+      if (!user) {
+        const isFirstUser = (await deps.getUserCount()) === 0
+        const username =
+          result.claims.preferredUsername ??
+          result.claims.email?.split('@')[0] ??
+          `oidc-${result.claims.sub.slice(0, 8)}`
+        user = await deps.createUser({
+          username,
+          passwordHash: hashPassword(crypto.randomUUID()),
+          isAdmin: isFirstUser,
+          email: result.claims.email,
+          oidcSubject: result.claims.sub,
+          authProvider: 'oidc',
+        })
+      }
+
+      const sessionToken = generateSessionToken()
+      createSession(user.id, sessionToken)
+      return c.redirect(`/?oidc_token=${encodeURIComponent(sessionToken)}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'OIDC authentication failed'
+      return c.redirect(`/?oidc_error=${encodeURIComponent(message)}`)
+    }
+  })
+
+  return router
+}

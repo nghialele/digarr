@@ -3,6 +3,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { envConfig } from '@/config/env'
+import type { OidcService } from '@/core/auth/oidc'
 import type { GenreService } from '@/core/genre/service'
 import type { LibraryHealthService } from '@/core/library/health'
 import type { SkyHookWarmer } from '@/core/library/skyhook-warmer'
@@ -20,6 +21,7 @@ import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscr
 import type { UserPublic } from '@/db/queries/users'
 import { authGuard } from './middleware/auth'
 import { requestLogger } from './middleware/logger'
+import { proxyAuthMiddleware } from './middleware/proxy-auth'
 import { setupGuard } from './middleware/setup-guard'
 import { analyticsRoutes } from './routes/analytics'
 import { artistRoutes } from './routes/artists'
@@ -30,6 +32,7 @@ import { healthRoutes } from './routes/health'
 import { libraryRoutes } from './routes/library'
 import { lidarrRoutes } from './routes/lidarr'
 import { listeningRoutes } from './routes/listening'
+import { oidcRoutes } from './routes/oidc'
 import { pipelineRoutes } from './routes/pipeline'
 import { recommendationRoutes } from './routes/recommendations'
 import { settingsRoutes } from './routes/settings'
@@ -75,6 +78,16 @@ export type AppDependencies = {
   getUserById: (id: number) => Promise<UserPublic | null>
   getUserCount: () => Promise<number>
   updatePassword: (id: number, passwordHash: string) => Promise<void>
+  // OIDC + user management
+  oidcService?: OidcService | null
+  getUserByOidcSubject: (subject: string) => Promise<{ id: number; username: string } | null>
+  getUserByEmail: (email: string) => Promise<{ id: number; username: string } | null>
+  updateUser: (
+    id: number,
+    data: { isAdmin?: boolean; email?: string; oidcSubject?: string },
+  ) => Promise<void>
+  listUsers: () => Promise<UserPublic[]>
+  deleteUser: (id: number) => Promise<void>
   // Genre service
   genreService: GenreService
   // Library health service
@@ -108,6 +121,20 @@ export function createApp(deps: AppDependencies) {
   )
   app.use(
     '*',
+    proxyAuthMiddleware({
+      enabled: envConfig.proxyAuthEnabled,
+      trustedProxies:
+        envConfig.proxyAuthTrustedProxies
+          ?.split(',')
+          .map((s) => s.trim())
+          .filter(Boolean) ?? [],
+      getUserByUsername: deps.getUserByUsername,
+      createUser: deps.createUser,
+      getUserCount: deps.getUserCount,
+    }),
+  )
+  app.use(
+    '*',
     authGuard(async () => (await deps.getUserCount()) > 0),
   )
   app.use('*', setupGuard(deps.isSetupComplete))
@@ -115,12 +142,45 @@ export function createApp(deps: AppDependencies) {
   // Auth status (unauthenticated -- tells the frontend whether auth is required)
   app.get('/api/auth/status', async (c) => {
     const userCount = await deps.getUserCount()
-    return c.json({
+    const proxyAuth = c.get('proxyAuth' as never) as boolean | undefined
+    const sessionToken = c.get('sessionToken' as never) as string | undefined
+    const settings = await deps.getSettings()
+    const oidcEnabled = !!(
+      settings &&
+      (settings as Record<string, unknown>).oidcIssuerUrl &&
+      (settings as Record<string, unknown>).oidcClientId
+    )
+
+    const response: Record<string, unknown> = {
       required: userCount > 0 || !!envConfig.authToken,
       hasUsers: userCount > 0,
-    })
+      oidcEnabled,
+      proxyAuthEnabled: envConfig.proxyAuthEnabled,
+    }
+
+    if (proxyAuth && sessionToken) {
+      response.proxyAuth = true
+      response.token = sessionToken
+      response.userId = c.get('userId' as never)
+    }
+
+    return c.json(response)
   })
 
+  if (deps.oidcService) {
+    app.route(
+      '/',
+      oidcRoutes({
+        oidcService: deps.oidcService,
+        getUserByOidcSubject: deps.getUserByOidcSubject,
+        getUserByEmail: deps.getUserByEmail,
+        getUserByUsername: deps.getUserByUsername,
+        createUser: deps.createUser,
+        getUserCount: deps.getUserCount,
+        updateUser: deps.updateUser,
+      }),
+    )
+  }
   app.route('/', authRoutes(deps))
   app.route('/', healthRoutes({ db: deps.db }))
   app.route('/', setupRoutes(deps))
