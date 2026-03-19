@@ -326,6 +326,7 @@ export function RecommendationCard({
       )}
       <button
         type="button"
+        data-testid="rec-card-button"
         className={cn(
           'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left flex flex-col relative',
           bulkMode && isChecked

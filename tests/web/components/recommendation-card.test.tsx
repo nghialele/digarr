@@ -140,7 +140,7 @@ describe('RecommendationCard', () => {
       />,
     )
     const wrapper = container.firstElementChild as HTMLElement
-    const card = wrapper.querySelector('button') as HTMLElement
+    const card = wrapper.querySelector('[data-testid="rec-card-button"]') as HTMLElement
     expect(card.className).toContain('border-accent')
   })
 
