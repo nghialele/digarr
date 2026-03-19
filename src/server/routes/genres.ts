@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { collect } from '@/core/pipeline/collect'
+import { getArtistsByGenre } from '@/db/queries/artists'
 import type { AppDependencies } from '@/server'
 
 export function genreRoutes(deps: AppDependencies) {
@@ -26,8 +27,11 @@ export function genreRoutes(deps: AppDependencies) {
     if (!genre) {
       return c.json({ error: 'Genre not found' }, 404)
     }
-    const subGenres = await deps.genreService.getSubGenres(genre.id)
-    return c.json({ ...genre, subGenres })
+    const [subGenres, libraryArtists] = await Promise.all([
+      deps.genreService.getSubGenres(genre.id),
+      getArtistsByGenre(deps.db, genre.name),
+    ])
+    return c.json({ ...genre, subGenres, libraryArtists })
   })
 
   router.post('/api/genres/seed', async (c) => {

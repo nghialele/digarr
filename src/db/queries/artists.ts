@@ -40,3 +40,19 @@ export async function getArtistById(db: Database, id: number): Promise<ArtistRow
   const rows = await db.select().from(artists).where(eq(artists.id, id)).limit(1)
   return rows[0] ?? null
 }
+
+export async function getArtistsByGenre(
+  db: Database,
+  genreName: string,
+  limit = 100,
+): Promise<ArtistRow[]> {
+  // Case-insensitive match: check whether any element in the genres array matches
+  return db
+    .select()
+    .from(artists)
+    .where(
+      sql`EXISTS (SELECT 1 FROM unnest(${artists.genres}) g WHERE lower(g) = lower(${genreName}))`,
+    )
+    .limit(limit)
+    .orderBy(artists.name)
+}

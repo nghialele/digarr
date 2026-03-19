@@ -3,13 +3,14 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { GenreInfo } from '../../core/genre/types'
 import { Skeleton } from '../components/ui/skeleton'
+import type { LibraryArtist } from '../lib/api'
 import { getGenre } from '../lib/api'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type GenreDetail = GenreInfo & { subGenres: GenreInfo[] }
+type GenreDetail = GenreInfo & { subGenres: GenreInfo[]; libraryArtists: LibraryArtist[] }
 
 type DetailTab = 'library' | 'recommended' | 'trending' | 'deep_cuts'
 
@@ -19,6 +20,57 @@ const TABS: { id: DetailTab; label: string }[] = [
   { id: 'trending', label: 'Trending' },
   { id: 'deep_cuts', label: 'Deep Cuts' },
 ]
+
+// ---------------------------------------------------------------------------
+// Artist thumbnail
+// ---------------------------------------------------------------------------
+
+function ArtistThumb({ name, imageUrl }: { name: string; imageUrl: string | null }) {
+  const hue = Math.abs([...name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
+  const [imgError, setImgError] = useState(false)
+
+  if (imageUrl && !imgError) {
+    return (
+      <img
+        src={imageUrl}
+        alt={name}
+        className="w-10 h-10 rounded-md shrink-0 object-cover bg-bg"
+        onError={() => setImgError(true)}
+      />
+    )
+  }
+
+  return (
+    <div
+      className="w-10 h-10 rounded-md shrink-0 flex items-center justify-center font-bold text-bg text-sm"
+      style={{ background: `hsl(${hue}, 40%, 45%)` }}
+    >
+      {name.slice(0, 2).toUpperCase()}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Library artist card
+// ---------------------------------------------------------------------------
+
+function LibraryArtistCard({ artist }: { artist: LibraryArtist }) {
+  const genres = artist.genres ?? []
+  return (
+    <div className="flex items-center gap-3 p-3 bg-surface border border-border rounded-lg">
+      <ArtistThumb name={artist.name} imageUrl={artist.imageUrl} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-text truncate">{artist.name}</p>
+        {artist.disambiguation && (
+          <p className="text-xs text-muted truncate">{artist.disambiguation}</p>
+        )}
+        {genres.length > 0 && (
+          <p className="text-[10px] text-muted truncate mt-0.5">{genres.slice(0, 3).join(', ')}</p>
+        )}
+      </div>
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Skeleton loader
@@ -133,10 +185,30 @@ export function GenreDetailPage() {
           ))}
         </div>
 
-        {/* Tab content -- placeholder for all tabs */}
-        <div className="py-12 text-center bg-surface border border-border rounded-lg">
-          <p className="text-muted text-sm">Coming soon</p>
-        </div>
+        {/* Tab content */}
+        {activeTab === 'library' ? (
+          data.libraryArtists.length === 0 ? (
+            <div className="py-12 text-center bg-surface border border-border rounded-lg">
+              <p className="text-muted text-sm">No artists in your library for this genre.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-muted">
+                {data.libraryArtists.length} artist{data.libraryArtists.length !== 1 ? 's' : ''} in
+                your library
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {data.libraryArtists.map((artist) => (
+                  <LibraryArtistCard key={artist.id} artist={artist} />
+                ))}
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="py-12 text-center bg-surface border border-border rounded-lg">
+            <p className="text-muted text-sm">Coming soon</p>
+          </div>
+        )}
       </div>
 
       {/* Create subscription */}

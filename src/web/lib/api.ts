@@ -1,5 +1,14 @@
 import type { GenreInfo } from '../../core/genre/types'
 
+export type LibraryArtist = {
+  id: number
+  mbid: string
+  name: string
+  disambiguation: string | null
+  genres: string[] | null
+  imageUrl: string | null
+}
+
 const BASE = '/api'
 
 const AUTH_TOKEN_KEY = 'digarr-auth-token'
@@ -193,5 +202,7 @@ export const getGenres = () => fetchApi<GenreInfo[]>('/genres')
 export const searchGenres = (q: string) =>
   fetchApi<GenreInfo[]>(`/genres/search?q=${encodeURIComponent(q)}`)
 export const getGenre = (slug: string) =>
-  fetchApi<GenreInfo & { subGenres: GenreInfo[] }>(`/genres/${encodeURIComponent(slug)}`)
+  fetchApi<GenreInfo & { subGenres: GenreInfo[]; libraryArtists: LibraryArtist[] }>(
+    `/genres/${encodeURIComponent(slug)}`,
+  )
 export const seedGenres = () => fetchApi<{ message: string }>('/genres/seed', { method: 'POST' })

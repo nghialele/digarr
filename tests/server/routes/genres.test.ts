@@ -54,9 +54,33 @@ const mockGenreService = {
   isStale: vi.fn(() => false),
 }
 
+function makeChainableMockDb() {
+  const chain: Record<string, unknown> = {}
+  const terminal = Promise.resolve([])
+  const methods = [
+    'select',
+    'from',
+    'where',
+    'limit',
+    'orderBy',
+    'insert',
+    'values',
+    'onConflictDoUpdate',
+    'returning',
+    'update',
+    'set',
+    'delete',
+  ]
+  for (const m of methods) {
+    chain[m] = vi.fn(() => Object.assign(terminal, chain))
+  }
+  chain.execute = vi.fn(async () => [])
+  return chain as unknown as AppDependencies['db']
+}
+
 function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
   return {
-    db: { execute: vi.fn(async () => []) } as unknown as AppDependencies['db'],
+    db: makeChainableMockDb(),
     storeDb: {} as unknown as AppDependencies['storeDb'],
     orchestrator: makeMockOrchestrator() as unknown as AppDependencies['orchestrator'],
     scheduler: {} as AppDependencies['scheduler'],
