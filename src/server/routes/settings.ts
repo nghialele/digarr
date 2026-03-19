@@ -6,7 +6,13 @@ import { sendWebhook } from '@/core/notifications'
 import { isHttpUrl } from '@/core/validation'
 import type { AppDependencies } from '@/server'
 
-const SECRET_FIELDS = ['lidarrApiKey', 'listenbrainzToken', 'lastfmApiKey', 'aiApiKey'] as const
+const SECRET_FIELDS = [
+  'lidarrApiKey',
+  'listenbrainzToken',
+  'lastfmApiKey',
+  'aiApiKey',
+  'oidcClientSecret',
+] as const
 
 type SettingsResponse = Record<string, unknown>
 
@@ -42,6 +48,10 @@ export function settingsRoutes(deps: AppDependencies) {
     'aiModel',
     'aiBaseUrl',
     'preferences',
+    'oidcIssuerUrl',
+    'oidcClientId',
+    'oidcClientSecret',
+    'oidcScopes',
   ])
 
   router.patch('/api/settings', async (c) => {

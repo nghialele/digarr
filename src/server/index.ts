@@ -38,6 +38,7 @@ import { recommendationRoutes } from './routes/recommendations'
 import { settingsRoutes } from './routes/settings'
 import { setupRoutes } from './routes/setup'
 import { subscriptionRoutes } from './routes/subscriptions'
+import { userRoutes } from './routes/users'
 
 export type AppDependencies = {
   db: import('@/db').Database
@@ -194,6 +195,7 @@ export function createApp(deps: AppDependencies) {
   app.route('/', listeningRoutes(deps))
   app.route('/', genreRoutes(deps))
   app.route('/', subscriptionRoutes(deps))
+  app.route('/', userRoutes(deps))
   app.route(
     '/',
     libraryRoutes({ libraryHealth: deps.libraryHealth, skyhookWarmer: deps.skyhookWarmer }),
