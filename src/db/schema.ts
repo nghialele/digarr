@@ -23,6 +23,10 @@ export const settings = pgTable('settings', {
   aiApiKey: text('ai_api_key'),
   aiModel: text('ai_model'),
   aiBaseUrl: text('ai_base_url'),
+  oidcIssuerUrl: text('oidc_issuer_url'),
+  oidcClientId: text('oidc_client_id'),
+  oidcClientSecret: text('oidc_client_secret'),
+  oidcScopes: text('oidc_scopes'),
   skipTlsVerify: boolean('skip_tls_verify').default(false).notNull(),
   preferences: jsonb('preferences').$type<Preferences>(),
   setupComplete: boolean('setup_complete').default(false).notNull(),
@@ -35,6 +39,9 @@ export const users = pgTable('users', {
   username: text('username').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
   isAdmin: boolean('is_admin').default(false).notNull(),
+  email: text('email'),
+  oidcSubject: text('oidc_subject'),
+  authProvider: text('auth_provider').notNull().default('local'),
   preferences: jsonb('preferences').$type<Preferences>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
@@ -107,6 +114,8 @@ export const recommendations = pgTable('recommendations', {
   status: text('status').notNull().default('pending'),
   lidarrArtistId: integer('lidarr_artist_id'),
   lidarrError: text('lidarr_error'),
+  recommendedReleaseGroupId: text('recommended_release_group_id'),
+  recommendedReleaseGroupTitle: text('recommended_release_group_title'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   actedOnAt: timestamp('acted_on_at', { withTimezone: true }),
 })
@@ -122,6 +131,21 @@ export const subscriptionRuns = pgTable('subscription_runs', {
   artistsNew: integer('artists_new').default(0),
   error: text('error'),
   batchId: integer('batch_id').references(() => recommendationBatches.id),
+})
+
+export const oidcTokens = pgTable('oidc_tokens', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  issuerUrl: text('issuer_url').notNull(),
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token'),
+  idToken: text('id_token'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  nonce: text('nonce'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 // Types

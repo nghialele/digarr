@@ -14,7 +14,14 @@ function toPublic(row: UserRow): UserPublic {
 
 export async function createUser(
   db: Database,
-  data: { username: string; passwordHash: string; isAdmin?: boolean },
+  data: {
+    username: string
+    passwordHash: string
+    isAdmin?: boolean
+    email?: string
+    oidcSubject?: string
+    authProvider?: string
+  },
 ): Promise<UserPublic> {
   const rows = await db
     .insert(users)
@@ -22,6 +29,9 @@ export async function createUser(
       username: data.username,
       passwordHash: data.passwordHash,
       isAdmin: data.isAdmin ?? false,
+      email: data.email,
+      oidcSubject: data.oidcSubject,
+      authProvider: data.authProvider ?? 'local',
     })
     .returning()
   const row = rows[0]
@@ -68,4 +78,22 @@ export async function updatePassword(
 
 export async function deleteUser(db: Database, id: number): Promise<void> {
   await db.delete(users).where(eq(users.id, id))
+}
+
+export async function getUserByOidcSubject(db: Database, subject: string): Promise<UserRow | null> {
+  const rows = await db.select().from(users).where(eq(users.oidcSubject, subject)).limit(1)
+  return rows[0] ?? null
+}
+
+export async function getUserByEmail(db: Database, email: string): Promise<UserRow | null> {
+  const rows = await db.select().from(users).where(eq(users.email, email)).limit(1)
+  return rows[0] ?? null
+}
+
+export async function updateUser(
+  db: Database,
+  id: number,
+  data: { isAdmin?: boolean; email?: string; oidcSubject?: string; authProvider?: string },
+): Promise<void> {
+  await db.update(users).set(data).where(eq(users.id, id))
 }
