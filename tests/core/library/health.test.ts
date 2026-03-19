@@ -770,7 +770,7 @@ describe('LibraryHealthService', () => {
       const check = results.find((r) => r.id === 'missing-albums')
 
       expect(check?.count).toBe(1)
-      expect(check?.items[0]?.detail).toBe('1 monitored album(s) with no files')
+      expect(check?.items[0]?.detail).toBe('1 monitored album with no files')
     })
 
     it('skips unmonitored artists', async () => {

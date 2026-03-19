@@ -114,23 +114,15 @@ export class LibraryHealthService {
     const cachedMbidSet = new Set(cachedArtists.map((a) => a.mbid))
     const cachedByMbid = new Map(cachedArtists.map((a) => [a.mbid, a]))
 
-    // Fetch albums for monitored artists one by one, swallowing per-artist errors.
+    // checkMissingAlbums fetches albums per-artist inline so we never hold
+    // all albums in memory simultaneously.
     const monitoredArtists = lidarrArtists.filter((a) => a.monitored)
-    const albumsByArtistId = new Map<number, LidarrAlbum[]>()
-    for (const artist of monitoredArtists) {
-      try {
-        const albums = await this.deps.lidarrClient.getAlbums(artist.id)
-        albumsByArtistId.set(artist.id, albums)
-      } catch {
-        albumsByArtistId.set(artist.id, [])
-      }
-    }
 
     const results: HealthCheckResult[] = [
       this.checkMissingMetadata(lidarrArtists, cachedByMbid),
       this.checkStaleMbids(lidarrArtists, cachedMbidSet),
       this.checkUnmonitored(lidarrArtists),
-      this.checkMissingAlbums(monitoredArtists, albumsByArtistId),
+      await this.checkMissingAlbums(monitoredArtists),
       this.checkDuplicateArtists(lidarrArtists),
       this.checkGenreGaps(lidarrArtists, cachedByMbid),
       this.checkImageGaps(cachedArtists, lidarrArtists),
@@ -281,29 +273,31 @@ export class LibraryHealthService {
     return { ...meta, id: 'unmonitored', count: items.length, items }
   }
 
-  private checkMissingAlbums(
-    monitoredArtists: LidarrArtist[],
-    albumsByArtistId: Map<number, LidarrAlbum[]>,
-  ): HealthCheckResult {
+  private async checkMissingAlbums(monitoredArtists: LidarrArtist[]): Promise<HealthCheckResult> {
     const meta = CHECK_META['missing-albums']
     const items: HealthCheckItem[] = []
 
     for (const artist of monitoredArtists) {
-      const albums = albumsByArtistId.get(artist.id) ?? []
-      const emptyAlbums = albums.filter(
-        (album) =>
-          album.monitored &&
-          (album.statistics?.trackFileCount ?? 0) === 0 &&
-          (album.statistics?.trackCount ?? 0) > 0,
-      )
+      try {
+        const albums = await this.deps.lidarrClient.getAlbums(artist.id)
+        // albums goes out of scope at the end of each iteration -- GC'd per artist
+        const missingCount = albums.filter(
+          (album) =>
+            album.monitored &&
+            (album.statistics?.trackFileCount ?? 0) === 0 &&
+            (album.statistics?.trackCount ?? 0) > 0,
+        ).length
 
-      if (emptyAlbums.length > 0) {
-        items.push({
-          artistId: artist.id,
-          artistName: artist.artistName,
-          mbid: artist.foreignArtistId,
-          detail: `${emptyAlbums.length} monitored album(s) with no files`,
-        })
+        if (missingCount > 0) {
+          items.push({
+            artistId: artist.id,
+            artistName: artist.artistName,
+            mbid: artist.foreignArtistId,
+            detail: `${missingCount} monitored album${missingCount === 1 ? '' : 's'} with no files`,
+          })
+        }
+      } catch {
+        // skip individual artist failures
       }
     }
 

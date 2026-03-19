@@ -101,14 +101,26 @@ export class PipelineOrchestrator extends EventEmitter {
       const mbClient = createMusicBrainzClient()
 
       this.emit('progress', { stage: 'collect', message: 'Fetching your Lidarr library...' })
-      const libraryArtists = await collect(lidarrClient)
-      this.emit('progress', {
-        stage: 'collect',
-        message: `Found ${libraryArtists.length} artists in your library`,
-      })
 
-      const libraryMbids = new Set(libraryArtists.map((a) => a.mbid))
-      const libraryGenres = [...new Set(libraryArtists.flatMap((a) => a.genres))]
+      // Block-scope libraryArtists so the full array can be GC'd after we
+      // extract what we need. For large libraries (2000+ artists) this is
+      // the primary source of memory pressure.
+      let libraryMbids: Set<string>
+      let libraryGenres: string[]
+      let librarySeeds: Array<{ mbid: string; name: string }>
+      {
+        const libraryArtists = await collect(lidarrClient)
+        this.emit('progress', {
+          stage: 'collect',
+          message: `Found ${libraryArtists.length} artists in your library`,
+        })
+        libraryMbids = new Set(libraryArtists.map((a) => a.mbid))
+        libraryGenres = [...new Set(libraryArtists.flatMap((a) => a.genres))]
+        // discover() only needs mbid + name for seed selection
+        librarySeeds = libraryArtists.map((a) => ({ mbid: a.mbid, name: a.name }))
+        // libraryArtists goes out of scope here -- eligible for GC
+      }
+
       const rejectedMbids = await db.getRejectedMbids(prefs.rejectionCooldownDays)
       const feedbackHistory = await db.getFeedbackHistory()
 
@@ -131,7 +143,7 @@ export class PipelineOrchestrator extends EventEmitter {
           ai: aiProvider,
         },
         prefs.topArtistsLimit,
-        libraryArtists,
+        librarySeeds,
         prefs.librarySeedRatio ?? 0.3,
       )
       this.emit('progress', {

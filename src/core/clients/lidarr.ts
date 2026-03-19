@@ -58,8 +58,21 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
   // Cache for root folders to avoid repeated API calls within a client instance.
   let rootFolderCache: RootFolder[] | null = null
 
-  function getArtists(): Promise<LidarrArtist[]> {
-    return http.get<LidarrArtist[]>('/api/v1/artist')
+  async function getArtists(): Promise<LidarrArtist[]> {
+    const raw = await http.get<Record<string, unknown>[]>('/api/v1/artist')
+    // Strip to only the fields we need -- the full Lidarr response includes
+    // images, statistics, albums, links, ratings etc. that we don't use,
+    // which wastes significant memory for large libraries.
+    return raw.map((a) => ({
+      id: a.id as number,
+      artistName: a.artistName as string,
+      foreignArtistId: a.foreignArtistId as string,
+      qualityProfileId: a.qualityProfileId as number,
+      rootFolderPath: a.rootFolderPath as string,
+      monitored: a.monitored as boolean,
+      status: a.status as string,
+      genres: (a.genres as string[] | undefined) ?? undefined,
+    }))
   }
 
   function lookupArtist(term: string): Promise<LidarrArtist[]> {
@@ -109,8 +122,26 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
     })
   }
 
-  function getAlbums(artistId: number): Promise<LidarrAlbum[]> {
-    return http.get<LidarrAlbum[]>(`/api/v1/album?artistIds=${artistId}`)
+  async function getAlbums(artistId: number): Promise<LidarrAlbum[]> {
+    const raw = await http.get<Record<string, unknown>[]>(`/api/v1/album?artistIds=${artistId}`)
+    // Strip to only the fields we need -- Lidarr album responses include
+    // full track lists, images, and other metadata we don't use.
+    return raw.map((a) => ({
+      id: a.id as number,
+      title: a.title as string,
+      artistId: a.artistId as number,
+      foreignAlbumId: a.foreignAlbumId as string,
+      monitored: a.monitored as boolean,
+      albumType: a.albumType as string,
+      statistics:
+        a.statistics != null
+          ? (a.statistics as {
+              trackCount: number
+              trackFileCount: number
+              percentOfTracks: number
+            })
+          : undefined,
+    }))
   }
 
   function updateArtist(id: number, data: Partial<LidarrArtist>): Promise<LidarrArtist> {

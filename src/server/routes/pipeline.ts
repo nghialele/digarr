@@ -95,9 +95,8 @@ export function pipelineRoutes(deps: AppDependencies) {
         )
         const mb = createMusicBrainzClient()
 
-        // Get library MBIDs
-        const libraryArtists = await lidarr.getArtists()
-        const libraryMbids = new Set(libraryArtists.map((a) => a.foreignArtistId))
+        // Get library MBIDs -- intermediate array is immediately GC-eligible
+        const libraryMbids = new Set((await lidarr.getArtists()).map((a) => a.foreignArtistId))
 
         // Get similar from Last.fm
         const discovered = []
