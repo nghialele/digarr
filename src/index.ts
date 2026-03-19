@@ -3,10 +3,16 @@ import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
+import { createLidarrClient } from './core/clients/lidarr'
+import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
+import { runGenreSubscription } from './core/genre/subscription-runner'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
+import { createLastFmSource } from './core/plugins/lastfm'
+import { createListenBrainzSource } from './core/plugins/listenbrainz'
+import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
 import { db, pool } from './db'
 import { getArtistById, upsertArtist } from './db/queries/artists'
@@ -30,11 +36,14 @@ import {
 import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
 import {
+  completeRun,
   createSubscription,
   deleteSubscription,
+  getEnabledSubscriptions,
   getRunsForSubscription,
   getSubscription,
   getSubscriptionsByUser,
+  insertRun,
   updateSubscription,
 } from './db/queries/subscriptions'
 import {
@@ -119,6 +128,77 @@ const runPipeline = async () => {
   }
 }
 
+// Shared subscription query facade (used both by routes and scheduler)
+const subscriptionQueriesImpl = {
+  createSubscription: (data: Parameters<typeof createSubscription>[1]) =>
+    createSubscription(db, data),
+  getSubscription: (id: number) => getSubscription(db, id),
+  getSubscriptionsByUser: (userId: number) => getSubscriptionsByUser(db, userId),
+  updateSubscription: (id: number, data: Parameters<typeof updateSubscription>[2]) =>
+    updateSubscription(db, id, data),
+  deleteSubscription: (id: number) => deleteSubscription(db, id),
+  getRunsForSubscription: (id: number, limit?: number) => getRunsForSubscription(db, id, limit),
+  insertRun: (data: Parameters<typeof insertRun>[1]) => insertRun(db, data),
+  completeRun: (id: number, data: Parameters<typeof completeRun>[2]) => completeRun(db, id, data),
+}
+
+async function executeSubscription(subscriptionId: number): Promise<void> {
+  const sub = await getSubscription(db, subscriptionId)
+  if (!sub) {
+    console.warn(`[subscription-runner] Subscription ${subscriptionId} not found -- skipping`)
+    return
+  }
+
+  const settings = await getSettings(db)
+  const prefs = { ...DEFAULT_PREFERENCES, ...settings?.preferences }
+
+  const lidarrClient =
+    settings?.lidarrUrl && settings?.lidarrApiKey
+      ? createLidarrClient(
+          settings.lidarrUrl,
+          settings.lidarrApiKey,
+          settings.skipTlsVerify ?? false,
+        )
+      : null
+
+  const rejectedMbids = await storeDb.getRejectedMbids(prefs.rejectionCooldownDays)
+  const feedbackHistory = await storeDb.getFeedbackHistory()
+
+  // Build source registry fresh per run (same pattern as orchestrator)
+  const sourceRegistry = new SourceRegistry()
+  if (settings?.listenbrainzUsername && settings?.listenbrainzToken) {
+    sourceRegistry.register(
+      createListenBrainzSource(settings.listenbrainzUsername, settings.listenbrainzToken),
+    )
+  }
+  if (settings?.lastfmUsername && settings?.lastfmApiKey) {
+    sourceRegistry.register(createLastFmSource(settings.lastfmUsername, settings.lastfmApiKey))
+  }
+
+  await runGenreSubscription({
+    subscription: {
+      id: sub.id,
+      userId: sub.userId,
+      sourceConfig: sub.sourceConfig,
+      maxArtistsPerRun: sub.maxArtistsPerRun,
+      scoreThreshold: sub.scoreThreshold,
+      scoringWeightPreset: sub.scoringWeightPreset,
+      scoringWeightOverrides: sub.scoringWeightOverrides,
+    },
+    sources: sourceRegistry.withCapability('genreArtists'),
+    mbClient: createMusicBrainzClient(),
+    lidarrClient,
+    storeDb,
+    subscriptionQueries: subscriptionQueriesImpl,
+    libraryMbids: new Set<string>(),
+    libraryGenres: [],
+    rejectedMbids,
+    feedbackHistory,
+    cooldownDays: prefs.rejectionCooldownDays,
+    defaultScoreThreshold: prefs.scoreThreshold,
+  })
+}
+
 const app = createApp({
   db,
   storeDb,
@@ -156,18 +236,8 @@ const app = createApp({
   getUserCount: () => getUserCount(db),
   updatePassword: (id, hash) => updatePassword(db, id, hash),
   genreService,
-  subscriptionQueries: {
-    createSubscription: (data) => createSubscription(db, data),
-    getSubscription: (id) => getSubscription(db, id),
-    getSubscriptionsByUser: (userId) => getSubscriptionsByUser(db, userId),
-    updateSubscription: (id, data) => updateSubscription(db, id, data),
-    deleteSubscription: (id) => deleteSubscription(db, id),
-    getRunsForSubscription: (id, limit) => getRunsForSubscription(db, id, limit),
-  },
-  runSubscription: async (id) => {
-    // Placeholder -- actual execution wired in Task 10 (genre subscription execution)
-    console.log(`Manual run triggered for subscription ${id}`)
-  },
+  subscriptionQueries: subscriptionQueriesImpl,
+  runSubscription: (id) => executeSubscription(id),
 })
 
 const port = envConfig.port
@@ -222,6 +292,13 @@ isSetupComplete(db)
     if (cron) {
       scheduler.schedule('main-pipeline', cron, runPipeline)
       console.log(`Scheduler started with cron: ${cron}`)
+    }
+  })
+  .then(() => getEnabledSubscriptions(db))
+  .then((subs) => {
+    for (const sub of subs) {
+      scheduler.schedule(`subscription-${sub.id}`, sub.cron, () => executeSubscription(sub.id))
+      console.log(`Subscription '${sub.name}' (id=${sub.id}) scheduled with cron: ${sub.cron}`)
     }
   })
   .catch((err: unknown) => {
