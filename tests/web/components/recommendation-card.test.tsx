@@ -33,6 +33,8 @@ const makeRec = (overrides: Partial<Recommendation> = {}): Recommendation => ({
   aiReasoning: 'Great match for your indie taste.',
   sources: { listenbrainz: 0.9, lastfm: 0.7 },
   lidarrError: null,
+  recommendedReleaseGroupId: null,
+  recommendedReleaseGroupTitle: null,
   artist: {
     id: 10,
     name: 'Radiohead',

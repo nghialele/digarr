@@ -1,13 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { AlbumPicker } from '../components/album-picker'
 import { CardStack } from '../components/card-stack'
+import { MonitoringOptions, type MonitorOption } from '../components/monitoring-options'
 import { type Recommendation, RecommendationCard } from '../components/recommendation-card'
 import { SwipeCard } from '../components/swipe-card'
 import { Skeleton } from '../components/ui/skeleton'
 import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import {
+  approveRecommendation,
   bulkAction,
   getRecommendations,
   getWarmStatuses,
@@ -186,6 +189,7 @@ export function DiscoverPage() {
   const [bulkMode, setBulkMode] = useState(false)
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set())
   const [bulkActing, setBulkActing] = useState(false)
+  const [albumPickerRecId, setAlbumPickerRecId] = useState<number | null>(null)
 
   const refetch = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['recommendations'] })
@@ -306,6 +310,34 @@ export function DiscoverPage() {
   // ---------------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------------
+
+  const handleApproveWithOptions = useCallback(
+    async (
+      id: number,
+      option: MonitorOption,
+      selectedAlbumIds?: string[],
+      prevStatus = 'pending',
+    ) => {
+      setActingIds((prev) => new Set([...prev, id]))
+      try {
+        await approveRecommendation(id, {
+          monitorOption: option,
+          selectedAlbumIds: option === 'selected' ? selectedAlbumIds : undefined,
+        })
+        showUndo({ id, prevStatus })
+        refetch()
+      } catch {
+        toast.error('Failed to approve')
+      } finally {
+        setActingIds((prev) => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
+      }
+    },
+    [refetch, showUndo],
+  )
 
   const handleApprove = useCallback(
     async (id: number, prevStatus = 'pending') => {
@@ -735,6 +767,17 @@ export function DiscoverPage() {
                             | 'unknown'
                             | undefined
                         }
+                        approveNode={
+                          !isActing && !bulkMode ? (
+                            <MonitoringOptions
+                              loading={isActing}
+                              onApprove={(option) =>
+                                handleApproveWithOptions(rec.id, option, undefined, rec.status)
+                              }
+                              onOpenAlbumPicker={() => setAlbumPickerRecId(rec.id)}
+                            />
+                          ) : undefined
+                        }
                       />
                     </SwipeCard>
                   </div>
@@ -777,6 +820,17 @@ export function DiscoverPage() {
                       onToggleSelect={handleToggleSelect}
                       warmStatus={
                         warmStatuses[rec.artist.mbid] as 'warm' | 'warming' | 'unknown' | undefined
+                      }
+                      approveNode={
+                        !isActing && !bulkMode ? (
+                          <MonitoringOptions
+                            loading={isActing}
+                            onApprove={(option) =>
+                              handleApproveWithOptions(rec.id, option, undefined, rec.status)
+                            }
+                            onOpenAlbumPicker={() => setAlbumPickerRecId(rec.id)}
+                          />
+                        ) : undefined
                       }
                     />
                   </SwipeCard>
@@ -917,6 +971,30 @@ export function DiscoverPage() {
           </svg>
         </button>
       )}
+
+      {/* Album picker modal */}
+      {albumPickerRecId != null &&
+        (() => {
+          const pickerRec = items.find((r) => r.id === albumPickerRecId)
+          if (!pickerRec) return null
+          return (
+            <AlbumPicker
+              artistMbid={pickerRec.artist.mbid}
+              artistName={pickerRec.artist.name}
+              suggestedAlbumId={pickerRec.recommendedReleaseGroupId}
+              onConfirm={(selectedAlbumIds) => {
+                setAlbumPickerRecId(null)
+                handleApproveWithOptions(
+                  albumPickerRecId,
+                  'selected',
+                  selectedAlbumIds,
+                  pickerRec.status,
+                )
+              }}
+              onCancel={() => setAlbumPickerRecId(null)}
+            />
+          )
+        })()}
     </div>
   )
 }

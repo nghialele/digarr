@@ -16,6 +16,8 @@ export type Recommendation = {
   aiReasoning: string | null
   sources: Record<string, number> | null
   lidarrError: string | null
+  recommendedReleaseGroupId: string | null
+  recommendedReleaseGroupTitle: string | null
   artist: {
     id: number
     name: string
@@ -40,6 +42,7 @@ type RecommendationCardProps = {
   isChecked?: boolean
   onToggleSelect?: (id: number) => void
   warmStatus?: 'warm' | 'warming' | 'unknown'
+  approveNode?: React.ReactNode
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +156,7 @@ function ActionButtons({
   isApproved,
   onApprove,
   onReject,
+  approveNode,
 }: {
   rec: Recommendation
   bulkMode: boolean
@@ -160,6 +164,7 @@ function ActionButtons({
   isApproved: boolean
   onApprove: (id: number) => void
   onReject: (id: number) => void
+  approveNode?: React.ReactNode
 }) {
   if (bulkMode) return null
 
@@ -170,17 +175,19 @@ function ActionButtons({
   if (isPending) {
     return (
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
-          onClick={(e) => {
-            stop(e)
-            onApprove(rec.id)
-          }}
-        >
-          Approve
-        </Button>
+        {approveNode ?? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
+            onClick={(e) => {
+              stop(e)
+              onApprove(rec.id)
+            }}
+          >
+            Approve
+          </Button>
+        )}
         <Button
           size="sm"
           variant="outline"
@@ -248,6 +255,7 @@ export function RecommendationCard({
   isChecked = false,
   onToggleSelect,
   warmStatus,
+  approveNode,
 }: RecommendationCardProps) {
   const preview = usePreviewContext()
   const pct = `${Math.round(rec.score * 100)}%`
@@ -389,6 +397,11 @@ export function RecommendationCard({
                 {rec.artist.disambiguation && (
                   <p className="text-xs text-muted mt-0.5">{rec.artist.disambiguation}</p>
                 )}
+                {rec.recommendedReleaseGroupTitle && (
+                  <p className="text-xs text-muted mt-0.5">
+                    Start with: <span className="italic">{rec.recommendedReleaseGroupTitle}</span>
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {warmStatus === 'warm' && (
@@ -462,6 +475,7 @@ export function RecommendationCard({
             isApproved={isApproved}
             onApprove={onApprove}
             onReject={onReject}
+            approveNode={approveNode}
           />
         </div>
 
@@ -546,6 +560,7 @@ export function RecommendationCard({
               isApproved={isApproved}
               onApprove={onApprove}
               onReject={onReject}
+              approveNode={approveNode}
             />
           </div>
         )}

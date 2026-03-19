@@ -127,8 +127,22 @@ export const getRecommendations = (params?: Record<string, string>) => {
 }
 export const updateRecommendation = (id: number, body: Record<string, unknown>) =>
   fetchApi(`/recommendations/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+export const approveRecommendation = (
+  id: number,
+  options?: { monitorOption?: string; selectedAlbumIds?: string[] },
+) => updateRecommendation(id, { status: 'approved', ...options })
 export const bulkAction = (ids: number[], action: string) =>
   fetchApi('/recommendations/bulk', { method: 'POST', body: JSON.stringify({ ids, action }) })
+
+// Albums
+export type ReleaseGroup = {
+  id: string
+  title: string
+  type: string
+  firstReleaseDate?: string
+}
+export const getAlbums = (mbid: string) =>
+  fetchApi<ReleaseGroup[]>(`/albums/${encodeURIComponent(mbid)}`)
 
 // Batches
 export const getBatches = () => fetchApi<unknown[]>('/batches')
@@ -274,5 +288,4 @@ export const listUsers = () =>
   >('/users')
 export const updateUserAdmin = (id: number, isAdmin: boolean) =>
   fetchApi(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) })
-export const deleteUserApi = (id: number) =>
-  fetchApi(`/users/${id}`, { method: 'DELETE' })
+export const deleteUserApi = (id: number) => fetchApi(`/users/${id}`, { method: 'DELETE' })

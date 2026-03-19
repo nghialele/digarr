@@ -32,13 +32,24 @@ function renderWithQuery(ui: ReactElement) {
 vi.mock('@/web/lib/api', () => ({
   getRecommendations: vi.fn(),
   updateRecommendation: vi.fn(),
+  approveRecommendation: vi.fn(),
   bulkAction: vi.fn(),
+  getWarmStatuses: vi.fn(),
+  rescanArtists: vi.fn(),
+  triggerPipeline: vi.fn(),
 }))
 
-import { bulkAction, getRecommendations, updateRecommendation } from '@/web/lib/api'
+import {
+  approveRecommendation,
+  bulkAction,
+  getRecommendations,
+  getWarmStatuses,
+  updateRecommendation,
+} from '@/web/lib/api'
 
 const mockGetRecommendations = vi.mocked(getRecommendations)
 const mockUpdateRecommendation = vi.mocked(updateRecommendation)
+const mockApproveRecommendation = vi.mocked(approveRecommendation)
 const mockBulkAction = vi.mocked(bulkAction)
 
 // ---------------------------------------------------------------------------
@@ -87,6 +98,7 @@ function setupMockApi(recs: ReturnType<typeof makeRec>[] = [makeRec()]) {
   mockGetRecommendations.mockResolvedValue(
     makeRes(recs) as unknown as { items: unknown[]; total: number },
   )
+  vi.mocked(getWarmStatuses).mockResolvedValue({ statuses: {} })
 }
 
 // ---------------------------------------------------------------------------
@@ -183,8 +195,8 @@ describe('DiscoverPage', () => {
     })
   })
 
-  it('approve button calls updateRecommendation', async () => {
-    mockUpdateRecommendation.mockResolvedValue(undefined as unknown as never)
+  it('approve button calls approveRecommendation with all monitor option', async () => {
+    mockApproveRecommendation.mockResolvedValue(undefined as unknown as never)
     setupMockApi()
 
     renderWithQuery(<DiscoverPage />)
@@ -201,7 +213,7 @@ describe('DiscoverPage', () => {
     fireEvent.click(approveButtons[0]!)
 
     await waitFor(() => {
-      expect(mockUpdateRecommendation).toHaveBeenCalledWith(1, { status: 'approved' })
+      expect(mockApproveRecommendation).toHaveBeenCalledWith(1, { monitorOption: 'all' })
     })
   })
 
