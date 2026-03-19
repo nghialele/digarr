@@ -5,7 +5,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-590_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-673_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
@@ -192,7 +192,7 @@ See [`.env.example`](.env.example) for the full list with comments.
 - **Database**: PostgreSQL via [Drizzle ORM](https://orm.drizzle.team)
 - **Build**: [Vite](https://vite.dev)
 - **Lint/Format**: [Biome](https://biomejs.dev)
-- **Tests**: [Vitest](https://vitest.dev) (590 tests)
+- **Tests**: [Vitest](https://vitest.dev) (673 tests)
 
 ---
 
@@ -204,7 +204,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 bun install
 bun run lint        # biome check
 bun run typecheck   # tsc --noEmit
-bun run test        # vitest (590 tests)
+bun run test        # vitest (673 tests)
 ```
 
 ---
@@ -217,7 +217,7 @@ This project was built with the help of agentic AI coding tools. The design, arc
 
 The codebase went through multiple rounds of verification before release:
 
-- **590 unit and integration tests** across 51 test files -- API clients, pipeline stages, server routes, database queries, auth/session logic, and UI components (including RecommendationCard, PipelineProgress, Settings, Dashboard)
+- **673 unit and integration tests** across 51 test files -- API clients, pipeline stages, server routes, database queries, auth/session logic, and UI components (including RecommendationCard, PipelineProgress, Settings, Dashboard)
 - **Static analysis** -- zero errors from TypeScript strict mode (`noUncheckedIndexedAccess`, `isolatedModules`) and Biome linter across 175 checked files
 - **Security audit** -- identified and fixed vulnerabilities across multiple review cycles:
   - CORS defaults to allow-all when `ALLOWED_ORIGIN` unset, with startup warning in production; operators set `ALLOWED_ORIGIN` for restrictive CORS
