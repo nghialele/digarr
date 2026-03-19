@@ -48,6 +48,10 @@ export type LidarrCommand = {
   status: string
 }
 
+export type AddArtistOptions = {
+  monitorOption?: 'all' | 'new' | 'none'
+}
+
 export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = false) {
   const http = createHttpClient({
     baseUrl: url,
@@ -101,12 +105,15 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
     qualityProfileId: number,
     metadataProfileId: number,
     rootFolderId: number,
+    options?: AddArtistOptions,
   ): Promise<LidarrArtist> {
     const folders = await getRootFolders()
     const folder = folders.find((f) => f.id === rootFolderId)
     if (!folder) {
       throw new Error(`Root folder with id ${rootFolderId} not found`)
     }
+
+    const monitor = options?.monitorOption ?? 'all'
 
     return http.post<LidarrArtist>('/api/v1/artist', {
       foreignArtistId,
@@ -116,8 +123,8 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
       rootFolderPath: folder.path,
       monitored: true,
       addOptions: {
-        monitor: 'all',
-        searchForMissingAlbums: true,
+        monitor,
+        searchForMissingAlbums: monitor === 'all',
       },
     })
   }
@@ -148,6 +155,10 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
     return http.put<LidarrArtist>(`/api/v1/artist/${id}`, data)
   }
 
+  function updateAlbum(id: number, data: { monitored: boolean }): Promise<LidarrAlbum> {
+    return http.put<LidarrAlbum>(`/api/v1/album/${id}`, data)
+  }
+
   function triggerCommand(name: string, body?: Record<string, unknown>): Promise<LidarrCommand> {
     return http.post<LidarrCommand>('/api/v1/command', { name, ...body })
   }
@@ -172,6 +183,7 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
     addArtist,
     getAlbums,
     updateArtist,
+    updateAlbum,
     triggerCommand,
     getQualityProfiles,
     getMetadataProfiles,

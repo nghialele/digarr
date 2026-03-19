@@ -356,5 +356,149 @@ describe('createMusicBrainzClient', () => {
       await client.searchArtist('Radiohead')
       expect(instance.add).toHaveBeenCalledOnce()
     })
+
+    it('routes getReleaseGroups through the p-queue', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse({ 'release-groups': [] }))
+      const client = createMusicBrainzClient()
+      const instance = vi.mocked(PQueue).mock.results[0]?.value as { add: ReturnType<typeof vi.fn> }
+      await client.getReleaseGroups(MOCK_ARTIST_MBID)
+      expect(instance.add).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe('getReleaseGroups(artistMbid)', () => {
+    const MOCK_RG_RESPONSE = {
+      'release-groups': [
+        {
+          id: 'rg-1',
+          title: 'OK Computer',
+          'primary-type': 'Album',
+          'first-release-date': '1997-05-21',
+        },
+        {
+          id: 'rg-2',
+          title: 'Kid A',
+          'primary-type': 'Album',
+          'first-release-date': '2000-10-02',
+        },
+        {
+          id: 'rg-3',
+          title: 'Creep',
+          'primary-type': 'Single',
+          'first-release-date': '1992-09-21',
+        },
+        {
+          id: 'rg-4',
+          title: 'My Iron Lung EP',
+          'primary-type': 'EP',
+          'first-release-date': '1994-10-03',
+        },
+        {
+          id: 'rg-5',
+          title: 'No Primary Type Release',
+          'first-release-date': '2020-01-01',
+        },
+        {
+          id: 'rg-6',
+          title: 'No Date Single',
+          'primary-type': 'Single',
+        },
+      ],
+    }
+
+    it('GETs /release-group with artist, type, fmt, and limit params', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse({ 'release-groups': [] }))
+      const client = createMusicBrainzClient()
+      await client.getReleaseGroups(MOCK_ARTIST_MBID)
+
+      const [url] = mockFetch.mock.calls[0] as [string]
+      expect(url).toContain(`${MB_BASE}/release-group`)
+      expect(url).toContain(`artist=${MOCK_ARTIST_MBID}`)
+      expect(url).toContain('fmt=json')
+      expect(url).toContain('limit=100')
+    })
+
+    it('includes type filter in the query string', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse({ 'release-groups': [] }))
+      const client = createMusicBrainzClient()
+      await client.getReleaseGroups(MOCK_ARTIST_MBID)
+
+      const [url] = mockFetch.mock.calls[0] as [string]
+      expect(url).toContain('type=')
+    })
+
+    it('returns correctly shaped MBReleaseGroup array', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse(MOCK_RG_RESPONSE))
+      const client = createMusicBrainzClient()
+      const result = await client.getReleaseGroups(MOCK_ARTIST_MBID)
+
+      expect(result).toHaveLength(6)
+      expect(result[0]).toMatchObject({
+        id: 'rg-1',
+        title: 'OK Computer',
+        type: 'Album',
+        firstReleaseDate: '1997-05-21',
+      })
+    })
+
+    it('maps missing primary-type to "Other"', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse(MOCK_RG_RESPONSE))
+      const client = createMusicBrainzClient()
+      const result = await client.getReleaseGroups(MOCK_ARTIST_MBID)
+
+      const noType = result.find((rg) => rg.id === 'rg-5')
+      expect(noType?.type).toBe('Other')
+    })
+
+    it('maps missing first-release-date to undefined', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse(MOCK_RG_RESPONSE))
+      const client = createMusicBrainzClient()
+      const result = await client.getReleaseGroups(MOCK_ARTIST_MBID)
+
+      const noDate = result.find((rg) => rg.id === 'rg-6')
+      expect(noDate?.firstReleaseDate).toBeUndefined()
+    })
+
+    it('returns empty array when release-groups is missing from response', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse({}))
+      const client = createMusicBrainzClient()
+      const result = await client.getReleaseGroups(MOCK_ARTIST_MBID)
+      expect(result).toEqual([])
+    })
+
+    it('returns empty array when release-groups is empty', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse({ 'release-groups': [] }))
+      const client = createMusicBrainzClient()
+      const result = await client.getReleaseGroups(MOCK_ARTIST_MBID)
+      expect(result).toEqual([])
+    })
+
+    it('throws on non-ok HTTP response', async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } }),
+      )
+      const client = createMusicBrainzClient()
+      await expect(client.getReleaseGroups(MOCK_ARTIST_MBID)).rejects.toThrow(/404/)
+    })
+
+    it('sends User-Agent header', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse({ 'release-groups': [] }))
+      const client = createMusicBrainzClient()
+      await client.getReleaseGroups(MOCK_ARTIST_MBID)
+
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+      expect((options.headers as Record<string, string>)['User-Agent']).toBe(USER_AGENT)
+    })
+
+    it('maps all standard release types correctly', async () => {
+      mockFetch.mockResolvedValueOnce(makeJsonResponse(MOCK_RG_RESPONSE))
+      const client = createMusicBrainzClient()
+      const result = await client.getReleaseGroups(MOCK_ARTIST_MBID)
+
+      const types = result.map((rg) => rg.type)
+      expect(types).toContain('Album')
+      expect(types).toContain('Single')
+      expect(types).toContain('EP')
+    })
   })
 })

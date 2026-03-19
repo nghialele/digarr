@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { LidarrAlbum, LidarrArtist, QualityProfile, RootFolder } from '@/core/clients/lidarr'
+import type {
+  AddArtistOptions,
+  LidarrAlbum,
+  LidarrArtist,
+  QualityProfile,
+  RootFolder,
+} from '@/core/clients/lidarr'
 import { createLidarrClient } from '@/core/clients/lidarr'
 
 // Mock the HTTP client module so we never hit a real server.
@@ -166,6 +172,69 @@ describe('createLidarrClient', () => {
       const rootFolderGetCalls = mockGet.mock.calls.filter((c) => c[0] === '/api/v1/rootfolder')
       expect(rootFolderGetCalls).toHaveLength(1)
     })
+
+    it('defaults to monitor:"all" and searchForMissingAlbums:true when no options provided', async () => {
+      mockGet.mockResolvedValueOnce(mockFolders)
+      mockPost.mockResolvedValueOnce({ ...mockArtists[0], id: 12 })
+
+      const client = createLidarrClient(TEST_URL, TEST_KEY)
+      await client.addArtist('a74b1b7f-71a5-4011-9441-d0b5e4122711', 'Radiohead', 1, 1, 1)
+
+      expect(mockPost).toHaveBeenCalledWith(
+        '/api/v1/artist',
+        expect.objectContaining({
+          addOptions: { monitor: 'all', searchForMissingAlbums: true },
+        }),
+      )
+    })
+
+    it('uses monitorOption:"new" and sets searchForMissingAlbums:false', async () => {
+      mockGet.mockResolvedValueOnce(mockFolders)
+      mockPost.mockResolvedValueOnce({ ...mockArtists[0], id: 13 })
+
+      const options: AddArtistOptions = { monitorOption: 'new' }
+      const client = createLidarrClient(TEST_URL, TEST_KEY)
+      await client.addArtist('a74b1b7f-71a5-4011-9441-d0b5e4122711', 'Radiohead', 1, 1, 1, options)
+
+      expect(mockPost).toHaveBeenCalledWith(
+        '/api/v1/artist',
+        expect.objectContaining({
+          addOptions: { monitor: 'new', searchForMissingAlbums: false },
+        }),
+      )
+    })
+
+    it('uses monitorOption:"none" and sets searchForMissingAlbums:false', async () => {
+      mockGet.mockResolvedValueOnce(mockFolders)
+      mockPost.mockResolvedValueOnce({ ...mockArtists[0], id: 14 })
+
+      const options: AddArtistOptions = { monitorOption: 'none' }
+      const client = createLidarrClient(TEST_URL, TEST_KEY)
+      await client.addArtist('a74b1b7f-71a5-4011-9441-d0b5e4122711', 'Radiohead', 1, 1, 1, options)
+
+      expect(mockPost).toHaveBeenCalledWith(
+        '/api/v1/artist',
+        expect.objectContaining({
+          addOptions: { monitor: 'none', searchForMissingAlbums: false },
+        }),
+      )
+    })
+
+    it('uses monitorOption:"all" explicitly and sets searchForMissingAlbums:true', async () => {
+      mockGet.mockResolvedValueOnce(mockFolders)
+      mockPost.mockResolvedValueOnce({ ...mockArtists[0], id: 15 })
+
+      const options: AddArtistOptions = { monitorOption: 'all' }
+      const client = createLidarrClient(TEST_URL, TEST_KEY)
+      await client.addArtist('a74b1b7f-71a5-4011-9441-d0b5e4122711', 'Radiohead', 1, 1, 1, options)
+
+      expect(mockPost).toHaveBeenCalledWith(
+        '/api/v1/artist',
+        expect.objectContaining({
+          addOptions: { monitor: 'all', searchForMissingAlbums: true },
+        }),
+      )
+    })
   })
 
   describe('getAlbums()', () => {
@@ -235,6 +304,52 @@ describe('createLidarrClient', () => {
       const client = createLidarrClient(TEST_URL, TEST_KEY)
       const result = await client.updateArtist(1, { genres: ['rock'] })
       expect(result.genres).toEqual(['rock'])
+    })
+  })
+
+  describe('updateAlbum()', () => {
+    const mockAlbum: LidarrAlbum = {
+      id: 101,
+      title: 'OK Computer',
+      artistId: 1,
+      foreignAlbumId: 'a0a0a0a0-0000-0000-0000-000000000001',
+      monitored: true,
+      albumType: 'Album',
+    }
+
+    it('PUTs to /api/v1/album/:id with monitored:true', async () => {
+      mockPut.mockResolvedValueOnce({ ...mockAlbum, monitored: true })
+      const client = createLidarrClient(TEST_URL, TEST_KEY)
+      const result = await client.updateAlbum(101, { monitored: true })
+      expect(mockPut).toHaveBeenCalledWith('/api/v1/album/101', { monitored: true })
+      expect(result.monitored).toBe(true)
+    })
+
+    it('PUTs to /api/v1/album/:id with monitored:false', async () => {
+      mockPut.mockResolvedValueOnce({ ...mockAlbum, monitored: false })
+      const client = createLidarrClient(TEST_URL, TEST_KEY)
+      const result = await client.updateAlbum(101, { monitored: false })
+      expect(mockPut).toHaveBeenCalledWith('/api/v1/album/101', { monitored: false })
+      expect(result.monitored).toBe(false)
+    })
+
+    it('uses the correct album id in the URL', async () => {
+      mockPut.mockResolvedValueOnce({ ...mockAlbum, id: 202, monitored: true })
+      const client = createLidarrClient(TEST_URL, TEST_KEY)
+      await client.updateAlbum(202, { monitored: true })
+      expect(mockPut).toHaveBeenCalledWith('/api/v1/album/202', { monitored: true })
+    })
+
+    it('returns a LidarrAlbum shape', async () => {
+      mockPut.mockResolvedValueOnce(mockAlbum)
+      const client = createLidarrClient(TEST_URL, TEST_KEY)
+      const result = await client.updateAlbum(101, { monitored: true })
+      expect(result).toHaveProperty('id')
+      expect(result).toHaveProperty('title')
+      expect(result).toHaveProperty('artistId')
+      expect(result).toHaveProperty('foreignAlbumId')
+      expect(result).toHaveProperty('monitored')
+      expect(result).toHaveProperty('albumType')
     })
   })
 

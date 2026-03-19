@@ -134,6 +134,14 @@ const mockLidarrClient = {
     monitored: false,
     status: '',
   })),
+  updateAlbum: vi.fn(async () => ({
+    id: 0,
+    title: '',
+    artistId: 0,
+    foreignAlbumId: '',
+    monitored: false,
+    albumType: '',
+  })),
   triggerCommand: vi.fn(async () => ({ id: 0, name: '', status: '' })),
   testConnection: vi.fn(async () => ({ success: true, message: 'ok' })),
 }
