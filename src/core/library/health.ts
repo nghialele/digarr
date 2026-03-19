@@ -1,0 +1,450 @@
+import PQueue from 'p-queue'
+import type { LidarrAlbum, LidarrArtist } from '@/core/clients/lidarr'
+import type {
+  HealthCheckId,
+  HealthCheckItem,
+  HealthCheckResult,
+  HealthFixProgress,
+  LibraryStats,
+} from '@/core/library/types'
+
+// ---------------------------------------------------------------------------
+// Dependency types
+// ---------------------------------------------------------------------------
+
+type ArtistCacheEntry = {
+  id: number
+  mbid: string
+  name: string
+  genres: string[] | null
+  tags: string[] | null
+  imageUrl: string | null
+  streamingUrls: Record<string, string> | null
+}
+
+type HealthServiceDeps = {
+  lidarrClient: {
+    getArtists: () => Promise<LidarrArtist[]>
+    getAlbums: (artistId: number) => Promise<LidarrAlbum[]>
+    lookupArtist: (term: string) => Promise<unknown[]>
+    updateArtist: (id: number, data: Partial<LidarrArtist>) => Promise<LidarrArtist>
+    triggerCommand: (name: string, body?: Record<string, unknown>) => Promise<unknown>
+    getRootFolders: () => Promise<Array<{ id: number; path: string; freeSpace: number }>>
+  }
+  artistCache: {
+    getAll: () => Promise<ArtistCacheEntry[]>
+    updateImageUrl?: (mbid: string, imageUrl: string) => Promise<void>
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Check metadata
+// ---------------------------------------------------------------------------
+
+const CHECK_META: Record<
+  HealthCheckId,
+  { name: string; description: string; severity: 'info' | 'warning' | 'error'; fixable: boolean }
+> = {
+  'missing-metadata': {
+    name: 'Missing Metadata',
+    description: 'Artists in Lidarr with no genres and no image in local cache.',
+    severity: 'warning',
+    fixable: true,
+  },
+  'stale-mbids': {
+    name: 'Stale MBIDs',
+    description: 'Artists in Lidarr whose MBID is not found in local artist cache.',
+    severity: 'info',
+    fixable: true,
+  },
+  unmonitored: {
+    name: 'Unmonitored Artists',
+    description: 'Artists in Lidarr that are not monitored.',
+    severity: 'info',
+    fixable: true,
+  },
+  'missing-albums': {
+    name: 'Missing Album Files',
+    description: 'Monitored artists with albums that have tracks but no downloaded files.',
+    severity: 'warning',
+    fixable: true,
+  },
+  'duplicate-artists': {
+    name: 'Duplicate Artists',
+    description: 'Artists with the same name under different MBIDs.',
+    severity: 'warning',
+    fixable: false,
+  },
+  'genre-gaps': {
+    name: 'Genre Gaps',
+    description: 'Artists with no genre tags in either Lidarr or local cache.',
+    severity: 'warning',
+    fixable: true,
+  },
+  'image-gaps': {
+    name: 'Image Gaps',
+    description: 'Artists in local cache with no image URL.',
+    severity: 'info',
+    fixable: true,
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
+export class LibraryHealthService {
+  private deps: HealthServiceDeps
+  private cachedResults: HealthCheckResult[] | null = null
+
+  constructor(deps: HealthServiceDeps) {
+    this.deps = deps
+  }
+
+  // -------------------------------------------------------------------------
+  // runChecks
+  // -------------------------------------------------------------------------
+
+  async runChecks(): Promise<HealthCheckResult[]> {
+    const [lidarrArtists, cachedArtists] = await Promise.all([
+      this.deps.lidarrClient.getArtists(),
+      this.deps.artistCache.getAll(),
+    ])
+
+    const cachedMbidSet = new Set(cachedArtists.map((a) => a.mbid))
+    const cachedByMbid = new Map(cachedArtists.map((a) => [a.mbid, a]))
+
+    // Fetch albums for monitored artists one by one, swallowing per-artist errors.
+    const monitoredArtists = lidarrArtists.filter((a) => a.monitored)
+    const albumsByArtistId = new Map<number, LidarrAlbum[]>()
+    for (const artist of monitoredArtists) {
+      try {
+        const albums = await this.deps.lidarrClient.getAlbums(artist.id)
+        albumsByArtistId.set(artist.id, albums)
+      } catch {
+        albumsByArtistId.set(artist.id, [])
+      }
+    }
+
+    const results: HealthCheckResult[] = [
+      this.checkMissingMetadata(lidarrArtists, cachedByMbid),
+      this.checkStaleMbids(lidarrArtists, cachedMbidSet),
+      this.checkUnmonitored(lidarrArtists),
+      this.checkMissingAlbums(monitoredArtists, albumsByArtistId),
+      this.checkDuplicateArtists(lidarrArtists),
+      this.checkGenreGaps(lidarrArtists, cachedByMbid),
+      this.checkImageGaps(cachedArtists, lidarrArtists),
+    ]
+
+    this.cachedResults = results
+    return results
+  }
+
+  // -------------------------------------------------------------------------
+  // getLastResults
+  // -------------------------------------------------------------------------
+
+  getLastResults(): HealthCheckResult[] | null {
+    return this.cachedResults
+  }
+
+  // -------------------------------------------------------------------------
+  // fixCheck
+  // -------------------------------------------------------------------------
+
+  async fixCheck(checkId: HealthCheckId): Promise<HealthFixProgress> {
+    if (checkId === 'duplicate-artists') {
+      throw new Error('duplicate-artists check is not fixable')
+    }
+
+    const results = this.cachedResults
+    const check = results?.find((r) => r.id === checkId)
+    const items: HealthCheckItem[] = check?.items ?? []
+
+    const progress: HealthFixProgress = {
+      checkId,
+      total: items.length,
+      completed: 0,
+      failed: 0,
+      status: 'running',
+      errors: [],
+    }
+
+    const queue = new PQueue({ concurrency: 1, interval: 1000, intervalCap: 1 })
+
+    for (const item of items) {
+      await queue.add(async () => {
+        try {
+          await this.applyFix(checkId, item)
+          progress.completed++
+        } catch (err: unknown) {
+          progress.failed++
+          const msg = err instanceof Error ? err.message : String(err)
+          progress.errors.push(`${item.artistName}: ${msg}`)
+        }
+      })
+    }
+
+    await queue.onIdle()
+
+    progress.status = progress.failed === 0 ? 'completed' : 'failed'
+    return progress
+  }
+
+  // -------------------------------------------------------------------------
+  // getStats
+  // -------------------------------------------------------------------------
+
+  async getStats(): Promise<LibraryStats> {
+    const [lidarrArtists, rootFolders] = await Promise.all([
+      this.deps.lidarrClient.getArtists(),
+      this.deps.lidarrClient.getRootFolders(),
+    ])
+
+    const monitoredCount = lidarrArtists.filter((a) => a.monitored).length
+
+    const genreCounts = new Map<string, number>()
+    for (const artist of lidarrArtists) {
+      for (const genre of artist.genres ?? []) {
+        genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1)
+      }
+    }
+
+    const genreDistribution = [...genreCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 30)
+      .map(([genre, count]) => ({ genre, count }))
+
+    return {
+      totalArtists: lidarrArtists.length,
+      totalAlbums: 0,
+      monitoredArtists: monitoredCount,
+      genreDistribution,
+      rootFolders: rootFolders.map(({ path, freeSpace }) => ({ path, freeSpace })),
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: individual checks
+  // -------------------------------------------------------------------------
+
+  private checkMissingMetadata(
+    artists: LidarrArtist[],
+    cachedByMbid: Map<string, ArtistCacheEntry>,
+  ): HealthCheckResult {
+    const meta = CHECK_META['missing-metadata']
+    const items: HealthCheckItem[] = []
+
+    for (const artist of artists) {
+      const hasGenres = (artist.genres?.length ?? 0) > 0
+      const cached = cachedByMbid.get(artist.foreignArtistId)
+      const hasImage = cached?.imageUrl != null
+
+      if (!hasGenres && !hasImage) {
+        items.push({
+          artistId: artist.id,
+          artistName: artist.artistName,
+          mbid: artist.foreignArtistId,
+          detail: 'Missing: genres, image',
+        })
+      }
+    }
+
+    return { ...meta, id: 'missing-metadata', count: items.length, items }
+  }
+
+  private checkStaleMbids(artists: LidarrArtist[], cachedMbidSet: Set<string>): HealthCheckResult {
+    const meta = CHECK_META['stale-mbids']
+    const items: HealthCheckItem[] = artists
+      .filter((a) => !cachedMbidSet.has(a.foreignArtistId))
+      .map((a) => ({
+        artistId: a.id,
+        artistName: a.artistName,
+        mbid: a.foreignArtistId,
+        detail: 'MBID not found in local cache',
+      }))
+
+    return { ...meta, id: 'stale-mbids', count: items.length, items }
+  }
+
+  private checkUnmonitored(artists: LidarrArtist[]): HealthCheckResult {
+    const meta = CHECK_META.unmonitored
+    const items: HealthCheckItem[] = artists
+      .filter((a) => !a.monitored)
+      .map((a) => ({
+        artistId: a.id,
+        artistName: a.artistName,
+        mbid: a.foreignArtistId,
+        detail: 'Not monitored',
+      }))
+
+    return { ...meta, id: 'unmonitored', count: items.length, items }
+  }
+
+  private checkMissingAlbums(
+    monitoredArtists: LidarrArtist[],
+    albumsByArtistId: Map<number, LidarrAlbum[]>,
+  ): HealthCheckResult {
+    const meta = CHECK_META['missing-albums']
+    const items: HealthCheckItem[] = []
+
+    for (const artist of monitoredArtists) {
+      const albums = albumsByArtistId.get(artist.id) ?? []
+      const emptyAlbums = albums.filter(
+        (album) =>
+          album.monitored &&
+          (album.statistics?.trackFileCount ?? 0) === 0 &&
+          (album.statistics?.trackCount ?? 0) > 0,
+      )
+
+      if (emptyAlbums.length > 0) {
+        items.push({
+          artistId: artist.id,
+          artistName: artist.artistName,
+          mbid: artist.foreignArtistId,
+          detail: `${emptyAlbums.length} monitored album(s) with no files`,
+        })
+      }
+    }
+
+    return { ...meta, id: 'missing-albums', count: items.length, items }
+  }
+
+  private checkDuplicateArtists(artists: LidarrArtist[]): HealthCheckResult {
+    const meta = CHECK_META['duplicate-artists']
+    const nameMap = new Map<string, LidarrArtist[]>()
+
+    for (const artist of artists) {
+      const key = artist.artistName.toLowerCase()
+      const existing = nameMap.get(key) ?? []
+      existing.push(artist)
+      nameMap.set(key, existing)
+    }
+
+    const items: HealthCheckItem[] = []
+    for (const group of nameMap.values()) {
+      if (group.length < 2) continue
+      for (const artist of group) {
+        items.push({
+          artistId: artist.id,
+          artistName: artist.artistName,
+          mbid: artist.foreignArtistId,
+          detail: `Duplicate: ${group.length} entries with this name`,
+        })
+      }
+    }
+
+    return { ...meta, id: 'duplicate-artists', count: items.length, items }
+  }
+
+  private checkGenreGaps(
+    artists: LidarrArtist[],
+    cachedByMbid: Map<string, ArtistCacheEntry>,
+  ): HealthCheckResult {
+    const meta = CHECK_META['genre-gaps']
+    const items: HealthCheckItem[] = []
+
+    for (const artist of artists) {
+      const lidarrHasGenres = (artist.genres?.length ?? 0) > 0
+      const cached = cachedByMbid.get(artist.foreignArtistId)
+      const cacheHasGenres = (cached?.genres?.length ?? 0) > 0
+
+      if (!lidarrHasGenres && !cacheHasGenres) {
+        items.push({
+          artistId: artist.id,
+          artistName: artist.artistName,
+          mbid: artist.foreignArtistId,
+          detail: 'No genre tags',
+        })
+      }
+    }
+
+    return { ...meta, id: 'genre-gaps', count: items.length, items }
+  }
+
+  private checkImageGaps(
+    cachedArtists: ArtistCacheEntry[],
+    lidarrArtists: LidarrArtist[],
+  ): HealthCheckResult {
+    const meta = CHECK_META['image-gaps']
+    const lidarrByMbid = new Map(lidarrArtists.map((a) => [a.foreignArtistId, a]))
+
+    const items: HealthCheckItem[] = cachedArtists
+      .filter((a) => a.imageUrl == null)
+      .map((a) => {
+        const lidarr = lidarrByMbid.get(a.mbid)
+        return {
+          artistId: lidarr?.id ?? 0,
+          artistName: a.name,
+          mbid: a.mbid,
+          detail: 'No image',
+        }
+      })
+
+    return { ...meta, id: 'image-gaps', count: items.length, items }
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: fix dispatch
+  // -------------------------------------------------------------------------
+
+  private async applyFix(checkId: HealthCheckId, item: HealthCheckItem): Promise<void> {
+    switch (checkId) {
+      case 'missing-metadata':
+      case 'genre-gaps':
+      case 'stale-mbids':
+        await this.deps.lidarrClient.triggerCommand('RefreshArtist', { artistId: item.artistId })
+        break
+
+      case 'unmonitored':
+        await this.deps.lidarrClient.updateArtist(item.artistId, { monitored: true })
+        break
+
+      case 'missing-albums':
+        await this.deps.lidarrClient.triggerCommand('ArtistSearch', { artistId: item.artistId })
+        break
+
+      case 'image-gaps': {
+        const results = await this.deps.lidarrClient.lookupArtist(`lidarr:${item.mbid}`)
+        const imageUrl = extractImageUrl(results)
+        if (imageUrl && this.deps.artistCache.updateImageUrl) {
+          await this.deps.artistCache.updateImageUrl(item.mbid, imageUrl)
+        }
+        break
+      }
+
+      case 'duplicate-artists':
+        throw new Error('not fixable')
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function extractImageUrl(results: unknown[]): string | null {
+  for (const result of results) {
+    if (typeof result !== 'object' || result === null) continue
+    const r = result as Record<string, unknown>
+
+    // Look for images array (Lidarr lookup format)
+    if (Array.isArray(r.images)) {
+      for (const img of r.images as Array<Record<string, unknown>>) {
+        if (img.coverType === 'poster' && typeof img.url === 'string') return img.url
+      }
+      for (const img of r.images as Array<Record<string, unknown>>) {
+        if (img.coverType === 'fanart' && typeof img.url === 'string') return img.url
+      }
+      // Fall back to any image URL
+      for (const img of r.images as Array<Record<string, unknown>>) {
+        if (typeof img.url === 'string') return img.url
+      }
+    }
+
+    // Direct posterUrl / fanartUrl fields
+    if (typeof r.posterUrl === 'string') return r.posterUrl
+    if (typeof r.fanartUrl === 'string') return r.fanartUrl
+  }
+  return null
+}
