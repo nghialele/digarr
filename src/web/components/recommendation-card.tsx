@@ -78,6 +78,9 @@ type RecommendationCardProps = {
   isSelected?: boolean
   expanded?: boolean
   onRetry?: (id: number) => void
+  bulkMode?: boolean
+  isChecked?: boolean
+  onToggleSelect?: (id: number) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -192,15 +195,53 @@ export function RecommendationCard({
   isSelected = false,
   expanded = false,
   onRetry,
+  bulkMode = false,
+  isChecked = false,
+  onToggleSelect,
 }: RecommendationCardProps) {
   const pct = `${Math.round(rec.score * 100)}%`
   const isPending = rec.status === 'pending' || rec.status === 'approved'
   const isActed = rec.status !== 'pending'
+  const isApproved =
+    rec.status === 'added_to_lidarr' || rec.status === 'add_failed' || rec.status === 'approved'
+
+  function handleCardClick() {
+    if (bulkMode) {
+      onToggleSelect?.(rec.id)
+    } else {
+      onClick?.(rec.id)
+    }
+  }
 
   return (
     <div className="relative group">
+      {/* Bulk mode checkbox overlay */}
+      {bulkMode && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: checkbox overlay
+        <div
+          className="absolute top-2 left-2 z-20"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleSelect?.(rec.id)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation()
+              onToggleSelect?.(rec.id)
+            }
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={() => onToggleSelect?.(rec.id)}
+            className="w-4 h-4 accent-accent cursor-pointer"
+            aria-label={`Select ${rec.artist.name}`}
+          />
+        </div>
+      )}
       {/* Hover edge buttons -- desktop only, only for pending cards */}
-      {isPending && (
+      {!bulkMode && isPending && (
         <>
           {/* Left edge: reject */}
           {/* biome-ignore lint/a11y/noStaticElementInteractions: edge action button */}
@@ -287,13 +328,17 @@ export function RecommendationCard({
         type="button"
         className={cn(
           'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left flex flex-col relative',
-          isSelected ? 'border-accent' : 'border-border hover:border-border/80',
+          bulkMode && isChecked
+            ? 'border-accent bg-accent/5'
+            : isSelected
+              ? 'border-accent'
+              : 'border-border hover:border-border/80',
         )}
-        onClick={() => onClick?.(rec.id)}
+        onClick={handleCardClick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            onClick?.(rec.id)
+            handleCardClick()
           }
         }}
       >
@@ -343,8 +388,8 @@ export function RecommendationCard({
             />
           )}
 
-          {/* Action buttons */}
-          {isPending && (
+          {/* Action buttons -- hidden in bulk mode */}
+          {!bulkMode && isPending && (
             // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
             <div
               className="flex gap-2"
@@ -370,7 +415,25 @@ export function RecommendationCard({
               </Button>
             </div>
           )}
-          {rec.status === 'rejected' && (
+          {!bulkMode && isApproved && (
+            // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
+            <div
+              className="flex gap-2"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              role="presentation"
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
+                onClick={() => onReject(rec.id)}
+              >
+                Reject
+              </Button>
+            </div>
+          )}
+          {!bulkMode && rec.status === 'rejected' && (
             // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper, not interactive itself
             <div
               className="flex gap-2"
@@ -466,8 +529,8 @@ export function RecommendationCard({
               />
             )}
 
-            {/* Action buttons (re-shown in expanded too for non-acted) */}
-            {isPending && (
+            {/* Action buttons (re-shown in expanded too) -- hidden in bulk mode */}
+            {!bulkMode && isPending && (
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -487,7 +550,19 @@ export function RecommendationCard({
                 </Button>
               </div>
             )}
-            {rec.status === 'rejected' && (
+            {!bulkMode && isApproved && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
+                  onClick={() => onReject(rec.id)}
+                >
+                  Reject
+                </Button>
+              </div>
+            )}
+            {!bulkMode && rec.status === 'rejected' && (
               <div className="flex gap-2">
                 <Button
                   size="sm"

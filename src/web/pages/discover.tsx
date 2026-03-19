@@ -91,6 +91,9 @@ export function DiscoverPage() {
   const [approveThreshold, setApproveThreshold] = useState(70)
   const [actingIds, setActingIds] = useState<Set<number>>(new Set())
   const [page, setPage] = useState(0)
+  const [bulkMode, setBulkMode] = useState(false)
+  const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set())
+  const [bulkActing, setBulkActing] = useState(false)
 
   const queryParams: Record<string, string> = {
     sort: 'score_desc',
@@ -252,6 +255,63 @@ export function DiscoverPage() {
     }
   }
 
+  function handleToggleBulkMode() {
+    setBulkMode((prev) => {
+      if (prev) setCheckedIds(new Set())
+      return !prev
+    })
+  }
+
+  function handleToggleSelect(id: number) {
+    setCheckedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  function handleSelectAll() {
+    setCheckedIds(new Set(items.map((r) => r.id)))
+  }
+
+  function handleDeselectAll() {
+    setCheckedIds(new Set())
+  }
+
+  async function handleBulkApprove() {
+    if (checkedIds.size === 0) return
+    setBulkActing(true)
+    try {
+      await bulkAction([...checkedIds], 'approve')
+      toast.success(`Approved ${checkedIds.size} recommendations`)
+      setCheckedIds(new Set())
+      refetch()
+    } catch {
+      toast.error('Bulk approve failed')
+    } finally {
+      setBulkActing(false)
+    }
+  }
+
+  async function handleBulkReject() {
+    if (checkedIds.size === 0) return
+    setBulkActing(true)
+    try {
+      await bulkAction([...checkedIds], 'reject')
+      toast.success(`Rejected ${checkedIds.size} recommendations`)
+      setCheckedIds(new Set())
+      refetch()
+    } catch {
+      toast.error('Bulk reject failed')
+    } finally {
+      setBulkActing(false)
+    }
+  }
+
   const handleCardClick = useCallback(
     (id: number) => {
       if (expandedId === id) {
@@ -317,7 +377,7 @@ export function DiscoverPage() {
   ).length
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+    <div className={`p-6 space-y-6 max-w-6xl mx-auto${bulkMode ? ' pb-24' : ''}`}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Filter tabs */}
@@ -331,6 +391,7 @@ export function DiscoverPage() {
                 setExpandedId(null)
                 setSelectedId(null)
                 setPage(0)
+                setCheckedIds(new Set())
               }}
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                 filter === tab ? 'bg-accent text-bg' : 'text-muted hover:text-text'
@@ -351,8 +412,8 @@ export function DiscoverPage() {
           ))}
         </div>
 
-        {/* Approve All Above */}
-        <div className="flex items-center gap-2">
+        {/* Approve All Above + Select */}
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={approveThreshold}
             onChange={(e) => setApproveThreshold(Number(e.target.value))}
@@ -390,17 +451,32 @@ export function DiscoverPage() {
           >
             Refresh Data
           </button>
+          <button
+            type="button"
+            onClick={handleToggleBulkMode}
+            className={`px-3 py-1.5 border rounded text-sm font-medium transition-colors ${
+              bulkMode
+                ? 'bg-accent text-bg border-accent'
+                : 'bg-surface border-border text-muted hover:text-text'
+            }`}
+          >
+            {bulkMode ? 'Cancel' : 'Select'}
+          </button>
         </div>
       </div>
 
       {/* Keyboard hint (hidden on small screens, swipe hint shown instead) */}
-      <p className="text-xs text-muted hidden sm:block">
-        Shortcuts: <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd> navigate{' '}
-        <kbd className="px-1 bg-surface border border-border rounded">a</kbd> approve{' '}
-        <kbd className="px-1 bg-surface border border-border rounded">r</kbd> reject{' '}
-        <kbd className="px-1 bg-surface border border-border rounded">enter</kbd> expand
-      </p>
-      <p className="text-xs text-muted sm:hidden">Swipe right to approve, left to reject</p>
+      {!bulkMode && (
+        <>
+          <p className="text-xs text-muted hidden sm:block">
+            Shortcuts: <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
+            navigate <kbd className="px-1 bg-surface border border-border rounded">a</kbd> approve{' '}
+            <kbd className="px-1 bg-surface border border-border rounded">r</kbd> reject{' '}
+            <kbd className="px-1 bg-surface border border-border rounded">enter</kbd> expand
+          </p>
+          <p className="text-xs text-muted sm:hidden">Swipe right to approve, left to reject</p>
+        </>
+      )}
 
       {/* Card grid */}
       {loading ? (
@@ -419,27 +495,72 @@ export function DiscoverPage() {
                 className={isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''}
               >
                 <SwipeCard
-                  enabled={isPending && !isActing}
+                  enabled={!bulkMode && isPending && !isActing}
                   onSwipeRight={
-                    isPending && !isActing ? () => handleApprove(rec.id, rec.status) : undefined
+                    !bulkMode && isPending && !isActing
+                      ? () => handleApprove(rec.id, rec.status)
+                      : undefined
                   }
                   onSwipeLeft={
-                    isPending && !isActing ? () => handleReject(rec.id, rec.status) : undefined
+                    !bulkMode && isPending && !isActing
+                      ? () => handleReject(rec.id, rec.status)
+                      : undefined
                   }
                 >
                   <RecommendationCard
                     recommendation={rec}
                     onApprove={isActing ? () => {} : handleApprove}
                     onReject={isActing ? () => {} : handleReject}
-                    onClick={handleCardClick}
-                    isSelected={selectedId === rec.id}
-                    expanded={isExpanded}
+                    onClick={bulkMode ? undefined : handleCardClick}
+                    isSelected={!bulkMode && selectedId === rec.id}
+                    expanded={!bulkMode && isExpanded}
                     onRetry={handleRetry}
+                    bulkMode={bulkMode}
+                    isChecked={checkedIds.has(rec.id)}
+                    onToggleSelect={handleToggleSelect}
                   />
                 </SwipeCard>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Bulk action toolbar */}
+      {bulkMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 bg-surface border border-border rounded-lg shadow-lg text-sm">
+          <span className="text-muted tabular-nums">{checkedIds.size} selected</span>
+          <button
+            type="button"
+            onClick={handleSelectAll}
+            className="text-xs text-accent hover:underline"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={handleDeselectAll}
+            className="text-xs text-muted hover:text-text"
+          >
+            None
+          </button>
+          <div className="w-px h-4 bg-border" />
+          <button
+            type="button"
+            onClick={handleBulkApprove}
+            disabled={checkedIds.size === 0 || bulkActing}
+            className="px-3 py-1 bg-approve/20 text-approve border border-approve/40 rounded text-sm font-medium hover:bg-approve/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Approve{checkedIds.size > 0 ? ` (${checkedIds.size})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={handleBulkReject}
+            disabled={checkedIds.size === 0 || bulkActing}
+            className="px-3 py-1 bg-reject/20 text-reject border border-reject/40 rounded text-sm font-medium hover:bg-reject/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Reject{checkedIds.size > 0 ? ` (${checkedIds.size})` : ''}
+          </button>
         </div>
       )}
 
