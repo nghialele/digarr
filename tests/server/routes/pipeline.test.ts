@@ -19,6 +19,12 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     storeDb: {} as unknown as AppDependencies['storeDb'],
     orchestrator: makeMockOrchestrator() as unknown as AppDependencies['orchestrator'],
     scheduler: {} as AppDependencies['scheduler'],
+    providerRegistry: {
+      create: vi.fn().mockResolvedValue({ getRecommendations: vi.fn(), testConnection: vi.fn() }),
+      register: vi.fn(),
+      has: vi.fn().mockReturnValue(true),
+      availableIds: vi.fn().mockReturnValue(['anthropic', 'openai', 'ollama']),
+    } as unknown as AppDependencies['providerRegistry'],
     isSetupComplete: async () => true,
     getSettings: vi.fn(async () => ({
       id: 1,

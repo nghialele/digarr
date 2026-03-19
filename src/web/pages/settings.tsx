@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import type { AiProvider } from '@/core/types'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { ServiceCard } from '../components/service-card'
 import { Button } from '../components/ui/button'
@@ -31,7 +30,7 @@ type Settings = {
   listenbrainzToken?: string
   lastfmUsername?: string
   lastfmApiKey?: string
-  aiProvider?: AiProvider
+  aiProvider?: string
   aiApiKey?: string
   aiModel?: string
   aiBaseUrl?: string
@@ -142,7 +141,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   const [lfApiKey, setLfApiKey] = useState(
     settings.lastfmApiKey === '***' ? '' : (settings.lastfmApiKey ?? ''),
   )
-  const [aiProvider, setAiProvider] = useState<AiProvider>(settings.aiProvider ?? 'anthropic')
+  const [aiProvider, setAiProvider] = useState<string>(settings.aiProvider ?? 'anthropic')
   const [aiModel, setAiModel] = useState(settings.aiModel ?? '')
   const [aiApiKey, setAiApiKey] = useState(
     settings.aiApiKey === '***' ? '' : (settings.aiApiKey ?? ''),
@@ -473,7 +472,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               <Select
                 id="ai-provider"
                 value={aiProvider}
-                onChange={(e) => setAiProvider(e.target.value as AiProvider)}
+                onChange={(e) => setAiProvider(e.target.value)}
               >
                 <option value="anthropic">Anthropic</option>
                 <option value="openai">OpenAI</option>

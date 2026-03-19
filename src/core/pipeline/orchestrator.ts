@@ -5,7 +5,7 @@ import { sendWebhook } from '@/core/notifications'
 import { createLastFmSource } from '@/core/plugins/lastfm'
 import { createListenBrainzSource } from '@/core/plugins/listenbrainz'
 import { SourceRegistry } from '@/core/plugins/registry'
-import { createProvider } from '@/core/providers/factory'
+import type { AiProviderRegistry } from '@/core/providers/registry'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { analyze } from './analyze'
 import { collect } from './collect'
@@ -35,6 +35,7 @@ export interface PipelineDeps {
   db: StoreDb
   settings: PipelineSettings
   userId?: number
+  providerRegistry?: AiProviderRegistry
 }
 
 export class PipelineOrchestrator extends EventEmitter {
@@ -58,7 +59,7 @@ export class PipelineOrchestrator extends EventEmitter {
     this.currentMessage = null
 
     try {
-      const { db, settings } = deps
+      const { db, settings, providerRegistry } = deps
       // Merge with defaults so partially-saved preferences don't leave fields undefined
       const prefs: Preferences = {
         ...DEFAULT_PREFERENCES,
@@ -91,13 +92,12 @@ export class PipelineOrchestrator extends EventEmitter {
       const mbClient = createMusicBrainzClient()
 
       const aiProvider =
-        settings.aiProvider && settings.aiModel
-          ? await createProvider(
-              settings.aiProvider,
-              settings.aiApiKey ?? null,
-              settings.aiModel,
-              settings.aiBaseUrl ?? undefined,
-            )
+        providerRegistry && settings.aiProvider && settings.aiModel
+          ? await providerRegistry.create(settings.aiProvider, {
+              apiKey: settings.aiApiKey ?? null,
+              model: settings.aiModel,
+              baseUrl: settings.aiBaseUrl ?? null,
+            })
           : null
 
       this.emit('progress', { stage: 'collect', message: 'Fetching your Lidarr library...' })

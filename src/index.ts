@@ -6,6 +6,7 @@ import { hashPassword } from './core/auth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import { PipelineScheduler } from './core/pipeline/scheduler'
 import type { StoreDb } from './core/pipeline/store'
+import { createDefaultRegistry } from './core/providers/registry'
 import { db, pool } from './db'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
@@ -66,11 +67,12 @@ const storeDb: StoreDb = {
 
 const orchestrator = new PipelineOrchestrator()
 const scheduler = new PipelineScheduler()
+const providerRegistry = createDefaultRegistry()
 
 const runPipeline = async () => {
   const currentSettings = await getSettings(db)
   if (currentSettings) {
-    await orchestrator.run({ db: storeDb, settings: currentSettings })
+    await orchestrator.run({ db: storeDb, settings: currentSettings, providerRegistry })
   }
 }
 
@@ -79,6 +81,7 @@ const app = createApp({
   storeDb,
   orchestrator,
   scheduler,
+  providerRegistry,
   isSetupComplete: () => isSetupComplete(db),
   getSettings: () => getSettings(db),
   updateSettings: (partial) => updateSettings(db, partial),

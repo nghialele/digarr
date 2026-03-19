@@ -36,6 +36,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     storeDb: {} as unknown as AppDependencies['storeDb'],
     orchestrator: makeMockOrchestrator() as unknown as AppDependencies['orchestrator'],
     scheduler: {} as AppDependencies['scheduler'],
+    providerRegistry: {} as unknown as AppDependencies['providerRegistry'],
     isSetupComplete: async () => true,
     getSettings: vi.fn(async () => mockSettings as Record<string, unknown>),
     updateSettings: vi.fn(async () => {}),
