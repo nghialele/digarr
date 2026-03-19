@@ -72,6 +72,28 @@ describe('OidcService', () => {
 
       expect(oidcClient.discovery).toHaveBeenCalledTimes(1)
     })
+
+    it('propagates discovery errors', async () => {
+      vi.mocked(oidcClient.discovery).mockRejectedValue(new Error('Network error'))
+
+      await expect(service.getAuthorizationUrl('http://localhost:3000/cb')).rejects.toThrow(
+        'Network error',
+      )
+    })
+
+    it('resetDiscovery forces re-fetch on next call', async () => {
+      vi.mocked(oidcClient.discovery).mockResolvedValue({} as never)
+      vi.mocked(oidcClient.buildAuthorizationUrl).mockReturnValue(
+        new URL('https://auth.example.com/authorize?state=mock-state'),
+      )
+
+      await service.getAuthorizationUrl('http://localhost:3000/cb')
+      expect(oidcClient.discovery).toHaveBeenCalledTimes(1)
+
+      service.resetDiscovery()
+      await service.getAuthorizationUrl('http://localhost:3000/cb')
+      expect(oidcClient.discovery).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('handleCallback', () => {
@@ -95,6 +117,7 @@ describe('OidcService', () => {
       vi.mocked(oidcClient.authorizationCodeGrant).mockResolvedValue(mockTokens as never)
 
       // Pre-populate pending auth state
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       service['pendingAuths'].set('mock-state', {
         nonce: 'mock-nonce',
         codeVerifier: 'mock-code-verifier',
@@ -139,6 +162,7 @@ describe('OidcService', () => {
       vi.mocked(oidcClient.discovery).mockResolvedValue({} as never)
       vi.mocked(oidcClient.authorizationCodeGrant).mockResolvedValue(mockTokens as never)
 
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       service['pendingAuths'].set('mock-state', {
         nonce: 'mock-nonce',
         codeVerifier: 'mock-code-verifier',
@@ -150,6 +174,7 @@ describe('OidcService', () => {
         new URL('http://localhost:3000/api/auth/oidc/callback?code=auth-code&state=mock-state'),
       )
 
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       expect(service['pendingAuths'].has('mock-state')).toBe(false)
     })
 
@@ -176,6 +201,7 @@ describe('OidcService', () => {
       vi.mocked(oidcClient.discovery).mockResolvedValue({} as never)
       vi.mocked(oidcClient.authorizationCodeGrant).mockResolvedValue(mockTokens as never)
 
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       service['pendingAuths'].set('mock-state', {
         nonce: 'mock-nonce',
         codeVerifier: 'mock-code-verifier',
@@ -189,16 +215,37 @@ describe('OidcService', () => {
         ),
       ).rejects.toThrow('No ID token claims')
     })
+
+    it('propagates token exchange errors', async () => {
+      vi.mocked(oidcClient.discovery).mockResolvedValue({} as never)
+      vi.mocked(oidcClient.authorizationCodeGrant).mockRejectedValue(new Error('invalid_grant'))
+
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
+      service['pendingAuths'].set('mock-state', {
+        nonce: 'mock-nonce',
+        codeVerifier: 'mock-code-verifier',
+        redirectUri: 'http://localhost:3000/api/auth/oidc/callback',
+        createdAt: Date.now(),
+      })
+
+      await expect(
+        service.handleCallback(
+          new URL('http://localhost:3000/api/auth/oidc/callback?code=x&state=mock-state'),
+        ),
+      ).rejects.toThrow('invalid_grant')
+    })
   })
 
   describe('cleanupPendingAuths', () => {
     it('removes entries older than 10 minutes', () => {
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       service['pendingAuths'].set('old-state', {
         nonce: 'n',
         codeVerifier: 'cv',
         redirectUri: 'http://localhost:3000/api/auth/oidc/callback',
         createdAt: Date.now() - 20 * 60 * 1000,
       })
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       service['pendingAuths'].set('fresh-state', {
         nonce: 'n2',
         codeVerifier: 'cv2',
@@ -206,14 +253,19 @@ describe('OidcService', () => {
         createdAt: Date.now(),
       })
 
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       service['cleanupPendingAuths']()
 
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       expect(service['pendingAuths'].has('old-state')).toBe(false)
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       expect(service['pendingAuths'].has('fresh-state')).toBe(true)
     })
 
     it('handles empty map', () => {
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       service['cleanupPendingAuths']()
+      // biome-ignore lint/complexity/useLiteralKeys: accessing private field
       expect(service['pendingAuths'].size).toBe(0)
     })
   })
