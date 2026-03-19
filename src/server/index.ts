@@ -3,6 +3,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { envConfig } from '@/config/env'
+import type { GenreService } from '@/core/genre/service'
 import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
 import type { SubscriptionScheduler } from '@/core/pipeline/subscription-scheduler'
 import type { AiProviderRegistry } from '@/core/providers/registry'
@@ -13,6 +14,14 @@ import type {
   StatusUpdateExtra,
 } from '@/db/queries/recommendations'
 import type { SetupConfig } from '@/db/queries/settings'
+import type {
+  createSubscription,
+  deleteSubscription,
+  getRunsForSubscription,
+  getSubscription,
+  getSubscriptionsByUser,
+  updateSubscription,
+} from '@/db/queries/subscriptions'
 import type { UserPublic } from '@/db/queries/users'
 import { authGuard } from './middleware/auth'
 import { setupGuard } from './middleware/setup-guard'
@@ -20,6 +29,7 @@ import { analyticsRoutes } from './routes/analytics'
 import { artistRoutes } from './routes/artists'
 import { authRoutes } from './routes/auth'
 import { batchRoutes } from './routes/batches'
+import { genreRoutes } from './routes/genres'
 import { healthRoutes } from './routes/health'
 import { lidarrRoutes } from './routes/lidarr'
 import { listeningRoutes } from './routes/listening'
@@ -27,6 +37,7 @@ import { pipelineRoutes } from './routes/pipeline'
 import { recommendationRoutes } from './routes/recommendations'
 import { settingsRoutes } from './routes/settings'
 import { setupRoutes } from './routes/setup'
+import { subscriptionRoutes } from './routes/subscriptions'
 
 export type AppDependencies = {
   db: import('@/db').Database
@@ -67,6 +78,35 @@ export type AppDependencies = {
   getUserById: (id: number) => Promise<UserPublic | null>
   getUserCount: () => Promise<number>
   updatePassword: (id: number, passwordHash: string) => Promise<void>
+  // Genre service
+  genreService: GenreService
+  // Subscription query functions
+  subscriptionQueries: {
+    createSubscription: (
+      ...args: Parameters<typeof createSubscription> extends [unknown, ...infer Rest] ? Rest : never
+    ) => ReturnType<typeof createSubscription>
+    getSubscription: (
+      ...args: Parameters<typeof getSubscription> extends [unknown, ...infer Rest] ? Rest : never
+    ) => ReturnType<typeof getSubscription>
+    getSubscriptionsByUser: (
+      ...args: Parameters<typeof getSubscriptionsByUser> extends [unknown, ...infer Rest]
+        ? Rest
+        : never
+    ) => ReturnType<typeof getSubscriptionsByUser>
+    updateSubscription: (
+      ...args: Parameters<typeof updateSubscription> extends [unknown, ...infer Rest] ? Rest : never
+    ) => ReturnType<typeof updateSubscription>
+    deleteSubscription: (
+      ...args: Parameters<typeof deleteSubscription> extends [unknown, ...infer Rest] ? Rest : never
+    ) => ReturnType<typeof deleteSubscription>
+    getRunsForSubscription: (
+      ...args: Parameters<typeof getRunsForSubscription> extends [unknown, ...infer Rest]
+        ? Rest
+        : never
+    ) => ReturnType<typeof getRunsForSubscription>
+  }
+  // Manual subscription trigger
+  runSubscription: (id: number) => Promise<void>
 }
 
 export function createApp(deps: AppDependencies) {
@@ -104,6 +144,8 @@ export function createApp(deps: AppDependencies) {
   app.route('/', artistRoutes(deps))
   app.route('/', lidarrRoutes(deps))
   app.route('/', listeningRoutes(deps))
+  app.route('/', genreRoutes(deps))
+  app.route('/', subscriptionRoutes(deps))
 
   // Serve built SPA in production (dev uses Vite's dev server with proxy)
   // Absolute path required: @hono/node-server serveStatic resolves relative

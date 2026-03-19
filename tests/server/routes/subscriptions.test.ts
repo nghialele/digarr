@@ -1,0 +1,394 @@
+// @vitest-environment node
+
+import { EventEmitter } from 'node:events'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AppDependencies } from '@/server'
+
+function makeMockOrchestrator() {
+  const emitter = new EventEmitter()
+  return Object.assign(emitter, {
+    isRunning: false,
+    run: vi.fn(async () => ({ batchId: 1 })),
+  })
+}
+
+const USER_ID = 42
+
+const mockSub = {
+  id: 1,
+  userId: USER_ID,
+  name: 'My Sub',
+  enabled: true,
+  sourceType: 'genre',
+  sourceProvider: 'library',
+  sourceConfig: { genreSlug: 'rock' },
+  maxArtistsPerRun: 20,
+  listenerRange: null,
+  cron: '0 9 * * *',
+  action: 'recommend',
+  scoreThreshold: null,
+  scoringWeightPreset: null,
+  scoringWeightOverrides: null,
+  lastRunAt: null,
+  lastResultCount: null,
+  lastError: null,
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+}
+
+const mockSubQueries = {
+  createSubscription: vi.fn(async () => mockSub),
+  getSubscription: vi.fn(async (id: number) => (id === 1 ? mockSub : null)),
+  getSubscriptionsByUser: vi.fn(async () => [mockSub]),
+  updateSubscription: vi.fn(async () => {}),
+  deleteSubscription: vi.fn(async () => {}),
+  getRunsForSubscription: vi.fn(async () => []),
+}
+
+const mockGenreService = {
+  getLibraryGenres: vi.fn(async () => []),
+  search: vi.fn(async () => []),
+  getOrFetchGenre: vi.fn(async () => null),
+  getSubGenres: vi.fn(async () => []),
+  seedFromLibrary: vi.fn(async () => {}),
+  slugify: vi.fn((name: string) => name.toLowerCase()),
+  isStale: vi.fn(() => false),
+}
+
+function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
+  return {
+    db: { execute: vi.fn(async () => []) } as unknown as AppDependencies['db'],
+    storeDb: {} as unknown as AppDependencies['storeDb'],
+    orchestrator: makeMockOrchestrator() as unknown as AppDependencies['orchestrator'],
+    scheduler: { remove: vi.fn() } as unknown as AppDependencies['scheduler'],
+    providerRegistry: {} as unknown as AppDependencies['providerRegistry'],
+    isSetupComplete: async () => true,
+    getSettings: vi.fn(async () => ({
+      id: 1,
+      lidarrUrl: 'http://lidarr:8686',
+      lidarrApiKey: 'key',
+      preferences: {},
+    })),
+    updateSettings: vi.fn(async () => {}),
+    completeSetup: vi.fn(async () => ({ id: 1, setupComplete: true })),
+    getLastBatch: vi.fn(async () => null),
+    listRecommendations: vi.fn(async () => ({ items: [], total: 0 })),
+    getRecommendation: vi.fn(async () => null),
+    updateRecommendationStatus: vi.fn(async () => {}),
+    bulkUpdateStatus: vi.fn(async () => {}),
+    listBatches: vi.fn(async () => []),
+    getBatch: vi.fn(async () => null),
+    getArtistById: vi.fn(async () => null),
+    restartScheduler: vi.fn(),
+    createUser: vi.fn(async () => ({
+      id: 1,
+      username: 'test',
+      isAdmin: false,
+      preferences: null,
+      createdAt: new Date(),
+    })),
+    getUserByUsername: vi.fn(async () => null),
+    // Auth: return user so userId is set to USER_ID
+    getUserById: vi.fn(async (id: number) =>
+      id === USER_ID
+        ? {
+            id: USER_ID,
+            username: 'testuser',
+            isAdmin: false,
+            preferences: null,
+            createdAt: new Date(),
+          }
+        : null,
+    ),
+    getUserCount: vi.fn(async () => 0),
+    updatePassword: vi.fn(async () => {}),
+    genreService: mockGenreService as unknown as AppDependencies['genreService'],
+    subscriptionQueries: mockSubQueries as unknown as AppDependencies['subscriptionQueries'],
+    runSubscription: vi.fn(async () => {}),
+    ...overrides,
+  }
+}
+
+// Helper to make authenticated requests (injects userId via session simulation)
+// Since auth middleware checks getUserCount() == 0 to skip auth, we keep it at 0
+// so no token is needed and userId is undefined. For endpoints that need userId,
+// we need a session. Instead we test the 401 paths (no auth) and ownership (403).
+// For ownership tests, we need a way to set userId. We do this by patching
+// the app to bypass auth (getUserCount returns 0) and set userId via a custom middleware.
+// The cleanest approach is to use the existing session mechanism -- but since sessions
+// are in-memory we can't easily inject one in tests. Instead we wrap createApp
+// with a pre-auth middleware that sets userId on the context.
+
+import { Hono } from 'hono'
+import { genreRoutes } from '@/server/routes/genres'
+import { subscriptionRoutes } from '@/server/routes/subscriptions'
+
+function createTestApp(deps: AppDependencies, userId: number | undefined) {
+  const app = new Hono()
+  // Inject userId before route handlers
+  app.use('*', async (c, next) => {
+    if (userId !== undefined) {
+      c.set('userId' as never, userId as never)
+    }
+    return next()
+  })
+  app.route('/', genreRoutes(deps))
+  app.route('/', subscriptionRoutes(deps))
+  return app
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockSubQueries.createSubscription.mockResolvedValue(mockSub)
+  mockSubQueries.getSubscription.mockImplementation(async (id: number) =>
+    id === 1 ? mockSub : null,
+  )
+  mockSubQueries.getSubscriptionsByUser.mockResolvedValue([mockSub])
+  mockSubQueries.updateSubscription.mockResolvedValue(undefined)
+  mockSubQueries.deleteSubscription.mockResolvedValue(undefined)
+  mockSubQueries.getRunsForSubscription.mockResolvedValue([])
+})
+
+describe('GET /api/subscriptions', () => {
+  it('returns subscriptions for authenticated user', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(Array.isArray(body)).toBe(true)
+    expect(body).toHaveLength(1)
+    expect(mockSubQueries.getSubscriptionsByUser).toHaveBeenCalledWith(USER_ID)
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    const app = createTestApp(makeDeps(), undefined)
+    const res = await app.request('/api/subscriptions')
+    expect(res.status).toBe(401)
+  })
+})
+
+describe('POST /api/subscriptions', () => {
+  const validBody = {
+    name: 'Test Sub',
+    sourceType: 'genre',
+    sourceProvider: 'library',
+    sourceConfig: { genreSlug: 'rock' },
+    cron: '0 9 * * *',
+  }
+
+  it('creates a subscription with valid fields', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validBody),
+    })
+    expect(res.status).toBe(201)
+    expect(mockSubQueries.createSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Test Sub', userId: USER_ID }),
+    )
+  })
+
+  it('returns 400 when name is missing', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const { name: _n, ...noName } = validBody
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(noName),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when sourceType is missing', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const { sourceType: _st, ...noType } = validBody
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(noType),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when sourceProvider is missing', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const { sourceProvider: _sp, ...noProvider } = validBody
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(noProvider),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when sourceConfig is missing', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const { sourceConfig: _sc, ...noConfig } = validBody
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(noConfig),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when cron is missing', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const { cron: _c, ...noCron } = validBody
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(noCron),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 for invalid cron expression', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validBody, cron: 'not-a-cron' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    const app = createTestApp(makeDeps(), undefined)
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validBody),
+    })
+    expect(res.status).toBe(401)
+  })
+})
+
+describe('PATCH /api/subscriptions/:id', () => {
+  it('updates subscription when user owns it', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated Name' }),
+    })
+    expect(res.status).toBe(200)
+    expect(mockSubQueries.updateSubscription).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ name: 'Updated Name' }),
+    )
+  })
+
+  it('returns 403 when user does not own subscription', async () => {
+    const OTHER_USER = 99
+    const app = createTestApp(makeDeps(), OTHER_USER)
+    const res = await app.request('/api/subscriptions/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Hacked' }),
+    })
+    expect(res.status).toBe(403)
+    expect(mockSubQueries.updateSubscription).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when subscription does not exist', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/999', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'x' }),
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 400 for invalid cron in update', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cron: 'bad-cron' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('strips non-allowlisted fields from update', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    await app.request('/api/subscriptions/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'ok', sourceType: 'evil', userId: 999 }),
+    })
+    expect(mockSubQueries.updateSubscription).toHaveBeenCalledWith(
+      1,
+      expect.not.objectContaining({ sourceType: 'evil', userId: 999 }),
+    )
+  })
+})
+
+describe('DELETE /api/subscriptions/:id', () => {
+  it('deletes subscription and removes from scheduler', async () => {
+    const schedulerRemove = vi.fn()
+    const app = createTestApp(
+      makeDeps({
+        scheduler: { remove: schedulerRemove } as unknown as AppDependencies['scheduler'],
+      }),
+      USER_ID,
+    )
+    const res = await app.request('/api/subscriptions/1', { method: 'DELETE' })
+    expect(res.status).toBe(200)
+    expect(mockSubQueries.deleteSubscription).toHaveBeenCalledWith(1)
+    expect(schedulerRemove).toHaveBeenCalledWith('subscription-1')
+  })
+
+  it('returns 403 when user does not own subscription', async () => {
+    const app = createTestApp(makeDeps(), 99)
+    const res = await app.request('/api/subscriptions/1', { method: 'DELETE' })
+    expect(res.status).toBe(403)
+    expect(mockSubQueries.deleteSubscription).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when subscription does not exist', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/999', { method: 'DELETE' })
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('POST /api/subscriptions/:id/run', () => {
+  it('triggers subscription run and returns 202', async () => {
+    const runSubscription = vi.fn(async () => {})
+    const app = createTestApp(makeDeps({ runSubscription }), USER_ID)
+    const res = await app.request('/api/subscriptions/1/run', { method: 'POST' })
+    expect(res.status).toBe(202)
+  })
+
+  it('returns 403 when user does not own subscription', async () => {
+    const app = createTestApp(makeDeps(), 99)
+    const res = await app.request('/api/subscriptions/1/run', { method: 'POST' })
+    expect(res.status).toBe(403)
+  })
+})
+
+describe('GET /api/subscriptions/:id/runs', () => {
+  it('returns run history for owned subscription', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/1/runs')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(Array.isArray(body)).toBe(true)
+    expect(mockSubQueries.getRunsForSubscription).toHaveBeenCalledWith(1)
+  })
+
+  it('returns 403 for non-owner', async () => {
+    const app = createTestApp(makeDeps(), 99)
+    const res = await app.request('/api/subscriptions/1/runs')
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 404 for unknown subscription', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/999/runs')
+    expect(res.status).toBe(404)
+  })
+})

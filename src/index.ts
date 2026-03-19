@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
+import { GenreService } from './core/genre/service'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
@@ -10,6 +11,13 @@ import { createDefaultRegistry } from './core/providers/registry'
 import { db, pool } from './db'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
+import {
+  getAllGenres,
+  getChildGenres,
+  getGenreBySlug,
+  searchGenres,
+  upsertGenre,
+} from './db/queries/genres'
 import {
   bulkUpdateStatus,
   getGenreFeedbackHistory,
@@ -21,6 +29,14 @@ import {
 } from './db/queries/recommendations'
 import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
+import {
+  createSubscription,
+  deleteSubscription,
+  getRunsForSubscription,
+  getSubscription,
+  getSubscriptionsByUser,
+  updateSubscription,
+} from './db/queries/subscriptions'
 import {
   createUser,
   getUserById,
@@ -69,6 +85,33 @@ const orchestrator = new PipelineOrchestrator()
 const scheduler = new SubscriptionScheduler()
 const providerRegistry = createDefaultRegistry()
 
+// Map DB genre rows (artistCount: number | null) to GenreInfo (artistCount: number)
+function mapGenreRow(row: Awaited<ReturnType<typeof upsertGenre>>) {
+  return { ...row, artistCount: row.artistCount ?? 0 }
+}
+
+const genreService = new GenreService({
+  genreQueries: {
+    upsertGenre: async (data) => mapGenreRow(await upsertGenre(db, data)),
+    getGenreBySlug: async (slug) => {
+      const row = await getGenreBySlug(db, slug)
+      return row ? mapGenreRow(row) : null
+    },
+    getChildGenres: async (parentId) => {
+      const rows = await getChildGenres(db, parentId)
+      return rows.map(mapGenreRow)
+    },
+    searchGenres: async (query, limit) => {
+      const rows = await searchGenres(db, query, limit)
+      return rows.map(mapGenreRow)
+    },
+    getAllGenres: async () => {
+      const rows = await getAllGenres(db)
+      return rows.map(mapGenreRow)
+    },
+  },
+})
+
 const runPipeline = async () => {
   const currentSettings = await getSettings(db)
   if (currentSettings) {
@@ -112,6 +155,19 @@ const app = createApp({
   getUserById: (id) => getUserById(db, id),
   getUserCount: () => getUserCount(db),
   updatePassword: (id, hash) => updatePassword(db, id, hash),
+  genreService,
+  subscriptionQueries: {
+    createSubscription: (data) => createSubscription(db, data),
+    getSubscription: (id) => getSubscription(db, id),
+    getSubscriptionsByUser: (userId) => getSubscriptionsByUser(db, userId),
+    updateSubscription: (id, data) => updateSubscription(db, id, data),
+    deleteSubscription: (id) => deleteSubscription(db, id),
+    getRunsForSubscription: (id, limit) => getRunsForSubscription(db, id, limit),
+  },
+  runSubscription: async (id) => {
+    // Placeholder -- actual execution wired in Task 10 (genre subscription execution)
+    console.log(`Manual run triggered for subscription ${id}`)
+  },
 })
 
 const port = envConfig.port
