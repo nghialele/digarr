@@ -17,15 +17,41 @@ type AuthState = 'loading' | 'not-required' | 'register' | 'login' | 'authentica
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>('loading')
   const [hasUsers, setHasUsers] = useState(false)
+  const [oidcEnabled, setOidcEnabled] = useState(false)
 
   useEffect(() => {
     async function checkAuth() {
       try {
+        // Handle OIDC callback -- token or error passed as query params
+        const params = new URLSearchParams(window.location.search)
+        const oidcToken = params.get('oidc_token')
+        const oidcError = params.get('oidc_error')
+
+        if (oidcToken) {
+          window.history.replaceState({}, '', window.location.pathname)
+          setStoredToken(oidcToken)
+          setState('authenticated')
+          return
+        }
+
+        if (oidcError) {
+          window.history.replaceState({}, '', window.location.pathname)
+          // Fall through -- show login with the error visible via state
+        }
+
         const status = await getAuthStatus()
         setHasUsers(status.hasUsers)
+        setOidcEnabled(status.oidcEnabled ?? false)
 
         if (!status.required) {
           setState('not-required')
+          return
+        }
+
+        // Proxy auth -- backend resolved the identity and issued a token
+        if (status.proxyAuth && status.token) {
+          setStoredToken(status.token)
+          setState('authenticated')
           return
         }
 
@@ -73,7 +99,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     )
   }
   return (
-    <LoginForm onSuccess={handleAuthenticated} onSwitchToRegister={() => setState('register')} />
+    <LoginForm
+      onSuccess={handleAuthenticated}
+      onSwitchToRegister={() => setState('register')}
+      oidcEnabled={oidcEnabled}
+    />
   )
 }
 
@@ -84,9 +114,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 function LoginForm({
   onSuccess,
   onSwitchToRegister,
+  oidcEnabled,
 }: {
   onSuccess: (token: string) => void
   onSwitchToRegister: () => void
+  oidcEnabled?: boolean
 }) {
   const [mode, setMode] = useState<'credentials' | 'token'>('credentials')
   const [username, setUsername] = useState('')
@@ -147,6 +179,24 @@ function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {oidcEnabled && (
+            <div className="space-y-3 mb-4">
+              <a
+                href="/api/auth/oidc/login"
+                className="block w-full text-center px-4 py-2 rounded bg-accent text-bg font-medium hover:bg-accent/90"
+              >
+                Sign in with SSO
+              </a>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-bg px-2 text-muted">or</span>
+                </div>
+              </div>
+            </div>
+          )}
           {mode === 'credentials' ? (
             <form onSubmit={handleCredentialLogin} className="space-y-4">
               <div className="space-y-2">

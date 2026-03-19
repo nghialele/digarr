@@ -59,7 +59,15 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // Auth
-export type AuthStatus = { required: boolean; hasUsers: boolean }
+export type AuthStatus = {
+  required: boolean
+  hasUsers: boolean
+  oidcEnabled?: boolean
+  proxyAuthEnabled?: boolean
+  proxyAuth?: boolean
+  token?: string
+  userId?: number
+}
 export const getAuthStatus = () => fetchApi<AuthStatus>('/auth/status')
 
 export type AuthResponse = {
@@ -250,3 +258,21 @@ export const warmArtists = (mbids: string[]) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mbids }),
   })
+
+// User management (admin)
+export const listUsers = () =>
+  fetchApi<
+    Array<{
+      id: number
+      username: string
+      isAdmin: boolean
+      email: string | null
+      oidcSubject: string | null
+      authProvider: string
+      createdAt: string
+    }>
+  >('/users')
+export const updateUserAdmin = (id: number, isAdmin: boolean) =>
+  fetchApi(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) })
+export const deleteUserApi = (id: number) =>
+  fetchApi(`/users/${id}`, { method: 'DELETE' })
