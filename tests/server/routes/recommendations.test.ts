@@ -106,6 +106,17 @@ const mockLidarrClient = {
   getRootFolders: vi.fn(async () => []),
   getArtists: vi.fn(async () => []),
   lookupArtist: vi.fn(async () => []),
+  getAlbums: vi.fn(async () => []),
+  updateArtist: vi.fn(async () => ({
+    id: 0,
+    artistName: '',
+    foreignArtistId: '',
+    qualityProfileId: 0,
+    rootFolderPath: '',
+    monitored: false,
+    status: '',
+  })),
+  triggerCommand: vi.fn(async () => ({ id: 0, name: '', status: '' })),
   testConnection: vi.fn(async () => ({ success: true, message: 'ok' })),
 }
 

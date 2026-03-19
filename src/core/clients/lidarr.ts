@@ -28,6 +28,26 @@ export type RootFolder = {
   freeSpace: number
 }
 
+export type LidarrAlbum = {
+  id: number
+  title: string
+  artistId: number
+  foreignAlbumId: string // MBID
+  monitored: boolean
+  albumType: string
+  statistics?: {
+    trackCount: number
+    trackFileCount: number
+    percentOfTracks: number
+  }
+}
+
+export type LidarrCommand = {
+  id: number
+  name: string
+  status: string
+}
+
 export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = false) {
   const http = createHttpClient({
     baseUrl: url,
@@ -89,6 +109,18 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
     })
   }
 
+  function getAlbums(artistId: number): Promise<LidarrAlbum[]> {
+    return http.get<LidarrAlbum[]>(`/api/v1/album?artistIds=${artistId}`)
+  }
+
+  function updateArtist(id: number, data: Partial<LidarrArtist>): Promise<LidarrArtist> {
+    return http.put<LidarrArtist>(`/api/v1/artist/${id}`, data)
+  }
+
+  function triggerCommand(name: string, body?: Record<string, unknown>): Promise<LidarrCommand> {
+    return http.post<LidarrCommand>('/api/v1/command', { name, ...body })
+  }
+
   async function testConnection(): Promise<ServiceTestResult> {
     try {
       const profiles = await http.get<QualityProfile[]>('/api/v1/qualityprofile')
@@ -107,6 +139,9 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
     getArtists,
     lookupArtist,
     addArtist,
+    getAlbums,
+    updateArtist,
+    triggerCommand,
     getQualityProfiles,
     getMetadataProfiles,
     getRootFolders,
