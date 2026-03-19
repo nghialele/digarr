@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createSession, getActiveSessionForUser } from '@/core/sessions'
 import { proxyAuthMiddleware } from '@/server/middleware/proxy-auth'
 
 vi.mock('@/core/sessions', () => ({
@@ -47,12 +48,12 @@ describe('proxyAuthMiddleware', () => {
     mockGetUserCount.mockResolvedValue(0)
   })
 
-  // Note: In tests, getSocketIp() returns '127.0.0.1' (no real socket).
-  // Trust '127.0.0.0/8' to test the happy path. For untrusted scenarios,
-  // use a CIDR that excludes 127.x.x.x (e.g., '10.0.0.0/8').
+  // Note: In tests, getSocketIp() falls back to '0.0.0.0' (no real socket, fail-closed).
+  // Trust '0.0.0.0/32' to test the happy path. For untrusted scenarios,
+  // use a CIDR that excludes 0.0.0.0 (e.g., '10.0.0.0/8').
 
   it('auto-provisions user when X-Forwarded-User is present from trusted proxy', async () => {
-    const app = buildApp(['127.0.0.0/8'])
+    const app = buildApp(['0.0.0.0/32'])
     const res = await app.request('/test', {
       headers: { 'X-Forwarded-User': 'alice' },
     })
@@ -68,7 +69,7 @@ describe('proxyAuthMiddleware', () => {
       isAdmin: true,
       createdAt: new Date(),
     })
-    const app = buildApp(['127.0.0.0/8'])
+    const app = buildApp(['0.0.0.0/32'])
     const res = await app.request('/test', {
       headers: { 'X-Forwarded-User': 'bob' },
     })
@@ -86,7 +87,7 @@ describe('proxyAuthMiddleware', () => {
   })
 
   it('silently falls through when no X-Forwarded-User header', async () => {
-    const app = buildApp(['127.0.0.0/8'])
+    const app = buildApp(['0.0.0.0/32'])
     const res = await app.request('/test')
     const body = await res.json()
     expect(body.proxyAuth).toBeUndefined()
@@ -94,10 +95,55 @@ describe('proxyAuthMiddleware', () => {
 
   it('first proxy user becomes admin', async () => {
     mockGetUserCount.mockResolvedValue(0)
-    const app = buildApp(['127.0.0.0/8'])
+    const app = buildApp(['0.0.0.0/32'])
     await app.request('/test', {
       headers: { 'X-Forwarded-User': 'firstuser' },
     })
     expect(mockCreateUser).toHaveBeenCalledWith(expect.objectContaining({ isAdmin: true }))
+  })
+
+  it('skips all processing when disabled', async () => {
+    const app = new Hono()
+    app.use(
+      '*',
+      proxyAuthMiddleware({
+        enabled: false,
+        trustedProxies: ['0.0.0.0/32'],
+        getUserByUsername: mockGetUserByUsername,
+        createUser: mockCreateUser,
+        getUserCount: mockGetUserCount,
+      }),
+    )
+    app.get('/test', (c) => c.json({ proxyAuth: c.get('proxyAuth' as never) }))
+    const res = await app.request('/test', { headers: { 'X-Forwarded-User': 'alice' } })
+    const body = await res.json()
+    expect(body.proxyAuth).toBeUndefined()
+  })
+
+  it('reuses existing session instead of creating new one', async () => {
+    vi.mocked(getActiveSessionForUser).mockReturnValue('existing-token')
+    mockGetUserByUsername.mockResolvedValue({
+      id: 10,
+      username: 'carol',
+      passwordHash: 'h',
+      isAdmin: false,
+    })
+    const app = buildApp(['0.0.0.0/32'])
+    await app.request('/test', { headers: { 'X-Forwarded-User': 'carol' } })
+    expect(createSession).not.toHaveBeenCalled()
+  })
+
+  it('silently falls through when X-Forwarded-User is empty after trim', async () => {
+    const app = buildApp(['0.0.0.0/32'])
+    const res = await app.request('/test', { headers: { 'X-Forwarded-User': '   ' } })
+    const body = await res.json()
+    expect(body.proxyAuth).toBeUndefined()
+  })
+
+  it('silently falls through when X-Forwarded-User exceeds 50 chars', async () => {
+    const app = buildApp(['0.0.0.0/32'])
+    const res = await app.request('/test', { headers: { 'X-Forwarded-User': 'a'.repeat(51) } })
+    const body = await res.json()
+    expect(body.proxyAuth).toBeUndefined()
   })
 })

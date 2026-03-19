@@ -18,6 +18,10 @@ describe('isIpInCidr', () => {
   it('handles CIDR without mask (treats as /32)', () => {
     expect(isIpInCidr('10.0.0.1', '10.0.0.1')).toBe(true)
   })
+  it('handles /0 (match all IPs)', () => {
+    expect(isIpInCidr('8.8.8.8', '0.0.0.0/0')).toBe(true)
+    expect(isIpInCidr('192.168.1.1', '0.0.0.0/0')).toBe(true)
+  })
 })
 
 describe('isIpTrusted', () => {

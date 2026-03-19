@@ -26,7 +26,7 @@ type ProxyAuthDeps = {
  *
  * Bun runtime: `c.env?.remoteAddress` or the `conninfo` helper.
  * @hono/node-server: `c.env?.incoming?.socket?.remoteAddress`.
- * Tests: falls back to '127.0.0.1' (tests don't have a real socket).
+ * Tests: falls back to '0.0.0.0' (tests don't have a real socket).
  *
  * The implementer MUST verify which property exposes the socket IP
  * in the production runtime (Bun) and test runtime (Node/@hono/node-server).
@@ -42,8 +42,8 @@ function getSocketIp(c: { env?: Record<string, unknown> }): string {
   const nodeAddr = incoming?.socket?.remoteAddress
   if (typeof nodeAddr === 'string') return nodeAddr
 
-  // Fallback for tests (no real socket)
-  return '127.0.0.1'
+  // Fail closed: '0.0.0.0' won't match any sane trusted proxy CIDR
+  return '0.0.0.0'
 }
 
 export function proxyAuthMiddleware(deps: ProxyAuthDeps) {
@@ -53,8 +53,10 @@ export function proxyAuthMiddleware(deps: ProxyAuthDeps) {
     const proxyIp = getSocketIp(c)
     if (!isIpTrusted(proxyIp, deps.trustedProxies)) return next()
 
-    const forwardedUser = c.req.header('X-Forwarded-User')
-    if (!forwardedUser) return next()
+    const rawForwardedUser = c.req.header('X-Forwarded-User')
+    if (!rawForwardedUser) return next()
+    const forwardedUser = rawForwardedUser.trim()
+    if (forwardedUser.length === 0 || forwardedUser.length > 50) return next()
 
     const forwardedEmail = c.req.header('X-Forwarded-Email') ?? undefined
 
