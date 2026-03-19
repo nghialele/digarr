@@ -1,12 +1,13 @@
 import { createLastFmClient } from '@/core/clients/lastfm'
-import type { ListeningSource } from './types'
+import type { DiscoverySource } from './types'
 
-export function createLastFmSource(username: string, apiKey: string): ListeningSource {
+export function createLastFmSource(username: string, apiKey: string): DiscoverySource {
   const client = createLastFmClient(username, apiKey)
 
   return {
     id: 'lastfm',
     name: 'Last.fm',
+    capabilities: ['topArtists', 'similarArtists', 'genreArtists'],
 
     async getTopArtists() {
       const artists = await client.getTopArtists('1month')
@@ -30,6 +31,16 @@ export function createLastFmSource(username: string, apiKey: string): ListeningS
 
     async testConnection() {
       return client.testConnection()
+    },
+
+    async getGenreArtists(genre, options) {
+      const artists = await client.getTopArtistsByTag(genre, options?.limit)
+      return artists.map((a) => ({
+        name: a.name,
+        mbid: a.mbid,
+        listeners: a.listeners,
+        source: 'lastfm',
+      }))
     },
   }
 }

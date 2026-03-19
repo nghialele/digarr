@@ -206,6 +206,7 @@ describe('PipelineOrchestrator', () => {
     vi.mocked(createListenBrainzSource).mockReturnValue({
       id: 'listenbrainz',
       name: 'ListenBrainz',
+      capabilities: ['topArtists', 'similarArtists', 'listeningActivity'],
       getTopArtists: vi.fn(),
       getSimilarArtists: vi.fn(),
       testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
@@ -214,6 +215,7 @@ describe('PipelineOrchestrator', () => {
     vi.mocked(createLastFmSource).mockReturnValue({
       id: 'lastfm',
       name: 'Last.fm',
+      capabilities: ['topArtists', 'similarArtists', 'genreArtists'],
       getTopArtists: vi.fn(),
       getSimilarArtists: vi.fn(),
       testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),

@@ -86,6 +86,29 @@ export function createLastFmClient(username: string, apiKey: string) {
     return res.recenttracks.track
   }
 
+  async function getTopArtistsByTag(
+    tag: string,
+    limit = 20,
+  ): Promise<Array<{ name: string; mbid?: string; listeners: number }>> {
+    const params = new URLSearchParams({
+      method: 'tag.gettopartists',
+      tag,
+      limit: String(limit),
+      api_key: apiKey,
+      format: 'json',
+    })
+    const res = await fetch(`https://ws.audioscrobbler.com/2.0/?${params}`)
+    const data = (await res.json()) as {
+      topartists?: { artist?: Array<{ name: string; mbid?: string; listeners?: string }> }
+    }
+    const artists = data?.topartists?.artist ?? []
+    return artists.map((a) => ({
+      name: a.name,
+      mbid: a.mbid || undefined,
+      listeners: Number(a.listeners) || 0,
+    }))
+  }
+
   async function testConnection(): Promise<ServiceTestResult> {
     try {
       const artists = await getTopArtists('7day')
@@ -103,6 +126,7 @@ export function createLastFmClient(username: string, apiKey: string) {
   return {
     getSimilarArtists,
     getTopArtists,
+    getTopArtistsByTag,
     getRecentTracks,
     testConnection,
   }
