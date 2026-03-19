@@ -1,8 +1,26 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Recommendation, RecommendationCard } from '@/web/components/recommendation-card'
+import { PreviewContext } from '@/web/lib/preview-context'
+
+// ---------------------------------------------------------------------------
+// Preview context stub
+// ---------------------------------------------------------------------------
+
+const noopPreview = {
+  play: vi.fn(),
+  stop: vi.fn(),
+  hasPreview: () => false,
+  currentMbid: null,
+  playing: false,
+}
+
+function withPreview(ui: ReactElement) {
+  return render(<PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>)
+}
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -42,7 +60,7 @@ describe('RecommendationCard', () => {
   })
 
   it('renders artist name and score badge', () => {
-    render(
+    withPreview(
       <RecommendationCard recommendation={makeRec()} onApprove={onApprove} onReject={onReject} />,
     )
     expect(screen.getByText('Radiohead')).toBeInTheDocument()
@@ -50,7 +68,7 @@ describe('RecommendationCard', () => {
   })
 
   it('renders genre pills', () => {
-    render(
+    withPreview(
       <RecommendationCard recommendation={makeRec()} onApprove={onApprove} onReject={onReject} />,
     )
     // Default compact: max 3 genres shown
@@ -62,7 +80,7 @@ describe('RecommendationCard', () => {
   })
 
   it('approve button calls onApprove with correct id', () => {
-    render(
+    withPreview(
       <RecommendationCard
         recommendation={makeRec({ id: 42 })}
         onApprove={onApprove}
@@ -74,7 +92,7 @@ describe('RecommendationCard', () => {
   })
 
   it('reject button calls onReject with correct id', () => {
-    render(
+    withPreview(
       <RecommendationCard
         recommendation={makeRec({ id: 7 })}
         onApprove={onApprove}
@@ -86,7 +104,7 @@ describe('RecommendationCard', () => {
   })
 
   it('click handler calls onClick with correct id', () => {
-    render(
+    withPreview(
       <RecommendationCard
         recommendation={makeRec({ id: 5 })}
         onApprove={onApprove}
@@ -100,7 +118,7 @@ describe('RecommendationCard', () => {
   })
 
   it('expanded state shows AI reasoning and source scores', () => {
-    render(
+    withPreview(
       <RecommendationCard
         recommendation={makeRec()}
         onApprove={onApprove}
@@ -116,7 +134,7 @@ describe('RecommendationCard', () => {
   })
 
   it('expanded state shows more genre pills', () => {
-    render(
+    withPreview(
       <RecommendationCard
         recommendation={makeRec()}
         onApprove={onApprove}
@@ -131,7 +149,7 @@ describe('RecommendationCard', () => {
   })
 
   it('selected state applies border highlight', () => {
-    const { container } = render(
+    const { container } = withPreview(
       <RecommendationCard
         recommendation={makeRec()}
         onApprove={onApprove}
@@ -159,7 +177,7 @@ describe('RecommendationCard', () => {
         streamingUrls: null,
       },
     })
-    render(
+    withPreview(
       <RecommendationCard
         recommendation={rec}
         onApprove={onApprove}
@@ -175,7 +193,7 @@ describe('RecommendationCard', () => {
   })
 
   it('shows Restore button for rejected recs instead of Approve/Reject', () => {
-    render(
+    withPreview(
       <RecommendationCard
         recommendation={makeRec({ status: 'rejected' })}
         onApprove={onApprove}
@@ -188,7 +206,7 @@ describe('RecommendationCard', () => {
   })
 
   it('shows Add Failed status with error message', () => {
-    render(
+    withPreview(
       <RecommendationCard
         recommendation={makeRec({ status: 'add_failed', lidarrError: 'Artist not found in MB' })}
         onApprove={onApprove}

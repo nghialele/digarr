@@ -4,12 +4,25 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { PreviewContext } from '@/web/lib/preview-context'
+
+const noopPreview = {
+  play: vi.fn(),
+  stop: vi.fn(),
+  hasPreview: () => false,
+  currentMbid: null,
+  playing: false,
+}
 
 function renderWithQuery(ui: ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(
+    <QueryClientProvider client={client}>
+      <PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>
+    </QueryClientProvider>,
+  )
 }
 
 // ---------------------------------------------------------------------------
