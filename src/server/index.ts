@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { envConfig } from '@/config/env'
 import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
-import type { PipelineScheduler } from '@/core/pipeline/scheduler'
+import type { SubscriptionScheduler } from '@/core/pipeline/subscription-scheduler'
 import type { AiProviderRegistry } from '@/core/providers/registry'
 import type {
   ListRecommendationsFilters,
@@ -32,7 +32,7 @@ export type AppDependencies = {
   db: import('@/db').Database
   storeDb: import('@/core/pipeline/store').StoreDb
   orchestrator: PipelineOrchestrator
-  scheduler: PipelineScheduler
+  scheduler: SubscriptionScheduler
   providerRegistry: AiProviderRegistry
   isSetupComplete: () => Promise<boolean>
   getSettings: () => Promise<Record<string, unknown> | null>

@@ -4,8 +4,8 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
-import { PipelineScheduler } from './core/pipeline/scheduler'
 import type { StoreDb } from './core/pipeline/store'
+import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
 import { createDefaultRegistry } from './core/providers/registry'
 import { db, pool } from './db'
 import { getArtistById, upsertArtist } from './db/queries/artists'
@@ -66,7 +66,7 @@ const storeDb: StoreDb = {
 }
 
 const orchestrator = new PipelineOrchestrator()
-const scheduler = new PipelineScheduler()
+const scheduler = new SubscriptionScheduler()
 const providerRegistry = createDefaultRegistry()
 
 const runPipeline = async () => {
@@ -100,11 +100,11 @@ const app = createApp({
   getArtistById: (id) => getArtistById(db, id),
   restartScheduler: (cron: string | null) => {
     if (!cron) {
-      scheduler.stop()
+      scheduler.remove('main-pipeline')
       console.log('Scheduler stopped')
       return
     }
-    scheduler.start(cron, runPipeline)
+    scheduler.schedule('main-pipeline', cron, runPipeline)
     console.log(`Scheduler restarted with cron: ${cron}`)
   },
   createUser: (data) => createUser(db, data),
@@ -164,7 +164,7 @@ isSetupComplete(db)
   .then((settings) => {
     const cron = settings?.preferences?.scheduleCron
     if (cron) {
-      scheduler.start(cron, runPipeline)
+      scheduler.schedule('main-pipeline', cron, runPipeline)
       console.log(`Scheduler started with cron: ${cron}`)
     }
   })
@@ -178,7 +178,7 @@ console.log(`Digarr running on http://localhost:${port}`)
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, async () => {
     console.log(`${signal} received, shutting down...`)
-    scheduler.stop()
+    scheduler.stopAll()
     server.close()
     await new Promise((resolve) => setTimeout(resolve, 5000))
     await pool.end()
