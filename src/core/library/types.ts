@@ -1,0 +1,44 @@
+export type HealthCheckId =
+  | 'missing-metadata'
+  | 'stale-mbids'
+  | 'unmonitored'
+  | 'missing-albums'
+  | 'duplicate-artists'
+  | 'genre-gaps'
+  | 'image-gaps'
+
+export type HealthCheckSeverity = 'info' | 'warning' | 'error'
+
+export type HealthCheckResult = {
+  id: HealthCheckId
+  name: string
+  description: string
+  severity: HealthCheckSeverity
+  count: number
+  items: HealthCheckItem[]
+  fixable: boolean
+}
+
+export type HealthCheckItem = {
+  artistId: number
+  artistName: string
+  mbid: string
+  detail: string
+}
+
+export type HealthFixProgress = {
+  checkId: HealthCheckId
+  total: number
+  completed: number
+  failed: number
+  status: 'running' | 'completed' | 'failed'
+  errors: string[]
+}
+
+export type LibraryStats = {
+  totalArtists: number
+  totalAlbums: number
+  monitoredArtists: number
+  genreDistribution: Array<{ genre: string; count: number }>
+  rootFolders: Array<{ path: string; freeSpace: number }>
+}
