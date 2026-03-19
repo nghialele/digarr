@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { type Recommendation, RecommendationCard } from '../components/recommendation-card'
+import { SwipeCard } from '../components/swipe-card'
 import { Skeleton } from '../components/ui/skeleton'
 import { bulkAction, getRecommendations, rescanArtists, updateRecommendation } from '../lib/api'
 
@@ -111,6 +112,34 @@ export function DiscoverPage() {
     queryClient.invalidateQueries({ queryKey: ['recommendations'] })
   }, [queryClient])
 
+  // ---------------------------------------------------------------------------
+  // Undo toast
+  // ---------------------------------------------------------------------------
+
+  type UndoEntry = { id: number; prevStatus: string }
+  const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showUndo = useCallback((entry: UndoEntry) => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    setUndoEntry(entry)
+    undoTimerRef.current = setTimeout(() => setUndoEntry(null), 5000)
+  }, [])
+
+  const handleUndo = useCallback(async () => {
+    if (!undoEntry) return
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    const entry = undoEntry
+    setUndoEntry(null)
+    try {
+      await updateRecommendation(entry.id, { status: entry.prevStatus })
+      toast.success('Undone')
+      refetch()
+    } catch {
+      toast.error('Undo failed')
+    }
+  }, [undoEntry, refetch])
+
   // Count per filter for tab badges -- fetch all counts independently
   const { data: allCountData } = useQuery({
     queryKey: ['recommendations', 'count', 'all'],
@@ -142,12 +171,16 @@ export function DiscoverPage() {
   // ---------------------------------------------------------------------------
 
   const handleApprove = useCallback(
-    async (id: number) => {
+    async (id: number, prevStatus = 'pending') => {
       setActingIds((prev) => new Set([...prev, id]))
       const newStatus = filter === 'rejected' ? 'pending' : 'approved'
       try {
         await updateRecommendation(id, { status: newStatus })
-        toast.success(filter === 'rejected' ? 'Restored to pending' : 'Approved')
+        if (filter !== 'rejected') {
+          showUndo({ id, prevStatus })
+        } else {
+          toast.success('Restored to pending')
+        }
         refetch()
       } catch {
         toast.error(filter === 'rejected' ? 'Failed to restore' : 'Failed to approve')
@@ -159,15 +192,15 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, filter],
+    [refetch, filter, showUndo],
   )
 
   const handleReject = useCallback(
-    async (id: number) => {
+    async (id: number, prevStatus = 'pending') => {
       setActingIds((prev) => new Set([...prev, id]))
       try {
         await updateRecommendation(id, { status: 'rejected' })
-        toast.success('Rejected')
+        showUndo({ id, prevStatus })
         refetch()
       } catch {
         toast.error('Failed to reject')
@@ -179,7 +212,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch],
+    [refetch, showUndo],
   )
 
   async function handleRetry(id: number) {
@@ -379,23 +412,72 @@ export function DiscoverPage() {
           {items.map((rec) => {
             const isExpanded = expandedId === rec.id
             const isActing = actingIds.has(rec.id)
+            const isPending = rec.status === 'pending'
             return (
               <div
                 key={rec.id}
                 className={isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''}
               >
-                <RecommendationCard
-                  recommendation={rec}
-                  onApprove={isActing ? () => {} : handleApprove}
-                  onReject={isActing ? () => {} : handleReject}
-                  onClick={handleCardClick}
-                  isSelected={selectedId === rec.id}
-                  expanded={isExpanded}
-                  onRetry={handleRetry}
-                />
+                <SwipeCard
+                  enabled={isPending && !isActing}
+                  onSwipeRight={
+                    isPending && !isActing ? () => handleApprove(rec.id, rec.status) : undefined
+                  }
+                  onSwipeLeft={
+                    isPending && !isActing ? () => handleReject(rec.id, rec.status) : undefined
+                  }
+                >
+                  <RecommendationCard
+                    recommendation={rec}
+                    onApprove={isActing ? () => {} : handleApprove}
+                    onReject={isActing ? () => {} : handleReject}
+                    onClick={handleCardClick}
+                    isSelected={selectedId === rec.id}
+                    expanded={isExpanded}
+                    onRetry={handleRetry}
+                  />
+                </SwipeCard>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Undo toast */}
+      {undoEntry && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 bg-surface border border-border rounded-lg shadow-lg text-sm text-text">
+          <span>Action applied.</span>
+          <button
+            type="button"
+            onClick={handleUndo}
+            className="text-accent font-medium hover:underline"
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => {
+              if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+              setUndoEntry(null)
+            }}
+            className="text-muted hover:text-text ml-1"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-3.5 h-3.5"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
       )}
 
