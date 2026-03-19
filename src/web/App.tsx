@@ -6,8 +6,11 @@ import { Toaster, toast } from 'sonner'
 import { AuthGate } from './components/auth-gate'
 import { BottomNav } from './components/bottom-nav'
 import { KeyboardShortcuts } from './components/keyboard-shortcuts'
+import { PreviewPlayer } from './components/preview-player'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
+import { usePreview } from './hooks/use-preview'
 import { getSetupStatus, triggerPipeline } from './lib/api'
+import { PreviewContext } from './lib/preview-context'
 import { queryClient } from './lib/query-client'
 import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
 import { AnalyticsPage } from './pages/analytics'
@@ -79,6 +82,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [theme, setThemeState] = useState<Theme>(getStoredTheme)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const preview = usePreview()
 
   useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
 
@@ -101,99 +105,116 @@ function AppShell({ children }: { children: React.ReactNode }) {
     isActive ? 'text-text' : 'text-muted hover:text-text'
 
   return (
-    <div className="min-h-screen bg-bg">
-      <nav className="border-b border-border px-4 sm:px-6 py-3" aria-label="Main navigation">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <NavLink to="/" className="text-xl font-bold text-accent hover:opacity-90">
-              digarr
-            </NavLink>
-            {/* Desktop nav links */}
-            <div className="hidden sm:flex items-center gap-6">
-              <NavLink to="/" className={navLinkClass}>
+    <PreviewContext.Provider
+      value={{
+        play: preview.play,
+        stop: preview.stop,
+        hasPreview: preview.hasPreview,
+        currentMbid: preview.state.artistMbid,
+        playing: preview.state.playing,
+      }}
+    >
+      <div className="min-h-screen bg-bg">
+        <nav className="border-b border-border px-4 sm:px-6 py-3" aria-label="Main navigation">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <NavLink to="/" className="text-xl font-bold text-accent hover:opacity-90">
+                digarr
+              </NavLink>
+              {/* Desktop nav links */}
+              <div className="hidden sm:flex items-center gap-6">
+                <NavLink to="/" className={navLinkClass}>
+                  Dashboard
+                </NavLink>
+                <NavLink to="/discover" className={navLinkClass}>
+                  Discover
+                </NavLink>
+                <NavLink to="/genres" className={navLinkClass}>
+                  Genres
+                </NavLink>
+                <NavLink to="/library/health" className={navLinkClass}>
+                  <span className="flex items-center gap-1">
+                    <HeartPulse size={14} aria-hidden="true" />
+                    Library
+                  </span>
+                </NavLink>
+                <NavLink to="/analytics" className={navLinkClass}>
+                  Analytics
+                </NavLink>
+                <NavLink to="/settings" className={navLinkClass}>
+                  Settings
+                </NavLink>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle theme={theme} onChange={handleThemeChange} />
+              <button
+                type="button"
+                onClick={() =>
+                  triggerPipeline()
+                    .then(() => toast.success('Scan started -- check Dashboard for progress'))
+                    .catch((err) => {
+                      const msg = err instanceof Error ? err.message : 'Failed to start scan'
+                      toast.error(msg.includes('409') ? 'Scan already running' : msg)
+                    })
+                }
+                className="px-3 sm:px-4 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90"
+              >
+                <span className="hidden sm:inline">Run Scan</span>
+                <span className="sm:hidden">Scan</span>
+              </button>
+              {/* Mobile hamburger */}
+              <button
+                type="button"
+                onClick={() => setMenuOpen((v) => !v)}
+                className="sm:hidden p-1"
+                aria-label="Toggle menu"
+              >
+                <MobileMenuIcon open={menuOpen} />
+              </button>
+            </div>
+          </div>
+          {/* Mobile nav dropdown */}
+          {menuOpen && (
+            <div className="sm:hidden flex flex-col gap-3 pt-3 pb-1">
+              <NavLink to="/" className={navLinkClass} onClick={() => setMenuOpen(false)}>
                 Dashboard
               </NavLink>
-              <NavLink to="/discover" className={navLinkClass}>
+              <NavLink to="/discover" className={navLinkClass} onClick={() => setMenuOpen(false)}>
                 Discover
               </NavLink>
-              <NavLink to="/genres" className={navLinkClass}>
+              <NavLink to="/genres" className={navLinkClass} onClick={() => setMenuOpen(false)}>
                 Genres
               </NavLink>
-              <NavLink to="/library/health" className={navLinkClass}>
-                <span className="flex items-center gap-1">
-                  <HeartPulse size={14} aria-hidden="true" />
-                  Library
-                </span>
+              <NavLink
+                to="/library/health"
+                className={navLinkClass}
+                onClick={() => setMenuOpen(false)}
+              >
+                Library
               </NavLink>
-              <NavLink to="/analytics" className={navLinkClass}>
+              <NavLink to="/analytics" className={navLinkClass} onClick={() => setMenuOpen(false)}>
                 Analytics
               </NavLink>
-              <NavLink to="/settings" className={navLinkClass}>
+              <NavLink to="/settings" className={navLinkClass} onClick={() => setMenuOpen(false)}>
                 Settings
               </NavLink>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle theme={theme} onChange={handleThemeChange} />
-            <button
-              type="button"
-              onClick={() =>
-                triggerPipeline()
-                  .then(() => toast.success('Scan started -- check Dashboard for progress'))
-                  .catch((err) => {
-                    const msg = err instanceof Error ? err.message : 'Failed to start scan'
-                    toast.error(msg.includes('409') ? 'Scan already running' : msg)
-                  })
-              }
-              className="px-3 sm:px-4 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90"
-            >
-              <span className="hidden sm:inline">Run Scan</span>
-              <span className="sm:hidden">Scan</span>
-            </button>
-            {/* Mobile hamburger */}
-            <button
-              type="button"
-              onClick={() => setMenuOpen((v) => !v)}
-              className="sm:hidden p-1"
-              aria-label="Toggle menu"
-            >
-              <MobileMenuIcon open={menuOpen} />
-            </button>
-          </div>
-        </div>
-        {/* Mobile nav dropdown */}
-        {menuOpen && (
-          <div className="sm:hidden flex flex-col gap-3 pt-3 pb-1">
-            <NavLink to="/" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-              Dashboard
-            </NavLink>
-            <NavLink to="/discover" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-              Discover
-            </NavLink>
-            <NavLink to="/genres" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-              Genres
-            </NavLink>
-            <NavLink
-              to="/library/health"
-              className={navLinkClass}
-              onClick={() => setMenuOpen(false)}
-            >
-              Library
-            </NavLink>
-            <NavLink to="/analytics" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-              Analytics
-            </NavLink>
-            <NavLink to="/settings" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-              Settings
-            </NavLink>
-          </div>
-        )}
-      </nav>
-      {/* Main content -- add pb-16 on mobile so bottom nav doesn't overlap */}
-      <main className="pb-16 md:pb-0">{children}</main>
-      <BottomNav />
-      <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
-    </div>
+          )}
+        </nav>
+        {/* Main content -- add pb-16 on mobile so bottom nav doesn't overlap */}
+        <main className="pb-16 md:pb-0">{children}</main>
+        <BottomNav />
+        <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+        <PreviewPlayer
+          playing={preview.state.playing}
+          artistName={preview.state.artistName}
+          source={preview.state.source}
+          loading={preview.state.loading}
+          onStop={preview.stop}
+        />
+      </div>
+    </PreviewContext.Provider>
   )
 }
 
