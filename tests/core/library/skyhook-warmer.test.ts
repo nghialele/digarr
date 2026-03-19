@@ -54,4 +54,24 @@ describe('SkyHookWarmer', () => {
     await warmer.warmBatch(['mbid-1', 'mbid-2'])
     expect(lookupArtist).toHaveBeenCalledTimes(1)
   })
+
+  it('warmBatch deduplicates input', async () => {
+    await warmer.warmBatch(['mbid-1', 'mbid-1', 'mbid-1'])
+    expect(lookupArtist).toHaveBeenCalledTimes(1)
+  })
+
+  it('evicts warm entries when map exceeds 5000', async () => {
+    // Pre-populate 5000 warm entries by directly setting internal state
+    const statusMap = (warmer as unknown as { status: Map<string, string> }).status
+    for (let i = 0; i < 5000; i++) {
+      statusMap.set(`seed-${i}`, 'warm')
+    }
+    // Warming one more should trigger eviction of 'warm' entries
+    await warmer.warm('mbid-trigger')
+    expect(warmer.isWarm('mbid-trigger')).toBe(true)
+    // All seed entries should be evicted
+    expect(statusMap.get('seed-0')).toBeUndefined()
+    // Map should be much smaller now
+    expect(statusMap.size).toBeLessThan(5000)
+  })
 })

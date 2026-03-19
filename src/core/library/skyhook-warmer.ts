@@ -23,6 +23,14 @@ export class SkyHookWarmer {
     return this.status.get(mbid) === 'warm'
   }
 
+  private evictIfNeeded(): void {
+    if (this.status.size <= 5000) return
+    // Evict 'warm' entries -- cheapest to re-warm if needed
+    for (const [mbid, s] of this.status) {
+      if (s === 'warm') this.status.delete(mbid)
+    }
+  }
+
   async warm(mbid: string): Promise<void> {
     if (this.status.get(mbid) === 'warm') return
     if (this.status.get(mbid) === 'warming') return
@@ -32,6 +40,7 @@ export class SkyHookWarmer {
       await this.queue.add(async () => {
         await this.deps.lookupArtist(`lidarr:${mbid}`)
       })
+      this.evictIfNeeded()
       this.status.set(mbid, 'warm')
     } catch {
       this.status.set(mbid, 'unknown')
@@ -39,7 +48,8 @@ export class SkyHookWarmer {
   }
 
   async warmBatch(mbids: string[]): Promise<void> {
-    const unwarmed = mbids.filter((mbid) => this.status.get(mbid) !== 'warm')
+    const unique = [...new Set(mbids)]
+    const unwarmed = unique.filter((mbid) => this.status.get(mbid) !== 'warm')
     await Promise.all(unwarmed.map((mbid) => this.warm(mbid)))
   }
 

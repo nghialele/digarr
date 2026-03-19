@@ -42,6 +42,12 @@ function resolveSpotifyEmbed(spotifyUrl: string): PreviewSource | null {
   }
 }
 
+/**
+ * Attempt to fetch a Deezer preview. The Deezer public API does NOT send
+ * CORS headers, so this will fail in most browsers. It works from non-browser
+ * contexts (tests, SSR) and some browsers with relaxed CORS policies.
+ * When it fails, the preview chain falls through to YouTube embed.
+ */
 async function resolveDeezerPreview(artistName: string): Promise<PreviewSource | null> {
   try {
     const encoded = encodeURIComponent(artistName)

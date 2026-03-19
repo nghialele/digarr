@@ -62,8 +62,12 @@ export function libraryRoutes(deps: LibraryRouteDeps) {
       return c.json({ error: 'SkyHook warming not available (Lidarr not configured)' }, 400)
     }
     const body = await c.req.json()
-    const mbids = body.mbids as string[]
-    if (!Array.isArray(mbids) || mbids.length === 0) {
+    const rawMbids = body.mbids
+    if (!Array.isArray(rawMbids) || rawMbids.length === 0) {
+      return c.json({ error: 'mbids array required' }, 400)
+    }
+    const mbids = rawMbids.filter((m): m is string => typeof m === 'string')
+    if (mbids.length === 0) {
       return c.json({ error: 'mbids array required' }, 400)
     }
     const batch = mbids.slice(0, 50) // Limit batch size

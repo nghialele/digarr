@@ -28,35 +28,42 @@ export function LibraryStatsDisplay({ stats }: Props) {
 
   const totalFreeSpace = stats.rootFolders.reduce((sum, f) => sum + f.freeSpace, 0)
 
+  type StatCard = { label: string; value: number | string; subValue?: string }
+  const statCards: StatCard[] = [
+    { label: 'Artists', value: stats.totalArtists },
+    {
+      label: 'Monitored',
+      value: stats.monitoredArtists,
+      subValue:
+        stats.totalArtists > 0
+          ? `${Math.round((stats.monitoredArtists / stats.totalArtists) * 100)}%`
+          : '--',
+    },
+    ...(stats.totalAlbums > 0 ? [{ label: 'Albums', value: stats.totalAlbums }] : []),
+    {
+      label: 'Free Space',
+      value: totalFreeSpace > 0 ? formatBytes(totalFreeSpace) : '--',
+    },
+  ]
+
   return (
     <div className="space-y-6">
       {/* Stat grid */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Artists</p>
-          <p className="text-2xl font-bold text-foreground">{stats.totalArtists}</p>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Monitored</p>
-          <p className="text-2xl font-bold text-foreground">{stats.monitoredArtists}</p>
-          <p className="text-xs text-muted-foreground">
-            {stats.totalArtists > 0
-              ? `${Math.round((stats.monitoredArtists / stats.totalArtists) * 100)}%`
-              : '--'}
-          </p>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Albums</p>
-          <p className="text-2xl font-bold text-foreground">
-            {stats.totalAlbums > 0 ? stats.totalAlbums : '--'}
-          </p>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Free Space</p>
-          <p className="text-2xl font-bold text-foreground">
-            {totalFreeSpace > 0 ? formatBytes(totalFreeSpace) : '--'}
-          </p>
-        </div>
+      <div
+        className={`grid grid-cols-2 gap-4 ${statCards.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}
+      >
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className="bg-surface border border-border rounded-lg p-4 space-y-1"
+          >
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">{card.label}</p>
+            <p className="text-2xl font-bold text-foreground">{card.value}</p>
+            {card.subValue !== undefined && (
+              <p className="text-xs text-muted-foreground">{card.subValue}</p>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Genre distribution */}
