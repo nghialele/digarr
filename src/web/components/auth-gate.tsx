@@ -306,13 +306,13 @@ function RegisterForm({
       onSuccess(res.token)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed'
-      setError(
-        msg.includes('409')
-          ? 'Username already taken'
-          : msg.includes('400')
-            ? 'Invalid input'
-            : msg,
-      )
+      if (msg.includes('409')) {
+        setError('Username already taken')
+      } else if (msg.includes('400')) {
+        setError('Invalid input')
+      } else {
+        setError(msg)
+      }
     } finally {
       setLoading(false)
     }
