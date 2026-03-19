@@ -42,9 +42,10 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getStoredToken()
   if (token) headers.Authorization = `Bearer ${token}`
 
+  const { headers: extraHeaders, ...restOptions } = options ?? {}
   const res = await fetch(`${BASE}${path}`, {
-    headers: { ...headers, ...options?.headers },
-    ...options,
+    ...restOptions,
+    headers: { ...headers, ...(extraHeaders as Record<string, string>) },
   })
   if (!res.ok) {
     if (res.status === 401) {
@@ -281,7 +282,6 @@ export const getWarmStatuses = (mbids: string) =>
 export const warmArtists = (mbids: string[]) =>
   fetchApi('/library/warm', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mbids }),
   })
 
