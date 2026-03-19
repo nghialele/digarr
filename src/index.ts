@@ -7,6 +7,7 @@ import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
 import { runGenreSubscription } from './core/genre/subscription-runner'
+import { LibraryHealthService } from './core/library/health'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
@@ -118,6 +119,45 @@ const genreService = new GenreService({
       const rows = await getAllGenres(db)
       return rows.map(mapGenreRow)
     },
+  },
+})
+
+// LibraryHealthService uses a lazy Lidarr client that reads current settings per call.
+// This avoids the chicken-and-egg problem of needing settings at construction time.
+function makeLazyLidarrClient() {
+  async function getClient() {
+    const s = await getSettings(db)
+    if (s?.lidarrUrl && s?.lidarrApiKey) {
+      return createLidarrClient(s.lidarrUrl, s.lidarrApiKey, s.skipTlsVerify ?? false)
+    }
+    return null
+  }
+
+  return {
+    getArtists: async () => (await getClient())?.getArtists() ?? [],
+    getAlbums: async (artistId: number) => (await getClient())?.getAlbums(artistId) ?? [],
+    lookupArtist: async (term: string) => (await getClient())?.lookupArtist(term) ?? [],
+    updateArtist: async (
+      id: number,
+      data: Parameters<ReturnType<typeof createLidarrClient>['updateArtist']>[1],
+    ) => {
+      const client = await getClient()
+      if (!client) throw new Error('Lidarr not configured')
+      return client.updateArtist(id, data)
+    },
+    triggerCommand: async (name: string, body?: Record<string, unknown>) => {
+      const client = await getClient()
+      if (!client) throw new Error('Lidarr not configured')
+      return client.triggerCommand(name, body)
+    },
+    getRootFolders: async () => (await getClient())?.getRootFolders() ?? [],
+  }
+}
+
+const libraryHealth = new LibraryHealthService({
+  lidarrClient: makeLazyLidarrClient(),
+  artistCache: {
+    getAll: async () => db.select().from(artists),
   },
 })
 
@@ -243,6 +283,7 @@ const app = createApp({
   getUserCount: () => getUserCount(db),
   updatePassword: (id, hash) => updatePassword(db, id, hash),
   genreService,
+  libraryHealth,
   subscriptionQueries: subscriptionQueriesImpl,
   runSubscription: (id) => executeSubscription(id),
 })

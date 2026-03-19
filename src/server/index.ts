@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { envConfig } from '@/config/env'
 import type { GenreService } from '@/core/genre/service'
+import type { LibraryHealthService } from '@/core/library/health'
 import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
 import type { SubscriptionScheduler } from '@/core/pipeline/subscription-scheduler'
 import type { AiProviderRegistry } from '@/core/providers/registry'
@@ -24,6 +25,7 @@ import { authRoutes } from './routes/auth'
 import { batchRoutes } from './routes/batches'
 import { genreRoutes } from './routes/genres'
 import { healthRoutes } from './routes/health'
+import { libraryRoutes } from './routes/library'
 import { lidarrRoutes } from './routes/lidarr'
 import { listeningRoutes } from './routes/listening'
 import { pipelineRoutes } from './routes/pipeline'
@@ -73,6 +75,8 @@ export type AppDependencies = {
   updatePassword: (id: number, passwordHash: string) => Promise<void>
   // Genre service
   genreService: GenreService
+  // Library health service
+  libraryHealth: LibraryHealthService
   // Subscription query functions
   subscriptionQueries: {
     createSubscription: (data: SubscriptionInsert) => Promise<{ id: number; userId: number | null }>
@@ -123,6 +127,7 @@ export function createApp(deps: AppDependencies) {
   app.route('/', listeningRoutes(deps))
   app.route('/', genreRoutes(deps))
   app.route('/', subscriptionRoutes(deps))
+  app.route('/', libraryRoutes({ libraryHealth: deps.libraryHealth }))
 
   // Serve built SPA in production (dev uses Vite's dev server with proxy)
   // Absolute path required: @hono/node-server serveStatic resolves relative

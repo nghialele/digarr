@@ -53,6 +53,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     getUserCount: vi.fn(async () => 0),
     updatePassword: vi.fn(async () => {}),
     genreService: {} as unknown as AppDependencies['genreService'],
+    libraryHealth: {} as unknown as AppDependencies['libraryHealth'],
     subscriptionQueries: {
       createSubscription: vi.fn(async () => ({}) as never),
       getSubscription: vi.fn(async () => null),
