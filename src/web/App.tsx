@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { AuthGate } from './components/auth-gate'
+import { BottomNav } from './components/bottom-nav'
 import { getSetupStatus, triggerPipeline } from './lib/api'
 import { queryClient } from './lib/query-client'
 import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
@@ -95,7 +96,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-bg">
-      <nav className="border-b border-border px-4 sm:px-6 py-3">
+      <nav className="border-b border-border px-4 sm:px-6 py-3" aria-label="Main navigation">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
             <NavLink to="/" className="text-xl font-bold text-accent hover:opacity-90">
@@ -169,7 +170,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
       </nav>
-      <main>{children}</main>
+      {/* Main content -- add pb-16 on mobile so bottom nav doesn't overlap */}
+      <main className="pb-16 md:pb-0">{children}</main>
+      <BottomNav />
     </div>
   )
 }

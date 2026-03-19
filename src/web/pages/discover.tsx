@@ -1,16 +1,36 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { CardStack } from '../components/card-stack'
 import { type Recommendation, RecommendationCard } from '../components/recommendation-card'
 import { SwipeCard } from '../components/swipe-card'
 import { Skeleton } from '../components/ui/skeleton'
-import { bulkAction, getRecommendations, rescanArtists, updateRecommendation } from '../lib/api'
+import {
+  bulkAction,
+  getRecommendations,
+  rescanArtists,
+  triggerPipeline,
+  updateRecommendation,
+} from '../lib/api'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 type FilterTab = 'all' | 'pending' | 'approved' | 'rejected'
+type ViewMode = 'grid' | 'list' | 'stack'
+
+const VIEW_MODE_KEY = 'digarr:discover-view'
+
+function getStoredViewMode(): ViewMode {
+  try {
+    const v = localStorage.getItem(VIEW_MODE_KEY)
+    if (v === 'grid' || v === 'list' || v === 'stack') return v
+  } catch {
+    // ignore
+  }
+  return 'grid'
+}
 
 const FILTER_LABELS: Record<FilterTab, string> = {
   all: 'All',
@@ -80,12 +100,81 @@ function EmptyState({ filter }: { filter: FilterTab }) {
 }
 
 // ---------------------------------------------------------------------------
+// View mode icons (inline SVG)
+// ---------------------------------------------------------------------------
+
+function GridIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-4 h-4"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  )
+}
+
+function ListIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-4 h-4"
+      aria-hidden="true"
+    >
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  )
+}
+
+function StackIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-4 h-4"
+      aria-hidden="true"
+    >
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Discover page
 // ---------------------------------------------------------------------------
 
 export function DiscoverPage() {
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<FilterTab>('pending')
+  const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [approveThreshold, setApproveThreshold] = useState(70)
@@ -94,6 +183,54 @@ export function DiscoverPage() {
   const [bulkMode, setBulkMode] = useState(false)
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set())
   const [bulkActing, setBulkActing] = useState(false)
+
+  // Pull-to-refresh state
+  const [pullY, setPullY] = useState(0)
+  const pullStartY = useRef(0)
+  const pullActive = useRef(false)
+  const PULL_THRESHOLD = 80
+
+  function handleTouchStart(e: React.TouchEvent) {
+    const touch = e.touches[0]
+    if (!touch) return
+    if (window.scrollY === 0) {
+      pullStartY.current = touch.clientY
+      pullActive.current = true
+    }
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!pullActive.current) return
+    const touch = e.touches[0]
+    if (!touch) return
+    const dy = touch.clientY - pullStartY.current
+    if (dy > 0) {
+      setPullY(Math.min(dy, PULL_THRESHOLD + 20))
+    }
+  }
+
+  function handleTouchEnd() {
+    if (pullActive.current && pullY >= PULL_THRESHOLD) {
+      refetch()
+      toast.info('Refreshing...')
+    }
+    pullActive.current = false
+    setPullY(0)
+  }
+
+  function handleSetViewMode(mode: ViewMode) {
+    setViewMode(mode)
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode)
+    } catch {
+      // ignore
+    }
+    // Stack mode exits bulk mode (incompatible)
+    if (mode === 'stack' && bulkMode) {
+      setBulkMode(false)
+      setCheckedIds(new Set())
+    }
+  }
 
   const queryParams: Record<string, string> = {
     sort: 'score_desc',
@@ -377,154 +514,273 @@ export function DiscoverPage() {
   ).length
 
   return (
-    <div className={`p-6 space-y-6 max-w-6xl mx-auto${bulkMode ? ' pb-24' : ''}`}>
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Filter tabs */}
-        <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1">
-          {(Object.keys(FILTER_LABELS) as FilterTab[]).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => {
-                setFilter(tab)
-                setExpandedId(null)
-                setSelectedId(null)
-                setPage(0)
-                setCheckedIds(new Set())
-              }}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                filter === tab ? 'bg-accent text-bg' : 'text-muted hover:text-text'
-              }`}
-            >
-              {FILTER_LABELS[tab]}
-              {tab !== 'all' && counts[tab] > 0 && (
-                <span className={`ml-1.5 text-xs ${filter === tab ? 'opacity-70' : 'text-muted'}`}>
-                  {counts[tab]}
-                </span>
-              )}
-              {tab === 'all' && counts.all > 0 && (
-                <span className={`ml-1.5 text-xs ${filter === tab ? 'opacity-70' : 'text-muted'}`}>
-                  {counts.all}
-                </span>
-              )}
-            </button>
-          ))}
+    <div
+      className={`space-y-6 max-w-6xl mx-auto${bulkMode ? ' pb-24' : ' pb-6'} md:pb-6`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {pullY > 0 && (
+        <div
+          className="flex items-center justify-center text-xs text-muted transition-all"
+          style={{ height: `${Math.min(pullY, PULL_THRESHOLD + 20)}px` }}
+          aria-hidden="true"
+        >
+          {pullY >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
         </div>
+      )}
 
-        {/* Approve All Above + Select */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <select
-            value={approveThreshold}
-            onChange={(e) => setApproveThreshold(Number(e.target.value))}
-            className="bg-surface border border-border rounded text-sm text-text px-2 py-1.5"
-            aria-label="Threshold percentage"
-          >
-            {APPROVE_THRESHOLD_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}%
-              </option>
+      {/* Sticky filter + toolbar bar */}
+      <div className="sticky top-0 z-10 bg-bg border-b border-border px-6 pt-4 pb-3 -mx-0">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1">
+            {(Object.keys(FILTER_LABELS) as FilterTab[]).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => {
+                  setFilter(tab)
+                  setExpandedId(null)
+                  setSelectedId(null)
+                  setPage(0)
+                  setCheckedIds(new Set())
+                }}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                  filter === tab ? 'bg-accent text-bg' : 'text-muted hover:text-text'
+                }`}
+              >
+                {FILTER_LABELS[tab]}
+                {tab !== 'all' && counts[tab] > 0 && (
+                  <span
+                    className={`ml-1.5 text-xs ${filter === tab ? 'opacity-70' : 'text-muted'}`}
+                  >
+                    {counts[tab]}
+                  </span>
+                )}
+                {tab === 'all' && counts.all > 0 && (
+                  <span
+                    className={`ml-1.5 text-xs ${filter === tab ? 'opacity-70' : 'text-muted'}`}
+                  >
+                    {counts.all}
+                  </span>
+                )}
+              </button>
             ))}
-          </select>
-          <button
-            type="button"
-            onClick={handleApproveAbove}
-            disabled={pendingAboveThreshold === 0}
-            className="px-3 py-1.5 bg-approve/20 text-approve border border-approve/40 rounded text-sm font-medium hover:bg-approve/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Approve All Above
-            {pendingAboveThreshold > 0 && (
-              <span className="ml-1.5 text-xs opacity-70">({pendingAboveThreshold})</span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* View mode switcher */}
+            <div className="flex items-center gap-0.5 bg-surface border border-border rounded-lg p-1">
+              {(
+                [
+                  { mode: 'grid' as ViewMode, Icon: GridIcon, label: 'Grid view' },
+                  { mode: 'list' as ViewMode, Icon: ListIcon, label: 'List view' },
+                  { mode: 'stack' as ViewMode, Icon: StackIcon, label: 'Stack view' },
+                ] as const
+              ).map(({ mode, Icon, label }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => handleSetViewMode(mode)}
+                  aria-label={label}
+                  title={label}
+                  className={`p-1.5 rounded transition-colors ${
+                    viewMode === mode ? 'bg-accent text-bg' : 'text-muted hover:text-text'
+                  }`}
+                >
+                  <Icon />
+                </button>
+              ))}
+            </div>
+
+            {/* Approve All Above + Select -- hidden in stack mode */}
+            {viewMode !== 'stack' && (
+              <>
+                <select
+                  value={approveThreshold}
+                  onChange={(e) => setApproveThreshold(Number(e.target.value))}
+                  className="bg-surface border border-border rounded text-sm text-text px-2 py-1.5"
+                  aria-label="Threshold percentage"
+                >
+                  {APPROVE_THRESHOLD_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}%
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleApproveAbove}
+                  disabled={pendingAboveThreshold === 0}
+                  className="px-3 py-1.5 bg-approve/20 text-approve border border-approve/40 rounded text-sm font-medium hover:bg-approve/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Approve All Above
+                  {pendingAboveThreshold > 0 && (
+                    <span className="ml-1.5 text-xs opacity-70">({pendingAboveThreshold})</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.promise(rescanArtists(), {
+                      loading: 'Refreshing artist data...',
+                      success: (r) => `Updated ${r.updated} of ${r.total} artists`,
+                      error: 'Rescan failed',
+                    })
+                    setTimeout(refetch, 3000)
+                  }}
+                  className="px-3 py-1.5 bg-surface border border-border rounded text-sm text-muted hover:text-text transition-colors"
+                >
+                  Refresh Data
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleBulkMode}
+                  className={`px-3 py-1.5 border rounded text-sm font-medium transition-colors ${
+                    bulkMode
+                      ? 'bg-accent text-bg border-accent'
+                      : 'bg-surface border-border text-muted hover:text-text'
+                  }`}
+                >
+                  {bulkMode ? 'Cancel' : 'Select'}
+                </button>
+              </>
             )}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              toast.promise(rescanArtists(), {
-                loading: 'Refreshing artist data...',
-                success: (r) => `Updated ${r.updated} of ${r.total} artists`,
-                error: 'Rescan failed',
-              })
-              setTimeout(refetch, 3000)
-            }}
-            className="px-3 py-1.5 bg-surface border border-border rounded text-sm text-muted hover:text-text transition-colors"
-          >
-            Refresh Data
-          </button>
-          <button
-            type="button"
-            onClick={handleToggleBulkMode}
-            className={`px-3 py-1.5 border rounded text-sm font-medium transition-colors ${
-              bulkMode
-                ? 'bg-accent text-bg border-accent'
-                : 'bg-surface border-border text-muted hover:text-text'
-            }`}
-          >
-            {bulkMode ? 'Cancel' : 'Select'}
-          </button>
+          </div>
         </div>
       </div>
 
-      {/* Keyboard hint (hidden on small screens, swipe hint shown instead) */}
-      {!bulkMode && (
-        <>
-          <p className="text-xs text-muted hidden sm:block">
-            Shortcuts: <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
-            navigate <kbd className="px-1 bg-surface border border-border rounded">a</kbd> approve{' '}
-            <kbd className="px-1 bg-surface border border-border rounded">r</kbd> reject{' '}
-            <kbd className="px-1 bg-surface border border-border rounded">enter</kbd> expand
-          </p>
-          <p className="text-xs text-muted sm:hidden">Swipe right to approve, left to reject</p>
-        </>
-      )}
+      {/* Content area */}
+      <div className="px-6">
+        {/* Keyboard hint (hidden on small screens, swipe hint shown instead) */}
+        {!bulkMode && viewMode !== 'stack' && (
+          <>
+            <p className="text-xs text-muted hidden sm:block mb-4">
+              Shortcuts: <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
+              navigate <kbd className="px-1 bg-surface border border-border rounded">a</kbd> approve{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">r</kbd> reject{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">enter</kbd> expand
+            </p>
+            <p className="text-xs text-muted sm:hidden mb-4">
+              Swipe right to approve, left to reject
+            </p>
+          </>
+        )}
 
-      {/* Card grid */}
-      {loading ? (
-        <SkeletonGrid />
-      ) : items.length === 0 ? (
-        <EmptyState filter={filter} />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((rec) => {
-            const isExpanded = expandedId === rec.id
-            const isActing = actingIds.has(rec.id)
-            const isPending = rec.status === 'pending'
-            return (
-              <div
-                key={rec.id}
-                className={isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''}
-              >
-                <SwipeCard
-                  enabled={!bulkMode && isPending && !isActing}
-                  onSwipeRight={
-                    !bulkMode && isPending && !isActing
-                      ? () => handleApprove(rec.id, rec.status)
-                      : undefined
-                  }
-                  onSwipeLeft={
-                    !bulkMode && isPending && !isActing
-                      ? () => handleReject(rec.id, rec.status)
-                      : undefined
-                  }
-                >
-                  <RecommendationCard
-                    recommendation={rec}
-                    onApprove={isActing ? () => {} : handleApprove}
-                    onReject={isActing ? () => {} : handleReject}
-                    onClick={bulkMode ? undefined : handleCardClick}
-                    isSelected={!bulkMode && selectedId === rec.id}
-                    expanded={!bulkMode && isExpanded}
-                    onRetry={handleRetry}
-                    bulkMode={bulkMode}
-                    isChecked={checkedIds.has(rec.id)}
-                    onToggleSelect={handleToggleSelect}
-                  />
-                </SwipeCard>
-              </div>
-            )
-          })}
-        </div>
-      )}
+        {/* Stack view */}
+        {viewMode === 'stack' &&
+          (loading ? (
+            <div className="flex justify-center py-16">
+              <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <CardStack
+              recommendations={items}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onDetail={(id) => {
+                setExpandedId(expandedId === id ? null : id)
+                setSelectedId(id)
+                handleSetViewMode('grid')
+              }}
+            />
+          ))}
+
+        {/* Grid view */}
+        {viewMode === 'grid' &&
+          (loading ? (
+            <SkeletonGrid />
+          ) : items.length === 0 ? (
+            <EmptyState filter={filter} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {items.map((rec) => {
+                const isExpanded = expandedId === rec.id
+                const isActing = actingIds.has(rec.id)
+                const isPending = rec.status === 'pending'
+                return (
+                  <div
+                    key={rec.id}
+                    className={isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''}
+                  >
+                    <SwipeCard
+                      enabled={!bulkMode && isPending && !isActing}
+                      onSwipeRight={
+                        !bulkMode && isPending && !isActing
+                          ? () => handleApprove(rec.id, rec.status)
+                          : undefined
+                      }
+                      onSwipeLeft={
+                        !bulkMode && isPending && !isActing
+                          ? () => handleReject(rec.id, rec.status)
+                          : undefined
+                      }
+                    >
+                      <RecommendationCard
+                        recommendation={rec}
+                        onApprove={isActing ? () => {} : handleApprove}
+                        onReject={isActing ? () => {} : handleReject}
+                        onClick={bulkMode ? undefined : handleCardClick}
+                        isSelected={!bulkMode && selectedId === rec.id}
+                        expanded={!bulkMode && isExpanded}
+                        onRetry={handleRetry}
+                        bulkMode={bulkMode}
+                        isChecked={checkedIds.has(rec.id)}
+                        onToggleSelect={handleToggleSelect}
+                      />
+                    </SwipeCard>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+
+        {/* List view */}
+        {viewMode === 'list' &&
+          (loading ? (
+            <SkeletonGrid />
+          ) : items.length === 0 ? (
+            <EmptyState filter={filter} />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {items.map((rec) => {
+                const isActing = actingIds.has(rec.id)
+                const isPending = rec.status === 'pending'
+                return (
+                  <SwipeCard
+                    key={rec.id}
+                    enabled={!bulkMode && isPending && !isActing}
+                    onSwipeRight={
+                      !bulkMode && isPending && !isActing
+                        ? () => handleApprove(rec.id, rec.status)
+                        : undefined
+                    }
+                    onSwipeLeft={
+                      !bulkMode && isPending && !isActing
+                        ? () => handleReject(rec.id, rec.status)
+                        : undefined
+                    }
+                  >
+                    <RecommendationCard
+                      recommendation={rec}
+                      onApprove={isActing ? () => {} : handleApprove}
+                      onReject={isActing ? () => {} : handleReject}
+                      onClick={bulkMode ? undefined : handleCardClick}
+                      isSelected={!bulkMode && selectedId === rec.id}
+                      expanded={!bulkMode && expandedId === rec.id}
+                      onRetry={handleRetry}
+                      bulkMode={bulkMode}
+                      isChecked={checkedIds.has(rec.id)}
+                      onToggleSelect={handleToggleSelect}
+                    />
+                  </SwipeCard>
+                )
+              })}
+            </div>
+          ))}
+      </div>
 
       {/* Bulk action toolbar */}
       {bulkMode && (
@@ -603,8 +859,8 @@ export function DiscoverPage() {
       )}
 
       {/* Pagination */}
-      {total > PAGE_SIZE && (
-        <div className="flex items-center justify-center gap-4 pt-4">
+      {viewMode !== 'stack' && total > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-4 pt-4 px-6">
           <button
             type="button"
             disabled={page === 0}
@@ -625,6 +881,37 @@ export function DiscoverPage() {
             Next
           </button>
         </div>
+      )}
+
+      {/* FAB: Run Scan -- mobile only, above bottom nav */}
+      {!bulkMode && (
+        <button
+          type="button"
+          onClick={() =>
+            triggerPipeline()
+              .then(() => toast.success('Scan started -- check Dashboard for progress'))
+              .catch((err) => {
+                const msg = err instanceof Error ? err.message : 'Failed to start scan'
+                toast.error(msg.includes('409') ? 'Scan already running' : msg)
+              })
+          }
+          aria-label="Run Scan"
+          className="md:hidden fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-accent text-bg shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-5 h-5"
+            aria-hidden="true"
+          >
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+        </button>
       )}
     </div>
   )
