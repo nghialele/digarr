@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   boolean,
   integer,
   jsonb,
@@ -38,6 +39,38 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+export const genres = pgTable('genres', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  source: text('source').notNull(),
+  parentGenreId: integer('parent_genre_id').references((): AnyPgColumn => genres.id),
+  artistCount: integer('artist_count').default(0),
+  cachedAt: timestamp('cached_at', { withTimezone: true }),
+})
+
+export const subscriptions = pgTable('subscriptions', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  userId: integer('user_id').references(() => users.id),
+  enabled: boolean('enabled').notNull().default(true),
+  sourceType: text('source_type').notNull(),
+  sourceProvider: text('source_provider').notNull(),
+  sourceConfig: jsonb('source_config').notNull().$type<Record<string, unknown>>(),
+  maxArtistsPerRun: integer('max_artists_per_run').notNull().default(20),
+  listenerRange: jsonb('listener_range').$type<{ min?: number; max?: number } | null>(),
+  cron: text('cron').notNull(),
+  action: text('action').notNull().default('add_to_recommendations'),
+  scoreThreshold: real('score_threshold'),
+  scoringWeightPreset: text('scoring_weight_preset').default('default'),
+  scoringWeightOverrides: jsonb('scoring_weight_overrides').$type<Record<string, number> | null>(),
+  lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+  lastResultCount: integer('last_result_count'),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 export const artists = pgTable('artists', {
   id: serial('id').primaryKey(),
   mbid: uuid('mbid').unique().notNull(),
@@ -56,6 +89,7 @@ export const recommendationBatches = pgTable('recommendation_batches', {
   sourceConfig: jsonb('source_config'),
   stats: jsonb('stats'),
   status: text('status').notNull().default('running'),
+  subscriptionId: integer('subscription_id').references(() => subscriptions.id),
 })
 
 export const recommendations = pgTable('recommendations', {
@@ -77,6 +111,19 @@ export const recommendations = pgTable('recommendations', {
   actedOnAt: timestamp('acted_on_at', { withTimezone: true }),
 })
 
+export const subscriptionRuns = pgTable('subscription_runs', {
+  id: serial('id').primaryKey(),
+  subscriptionId: integer('subscription_id')
+    .notNull()
+    .references(() => subscriptions.id),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  artistsFound: integer('artists_found').default(0),
+  artistsNew: integer('artists_new').default(0),
+  error: text('error'),
+  batchId: integer('batch_id').references(() => recommendationBatches.id),
+})
+
 // Types
 export type Preferences = {
   qualityProfileId: number
@@ -96,6 +143,8 @@ export type Preferences = {
   librarySeedRatio: number // 0-1: fraction of seed artists from Lidarr library
   webhookUrl?: string
 }
+
+export type ScoringWeights = Preferences['scoringWeights']
 
 export const DEFAULT_PREFERENCES: Preferences = {
   qualityProfileId: 1,
