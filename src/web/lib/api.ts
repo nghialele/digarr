@@ -85,7 +85,19 @@ export const registerUser = (username: string, password: string) =>
     body: JSON.stringify({ username, password }),
   })
 export type UserProfile = { id: number; username: string; isAdmin: boolean }
-export const getCurrentUser = () => fetchApi<UserProfile>('/auth/me')
+export async function getCurrentUser(): Promise<UserProfile | null> {
+  const token = getStoredToken()
+  if (!token) return null
+  try {
+    const res = await fetch(`${BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return null // Legacy token users have no userId -- don't trigger auth-expired
+    return res.json() as Promise<UserProfile>
+  } catch {
+    return null
+  }
+}
 export const changePassword = (currentPassword: string, newPassword: string) =>
   fetchApi<{ ok: boolean; token?: string }>('/auth/change-password', {
     method: 'POST',
