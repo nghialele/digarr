@@ -3,6 +3,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { envConfig } from '@/config/env'
+import { VERSION } from '@/version'
 import type { OidcService } from '@/core/auth/oidc'
 import type { GenreService } from '@/core/genre/service'
 import type { LibraryHealthService } from '@/core/library/health'
@@ -157,6 +158,7 @@ export function createApp(deps: AppDependencies) {
       hasUsers: userCount > 0,
       oidcEnabled,
       proxyAuthEnabled: envConfig.proxyAuthEnabled,
+      version: VERSION,
     }
 
     if (proxyAuth && sessionToken) {

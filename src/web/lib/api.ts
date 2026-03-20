@@ -68,6 +68,7 @@ export type AuthStatus = {
   proxyAuth?: boolean
   token?: string
   userId?: number
+  version?: string
 }
 export const getAuthStatus = () => fetchApi<AuthStatus>('/auth/status')
 

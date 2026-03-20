@@ -18,6 +18,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>('loading')
   const [hasUsers, setHasUsers] = useState(false)
   const [oidcEnabled, setOidcEnabled] = useState(false)
+  const [version, setVersion] = useState<string>()
 
   useEffect(() => {
     async function checkAuth() {
@@ -42,6 +43,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         const status = await getAuthStatus()
         setHasUsers(status.hasUsers)
         setOidcEnabled(status.oidcEnabled ?? false)
+        setVersion(status.version)
 
         if (!status.required) {
           setState('not-required')
@@ -95,7 +97,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (state === 'not-required' || state === 'authenticated') return <>{children}</>
   if (state === 'register') {
     return (
-      <RegisterForm onSuccess={handleAuthenticated} onSwitchToLogin={() => setState('login')} />
+      <RegisterForm
+        onSuccess={handleAuthenticated}
+        onSwitchToLogin={() => setState('login')}
+        version={version}
+      />
     )
   }
   return (
@@ -103,6 +109,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       onSuccess={handleAuthenticated}
       onSwitchToRegister={() => setState('register')}
       oidcEnabled={oidcEnabled}
+      version={version}
     />
   )
 }
@@ -115,10 +122,12 @@ function LoginForm({
   onSuccess,
   onSwitchToRegister,
   oidcEnabled,
+  version,
 }: {
   onSuccess: (token: string) => void
   onSwitchToRegister: () => void
   oidcEnabled?: boolean
+  version?: string
 }) {
   const [mode, setMode] = useState<'credentials' | 'token'>('credentials')
   const [username, setUsername] = useState('')
@@ -269,6 +278,9 @@ function LoginForm({
           )}
         </CardContent>
       </Card>
+      {version && (
+        <p className="text-xs text-muted mt-4 text-center">v{version}</p>
+      )}
     </div>
   )
 }
@@ -280,9 +292,11 @@ function LoginForm({
 function RegisterForm({
   onSuccess,
   onSwitchToLogin,
+  version,
 }: {
   onSuccess: (token: string) => void
   onSwitchToLogin: () => void
+  version?: string
 }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -360,6 +374,9 @@ function RegisterForm({
           </form>
         </CardContent>
       </Card>
+      {version && (
+        <p className="text-xs text-muted mt-4 text-center">v{version}</p>
+      )}
     </div>
   )
 }

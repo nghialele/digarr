@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { AuthGate } from './components/auth-gate'
+import { VERSION } from '@/version'
 import { BottomNav } from './components/bottom-nav'
 import { KeyboardShortcuts } from './components/keyboard-shortcuts'
 import { PreviewPlayer } from './components/preview-player'
@@ -225,6 +226,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
           loading={preview.state.loading}
           onStop={preview.stop}
         />
+        <footer className="hidden md:block fixed bottom-2 right-3 text-[10px] text-muted select-none pointer-events-none z-10">
+          v{VERSION}
+        </footer>
       </div>
     </PreviewContext.Provider>
   )
