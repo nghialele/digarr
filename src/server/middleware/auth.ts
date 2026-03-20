@@ -24,10 +24,12 @@ const PUBLIC_PATHS = new Set([
 export function authGuard(hasUsers: () => Promise<boolean>) {
   return createMiddleware<HonoEnv>(async (c, next) => {
     // Skip auth for non-API paths (static assets, SPA routes), public API paths, and OAuth callbacks
+    // Only the callback path is public (browser redirect from provider, no auth header).
+    // Other OAuth paths (initiate, status, delete) need auth so userId is set on context.
     if (
       !c.req.path.startsWith('/api/') ||
       PUBLIC_PATHS.has(c.req.path) ||
-      c.req.path.startsWith('/api/auth/oauth/')
+      /^\/api\/auth\/oauth\/[^/]+\/callback$/.test(c.req.path)
     )
       return next()
 
