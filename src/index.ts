@@ -5,7 +5,6 @@ import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
 import { OidcService } from './core/auth/oidc'
 import { createLidarrClient } from './core/clients/lidarr'
-import { createLidarrTarget } from './core/targets/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
 import { runGenreSubscription } from './core/genre/subscription-runner'
@@ -19,6 +18,7 @@ import { createListenBrainzSource } from './core/plugins/listenbrainz'
 import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
 import { setSessionStore } from './core/sessions'
+import { createLidarrTarget } from './core/targets/lidarr'
 import { db, pool } from './db'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
@@ -52,6 +52,7 @@ import {
   insertRun,
   updateSubscription,
 } from './db/queries/subscriptions'
+import type { TargetInsert } from './db/queries/targets'
 import {
   createTarget,
   deleteTarget,
@@ -60,7 +61,6 @@ import {
   getTargetsByUser,
   updateTarget,
 } from './db/queries/targets'
-import type { TargetInsert } from './db/queries/targets'
 import {
   createUser,
   deleteUser,

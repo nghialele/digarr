@@ -1,3 +1,4 @@
+import { Compass } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Field } from '../components/field'
@@ -26,6 +27,8 @@ type TestingState = {
   lastfm: boolean
   ai: boolean
 }
+
+type SetupMode = 'lidarr' | 'discover'
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
@@ -73,6 +76,69 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
   )
 }
 
+function StepMode({
+  mode,
+  onSelect,
+}: {
+  mode: SetupMode | null
+  onSelect: (m: SetupMode) => void
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold text-text">How do you manage music?</h2>
+        <p className="text-sm text-muted mt-1">
+          This determines how approved recommendations are handled.
+        </p>
+      </div>
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => onSelect('lidarr')}
+          className={[
+            'w-full text-left rounded-lg border p-4 transition-colors',
+            mode === 'lidarr'
+              ? 'border-accent bg-accent/10'
+              : 'border-border bg-surface hover:border-accent/50',
+          ].join(' ')}
+        >
+          <div className="flex items-center gap-3">
+            <img src="/icons/lidarr.png" alt="" className="w-8 h-8" />
+            <div>
+              <span className="text-sm font-medium text-text">Lidarr</span>
+              <p className="text-xs text-muted mt-0.5">
+                Approved artists are added to Lidarr for automatic download
+              </p>
+            </div>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelect('discover')}
+          className={[
+            'w-full text-left rounded-lg border p-4 transition-colors',
+            mode === 'discover'
+              ? 'border-accent bg-accent/10'
+              : 'border-border bg-surface hover:border-accent/50',
+          ].join(' ')}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+              <Compass size={18} className="text-accent" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-text">Just discover</span>
+              <p className="text-xs text-muted mt-0.5">
+                Curate a personal list of recommendations. Export as JSON, CSV, or M3U.
+              </p>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function StepLidarr({
   form,
   onFormChange,
@@ -89,7 +155,7 @@ function StepLidarr({
       <div>
         <h2 className="text-xl font-semibold text-text">Connect Lidarr</h2>
         <p className="text-sm text-muted mt-1">
-          Lidarr manages your music library. This is required.
+          Lidarr manages your music library and downloads.
         </p>
       </div>
       <Field label="Lidarr URL" id="lidarr-url">
@@ -419,11 +485,13 @@ function StepAi({
 function StepDone({
   form,
   results,
+  mode,
   onStart,
   starting,
 }: {
   form: FormState
   results: TestResults
+  mode: SetupMode
   onStart: () => void
   starting: boolean
 }) {
@@ -431,14 +499,17 @@ function StepDone({
   if (results.listenbrainz === true) sources.push('ListenBrainz')
   if (results.lastfm === true) sources.push('Last.fm')
 
-  const rows: { label: string; value: string }[] = [
-    { label: 'Lidarr', value: form.lidarr.url },
-    { label: 'Listening Sources', value: sources.join(', ') || 'None' },
-    {
-      label: 'AI Provider',
-      value: `${form.ai.provider}${form.ai.model ? ` / ${form.ai.model}` : ''}`,
-    },
-  ]
+  const rows: { label: string; value: string }[] = []
+  if (mode === 'lidarr') {
+    rows.push({ label: 'Lidarr', value: form.lidarr.url })
+  } else {
+    rows.push({ label: 'Mode', value: 'Discovery only' })
+  }
+  rows.push({ label: 'Listening Sources', value: sources.join(', ') || 'None' })
+  rows.push({
+    label: 'AI Provider',
+    value: `${form.ai.provider}${form.ai.model ? ` / ${form.ai.model}` : ''}`,
+  })
 
   return (
     <div className="space-y-6">
@@ -484,10 +555,19 @@ const DEFAULT_TESTING: TestingState = {
 
 export function SetupWizard({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(1)
+  const [mode, setMode] = useState<SetupMode | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [results, setResults] = useState<TestResults>(DEFAULT_RESULTS)
   const [testing, setTesting] = useState<TestingState>(DEFAULT_TESTING)
   const [starting, setStarting] = useState(false)
+
+  // Step mapping depends on mode:
+  // mode='lidarr':  1=Mode, 2=Lidarr, 3=Sources, 4=AI, 5=Done
+  // mode='discover': 1=Mode, 2=Sources, 3=AI, 4=Done
+  const totalSteps = mode === 'lidarr' ? 5 : 4
+  const sourcesStep = mode === 'lidarr' ? 3 : 2
+  const aiStep = mode === 'lidarr' ? 4 : 3
+  const doneStep = mode === 'lidarr' ? 5 : 4
 
   function setTestingKey(key: keyof TestingState, val: boolean) {
     setTesting((prev) => ({ ...prev, [key]: val }))
@@ -508,7 +588,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       if (res.success) {
         setResultKey('lidarr', true)
         toast.success('Lidarr connected successfully')
-        setStep(2)
+        setStep(sourcesStep)
       } else {
         setResultKey('lidarr', false)
         toast.error(res.message || 'Lidarr connection failed')
@@ -581,7 +661,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       if (res.success) {
         setResultKey('ai', true)
         toast.success('AI provider connected')
-        setStep(4)
+        setStep(doneStep)
       } else {
         setResultKey('ai', false)
         toast.error(res.message || 'AI provider connection failed')
@@ -597,13 +677,16 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
   async function handleStart() {
     setStarting(true)
     const config: Record<string, unknown> = {
-      lidarrUrl: form.lidarr.url,
-      lidarrApiKey: form.lidarr.apiKey,
-      skipTlsVerify: form.lidarr.skipTlsVerify,
       aiProvider: form.ai.provider,
       aiModel: form.ai.model,
       aiApiKey: form.ai.apiKey || null,
       aiBaseUrl: form.ai.baseUrl || null,
+    }
+    // Only include Lidarr config if mode is lidarr
+    if (mode === 'lidarr') {
+      config.lidarrUrl = form.lidarr.url
+      config.lidarrApiKey = form.lidarr.apiKey
+      config.skipTlsVerify = form.lidarr.skipTlsVerify
     }
     if (results.listenbrainz === true) {
       config.listenbrainzUsername = form.listenbrainz.username
@@ -630,10 +713,19 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
           <p className="text-muted text-sm mt-1">Initial setup</p>
         </div>
 
-        <StepIndicator current={step} total={4} />
+        <StepIndicator current={step} total={totalSteps} />
 
         <div className="rounded-lg border border-border bg-surface p-6">
           {step === 1 && (
+            <StepMode
+              mode={mode}
+              onSelect={(m) => {
+                setMode(m)
+                setStep(2)
+              }}
+            />
+          )}
+          {step === 2 && mode === 'lidarr' && (
             <StepLidarr
               form={form.lidarr}
               onFormChange={(v) => setForm((f) => ({ ...f, lidarr: v }))}
@@ -641,7 +733,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
               onTest={testLidarr}
             />
           )}
-          {step === 2 && (
+          {step === sourcesStep && (
             <StepSources
               form={form}
               onFormChange={(key, v) => setForm((f) => ({ ...f, [key]: v }))}
@@ -649,10 +741,10 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
               results={results}
               onTestListenbrainz={testListenbrainz}
               onTestLastfm={testLastfm}
-              onContinue={() => setStep(3)}
+              onContinue={() => setStep(aiStep)}
             />
           )}
-          {step === 3 && (
+          {step === aiStep && (
             <StepAi
               form={form.ai}
               onFormChange={(v) => setForm((f) => ({ ...f, ai: v }))}
@@ -660,12 +752,18 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
               onTest={testAi}
             />
           )}
-          {step === 4 && (
-            <StepDone form={form} results={results} onStart={handleStart} starting={starting} />
+          {step === doneStep && (
+            <StepDone
+              form={form}
+              results={results}
+              mode={mode!}
+              onStart={handleStart}
+              starting={starting}
+            />
           )}
         </div>
 
-        {step > 1 && step < 4 && (
+        {step > 1 && step < doneStep && (
           <button
             type="button"
             onClick={() => setStep((s) => s - 1)}

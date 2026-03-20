@@ -23,10 +23,7 @@ export type TargetRow = {
   updatedAt: Date
 }
 
-export async function createTarget(
-  db: Database,
-  data: TargetInsert,
-): Promise<{ id: number }> {
+export async function createTarget(db: Database, data: TargetInsert): Promise<{ id: number }> {
   const [row] = await db
     .insert(targets)
     .values({
@@ -37,7 +34,8 @@ export async function createTarget(
       enabled: data.enabled ?? true,
     })
     .returning({ id: targets.id })
-  return { id: row!.id }
+  if (!row) throw new Error('createTarget: no row returned')
+  return { id: row.id }
 }
 
 export async function getTarget(db: Database, id: number): Promise<TargetRow | null> {
@@ -46,34 +44,21 @@ export async function getTarget(db: Database, id: number): Promise<TargetRow | n
 }
 
 export async function getTargetsByUser(db: Database, userId: number): Promise<TargetRow[]> {
-  const rows = await db
-    .select()
-    .from(targets)
-    .where(eq(targets.userId, userId))
+  const rows = await db.select().from(targets).where(eq(targets.userId, userId))
   return rows as TargetRow[]
 }
 
 export async function getEnabledTargets(db: Database): Promise<TargetRow[]> {
-  const rows = await db
-    .select()
-    .from(targets)
-    .where(eq(targets.enabled, true))
+  const rows = await db.select().from(targets).where(eq(targets.enabled, true))
   return rows as TargetRow[]
 }
 
 export async function getTargetsByType(db: Database, type: string): Promise<TargetRow[]> {
-  const rows = await db
-    .select()
-    .from(targets)
-    .where(eq(targets.type, type))
+  const rows = await db.select().from(targets).where(eq(targets.type, type))
   return rows as TargetRow[]
 }
 
-export async function updateTarget(
-  db: Database,
-  id: number,
-  data: TargetUpdate,
-): Promise<void> {
+export async function updateTarget(db: Database, id: number, data: TargetUpdate): Promise<void> {
   await db
     .update(targets)
     .set({ ...data, updatedAt: new Date() })

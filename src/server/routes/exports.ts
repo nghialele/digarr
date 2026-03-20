@@ -1,18 +1,16 @@
 import { Hono } from 'hono'
-import type { HonoEnv } from '@/server/types'
+import { exportToCsv } from '@/core/targets/export-csv'
+import { exportToJson } from '@/core/targets/export-json'
+import { exportToM3u } from '@/core/targets/export-m3u'
+import type { ExportableRecommendation } from '@/core/targets/types'
 import type {
   ListRecommendationsFilters,
   ListRecommendationsResult,
 } from '@/db/queries/recommendations'
-import { exportToJson } from '@/core/targets/export-json'
-import { exportToCsv } from '@/core/targets/export-csv'
-import { exportToM3u } from '@/core/targets/export-m3u'
-import type { ExportableRecommendation } from '@/core/targets/types'
+import type { HonoEnv } from '@/server/types'
 
 type ExportDeps = {
-  listRecommendations: (
-    filters?: ListRecommendationsFilters,
-  ) => Promise<ListRecommendationsResult>
+  listRecommendations: (filters?: ListRecommendationsFilters) => Promise<ListRecommendationsResult>
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -33,10 +31,7 @@ export function exportRoutes(deps: ExportDeps) {
   router.get('/api/exports/:format', async (c) => {
     const format = c.req.param('format')
     if (!CONTENT_TYPES[format] || !EXPORTERS[format]) {
-      return c.json(
-        { error: `Unsupported format: ${format}. Use json, csv, or m3u` },
-        400,
-      )
+      return c.json({ error: `Unsupported format: ${format}. Use json, csv, or m3u` }, 400)
     }
 
     const userId = c.get('userId')
@@ -60,18 +55,22 @@ export function exportRoutes(deps: ExportDeps) {
       imageUrl: rec.artist?.imageUrl ?? undefined,
       streamingUrls: rec.artist?.streamingUrls ?? {},
       createdAt:
-        typeof rec.createdAt === 'string'
-          ? rec.createdAt
-          : new Date(rec.createdAt).toISOString(),
+        typeof rec.createdAt === 'string' ? rec.createdAt : new Date(rec.createdAt).toISOString(),
       suggestedAlbum: rec.recommendedReleaseGroupTitle ?? undefined,
     }))
 
-    const output = EXPORTERS[format]!(exportable)
+    const exporter = EXPORTERS[format]
+    const contentType = CONTENT_TYPES[format]
+    if (!exporter || !contentType) {
+      return c.json({ error: 'Unsupported format' }, 400)
+    }
+
+    const output = exporter(exportable)
     const timestamp = new Date().toISOString().slice(0, 10)
 
     return new Response(output, {
       headers: {
-        'Content-Type': CONTENT_TYPES[format]!,
+        'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="digarr-export-${timestamp}.${format}"`,
       },
     })
