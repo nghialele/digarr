@@ -1,5 +1,17 @@
 import { QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { BarChart3, Compass, HeartPulse, LayoutDashboard, Monitor, Moon, Music, Settings, Sun, Users } from 'lucide-react'
+import {
+  BarChart3,
+  Compass,
+  HeartPulse,
+  LayoutDashboard,
+  Monitor,
+  Moon,
+  Music,
+  RefreshCw,
+  Settings,
+  Sun,
+  Users,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
@@ -10,7 +22,13 @@ import { KeyboardShortcuts } from './components/keyboard-shortcuts'
 import { PreviewPlayer } from './components/preview-player'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
 import { usePreview } from './hooks/use-preview'
-import { getCurrentUser, getSetupStatus, triggerPipeline } from './lib/api'
+import {
+  getCurrentUser,
+  getLibraryHealth,
+  getPipelineStatus,
+  getSetupStatus,
+  triggerPipeline,
+} from './lib/api'
 import { PreviewContext } from './lib/preview-context'
 import { queryClient } from './lib/query-client'
 import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
@@ -86,6 +104,17 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const preview = usePreview()
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
+  const { data: pipelineStatus } = useQuery({
+    queryKey: ['pipelineStatus'],
+    queryFn: getPipelineStatus,
+    refetchInterval: (query) => (query.state.data?.running ? 3000 : 15000),
+  })
+  const { data: healthStatus } = useQuery({
+    queryKey: ['library', 'health'],
+    queryFn: getLibraryHealth,
+    refetchInterval: (query) => (query.state.data?.scanning ? 3000 : false),
+  })
+  const anyScanRunning = pipelineStatus?.running || healthStatus?.scanning
 
   useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
 
@@ -176,6 +205,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <ThemeToggle theme={theme} onChange={handleThemeChange} />
               <button
                 type="button"
+                disabled={!!anyScanRunning}
                 onClick={() =>
                   triggerPipeline()
                     .then(() => toast.success('Scan started -- check Dashboard for progress'))
@@ -184,10 +214,20 @@ function AppShell({ children }: { children: React.ReactNode }) {
                       toast.error(msg.includes('409') ? 'Scan already running' : msg)
                     })
                 }
-                className="px-3 sm:px-4 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90"
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-60"
               >
-                <span className="hidden sm:inline">Run Scan</span>
-                <span className="sm:hidden">Scan</span>
+                {anyScanRunning ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span className="hidden sm:inline">Scanning...</span>
+                    <span className="sm:hidden">Scan</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Run Scan</span>
+                    <span className="sm:hidden">Scan</span>
+                  </>
+                )}
               </button>
               {/* Mobile hamburger */}
               <button
