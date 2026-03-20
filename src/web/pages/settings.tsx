@@ -825,6 +825,7 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
   const [genreOverlap, setGenreOverlap] = useState(weights.genreOverlap)
   const [aiConfidence, setAiConfidence] = useState(weights.aiConfidence)
   const [feedbackBoost, setFeedbackBoost] = useState(weights.feedbackBoost)
+  const [popularity, setPopularity] = useState(weights.popularity ?? 0)
   const [rejectionCooldown, setRejectionCooldown] = useState(
     String(prefs.rejectionCooldownDays ?? 90),
   )
@@ -832,7 +833,7 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
   const [librarySeedRatio, setLibrarySeedRatio] = useState(prefs.librarySeedRatio ?? 0.3)
   const [saving, setSaving] = useState(false)
 
-  const weightSum = consensus + similarity + genreOverlap + aiConfidence + feedbackBoost
+  const weightSum = consensus + similarity + genreOverlap + aiConfidence + feedbackBoost + popularity
   const weightsOk = Math.abs(weightSum - 1.0) < 0.01
 
   async function handleSave() {
@@ -842,7 +843,7 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
         preferences: {
           ...prefs,
           scoreThreshold,
-          scoringWeights: { consensus, similarity, genreOverlap, aiConfidence, feedbackBoost },
+          scoringWeights: { consensus, similarity, genreOverlap, aiConfidence, feedbackBoost, popularity },
           rejectionCooldownDays: parseInt(rejectionCooldown, 10) || prefs.rejectionCooldownDays,
           topArtistsLimit: parseInt(topArtistsLimit, 10) || prefs.topArtistsLimit,
           librarySeedRatio,
@@ -926,6 +927,18 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
           step={0.05}
           onChange={setFeedbackBoost}
         />
+        <SliderField
+          label="Popularity"
+          id="w-popularity"
+          value={popularity}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={setPopularity}
+        />
+        <p className="text-xs text-muted">
+          0 = ignore popularity, higher = prefer popular artists. Requires artist metadata import.
+        </p>
       </section>
 
       <section className="space-y-4">
