@@ -7,6 +7,7 @@ import {
   fixHealthCheck,
   getLibraryHealth,
   getLibraryStats,
+  getSettings,
   type HealthCheckResult,
   type LibraryStats,
   scanLibraryHealth,
@@ -70,6 +71,8 @@ export function LibraryHealthPage() {
     queryFn: getLibraryStats,
   })
 
+  const settingsQuery = useQuery({ queryKey: ['settings'], queryFn: getSettings })
+
   const rescanMutation = useMutation({
     mutationFn: scanLibraryHealth,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['library', 'health'] }),
@@ -83,6 +86,9 @@ export function LibraryHealthPage() {
   const scanning = healthQuery.data?.scanning ?? false
   const checks: HealthCheckResult[] = healthQuery.data?.checks ?? []
   const stats: LibraryStats | undefined = statsQuery.data
+  const prefs = (settingsQuery.data?.preferences ?? {}) as Record<string, unknown>
+  const lidarrBaseUrl =
+    (prefs.lidarrPublicUrl as string) || (settingsQuery.data?.lidarrUrl as string) || null
 
   return (
     <div className="p-6 space-y-8 max-w-6xl mx-auto">
@@ -125,6 +131,7 @@ export function LibraryHealthPage() {
                 check={check}
                 onFix={(checkId) => fixMutation.mutate(checkId)}
                 fixing={fixMutation.isPending && fixMutation.variables === check.id}
+                lidarrBaseUrl={lidarrBaseUrl}
               />
             ))}
           </div>

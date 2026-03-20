@@ -179,6 +179,7 @@ export type Preferences = {
   topArtistsLimit: number
   librarySeedRatio: number // 0-1: fraction of seed artists from Lidarr library
   webhookUrl?: string
+  lidarrPublicUrl?: string // browser-accessible Lidarr URL (may differ from API URL)
 }
 
 export type ScoringWeights = Preferences['scoringWeights']

@@ -4,7 +4,13 @@ import { toast } from 'sonner'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { Field } from '../components/field'
 import { ServiceCard } from '../components/service-card'
-import { AiProviderIcon, LastfmIcon, LidarrIcon, ListenBrainzIcon, WebhookIcon } from '../components/service-icons'
+import {
+  AiProviderIcon,
+  LastfmIcon,
+  LidarrIcon,
+  ListenBrainzIcon,
+  WebhookIcon,
+} from '../components/service-icons'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
@@ -129,6 +135,7 @@ type ServiceTestState = 'idle' | 'testing' | 'ok' | 'error'
 function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: () => void }) {
   const prefs = settings.preferences ?? {}
   const [lidarrUrl, setLidarrUrl] = useState(settings.lidarrUrl ?? '')
+  const [lidarrPublicUrl, setLidarrPublicUrl] = useState(prefs.lidarrPublicUrl ?? '')
   const [lidarrApiKey, setLidarrApiKey] = useState(
     settings.lidarrApiKey === '***' ? '' : (settings.lidarrApiKey ?? ''),
   )
@@ -269,6 +276,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
         qualityProfileId: parseInt(qualityProfileId, 10) || prefs.qualityProfileId,
         metadataProfileId: parseInt(metadataProfileId, 10) || prefs.metadataProfileId,
         rootFolderId: parseInt(rootFolderId, 10) || prefs.rootFolderId,
+        lidarrPublicUrl: lidarrPublicUrl || undefined,
       },
     }),
   )
@@ -341,6 +349,19 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               />
             </Field>
           </div>
+          <Field label="Public URL (optional)" id="lidarr-public-url">
+            <Input
+              id="lidarr-public-url"
+              type="url"
+              placeholder="https://lidarr.example.com"
+              value={lidarrPublicUrl}
+              onChange={(e) => setLidarrPublicUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted mt-1">
+              Browser-accessible URL for linking to Lidarr artist pages. Leave empty if the API URL
+              is already reachable from your browser.
+            </p>
+          </Field>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Quality Profile" id="quality-profile">
               <Select
