@@ -440,6 +440,31 @@ isSetupComplete(db)
       }
     }
   })
+  .then(async () => {
+    // Backfill: create Lidarr target for existing installations that have
+    // Lidarr configured in settings but no targets row yet
+    const existingSettings = await getSettings(db)
+    if (existingSettings?.lidarrUrl && existingSettings?.lidarrApiKey) {
+      const existingTargets = await getTargetsByType(db, 'lidarr')
+      if (existingTargets.length === 0) {
+        const allUsers = await listUsers(db)
+        const admin = allUsers.find((u) => u.isAdmin) ?? allUsers[0]
+        if (admin) {
+          await createTarget(db, {
+            type: 'lidarr',
+            name: 'Lidarr',
+            config: {
+              url: existingSettings.lidarrUrl as string,
+              apiKey: existingSettings.lidarrApiKey as string,
+              skipTlsVerify: (existingSettings.skipTlsVerify as boolean) ?? false,
+            },
+            userId: admin.id,
+          })
+          console.log('[boot] Created Lidarr target from existing settings (migration backfill)')
+        }
+      }
+    }
+  })
   .then(() => getSettings(db))
   .then((settings) => {
     const cron = settings?.preferences?.scheduleCron
