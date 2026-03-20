@@ -104,7 +104,8 @@ export function LibraryHealthPage() {
       {scanning && (
         <div className="bg-accent/10 border border-accent/30 rounded-lg px-4 py-3 text-sm text-accent flex items-center gap-2">
           <RefreshCw size={14} className="animate-spin shrink-0" />
-          Scanning library health... Results will appear when complete.
+          Scanning library health -- this may take several minutes for large libraries. Results will
+          appear when complete.
         </div>
       )}
 

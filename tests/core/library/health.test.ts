@@ -365,10 +365,9 @@ describe('LibraryHealthService', () => {
       const results = await service.runChecks()
       const check = results.find((r) => r.id === 'duplicate-artists')
 
-      expect(check?.count).toBe(2)
-      expect(check?.items.every((i) => i.detail === 'Duplicate: 2 entries with this name')).toBe(
-        true,
-      )
+      // Grouped: one item per duplicate name, not per entry
+      expect(check?.count).toBe(1)
+      expect(check?.items[0]?.detail).toMatch(/2 entries/)
     })
 
     it('is case-insensitive', async () => {
@@ -390,7 +389,7 @@ describe('LibraryHealthService', () => {
       const results = await service.runChecks()
       const check = results.find((r) => r.id === 'duplicate-artists')
 
-      expect(check?.count).toBe(2)
+      expect(check?.count).toBe(1)
     })
 
     it('returns empty when no duplicates', async () => {

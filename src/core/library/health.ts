@@ -342,14 +342,15 @@ export class LibraryHealthService {
     const items: HealthCheckItem[] = []
     for (const group of nameMap.values()) {
       if (group.length < 2) continue
-      for (const artist of group) {
-        items.push({
-          artistId: artist.id,
-          artistName: artist.artistName,
-          mbid: artist.foreignArtistId,
-          detail: `Duplicate: ${group.length} entries with this name`,
-        })
-      }
+      // Show one entry per duplicate group, list MBIDs in detail
+      const first = group[0] as LidarrArtist
+      const mbids = group.map((a) => a.foreignArtistId.slice(0, 8)).join(', ')
+      items.push({
+        artistId: first.id,
+        artistName: first.artistName,
+        mbid: first.foreignArtistId,
+        detail: `${group.length} entries (${mbids})`,
+      })
     }
 
     return { ...meta, id: 'duplicate-artists', count: items.length, items }

@@ -178,6 +178,9 @@ const libraryHealth = new LibraryHealthService({
   lidarrClient: lazyLidarrClient,
   artistCache: {
     getAll: async () => db.select().from(artists),
+    updateImageUrl: async (mbid, imageUrl) => {
+      await db.update(artists).set({ imageUrl }).where(eq(artists.mbid, mbid))
+    },
   },
 })
 

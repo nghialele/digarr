@@ -258,11 +258,11 @@ describe('createLidarrClient', () => {
       },
     ]
 
-    it('GETs /api/v1/album with artistIds query param', async () => {
+    it('GETs /api/v1/album with artistId query param', async () => {
       mockGet.mockResolvedValueOnce(mockAlbums)
       const client = createLidarrClient(TEST_URL, TEST_KEY)
       const result = await client.getAlbums(1)
-      expect(mockGet).toHaveBeenCalledWith('/api/v1/album?artistIds=1')
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/album?artistId=1')
       expect(result).toEqual(mockAlbums)
     })
 
@@ -270,7 +270,7 @@ describe('createLidarrClient', () => {
       mockGet.mockResolvedValueOnce([])
       const client = createLidarrClient(TEST_URL, TEST_KEY)
       await client.getAlbums(42)
-      expect(mockGet).toHaveBeenCalledWith('/api/v1/album?artistIds=42')
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/album?artistId=42')
     })
 
     it('returns empty array when artist has no albums', async () => {

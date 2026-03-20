@@ -130,7 +130,7 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
   }
 
   async function getAlbums(artistId: number): Promise<LidarrAlbum[]> {
-    const raw = await http.get<Record<string, unknown>[]>(`/api/v1/album?artistIds=${artistId}`)
+    const raw = await http.get<Record<string, unknown>[]>(`/api/v1/album?artistId=${artistId}`)
     // Strip to only the fields we need -- Lidarr album responses include
     // full track lists, images, and other metadata we don't use.
     return raw.map((a) => ({
