@@ -2,11 +2,13 @@ import { Hono } from 'hono'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
+import { getValidToken } from '@/core/oauth'
 import { filter } from '@/core/pipeline/filter'
 import type { PipelineDeps } from '@/core/pipeline/orchestrator'
 import { resolve } from '@/core/pipeline/resolve'
 import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
+import { getOAuthToken } from '@/db/queries/oauth-tokens'
 import { upsertArtist } from '@/db/queries/artists'
 import { getUserConnections } from '@/db/queries/users'
 import { mergePreferences } from '@/db/schema'
@@ -30,11 +32,28 @@ export function pipelineRoutes(deps: AppDependencies) {
     const userId = c.get('userId')
     const userConnections = userId ? await getUserConnections(deps.db, userId) : null
 
+    // Resolve Spotify OAuth token if connected
+    let spotifyAccessToken: string | null = null
+    if (userId) {
+      const oauthToken = await getOAuthToken(deps.db, userId, 'spotify')
+      if (oauthToken?.clientId && oauthToken?.clientSecret && !oauthToken.accessToken.startsWith('pending:')) {
+        try {
+          spotifyAccessToken = await getValidToken(deps.db, userId, 'spotify', {
+            tokenEndpoint: 'https://accounts.spotify.com/api/token',
+            clientId: oauthToken.clientId,
+            clientSecret: oauthToken.clientSecret,
+          })
+        } catch {
+          // Best-effort -- continue without Spotify
+        }
+      }
+    }
+
     // Fire-and-forget
     deps.orchestrator
       .run({
         db: deps.storeDb,
-        settings,
+        settings: { ...settings, spotifyAccessToken },
         userId,
         providerRegistry: deps.providerRegistry,
         userConnections,

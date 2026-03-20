@@ -246,6 +246,44 @@ export function settingsRoutes(deps: AppDependencies) {
           return c.json({ success: false, message })
         }
       }
+      case 'plex': {
+        const url = body.url || userConns?.plexUrl || ''
+        const token = body.token || userConns?.plexToken || ''
+        const { createPlexClient } = await import('@/core/clients/plex')
+        const client = createPlexClient(url, token)
+        const result = await client.testConnection()
+        return c.json(result)
+      }
+      case 'jellyfin': {
+        const url = body.url || userConns?.jellyfinUrl || ''
+        const apiKey = body.apiKey || userConns?.jellyfinApiKey || ''
+        const jfUserId = body.userId || userConns?.jellyfinUserId || ''
+        const { createJellyfinClient } = await import('@/core/clients/jellyfin')
+        const client = createJellyfinClient(url, apiKey, jfUserId)
+        const result = await client.testConnection()
+        return c.json(result)
+      }
+      case 'discogs': {
+        const token = body.token || userConns?.discogsToken || ''
+        const username = body.username || userConns?.discogsUsername || ''
+        const { createDiscogsClient } = await import('@/core/clients/discogs')
+        const client = createDiscogsClient(token, username)
+        const result = await client.testConnection()
+        return c.json(result)
+      }
+      case 'spotify': {
+        const testUserId = c.get('userId')
+        if (!testUserId) return c.json({ success: false, message: 'Login required' })
+        const { getOAuthToken } = await import('@/db/queries/oauth-tokens')
+        const oauthToken = await getOAuthToken(deps.db, testUserId, 'spotify')
+        if (!oauthToken || oauthToken.accessToken.startsWith('pending:')) {
+          return c.json({ success: false, message: 'Spotify not connected' })
+        }
+        const { createSpotifyClient } = await import('@/core/clients/spotify')
+        const client = createSpotifyClient(oauthToken.accessToken)
+        const result = await client.testConnection()
+        return c.json(result)
+      }
       default:
         return c.json({ error: `Unknown service: ${service}` }, 400)
     }

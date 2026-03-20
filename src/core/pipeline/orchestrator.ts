@@ -2,8 +2,12 @@ import { EventEmitter } from 'node:events'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
 import { sendWebhook } from '@/core/notifications'
+import { createDiscogsSource } from '@/core/plugins/discogs'
+import { createJellyfinSource } from '@/core/plugins/jellyfin'
 import { createLastFmSource } from '@/core/plugins/lastfm'
 import { createListenBrainzSource } from '@/core/plugins/listenbrainz'
+import { createPlexSource } from '@/core/plugins/plex'
+import { createSpotifySource } from '@/core/plugins/spotify'
 import { SourceRegistry } from '@/core/plugins/registry'
 import type { AiProviderRegistry } from '@/core/providers/registry'
 import { mergePreferences, type Preferences } from '@/db/schema'
@@ -30,6 +34,7 @@ export interface PipelineSettings {
   aiBaseUrl: string | null
   preferences: Preferences | null
   skipTlsVerify?: boolean
+  spotifyAccessToken?: string | null
 }
 
 export interface UserConnections {
@@ -97,6 +102,33 @@ export class PipelineOrchestrator extends EventEmitter {
       }
       if (lfUsername && lfApiKey) {
         registry.register(createLastFmSource(lfUsername, lfApiKey))
+      }
+
+      // Spotify (OAuth -- token resolved before pipeline run)
+      if (settings.spotifyAccessToken) {
+        registry.register(createSpotifySource(settings.spotifyAccessToken))
+      }
+
+      // Plex
+      const plexUrl = userConnections?.plexUrl
+      const plexToken = userConnections?.plexToken
+      if (plexUrl && plexToken) {
+        registry.register(createPlexSource(plexUrl, plexToken))
+      }
+
+      // Jellyfin
+      const jfUrl = userConnections?.jellyfinUrl
+      const jfApiKey = userConnections?.jellyfinApiKey
+      const jfUserId = userConnections?.jellyfinUserId
+      if (jfUrl && jfApiKey && jfUserId) {
+        registry.register(createJellyfinSource(jfUrl, jfApiKey, jfUserId))
+      }
+
+      // Discogs
+      const dcToken = userConnections?.discogsToken
+      const dcUsername = userConnections?.discogsUsername
+      if (dcToken && dcUsername) {
+        registry.register(createDiscogsSource(dcToken, dcUsername))
       }
 
       const aiProvider =
