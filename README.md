@@ -5,37 +5,28 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-692_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-690_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
 
 Think of it as Jellyseerr/Overseerr, but for music discovery.
 
-![Dashboard (dark)](docs/screenshots/dashboard-dark.png)
+![Dashboard](docs/screenshots/dashboard-dark.png)
 
-![Discover](docs/screenshots/discover.png)
-
-![Artist Detail](docs/screenshots/detail.png)
-
-![Analytics](docs/screenshots/analytics.png)
-
-![Settings](docs/screenshots/settings-connections.png)
+[More screenshots](docs/SCREENSHOTS.md)
 
 ---
 
 ## Why Digarr?
 
-| | **Digarr** | **Mixarr** | **Aurral** | **Lidify** |
-|---|---|---|---|---|
-| **Scoring** | 7-stage weighted pipeline with feedback learning | Queue-based, no scoring | Tag similarity only | None |
-| **AI** | Claude, GPT, Gemini, Ollama, any OpenAI-compatible | OpenAI, Anthropic, Gemini, Ollama | None | None |
-| **Data sources** | ListenBrainz, Last.fm (more coming) | 12 services | Last.fm | Last.fm |
-| **Genre discovery** | Browse, subscribe, per-genre recommendations | No | No | No |
-| **Library health** | 7 automated checks with batch fixes | No | No | No |
-| **Previews** | Spotify, YouTube, Deezer in-app | No | No | No |
-| **Multi-user** | Per-user queues and connections | Yes | No | No |
-| **Auth** | Local, OIDC/SSO, reverse proxy | Local, Google, SAML, LDAP, Plex | Local, proxy | None |
+Digarr was inspired by and builds on ideas from some great projects in the *arr ecosystem:
+
+- [**Mixarr**](https://github.com/DrMxrcy/mixarr) -- the trailblazer for AI-powered music discovery with *arr integration. Supports a wide range of listening sources and multi-user.
+- [**Aurral**](https://github.com/icefire-luo/aurral) -- a clean Last.fm-based approach to artist recommendations with tag similarity.
+- [**Lidify**](https://github.com/Gorefistus/lidify) -- a lightweight, focused tool for discovering similar artists via Last.fm.
+
+Digarr takes a different approach with a **7-stage weighted scoring pipeline** that learns from your feedback, supports multiple AI providers (Claude, GPT, Gemini, Ollama, any OpenAI-compatible), and adds library health monitoring, genre-based discovery, in-app music previews, and analytics -- all in a single self-hosted container.
 
 ---
 
@@ -44,15 +35,15 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 - **Listening history analysis** -- connects to ListenBrainz and/or Last.fm to understand your taste
 - **AI-powered recommendations** -- Anthropic (Claude), OpenAI, Google Gemini, Ollama, or any OpenAI-compatible provider; includes written explanations per artist
 - **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, and feedback learning; configurable weights, thresholds, and cooldowns
-- **One-click Lidarr integration** -- approve a recommendation and it gets added with your preferred quality/metadata profiles; Lidarr is optional
+- **One-click Lidarr integration** -- approve a recommendation and it gets added with your preferred quality/metadata profiles; select specific albums to monitor with cover art previews; Lidarr is optional
 - **Artist enrichment** -- images (fanart.tv via Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata
 - **Music previews** -- play Spotify embeds, Deezer 30-sec clips, or YouTube previews directly from recommendation cards
 - **Genre discovery** -- browse genres from your library, search the full catalog, view genre detail pages with sub-genres and library overlap; subscribe to genres for automatic discovery
-- **Library health dashboard** -- 7 automated checks (missing metadata, stale MBIDs, unmonitored artists, missing albums, duplicates, genre gaps, image gaps) with one-click batch fixes
+- **Library health dashboard** -- 6 automated checks (missing metadata, unmonitored artists, missing albums, duplicates, genre gaps, image gaps) with one-click batch fixes, auto-rescan after fixes, and artist links to Lidarr
 - **Swipe-to-approve** -- swipe right to approve, left to reject on mobile; desktop gets hover action buttons and a card-stack mode
 - **Bulk actions** -- select multiple recommendations, approve or reject in batch
 - **Multi-user** -- per-user recommendation queues, session auth with username/password, admin role, installable as a PWA
-- **Analytics dashboard** -- approval rates, genre trends, source effectiveness, batch history
+- **Analytics dashboard** -- approval rates, genre trends, source effectiveness, batch history with pagination, discovery-over-time chart, score distribution histogram, approval rate trend, and time-to-act metrics
 - **Webhook notifications** -- Discord, Slack, ntfy, Gotify, or any HTTP endpoint
 - **Self-hosted** -- single container, runs alongside your existing *arr stack
 
