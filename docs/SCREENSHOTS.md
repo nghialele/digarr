@@ -2,15 +2,19 @@
 
 ## Dashboard
 
-![Dashboard](screenshots/dashboard-dark.png)
+![Dashboard](screenshots/dashboard-light.png)
 
 ## Discover
 
 ![Discover](screenshots/discover.png)
 
-## Artist Detail
+## Genres
 
-![Artist Detail](screenshots/detail.png)
+![Genres](screenshots/genres.png)
+
+## Library
+
+![Library](screenshots/library.png)
 
 ## Analytics
 
@@ -18,4 +22,4 @@
 
 ## Settings
 
-![Settings](screenshots/settings-connections.png)
+![Settings](screenshots/settings.png)
