@@ -545,7 +545,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
                     : aiProvider === 'openai'
                       ? 'gpt-5.4-mini'
                       : aiProvider === 'gemini'
-                        ? 'gemini-2.5-flash'
+                        ? 'gemini-3-flash-preview'
                         : aiProvider === 'openai-compatible'
                           ? 'your-model-name'
                           : 'llama4'

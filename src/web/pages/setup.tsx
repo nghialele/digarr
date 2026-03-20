@@ -297,12 +297,11 @@ function StepAi({
   const apiKeyOptional = form.provider === 'openai-compatible'
   const needsBaseUrl = form.provider === 'ollama' || form.provider === 'openai-compatible'
 
-  const modelOptions: Record<string, Array<{ value: string; label: string }>> = {
+  const modelSuggestions: Record<string, Array<{ value: string; label: string }>> = {
     anthropic: [
-      { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (fast, cheapest)' },
-      { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (balanced)' },
-      { value: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5' },
-      { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (most capable)' },
+      { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 (fast, cheapest)' },
+      { value: 'claude-sonnet-4-6', label: 'Sonnet 4.6 (balanced)' },
+      { value: 'claude-opus-4-6', label: 'Opus 4.6 (most capable)' },
     ],
     openai: [
       { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano (fast, cheapest)' },
@@ -310,11 +309,15 @@ function StepAi({
       { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
     ],
     gemini: [
-      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (fast, cheapest)' },
-      { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (preview)' },
+      { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (fast, preview)' },
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (stable)' },
       { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (most capable)' },
     ],
-    ollama: [],
+    ollama: [
+      { value: 'llama4', label: 'Llama 4' },
+      { value: 'qwen3', label: 'Qwen 3' },
+      { value: 'deepseek-r1', label: 'DeepSeek R1' },
+    ],
   }
 
   const apiKeyLinks: Record<string, { url: string; label: string }> = {
@@ -324,7 +327,7 @@ function StepAi({
   }
 
   const link = apiKeyLinks[form.provider]
-  const models = modelOptions[form.provider] ?? []
+  const suggestions = modelSuggestions[form.provider] ?? []
 
   return (
     <div className="space-y-4">
@@ -346,26 +349,21 @@ function StepAi({
         </Select>
       </Field>
       <Field label="Model" id="ai-model">
-        {models.length > 0 ? (
-          <Select
-            id="ai-model"
-            value={form.model}
-            onChange={(e) => onFormChange({ ...form, model: e.target.value })}
-          >
-            <option value="">Select a model</option>
-            {models.map((m) => (
+        <Input
+          id="ai-model"
+          list="ai-model-suggestions"
+          placeholder={suggestions[0]?.value ?? 'model-name'}
+          value={form.model}
+          onChange={(e) => onFormChange({ ...form, model: e.target.value })}
+        />
+        {suggestions.length > 0 && (
+          <datalist id="ai-model-suggestions">
+            {suggestions.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.label}
               </option>
             ))}
-          </Select>
-        ) : (
-          <Input
-            id="ai-model"
-            placeholder="llama4"
-            value={form.model}
-            onChange={(e) => onFormChange({ ...form, model: e.target.value })}
-          />
+          </datalist>
         )}
       </Field>
       {(needsApiKey || apiKeyOptional) && (
