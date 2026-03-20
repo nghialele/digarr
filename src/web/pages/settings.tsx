@@ -153,6 +153,9 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
     settings.aiApiKey === '***' ? '' : (settings.aiApiKey ?? ''),
   )
   const [aiBaseUrl, setAiBaseUrl] = useState(settings.aiBaseUrl ?? '')
+  const [webhookUrl, setWebhookUrl] = useState(settings.preferences?.webhookUrl ?? '')
+  const [savingWebhook, setSavingWebhook] = useState(false)
+  const [testingWebhook, setTestingWebhook] = useState(false)
 
   const [tests, setTests] = useState<Record<string, ServiceTestState>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
@@ -226,6 +229,35 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
       } finally {
         setSave(key, false)
       }
+    }
+  }
+
+  async function handleSaveWebhook() {
+    setSavingWebhook(true)
+    try {
+      const prefs = settings.preferences ?? {}
+      await updateSettings({
+        preferences: { ...prefs, webhookUrl: webhookUrl || undefined },
+      })
+      toast.success('Webhook saved')
+      onSaved()
+    } catch {
+      toast.error('Failed to save webhook')
+    } finally {
+      setSavingWebhook(false)
+    }
+  }
+
+  async function handleTestWebhook() {
+    setTestingWebhook(true)
+    try {
+      const res = await testWebhook()
+      if (res.success) toast.success('Test notification sent')
+      else toast.error(res.message || 'Webhook test failed')
+    } catch {
+      toast.error('Failed to send test notification')
+    } finally {
+      setTestingWebhook(false)
     }
   }
 
@@ -532,6 +564,36 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           </div>
         </ServiceCard>
       </div>
+
+      {/* Webhook */}
+      <ServiceCard
+        name="Webhook"
+        description="Scan completion notifications (Discord, Slack, ntfy, Gotify, or any HTTP endpoint)"
+        status={webhookUrl ? 'connected' : 'not_configured'}
+      >
+        <Field label="Webhook URL" id="webhook-url">
+          <Input
+            id="webhook-url"
+            type="url"
+            placeholder="https://ntfy.sh/my-topic"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+          />
+        </Field>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleTestWebhook}
+            disabled={testingWebhook || !webhookUrl}
+          >
+            {testingWebhook ? 'Sending...' : 'Test Webhook'}
+          </Button>
+          <Button size="sm" onClick={handleSaveWebhook} disabled={savingWebhook}>
+            {savingWebhook ? 'Saving...' : webhookUrl ? 'Save' : 'Configure'}
+          </Button>
+        </div>
+      </ServiceCard>
     </div>
   )
 }
@@ -764,16 +826,12 @@ function ScheduleTab({ settings }: { settings: Settings }) {
   )
 }
 
-function AccountTab({ settings }: { settings: Settings }) {
-  const prefs = settings.preferences ?? {}
+function AccountTab() {
   const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
-  const [webhookUrl, setWebhookUrl] = useState(prefs.webhookUrl ?? '')
-  const [savingWebhook, setSavingWebhook] = useState(false)
-  const [testingWebhook, setTestingWebhook] = useState(false)
 
   async function handleLogout() {
     try {
@@ -811,33 +869,6 @@ function AccountTab({ settings }: { settings: Settings }) {
       )
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function handleSaveWebhook() {
-    setSavingWebhook(true)
-    try {
-      await updateSettings({
-        preferences: { ...prefs, webhookUrl: webhookUrl || undefined },
-      })
-      toast.success('Webhook saved')
-    } catch {
-      toast.error('Failed to save webhook')
-    } finally {
-      setSavingWebhook(false)
-    }
-  }
-
-  async function handleTestWebhook() {
-    setTestingWebhook(true)
-    try {
-      const res = await testWebhook()
-      if (res.success) toast.success('Test notification sent')
-      else toast.error(res.message || 'Webhook test failed')
-    } catch {
-      toast.error('Failed to send test notification')
-    } finally {
-      setTestingWebhook(false)
     }
   }
 
@@ -895,36 +926,6 @@ function AccountTab({ settings }: { settings: Settings }) {
             {saving ? 'Changing...' : 'Change Password'}
           </Button>
         </form>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Notifications</h2>
-        <p className="text-xs text-muted">
-          Receive a POST notification when a scan completes. Works with Discord, Slack, ntfy,
-          Gotify, or any HTTP endpoint that accepts JSON.
-        </p>
-        <Field label="Webhook URL" id="webhook-url">
-          <Input
-            id="webhook-url"
-            type="url"
-            placeholder="https://ntfy.sh/my-topic"
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-          />
-        </Field>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleSaveWebhook} disabled={savingWebhook}>
-            {savingWebhook ? 'Saving...' : 'Save'}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleTestWebhook}
-            disabled={testingWebhook || !webhookUrl}
-          >
-            {testingWebhook ? 'Sending...' : 'Test Webhook'}
-          </Button>
-        </div>
       </section>
     </div>
   )
@@ -1079,7 +1080,7 @@ export function SettingsPage() {
       {tab === 'connections' && <ConnectionsTab settings={data} onSaved={refetch} />}
       {tab === 'recommendations' && <RecommendationsTab settings={data} />}
       {tab === 'schedule' && <ScheduleTab settings={data} />}
-      {tab === 'account' && <AccountTab settings={data} />}
+      {tab === 'account' && <AccountTab />}
       {tab === 'auth' && <AuthTab settings={data} onSaved={refetch} />}
     </div>
   )
