@@ -38,6 +38,22 @@ export function AiProviderIcon({ provider }: { provider?: string }) {
   return <ServiceLogo src="/icons/openai.png" alt="AI Provider" />
 }
 
+export function SpotifyIcon() {
+  return <ServiceLogo src="/icons/spotify.svg" alt="Spotify" />
+}
+
+export function PlexIcon() {
+  return <ServiceLogo src="/icons/plex.svg" alt="Plex" />
+}
+
+export function JellyfinIcon() {
+  return <ServiceLogo src="/icons/jellyfin.svg" alt="Jellyfin" />
+}
+
+export function DiscogsIcon() {
+  return <ServiceLogo src="/icons/discogs.svg" alt="Discogs" />
+}
+
 export function WebhookIcon() {
   return (
     <span className="flex items-center justify-center w-6 h-6 text-[#60a5fa]">

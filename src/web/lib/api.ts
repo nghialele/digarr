@@ -359,3 +359,24 @@ export async function exportRecommendations(
   a.click()
   URL.revokeObjectURL(url)
 }
+
+// OAuth
+export async function initiateOAuth(
+  provider: string,
+  data: { clientId: string; clientSecret: string; redirectUri: string },
+): Promise<{ authUrl: string }> {
+  return fetchApi(`/auth/oauth/${provider}/initiate`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function disconnectOAuth(provider: string): Promise<void> {
+  await fetchApi(`/auth/oauth/${provider}`, { method: 'DELETE' })
+}
+
+export async function getOAuthStatus(
+  provider: string,
+): Promise<{ connected: boolean; scopes: string | null }> {
+  return fetchApi(`/auth/oauth/${provider}/status`)
+}
