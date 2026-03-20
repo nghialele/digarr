@@ -226,7 +226,9 @@ describe('GET /api/auth/oidc/callback', () => {
 
   it('handles errors and redirects with oidc_error', async () => {
     const deps = makeDeps()
-    deps.mockOidcService.handleCallback.mockRejectedValue(new Error('Unknown or expired OIDC state'))
+    deps.mockOidcService.handleCallback.mockRejectedValue(
+      new Error('Unknown or expired OIDC state'),
+    )
     const app = createTestApp(deps)
 
     const res = await app.request('/api/auth/oidc/callback?state=bad&code=auth-code-123')

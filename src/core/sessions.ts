@@ -1,5 +1,5 @@
-import { SESSION_TTL_MS } from '@/db/queries/sessions'
 import type { SessionStore } from '@/db/queries/sessions'
+import { SESSION_TTL_MS } from '@/db/queries/sessions'
 
 // In-memory fallback for tests and boot-time before DB is ready
 const memSessions = new Map<string, { userId: number; createdAt: number }>()

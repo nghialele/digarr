@@ -278,9 +278,7 @@ function LoginForm({
           )}
         </CardContent>
       </Card>
-      {version && (
-        <p className="text-xs text-muted mt-4 text-center">v{version}</p>
-      )}
+      {version && <p className="text-xs text-muted mt-4 text-center">v{version}</p>}
     </div>
   )
 }
@@ -374,9 +372,7 @@ function RegisterForm({
           </form>
         </CardContent>
       </Card>
-      {version && (
-        <p className="text-xs text-muted mt-4 text-center">v{version}</p>
-      )}
+      {version && <p className="text-xs text-muted mt-4 text-center">v{version}</p>}
     </div>
   )
 }

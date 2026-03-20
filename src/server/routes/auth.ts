@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
-import type { HonoEnv } from '@/server/types'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
 import type { AppDependencies } from '@/server'
+import type { HonoEnv } from '@/server/types'
 
 export function authRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()

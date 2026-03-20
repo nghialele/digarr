@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import type { HonoEnv } from '@/server/types'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
@@ -7,6 +6,7 @@ import { sendWebhook } from '@/core/notifications'
 import { isHttpUrl } from '@/core/validation'
 import { getUserConnections, updateUserConnections } from '@/db/queries/users'
 import type { AppDependencies } from '@/server'
+import type { HonoEnv } from '@/server/types'
 
 const SECRET_FIELDS = [
   'lidarrApiKey',
@@ -182,25 +182,16 @@ export function settingsRoutes(deps: AppDependencies) {
           (stored?.listenbrainzUsername as string) ||
           ''
         const token =
-          body.token ||
-          userConns?.listenbrainzToken ||
-          (stored?.listenbrainzToken as string) ||
-          ''
+          body.token || userConns?.listenbrainzToken || (stored?.listenbrainzToken as string) || ''
         const client = createListenBrainzClient(username, token)
         const result = await client.testConnection()
         return c.json(result)
       }
       case 'lastfm': {
         const username =
-          body.username ||
-          userConns?.lastfmUsername ||
-          (stored?.lastfmUsername as string) ||
-          ''
+          body.username || userConns?.lastfmUsername || (stored?.lastfmUsername as string) || ''
         const apiKey =
-          body.apiKey ||
-          userConns?.lastfmApiKey ||
-          (stored?.lastfmApiKey as string) ||
-          ''
+          body.apiKey || userConns?.lastfmApiKey || (stored?.lastfmApiKey as string) || ''
         const client = createLastFmClient(username, apiKey)
         const result = await client.testConnection()
         return c.json(result)

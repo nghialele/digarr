@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import type { HonoEnv } from '@/server/types'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
@@ -13,6 +12,7 @@ import { getUserConnections } from '@/db/queries/users'
 import { mergePreferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import { createPipelineSSEStream } from '@/server/sse'
+import type { HonoEnv } from '@/server/types'
 
 export function pipelineRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
@@ -97,9 +97,9 @@ export function pipelineRoutes(deps: AppDependencies) {
 
     // Override global listening source credentials with per-user values if present
     const lastfmApiKey =
-      (quickDiscoverUserConns?.lastfmApiKey ?? (settings.lastfmApiKey as string | null)) ?? null
+      quickDiscoverUserConns?.lastfmApiKey ?? (settings.lastfmApiKey as string | null) ?? null
     const lastfmUsername =
-      (quickDiscoverUserConns?.lastfmUsername ?? (settings.lastfmUsername as string | null)) ?? ''
+      quickDiscoverUserConns?.lastfmUsername ?? (settings.lastfmUsername as string | null) ?? ''
 
     // Fire-and-forget a focused pipeline run with just this artist as seed
     ;(async () => {
@@ -117,17 +117,15 @@ export function pipelineRoutes(deps: AppDependencies) {
         // Get similar from Last.fm
         const discovered = []
         if (lastfmApiKey && lastfmApiKey !== '***') {
-          const lfm = createLastFmClient(
-            lastfmUsername,
-            lastfmApiKey,
-          )
+          const lfm = createLastFmClient(lastfmUsername, lastfmApiKey)
           try {
             const similar = await lfm.getSimilarArtists(artistName)
-            for (const s of similar) {
-              discovered.push(s)
-            }
+            discovered.push(...similar)
           } catch (err: unknown) {
-            console.warn('Last.fm similar artists lookup failed:', err instanceof Error ? err.message : err)
+            console.warn(
+              'Last.fm similar artists lookup failed:',
+              err instanceof Error ? err.message : err,
+            )
           }
         }
 
@@ -249,7 +247,10 @@ export function pipelineRoutes(deps: AppDependencies) {
               })
             }
           } catch (err: unknown) {
-            console.warn('MusicBrainz disambiguation lookup failed:', err instanceof Error ? err.message : err)
+            console.warn(
+              'MusicBrainz disambiguation lookup failed:',
+              err instanceof Error ? err.message : err,
+            )
           }
         }
       } catch (err: unknown) {

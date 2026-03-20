@@ -17,9 +17,9 @@ import { createLastFmSource } from './core/plugins/lastfm'
 import { createListenBrainzSource } from './core/plugins/listenbrainz'
 import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
+import { setSessionStore } from './core/sessions'
 import { db, pool } from './db'
 import { getArtistById, upsertArtist } from './db/queries/artists'
-import { sessionQueries } from './db/queries/sessions'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
 import {
   getAllGenres,
@@ -37,6 +37,7 @@ import {
   listRecommendations,
   updateRecommendationStatus,
 } from './db/queries/recommendations'
+import { sessionQueries } from './db/queries/sessions'
 import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
 import {
@@ -62,8 +63,13 @@ import {
   updatePassword,
   updateUser,
 } from './db/queries/users'
-import { artists, DEFAULT_PREFERENCES, mergePreferences, recommendationBatches, recommendations } from './db/schema'
-import { setSessionStore } from './core/sessions'
+import {
+  artists,
+  DEFAULT_PREFERENCES,
+  mergePreferences,
+  recommendationBatches,
+  recommendations,
+} from './db/schema'
 import { createApp } from './server'
 
 // Run pending database migrations before anything else.
@@ -264,8 +270,7 @@ async function getOidcService(): Promise<OidcService | null> {
   const settings = await getSettings(db)
 
   // DB settings take precedence; env vars are fallback
-  const issuerUrl =
-    (settings?.oidcIssuerUrl as string | undefined) ?? envConfig.oidcIssuerUrl ?? ''
+  const issuerUrl = (settings?.oidcIssuerUrl as string | undefined) ?? envConfig.oidcIssuerUrl ?? ''
   const clientId = (settings?.oidcClientId as string | undefined) ?? envConfig.oidcClientId ?? ''
   const clientSecret =
     (settings?.oidcClientSecret as string | undefined) ?? envConfig.oidcClientSecret ?? ''
@@ -399,11 +404,16 @@ isSetupComplete(db)
   })
 
 // Clean up expired sessions every 6 hours
-setInterval(async () => {
-  try {
-    await sessionQueries(db).deleteExpired()
-  } catch { /* best-effort cleanup */ }
-}, 6 * 60 * 60 * 1000)
+setInterval(
+  async () => {
+    try {
+      await sessionQueries(db).deleteExpired()
+    } catch {
+      /* best-effort cleanup */
+    }
+  },
+  6 * 60 * 60 * 1000,
+)
 
 console.log(`Digarr running on http://localhost:${port}`)
 if (!envConfig.allowedOrigin && process.env.NODE_ENV === 'production') {

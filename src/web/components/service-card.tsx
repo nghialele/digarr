@@ -22,25 +22,22 @@ function StatusIndicator({ status }: { status: ServiceStatus }) {
     )
   }
 
-  const dot: Record<ServiceStatus, string> = {
+  const dot: Record<Exclude<ServiceStatus, 'testing'>, string> = {
     connected: 'bg-approve',
     not_configured: 'bg-muted',
     error: 'bg-reject',
-    testing: 'bg-muted',
   }
 
-  const label: Record<ServiceStatus, string> = {
+  const label: Record<Exclude<ServiceStatus, 'testing'>, string> = {
     connected: 'Connected',
     not_configured: 'Not configured',
     error: 'Error',
-    testing: 'Testing...',
   }
 
-  const textColor: Record<ServiceStatus, string> = {
+  const textColor: Record<Exclude<ServiceStatus, 'testing'>, string> = {
     connected: 'text-approve',
     not_configured: 'text-muted',
     error: 'text-reject',
-    testing: 'text-muted',
   }
 
   return (

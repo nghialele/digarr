@@ -8,13 +8,10 @@ export function sessionQueries(db: Database) {
   return {
     async create(token: string, userId: number): Promise<void> {
       const expiresAt = new Date(Date.now() + SESSION_TTL_MS)
-      await db
-        .insert(sessions)
-        .values({ token, userId, expiresAt })
-        .onConflictDoUpdate({
-          target: sessions.token,
-          set: { userId, expiresAt },
-        })
+      await db.insert(sessions).values({ token, userId, expiresAt }).onConflictDoUpdate({
+        target: sessions.token,
+        set: { userId, expiresAt },
+      })
     },
 
     async get(token: string): Promise<{ userId: number } | null> {

@@ -206,7 +206,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
  * Handles the scoringWeights sub-object so neither level is left with
  * undefined fields when the DB row contains only a partial preference set.
  */
-export function mergePreferences(raw: Preferences | Record<string, unknown> | null | undefined): Preferences {
+export function mergePreferences(
+  raw: Preferences | Record<string, unknown> | null | undefined,
+): Preferences {
   const partial = (raw ?? {}) as Record<string, unknown>
   return {
     ...DEFAULT_PREFERENCES,
