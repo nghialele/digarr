@@ -22,14 +22,11 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 
 Digarr was inspired by and builds on ideas from some great projects in the self-hosted music discovery space:
 
-- [**Mixarr**](https://github.com/DrMxrcy/mixarr) -- the trailblazer for AI-powered music discovery with *arr integration. Supports a wide range of listening sources and multi-user.
-- [**Aurral**](https://github.com/icefire-luo/aurral) -- clean Last.fm-based artist recommendations with tag similarity and weekly Soulseek/Navidrome flows.
-- [**Lidify**](https://github.com/Gorefistus/lidify) -- lightweight and focused similar-artist discovery via Last.fm.
-- [**Explo**](https://github.com/HoreaM/explo) -- clean ListenBrainz-to-music-server pipeline written in Go.
-- [**Yoink**](https://github.com/droqen/yoink) -- multi-provider metadata aggregation with confidence-scored provider links.
-- [**Kima Hub**](https://github.com/rolinston4/KimaHub) -- neural network mood analysis and 2D/3D music maps.
+- [**Mixarr**](https://github.com/aquantumofdonuts/mixarr) -- the trailblazer for AI-powered music discovery with *arr integration. Supports a wide range of listening sources and multi-user.
+- [**Aurral**](https://github.com/lklynet/aurral) -- artist discovery and request manager for Lidarr with tag similarity and Soulseek/Navidrome flows.
+- [**Lidify**](https://github.com/TheWicklowWolf/Lidify) -- music discovery based on selected Lidarr artists via Spotify or Last.fm.
+- [**Kima Hub**](https://github.com/Chevron7Locked/kima-hub) -- self-hosted music streaming with artist discovery, personalized playlists, and Lidarr integration.
 - [**Soularr**](https://github.com/mrusse/soularr) -- bridges Lidarr wanted lists to Soulseek downloads.
-- [**MusicMoveArr**](https://github.com/music-move-arr/music-move-arr) -- large Spotify/Deezer dataset used by digarr for genre gap filling and popularity scoring.
 
 Digarr takes a different approach with a **7-stage weighted scoring pipeline** that learns from your feedback, supports multiple AI providers (Claude, GPT, Gemini, Ollama, any OpenAI-compatible), and adds library health monitoring, genre-based discovery, in-app music previews, and analytics -- all in a single self-hosted container.
 
@@ -42,7 +39,7 @@ Digarr takes a different approach with a **7-stage weighted scoring pipeline** t
 - **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity; configurable weights, thresholds, and cooldowns
 - **Lidarr-optional** -- approve recommendations into Lidarr, or run in discovery-only mode without Lidarr. Setup wizard lets you choose. Export your curated list as JSON, CSV, or M3U
 - **Target registry** -- pluggable approval targets (Lidarr first, Navidrome/Jellyfin planned). Configure and test targets from Settings
-- **Artist enrichment** -- images (fanart.tv via Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata; optional Spotify genre/popularity enrichment via MusicMoveArr dataset import
+- **Artist enrichment** -- images (fanart.tv via Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata; optional Spotify genre/popularity enrichment via external dataset import
 - **Music previews** -- play Spotify embeds, Deezer 30-sec clips, or YouTube previews directly from recommendation cards
 - **Genre discovery** -- browse genres from your library, search the full catalog, view genre detail pages with sub-genres and library overlap; subscribe to genres for automatic discovery
 - **Library health dashboard** -- 6 automated checks (missing metadata, unmonitored artists, missing albums, duplicates, genre gaps, image gaps) with one-click batch fixes, auto-rescan after fixes, and artist links to Lidarr
