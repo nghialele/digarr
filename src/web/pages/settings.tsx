@@ -23,6 +23,7 @@ import {
   AUTH_EXPIRED_EVENT,
   changePassword,
   clearStoredToken,
+  createTargetApi,
   deleteTargetApi,
   disconnectOAuth,
   getAuthStatus,
@@ -1086,12 +1087,158 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   )
 }
 
+const TARGET_TYPES = [
+  {
+    value: 'lidarr',
+    label: 'Lidarr',
+    fields: [
+      { key: 'url', label: 'URL', placeholder: 'http://lidarr:8686' },
+      { key: 'apiKey', label: 'API Key', placeholder: 'Enter API key', type: 'password' as const },
+    ],
+  },
+  {
+    value: 'navidrome',
+    label: 'Navidrome',
+    fields: [
+      { key: 'url', label: 'URL', placeholder: 'http://navidrome:4533' },
+      { key: 'username', label: 'Username', placeholder: 'Enter username' },
+      {
+        key: 'password',
+        label: 'Password',
+        placeholder: 'Enter password',
+        type: 'password' as const,
+      },
+    ],
+  },
+  {
+    value: 'jellyfin',
+    label: 'Jellyfin',
+    fields: [
+      { key: 'url', label: 'URL', placeholder: 'http://jellyfin:8096' },
+      { key: 'apiKey', label: 'API Key', placeholder: 'Enter API key', type: 'password' as const },
+      { key: 'userId', label: 'User ID (optional)', placeholder: 'UUID or username' },
+    ],
+  },
+]
+
+function TargetTypeIcon({ type }: { type: string }) {
+  const iconMap: Record<string, string> = {
+    lidarr: '/icons/lidarr.png',
+    jellyfin: '/icons/jellyfin.svg',
+    'spotify-playlist': '/icons/spotify.svg',
+  }
+  const src = iconMap[type]
+  if (src) return <img src={src} alt="" className="w-5 h-5" />
+  // Text fallback for types without icons (e.g. navidrome)
+  return (
+    <span className="w-5 h-5 rounded bg-accent/20 text-accent text-[10px] font-bold flex items-center justify-center uppercase">
+      {type.charAt(0)}
+    </span>
+  )
+}
+
+function AddTargetDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [type, setType] = useState('')
+  const [name, setName] = useState('')
+  const [config, setConfig] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+
+  const selectedType = TARGET_TYPES.find((t) => t.value === type)
+
+  async function handleSave() {
+    if (!type || !selectedType) return
+    setSaving(true)
+    try {
+      await createTargetApi({
+        type,
+        name: name || selectedType.label,
+        config,
+      })
+      toast.success('Target added')
+      onCreated()
+      onClose()
+    } catch {
+      toast.error('Failed to add target')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4 space-y-4">
+      <h4 className="text-sm font-medium text-text">Add Target</h4>
+
+      <div>
+        <label className="block text-xs text-muted mb-1">Type</label>
+        <select
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value)
+            setConfig({})
+          }}
+          className="w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
+        >
+          <option value="">Select a target type...</option>
+          {TARGET_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedType && (
+        <>
+          <div>
+            <label className="block text-xs text-muted mb-1">Name</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={selectedType.label}
+              className="w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
+            />
+          </div>
+
+          {selectedType.fields.map((field) => (
+            <div key={field.key}>
+              <label className="block text-xs text-muted mb-1">{field.label}</label>
+              <input
+                type={'type' in field ? field.type : 'text'}
+                value={config[field.key] ?? ''}
+                onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })}
+                placeholder={field.placeholder}
+                className="w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
+              />
+            </div>
+          ))}
+
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={saving || !type}>
+              {saving ? 'Adding...' : 'Add Target'}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function TargetsTab() {
   const { data: targets, refetch } = useQuery({
     queryKey: ['targets'],
     queryFn: listTargets,
   })
   const [testing, setTesting] = useState<number | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
 
   async function handleTest(id: number) {
     setTesting(id)
@@ -1123,10 +1270,19 @@ function TargetsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-text">Targets</h3>
-        <span className="text-xs text-muted">Where approved recommendations go</span>
+        <Button variant="outline" size="sm" onClick={() => setAddOpen(!addOpen)}>
+          {addOpen ? 'Cancel' : 'Add Target'}
+        </Button>
       </div>
 
-      {targets?.length === 0 && (
+      {addOpen && (
+        <AddTargetDialog
+          onClose={() => setAddOpen(false)}
+          onCreated={() => refetch()}
+        />
+      )}
+
+      {!addOpen && targets?.length === 0 && (
         <p className="text-sm text-muted">
           No targets configured. Approved recommendations will be saved as a curated list.
         </p>
@@ -1138,7 +1294,7 @@ function TargetsTab() {
           <div key={t.id} className="rounded-lg border border-border bg-surface p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {t.type === 'lidarr' && <img src="/icons/lidarr.png" alt="" className="w-5 h-5" />}
+                <TargetTypeIcon type={t.type} />
                 <span className="text-sm font-medium text-text">{t.name}</span>
                 <span className="text-xs text-muted capitalize">({t.type})</span>
                 {!owned && (
