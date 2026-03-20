@@ -1,21 +1,25 @@
 import { Hono } from 'hono'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { collect } from '@/core/pipeline/collect'
-import { getArtistsByGenre, getExampleArtistsByGenre } from '@/db/queries/artists'
+import { getArtistsByGenre, getGenreEnrichments } from '@/db/queries/artists'
 import type { AppDependencies } from '@/server'
 
 export function genreRoutes(deps: AppDependencies) {
   const router = new Hono()
 
   router.get('/api/genres', async (c) => {
-    const [genres, examples] = await Promise.all([
+    const [genres, enrichments] = await Promise.all([
       deps.genreService.getLibraryGenres(),
-      getExampleArtistsByGenre(deps.db, 3),
+      getGenreEnrichments(deps.db, 3),
     ])
-    const enriched = genres.map((g) => ({
-      ...g,
-      exampleArtists: examples.get(g.name) ?? [],
-    }))
+    const enriched = genres.map((g) => {
+      const e = enrichments.get(g.name)
+      return {
+        ...g,
+        artistCount: e?.liveCount ?? g.artistCount,
+        exampleArtists: e?.examples ?? [],
+      }
+    })
     return c.json(enriched)
   })
 

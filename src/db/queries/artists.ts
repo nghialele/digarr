@@ -41,36 +41,56 @@ export async function getArtistById(db: Database, id: number): Promise<ArtistRow
   return rows[0] ?? null
 }
 
+type GenreEnrichment = { examples: string[]; liveCount: number }
+
 /**
- * Returns a map of genre name -> example artist names (up to `limit` per genre).
- * Single query using lateral join -- avoids N+1.
+ * Returns a map of genre name -> { examples, liveCount } using two efficient
+ * queries: a lateral join for example names, and an aggregate for live counts.
  */
-export async function getExampleArtistsByGenre(
+export async function getGenreEnrichments(
   db: Database,
-  limit = 3,
-): Promise<Map<string, string[]>> {
-  const rows = await db.execute<{ genre_name: string; artist_name: string }>(
-    sql`SELECT g.name AS genre_name, a.name AS artist_name
-        FROM ${genres} g
-        CROSS JOIN LATERAL (
-          SELECT ${artists.name}
-          FROM ${artists}
-          WHERE EXISTS (
+  exampleLimit = 3,
+): Promise<Map<string, GenreEnrichment>> {
+  const [exRows, countRows] = await Promise.all([
+    db.execute<{ genre_name: string; artist_name: string }>(
+      sql`SELECT g.name AS genre_name, a.name AS artist_name
+          FROM ${genres} g
+          CROSS JOIN LATERAL (
+            SELECT ${artists.name}
+            FROM ${artists}
+            WHERE EXISTS (
+              SELECT 1 FROM unnest(${artists.genres}) ag WHERE lower(ag) = lower(g.name)
+            )
+            ORDER BY ${artists.name}
+            LIMIT ${exampleLimit}
+          ) a
+          WHERE g.source = 'library'`,
+    ),
+    db.execute<{ genre_name: string; cnt: string }>(
+      sql`SELECT g.name AS genre_name, count(*)::text AS cnt
+          FROM ${genres} g
+          JOIN ${artists} a ON EXISTS (
             SELECT 1 FROM unnest(${artists.genres}) ag WHERE lower(ag) = lower(g.name)
           )
-          ORDER BY ${artists.name}
-          LIMIT ${limit}
-        ) a
-        WHERE g.source = 'library'`,
-  )
+          WHERE g.source = 'library'
+          GROUP BY g.name`,
+    ),
+  ])
 
-  const result = new Map<string, string[]>()
-  for (const row of rows.rows) {
-    const r = row as { genre_name: string; artist_name: string }
-    const existing = result.get(r.genre_name) ?? []
-    existing.push(r.artist_name)
-    result.set(r.genre_name, existing)
+  const result = new Map<string, GenreEnrichment>()
+
+  for (const row of countRows.rows) {
+    const r = row as { genre_name: string; cnt: string }
+    result.set(r.genre_name, { examples: [], liveCount: Number.parseInt(r.cnt, 10) })
   }
+
+  for (const row of exRows.rows) {
+    const r = row as { genre_name: string; artist_name: string }
+    const entry = result.get(r.genre_name) ?? { examples: [], liveCount: 0 }
+    entry.examples.push(r.artist_name)
+    result.set(r.genre_name, entry)
+  }
+
   return result
 }
 
