@@ -305,15 +305,13 @@ function StepAi({
       { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (most capable)' },
     ],
     openai: [
-      { value: 'gpt-5-nano', label: 'GPT-5 Nano (fast, cheapest)' },
-      { value: 'gpt-5-mini', label: 'GPT-5 Mini (balanced)' },
+      { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano (fast, cheapest)' },
+      { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini (balanced)' },
       { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
-      { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-      { value: 'gpt-4o', label: 'GPT-4o' },
     ],
     gemini: [
-      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (fast, cheapest)' },
-      { value: 'gemini-2.0-flash-thinking-exp', label: 'Gemini 2.0 Flash Thinking (reasoning)' },
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (fast, cheapest)' },
+      { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (preview)' },
       { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (most capable)' },
     ],
     ollama: [],
@@ -364,7 +362,7 @@ function StepAi({
         ) : (
           <Input
             id="ai-model"
-            placeholder="llama3.2"
+            placeholder="llama4"
             value={form.model}
             onChange={(e) => onFormChange({ ...form, model: e.target.value })}
           />

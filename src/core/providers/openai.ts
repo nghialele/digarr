@@ -3,7 +3,7 @@ import type { AiRecommendation, TasteProfile } from '@/core/types'
 import { buildRecommendationPrompt, parseRecommendationResponse } from './prompt'
 import type { RecommendationProvider } from './types'
 
-const DEFAULT_MODEL = 'gpt-5-mini'
+const DEFAULT_MODEL = 'gpt-5.4-mini'
 
 export class OpenAIProvider implements RecommendationProvider {
   private client: OpenAI

@@ -32,7 +32,7 @@ describe('GeminiProvider', () => {
       ),
     )
 
-    const provider = new GeminiProvider('test-key', 'gemini-2.0-flash')
+    const provider = new GeminiProvider('test-key', 'gemini-2.5-flash')
     const results = await provider.getRecommendations({
       topArtists: [{ name: 'Aphex Twin', playCount: 100, source: 'lastfm' }],
       topGenres: [{ name: 'electronic', weight: 1 }],
@@ -46,7 +46,7 @@ describe('GeminiProvider', () => {
     const call = fetchSpy.mock.calls[0] as [string | URL | Request, RequestInit | undefined]
     const [url, init] = call
     expect(String(url)).toContain('generativelanguage.googleapis.com')
-    expect(String(url)).toContain('gemini-2.0-flash')
+    expect(String(url)).toContain('gemini-2.5-flash')
     expect((init as RequestInit).headers).toEqual(
       expect.objectContaining({ 'x-goog-api-key': 'test-key' }),
     )

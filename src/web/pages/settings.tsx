@@ -541,14 +541,14 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
                 id="ai-model"
                 placeholder={
                   aiProvider === 'anthropic'
-                    ? 'claude-3-5-haiku-20241022'
+                    ? 'claude-haiku-4-5-20251001'
                     : aiProvider === 'openai'
-                      ? 'gpt-4o-mini'
+                      ? 'gpt-5.4-mini'
                       : aiProvider === 'gemini'
-                        ? 'gemini-2.0-flash'
+                        ? 'gemini-2.5-flash'
                         : aiProvider === 'openai-compatible'
                           ? 'your-model-name'
-                          : 'llama3.2'
+                          : 'llama4'
                 }
                 value={aiModel}
                 onChange={(e) => setAiModel(e.target.value)}
