@@ -1,7 +1,16 @@
 import { Bell } from 'lucide-react'
+import { useState } from 'react'
 
 function ServiceLogo({ src, alt }: { src: string; alt: string }) {
-  return <img src={src} alt={alt} className="w-6 h-6 rounded" />
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <span className="flex items-center justify-center w-6 h-6 rounded bg-muted text-[10px] font-bold text-muted-foreground">
+        {alt.charAt(0)}
+      </span>
+    )
+  }
+  return <img src={src} alt={alt} className="w-6 h-6 rounded" onError={() => setFailed(true)} />
 }
 
 export function LidarrIcon() {
