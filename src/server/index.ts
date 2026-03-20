@@ -27,6 +27,7 @@ import { requestLogger } from './middleware/logger'
 import { proxyAuthMiddleware } from './middleware/proxy-auth'
 import { setupGuard } from './middleware/setup-guard'
 import { analyticsRoutes } from './routes/analytics'
+import { exportRoutes } from './routes/exports'
 import { artistRoutes } from './routes/artists'
 import { authRoutes } from './routes/auth'
 import { batchRoutes } from './routes/batches'
@@ -216,6 +217,7 @@ export function createApp(deps: AppDependencies) {
   app.route('/', subscriptionRoutes(deps))
   app.route('/', userRoutes(deps))
   app.route('/', targetRoutes(deps))
+  app.route('/', exportRoutes(deps))
   app.route(
     '/',
     libraryRoutes({ libraryHealth: deps.libraryHealth, skyhookWarmer: deps.skyhookWarmer }),
