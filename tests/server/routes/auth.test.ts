@@ -79,12 +79,12 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
   }
 }
 
-beforeEach(() => {
-  clearAllSessions()
+beforeEach(async () => {
+  await clearAllSessions()
 })
 
-afterEach(() => {
-  clearAllSessions()
+afterEach(async () => {
+  await clearAllSessions()
 })
 
 describe('POST /api/auth/register', () => {

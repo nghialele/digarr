@@ -15,7 +15,7 @@ vi.mock('@/core/sessions', async (importOriginal) => {
   const orig = await importOriginal<typeof import('@/core/sessions')>()
   return {
     ...orig,
-    createSession: vi.fn(),
+    createSession: vi.fn(async () => {}),
   }
 })
 
@@ -70,13 +70,13 @@ function createTestApp(deps: ReturnType<typeof makeDeps>) {
   return app
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks()
-  clearAllSessions()
+  await clearAllSessions()
 })
 
-afterEach(() => {
-  clearAllSessions()
+afterEach(async () => {
+  await clearAllSessions()
 })
 
 describe('GET /api/auth/oidc/login', () => {

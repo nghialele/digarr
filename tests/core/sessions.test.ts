@@ -7,47 +7,47 @@ import {
   getSession,
 } from '@/core/sessions'
 
-afterEach(() => {
-  clearAllSessions()
+afterEach(async () => {
+  await clearAllSessions()
 })
 
 describe('session store', () => {
-  it('stores and retrieves a session', () => {
-    createSession(42, 'token-abc')
-    const session = getSession('token-abc')
+  it('stores and retrieves a session', async () => {
+    await createSession(42, 'token-abc')
+    const session = await getSession('token-abc')
     expect(session).not.toBeNull()
     expect(session?.userId).toBe(42)
   })
 
-  it('returns null for unknown token', () => {
-    expect(getSession('nonexistent')).toBeNull()
+  it('returns null for unknown token', async () => {
+    expect(await getSession('nonexistent')).toBeNull()
   })
 
-  it('deletes a session', () => {
-    createSession(1, 'token-del')
-    deleteSession('token-del')
-    expect(getSession('token-del')).toBeNull()
+  it('deletes a session', async () => {
+    await createSession(1, 'token-del')
+    await deleteSession('token-del')
+    expect(await getSession('token-del')).toBeNull()
   })
 
-  it('clears all sessions for a user', () => {
-    createSession(1, 'token-a')
-    createSession(1, 'token-b')
-    createSession(2, 'token-c')
+  it('clears all sessions for a user', async () => {
+    await createSession(1, 'token-a')
+    await createSession(1, 'token-b')
+    await createSession(2, 'token-c')
 
-    clearUserSessions(1)
+    await clearUserSessions(1)
 
-    expect(getSession('token-a')).toBeNull()
-    expect(getSession('token-b')).toBeNull()
-    expect(getSession('token-c')).not.toBeNull()
+    expect(await getSession('token-a')).toBeNull()
+    expect(await getSession('token-b')).toBeNull()
+    expect(await getSession('token-c')).not.toBeNull()
   })
 
-  it('clearAllSessions removes everything', () => {
-    createSession(1, 'token-1')
-    createSession(2, 'token-2')
+  it('clearAllSessions removes everything', async () => {
+    await createSession(1, 'token-1')
+    await createSession(2, 'token-2')
 
-    clearAllSessions()
+    await clearAllSessions()
 
-    expect(getSession('token-1')).toBeNull()
-    expect(getSession('token-2')).toBeNull()
+    expect(await getSession('token-1')).toBeNull()
+    expect(await getSession('token-2')).toBeNull()
   })
 })

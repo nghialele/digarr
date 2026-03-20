@@ -1,50 +1,69 @@
-type Session = {
-  userId: number
-  createdAt: number
-}
+import type { SessionStore } from '@/db/queries/sessions'
 
-// In-memory session store. Acceptable for a home/household app.
-// Sessions are lost on restart (users just re-login).
-const sessions = new Map<string, Session>()
-
-// Default session TTL: 30 days
+// In-memory fallback for tests and boot-time before DB is ready
+const memSessions = new Map<string, { userId: number; createdAt: number }>()
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
-export function createSession(userId: number, token: string): void {
-  sessions.set(token, { userId, createdAt: Date.now() })
+let dbStore: SessionStore | null = null
+
+export function setSessionStore(store: SessionStore): void {
+  dbStore = store
 }
 
-export function getSession(token: string): Session | null {
-  const session = sessions.get(token)
+export async function createSession(userId: number, token: string): Promise<void> {
+  if (dbStore) {
+    await dbStore.create(token, userId)
+  } else {
+    memSessions.set(token, { userId, createdAt: Date.now() })
+  }
+}
+
+export async function getSession(token: string): Promise<{ userId: number } | null> {
+  if (dbStore) {
+    return dbStore.get(token)
+  }
+  const session = memSessions.get(token)
   if (!session) return null
   if (Date.now() - session.createdAt > SESSION_TTL_MS) {
-    sessions.delete(token)
+    memSessions.delete(token)
     return null
   }
-  return session
+  return { userId: session.userId }
 }
 
-export function deleteSession(token: string): void {
-  sessions.delete(token)
-}
-
-export function clearUserSessions(userId: number): void {
-  for (const [token, session] of sessions) {
-    if (session.userId === userId) sessions.delete(token)
+export async function deleteSession(token: string): Promise<void> {
+  if (dbStore) {
+    await dbStore.delete(token)
+  } else {
+    memSessions.delete(token)
   }
 }
 
-/** Find an active (non-expired) session for a user. Used by proxy auth to reuse sessions. */
-export function getActiveSessionForUser(userId: number): string | null {
-  for (const [token, session] of sessions) {
-    if (session.userId === userId && Date.now() - session.createdAt < SESSION_TTL_MS) {
-      return token
+export async function clearUserSessions(userId: number): Promise<void> {
+  if (dbStore) {
+    await dbStore.deleteForUser(userId)
+  } else {
+    for (const [t, s] of memSessions) {
+      if (s.userId === userId) memSessions.delete(t)
     }
+  }
+}
+
+export async function getActiveSessionForUser(userId: number): Promise<string | null> {
+  if (dbStore) {
+    return dbStore.getActiveForUser(userId)
+  }
+  for (const [t, s] of memSessions) {
+    if (s.userId === userId && Date.now() - s.createdAt < SESSION_TTL_MS) return t
   }
   return null
 }
 
 /** Visible for testing. */
-export function clearAllSessions(): void {
-  sessions.clear()
+export async function clearAllSessions(): Promise<void> {
+  if (dbStore) {
+    await dbStore.clear()
+  } else {
+    memSessions.clear()
+  }
 }

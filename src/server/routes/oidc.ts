@@ -82,7 +82,7 @@ export function oidcRoutes(deps: OidcRouteDeps) {
       }
 
       const sessionToken = generateSessionToken()
-      createSession(user.id, sessionToken)
+      await createSession(user.id, sessionToken)
       return c.redirect(`/?oidc_token=${encodeURIComponent(sessionToken)}`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'OIDC authentication failed'

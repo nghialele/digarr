@@ -19,6 +19,7 @@ import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
 import { db, pool } from './db'
 import { getArtistById, upsertArtist } from './db/queries/artists'
+import { sessionQueries } from './db/queries/sessions'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
 import {
   getAllGenres,
@@ -62,12 +63,16 @@ import {
   updateUser,
 } from './db/queries/users'
 import { artists, DEFAULT_PREFERENCES, recommendationBatches, recommendations } from './db/schema'
+import { setSessionStore } from './core/sessions'
 import { createApp } from './server'
 
 // Run pending database migrations before anything else.
 // Uses drizzle-orm's programmatic migrator -- safe to run every boot (idempotent).
 await migrate(db, { migrationsFolder: './drizzle' })
 console.log('Database migrations applied')
+
+// Wire up DB-backed session store after migrations are applied.
+setSessionStore(sessionQueries(db))
 
 const storeDb: StoreDb = {
   getExistingRecommendationMbids: async () => {
@@ -399,6 +404,13 @@ isSetupComplete(db)
   .catch((err: unknown) => {
     console.error('Failed to initialize:', err)
   })
+
+// Clean up expired sessions every 6 hours
+setInterval(async () => {
+  try {
+    await sessionQueries(db).deleteExpired()
+  } catch { /* best-effort cleanup */ }
+}, 6 * 60 * 60 * 1000)
 
 console.log(`Digarr running on http://localhost:${port}`)
 if (!envConfig.allowedOrigin && process.env.NODE_ENV === 'production') {

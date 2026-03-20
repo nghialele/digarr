@@ -41,7 +41,7 @@ export function authGuard(hasUsers: () => Promise<boolean>) {
 
     // Try session token first
     if (provided) {
-      const session = getSession(provided)
+      const session = await getSession(provided)
       if (session) {
         c.set('userId' as never, session.userId as never)
         return next()

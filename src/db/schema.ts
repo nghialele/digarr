@@ -133,6 +133,15 @@ export const subscriptionRuns = pgTable('subscription_runs', {
   batchId: integer('batch_id').references(() => recommendationBatches.id),
 })
 
+export const sessions = pgTable('sessions', {
+  token: text('token').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+})
+
 export const oidcTokens = pgTable('oidc_tokens', {
   id: serial('id').primaryKey(),
   userId: integer('user_id')

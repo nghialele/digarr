@@ -4,8 +4,8 @@ import { createSession, getActiveSessionForUser } from '@/core/sessions'
 import { proxyAuthMiddleware } from '@/server/middleware/proxy-auth'
 
 vi.mock('@/core/sessions', () => ({
-  createSession: vi.fn(),
-  getActiveSessionForUser: vi.fn(() => null),
+  createSession: vi.fn(async () => {}),
+  getActiveSessionForUser: vi.fn(async () => null),
 }))
 vi.mock('@/core/auth', () => ({
   generateSessionToken: vi.fn(() => 'test-token-123'),
@@ -121,7 +121,7 @@ describe('proxyAuthMiddleware', () => {
   })
 
   it('reuses existing session instead of creating new one', async () => {
-    vi.mocked(getActiveSessionForUser).mockReturnValue('existing-token')
+    vi.mocked(getActiveSessionForUser).mockResolvedValue('existing-token')
     mockGetUserByUsername.mockResolvedValue({
       id: 10,
       username: 'carol',

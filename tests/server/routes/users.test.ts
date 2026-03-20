@@ -94,25 +94,25 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
 }
 
 /** Register a session for userId 1 (admin) and return the bearer token. */
-function adminToken(): string {
+async function adminToken(): Promise<string> {
   const token = 'test-admin-token'
-  createSession(1, token)
+  await createSession(1, token)
   return token
 }
 
 /** Register a session for userId 2 (non-admin) and return the bearer token. */
-function regularToken(): string {
+async function regularToken(): Promise<string> {
   const token = 'test-regular-token'
-  createSession(2, token)
+  await createSession(2, token)
   return token
 }
 
-beforeEach(() => {
-  clearAllSessions()
+beforeEach(async () => {
+  await clearAllSessions()
 })
 
-afterEach(() => {
-  clearAllSessions()
+afterEach(async () => {
+  await clearAllSessions()
 })
 
 // ---------------------------------------------------------------------------
@@ -121,7 +121,7 @@ afterEach(() => {
 
 describe('GET /api/users', () => {
   it('returns user list for admin', async () => {
-    const token = adminToken()
+    const token = await adminToken()
     const app = createApp(makeDeps())
 
     const res = await app.request('/api/users', {
@@ -136,7 +136,7 @@ describe('GET /api/users', () => {
   })
 
   it('returns 403 for non-admin', async () => {
-    const token = regularToken()
+    const token = await regularToken()
     const app = createApp(
       makeDeps({
         // Caller is user 2 (not admin)
@@ -166,7 +166,7 @@ describe('GET /api/users', () => {
 describe('PATCH /api/users/:id', () => {
   it('admin can toggle isAdmin on another user', async () => {
     const updateUser = vi.fn(async () => {})
-    const token = adminToken()
+    const token = await adminToken()
     const app = createApp(
       makeDeps({
         updateUser,
@@ -191,7 +191,7 @@ describe('PATCH /api/users/:id', () => {
   })
 
   it('prevents admin from removing own admin role', async () => {
-    const token = adminToken()
+    const token = await adminToken()
     const app = createApp(makeDeps())
 
     const res = await app.request('/api/users/1', {
@@ -206,7 +206,7 @@ describe('PATCH /api/users/:id', () => {
   })
 
   it('returns 404 for non-existent user', async () => {
-    const token = adminToken()
+    const token = await adminToken()
     const app = createApp(
       makeDeps({
         // Admin check succeeds for id=1, target 99 not found
@@ -231,7 +231,7 @@ describe('PATCH /api/users/:id', () => {
 describe('DELETE /api/users/:id', () => {
   it('admin can delete another user', async () => {
     const deleteUser = vi.fn(async () => {})
-    const token = adminToken()
+    const token = await adminToken()
     const app = createApp(
       makeDeps({
         deleteUser,
@@ -255,7 +255,7 @@ describe('DELETE /api/users/:id', () => {
   })
 
   it('prevents admin from deleting self', async () => {
-    const token = adminToken()
+    const token = await adminToken()
     const app = createApp(makeDeps())
 
     const res = await app.request('/api/users/1', {
@@ -269,7 +269,7 @@ describe('DELETE /api/users/:id', () => {
   })
 
   it('returns 404 for non-existent user', async () => {
-    const token = adminToken()
+    const token = await adminToken()
     const app = createApp(
       makeDeps({
         getUserById: vi.fn(async (id: number) => (id === 1 ? adminUser : null)),

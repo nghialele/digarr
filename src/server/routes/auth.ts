@@ -33,7 +33,7 @@ export function authRoutes(deps: AppDependencies) {
     const user = await deps.createUser({ username, passwordHash, isAdmin })
 
     const token = generateSessionToken()
-    createSession(user.id, token)
+    await createSession(user.id, token)
 
     return c.json({ user, token }, 201)
   })
@@ -53,17 +53,17 @@ export function authRoutes(deps: AppDependencies) {
     }
 
     const token = generateSessionToken()
-    createSession(user.id, token)
+    await createSession(user.id, token)
 
     const { passwordHash: _, ...publicUser } = user
     return c.json({ user: publicUser, token })
   })
 
   // Logout (invalidate session token)
-  router.post('/api/auth/logout', (c) => {
+  router.post('/api/auth/logout', async (c) => {
     const header = c.req.header('Authorization')
     if (header?.startsWith('Bearer ')) {
-      deleteSession(header.slice(7))
+      await deleteSession(header.slice(7))
     }
     return c.json({ ok: true })
   })
@@ -116,9 +116,9 @@ export function authRoutes(deps: AppDependencies) {
     await deps.updatePassword(userId, newHash)
 
     // Invalidate all sessions for this user, then create a fresh one
-    clearUserSessions(userId)
+    await clearUserSessions(userId)
     const newToken = generateSessionToken()
-    createSession(userId, newToken)
+    await createSession(userId, newToken)
 
     return c.json({ ok: true, token: newToken })
   })

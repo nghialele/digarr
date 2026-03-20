@@ -76,10 +76,10 @@ export function proxyAuthMiddleware(deps: ProxyAuthDeps) {
     }
 
     // Reuse existing session or create new one (for SSE ?token= compatibility)
-    let sessionToken = getActiveSessionForUser(user.id)
+    let sessionToken = await getActiveSessionForUser(user.id)
     if (!sessionToken) {
       sessionToken = generateSessionToken()
-      createSession(user.id, sessionToken)
+      await createSession(user.id, sessionToken)
     }
 
     c.set('userId' as never, user.id as never)
