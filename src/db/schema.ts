@@ -158,6 +158,16 @@ export const sessions = pgTable('sessions', {
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 })
 
+export const artistMetadata = pgTable('artist_metadata', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  nameNormalized: text('name_normalized').notNull().unique(),
+  spotifyGenres: text('spotify_genres').array(),
+  spotifyPopularity: integer('spotify_popularity'),
+  deezerFans: integer('deezer_fans'),
+  cachedAt: timestamp('cached_at', { withTimezone: true }).defaultNow(),
+})
+
 export const oidcTokens = pgTable('oidc_tokens', {
   id: serial('id').primaryKey(),
   userId: integer('user_id')
