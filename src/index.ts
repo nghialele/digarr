@@ -10,6 +10,7 @@ import { GenreService } from './core/genre/service'
 import { runGenreSubscription } from './core/genre/subscription-runner'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
+import { getValidToken } from './core/oauth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
@@ -18,7 +19,10 @@ import { createListenBrainzSource } from './core/plugins/listenbrainz'
 import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
 import { setSessionStore } from './core/sessions'
+import { createJellyfinTarget } from './core/targets/jellyfin'
 import { createLidarrTarget } from './core/targets/lidarr'
+import { createNavidromeTarget } from './core/targets/navidrome'
+import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
 import { db, pool } from './db'
 import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
 import { getArtistById, upsertArtist } from './db/queries/artists'
@@ -30,6 +34,7 @@ import {
   searchGenres,
   upsertGenre,
 } from './db/queries/genres'
+import { getOAuthToken } from './db/queries/oauth-tokens'
 import {
   bulkUpdateStatus,
   getGenreFeedbackHistory,
@@ -371,6 +376,27 @@ const app = createApp({
       })
       return target.testConnection()
     }
+
+    if (type === 'navidrome') {
+      const target = createNavidromeTarget(0, {
+        url: config.url as string,
+        username: config.username as string,
+        password: config.password as string,
+        skipTlsVerify: (config.skipTlsVerify as boolean) ?? false,
+      })
+      return target.testConnection()
+    }
+
+    if (type === 'jellyfin') {
+      const target = createJellyfinTarget(0, {
+        url: config.url as string,
+        apiKey: config.apiKey as string,
+        userId: config.userId as string | undefined,
+        skipTlsVerify: (config.skipTlsVerify as boolean) ?? false,
+      })
+      return target.testConnection()
+    }
+
     return { success: false, message: `Unknown target type: ${type}` }
   },
   getEnabledTargetsForUser: async (userId) => {
@@ -393,7 +419,50 @@ const app = createApp({
           }),
         )
       }
-      // Future: navidrome, jellyfin targets registered here
+
+      if (row.type === 'navidrome') {
+        targets.push(
+          createNavidromeTarget(row.id, {
+            url: row.config.url as string,
+            username: row.config.username as string,
+            password: row.config.password as string,
+            skipTlsVerify: (row.config.skipTlsVerify as boolean) ?? false,
+          }),
+        )
+      }
+
+      if (row.type === 'jellyfin') {
+        targets.push(
+          createJellyfinTarget(row.id, {
+            url: row.config.url as string,
+            apiKey: row.config.apiKey as string,
+            userId: row.config.userId as string | undefined,
+            skipTlsVerify: (row.config.skipTlsVerify as boolean) ?? false,
+          }),
+        )
+      }
+
+      if (row.type === 'spotify-playlist') {
+        targets.push(
+          createSpotifyPlaylistTarget(row.id, {
+            getAccessToken: async () => {
+              const oauthRow = await getOAuthToken(db, userId, 'spotify')
+              if (!oauthRow || !oauthRow.clientId || !oauthRow.clientSecret) {
+                throw new Error('No Spotify OAuth token -- connect Spotify in Settings')
+              }
+              const token = await getValidToken(db, userId, 'spotify', {
+                tokenEndpoint: 'https://accounts.spotify.com/api/token',
+                clientId: oauthRow.clientId,
+                clientSecret: oauthRow.clientSecret,
+              })
+              if (!token) {
+                throw new Error('Spotify OAuth token expired and could not be refreshed')
+              }
+              return token
+            },
+          }),
+        )
+      }
     }
     return targets
   },
