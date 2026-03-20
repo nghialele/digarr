@@ -57,11 +57,9 @@ export function LibraryStatsDisplay({ stats }: Props) {
             key={card.label}
             className="bg-surface border border-border rounded-lg p-4 space-y-1"
           >
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">{card.label}</p>
-            <p className="text-2xl font-bold text-foreground">{card.value}</p>
-            {card.subValue !== undefined && (
-              <p className="text-xs text-muted-foreground">{card.subValue}</p>
-            )}
+            <p className="text-xs text-muted uppercase tracking-wide">{card.label}</p>
+            <p className="text-2xl font-bold text-text">{card.value}</p>
+            {card.subValue !== undefined && <p className="text-xs text-muted">{card.subValue}</p>}
           </div>
         ))}
       </div>
@@ -69,13 +67,13 @@ export function LibraryStatsDisplay({ stats }: Props) {
       {/* Genre distribution */}
       {topGenres.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+          <h3 className="text-sm font-semibold text-text uppercase tracking-wide">
             Genre Distribution
           </h3>
           <div className="bg-surface border border-border rounded-lg p-4 space-y-2.5">
             {topGenres.map((g) => (
               <div key={g.genre} className="flex items-center gap-3">
-                <span className="w-32 text-sm text-foreground truncate shrink-0" title={g.genre}>
+                <span className="w-32 text-sm text-text truncate shrink-0" title={g.genre}>
                   {g.genre}
                 </span>
                 <div className="flex-1 h-4 bg-bg rounded overflow-hidden">
@@ -84,9 +82,7 @@ export function LibraryStatsDisplay({ stats }: Props) {
                     style={{ width: `${Math.round((g.count / maxCount) * 100)}%` }}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground w-10 text-right shrink-0">
-                  {g.count}
-                </span>
+                <span className="text-xs text-muted w-10 text-right shrink-0">{g.count}</span>
               </div>
             ))}
           </div>
@@ -96,14 +92,12 @@ export function LibraryStatsDisplay({ stats }: Props) {
       {/* Root folders */}
       {stats.rootFolders.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-            Root Folders
-          </h3>
+          <h3 className="text-sm font-semibold text-text uppercase tracking-wide">Root Folders</h3>
           <div className="bg-surface border border-border rounded-lg divide-y divide-border">
             {stats.rootFolders.map((folder) => (
               <div key={folder.path} className="flex items-center justify-between gap-4 px-4 py-3">
-                <span className="text-sm text-foreground font-mono truncate">{folder.path}</span>
-                <span className="text-xs text-muted-foreground shrink-0">
+                <span className="text-sm text-text font-mono truncate">{folder.path}</span>
+                <span className="text-xs text-muted shrink-0">
                   {folder.freeSpace > 0 ? `${formatBytes(folder.freeSpace)} free` : 'unknown'}
                 </span>
               </div>

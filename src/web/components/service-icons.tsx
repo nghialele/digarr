@@ -5,7 +5,7 @@ function ServiceLogo({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(false)
   if (failed) {
     return (
-      <span className="flex items-center justify-center w-6 h-6 rounded bg-muted text-[10px] font-bold text-muted-foreground">
+      <span className="flex items-center justify-center w-6 h-6 rounded bg-surface text-[10px] font-bold text-muted">
         {alt.charAt(0)}
       </span>
     )

@@ -46,23 +46,19 @@ export function PreviewPlayer({ playing, artistName, source, loading, onStop }: 
       <div className="max-w-3xl mx-auto px-4 py-2">
         {/* Info row */}
         <div className="flex items-center gap-3">
-          <Music size={16} className="text-muted-foreground shrink-0" aria-hidden="true" />
+          <Music size={16} className="text-muted shrink-0" aria-hidden="true" />
 
           <div className="flex-1 min-w-0">
             {loading && !artistName ? (
-              <span className="text-sm text-muted-foreground">Loading preview...</span>
+              <span className="text-sm text-muted">Loading preview...</span>
             ) : (
               <div className="flex items-center gap-2 min-w-0">
                 {artistName && (
-                  <span className="text-sm text-foreground font-medium truncate">{artistName}</span>
+                  <span className="text-sm text-text font-medium truncate">{artistName}</span>
                 )}
-                {loading && (
-                  <span className="text-xs text-muted-foreground shrink-0">Loading...</span>
-                )}
+                {loading && <span className="text-xs text-muted shrink-0">Loading...</span>}
                 {!loading && sourceLabel && (
-                  <span className="text-xs text-muted-foreground uppercase shrink-0">
-                    {sourceLabel}
-                  </span>
+                  <span className="text-xs text-muted uppercase shrink-0">{sourceLabel}</span>
                 )}
               </div>
             )}

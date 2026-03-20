@@ -85,7 +85,7 @@ export function LibraryHealthPage() {
     <div className="p-6 space-y-8 max-w-6xl mx-auto">
       {/* Page title */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-foreground">Library Health</h1>
+        <h1 className="text-xl font-bold text-text">Library Health</h1>
         <button
           type="button"
           onClick={() => rescanMutation.mutate()}
@@ -102,7 +102,7 @@ export function LibraryHealthPage() {
         {healthQuery.isLoading ? (
           <ChecksSkeleton />
         ) : checks.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted-foreground text-sm">
+          <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
             No health checks available. Run a scan to inspect your library.
           </div>
         ) : (
@@ -124,7 +124,7 @@ export function LibraryHealthPage() {
 
       {/* Library stats */}
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
           Library Statistics
         </h2>
         {statsQuery.isLoading ? (
@@ -132,7 +132,7 @@ export function LibraryHealthPage() {
         ) : stats ? (
           <LibraryStatsDisplay stats={stats} />
         ) : (
-          <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted-foreground text-sm">
+          <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
             Library statistics unavailable. Check your Lidarr connection in Settings.
           </div>
         )}
