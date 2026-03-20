@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
+import { TARGET_TYPES } from '@/core/targets/types'
 import type { ServiceTestResult } from '@/core/types'
 import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
 import type { HonoEnv } from '@/server/types'
 
-const VALID_TARGET_TYPES = new Set(['lidarr', 'navidrome', 'jellyfin', 'export'])
+const VALID_TARGET_TYPES: ReadonlySet<string> = new Set(TARGET_TYPES)
 
 type TargetDeps = {
   targetQueries: {

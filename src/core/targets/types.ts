@@ -2,7 +2,8 @@ import type { ServiceTestResult } from '@/core/types'
 
 export type TargetCapability = 'addArtist' | 'addAlbum' | 'createPlaylist' | 'addToFavorites'
 
-export type TargetType = 'lidarr' | 'navidrome' | 'jellyfin' | 'export'
+export const TARGET_TYPES = ['lidarr', 'navidrome', 'jellyfin', 'export'] as const
+export type TargetType = (typeof TARGET_TYPES)[number]
 
 export type TargetAddOptions = {
   monitorOption?: 'all' | 'new' | 'none' | 'selected'

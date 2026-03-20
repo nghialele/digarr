@@ -48,11 +48,6 @@ export async function getTargetsByUser(db: Database, userId: number): Promise<Ta
   return rows as TargetRow[]
 }
 
-export async function getEnabledTargets(db: Database): Promise<TargetRow[]> {
-  const rows = await db.select().from(targets).where(eq(targets.enabled, true))
-  return rows as TargetRow[]
-}
-
 export async function getTargetsByType(db: Database, type: string): Promise<TargetRow[]> {
   const rows = await db.select().from(targets).where(eq(targets.type, type))
   return rows as TargetRow[]

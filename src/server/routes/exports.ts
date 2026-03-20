@@ -59,18 +59,13 @@ export function exportRoutes(deps: ExportDeps) {
       suggestedAlbum: rec.recommendedReleaseGroupTitle ?? undefined,
     }))
 
-    const exporter = EXPORTERS[format]
-    const contentType = CONTENT_TYPES[format]
-    if (!exporter || !contentType) {
-      return c.json({ error: 'Unsupported format' }, 400)
-    }
-
-    const output = exporter(exportable)
+    // format already validated above -- safe to index directly
+    const output = EXPORTERS[format]!(exportable)
     const timestamp = new Date().toISOString().slice(0, 10)
 
     return new Response(output, {
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': CONTENT_TYPES[format]!,
         'Content-Disposition': `attachment; filename="digarr-export-${timestamp}.${format}"`,
       },
     })
