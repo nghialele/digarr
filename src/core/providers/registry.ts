@@ -69,5 +69,15 @@ export function createDefaultRegistry(): AiProviderRegistry {
     },
   })
 
+  registry.register({
+    id: 'gemini',
+    name: 'Google Gemini',
+    async create({ apiKey, model }) {
+      const { GeminiProvider } = await import('./gemini')
+      if (!apiKey) throw new Error('Gemini requires an API key')
+      return new GeminiProvider(apiKey, model)
+    },
+  })
+
   return registry
 }

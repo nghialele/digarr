@@ -530,6 +530,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               >
                 <option value="anthropic">Anthropic</option>
                 <option value="openai">OpenAI</option>
+                <option value="gemini">Google Gemini</option>
                 <option value="ollama">Ollama (local)</option>
               </Select>
             </Field>
@@ -541,7 +542,9 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
                     ? 'claude-3-5-haiku-20241022'
                     : aiProvider === 'openai'
                       ? 'gpt-4o-mini'
-                      : 'llama3.2'
+                      : aiProvider === 'gemini'
+                        ? 'gemini-2.0-flash'
+                        : 'llama3.2'
                 }
                 value={aiModel}
                 onChange={(e) => setAiModel(e.target.value)}

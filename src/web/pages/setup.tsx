@@ -310,12 +310,18 @@ function StepAi({
       { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
       { value: 'gpt-4o', label: 'GPT-4o' },
     ],
+    gemini: [
+      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (fast, cheapest)' },
+      { value: 'gemini-2.0-flash-thinking-exp', label: 'Gemini 2.0 Flash Thinking (reasoning)' },
+      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (most capable)' },
+    ],
     ollama: [],
   }
 
   const apiKeyLinks: Record<string, { url: string; label: string }> = {
     anthropic: { url: 'https://console.anthropic.com/settings/keys', label: 'Get API key' },
     openai: { url: 'https://platform.openai.com/api-keys', label: 'Get API key' },
+    gemini: { url: 'https://aistudio.google.com/app/apikey', label: 'Get API key' },
   }
 
   const link = apiKeyLinks[form.provider]
@@ -335,6 +341,7 @@ function StepAi({
         >
           <option value="anthropic">Anthropic</option>
           <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
           <option value="ollama">Ollama (local)</option>
         </Select>
       </Field>
