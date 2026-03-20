@@ -35,10 +35,11 @@ export function recommendationRoutes(deps: AppDependencies) {
   router.patch('/api/recommendations/:id', async (c) => {
     const id = Number(c.req.param('id'))
     const body = await c.req.json()
-    const { status, monitorOption, selectedAlbumIds } = body as {
+    const { status, monitorOption, selectedAlbumIds, targetId } = body as {
       status: string
       monitorOption?: 'all' | 'new' | 'none' | 'selected'
       selectedAlbumIds?: string[]
+      targetId?: string
     }
 
     if (!status) {
@@ -58,8 +59,17 @@ export function recommendationRoutes(deps: AppDependencies) {
       const userId = c.get('userId')
       const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
 
+      // Filter to specific target if targetId specified
+      const effectiveTargets = targetId
+        ? targets.filter((t) => t.id === targetId)
+        : targets
+
       // Pre-warm SkyHook if any Lidarr target exists
-      if (deps.skyhookWarmer && rec.artist?.mbid && targets.some((t) => t.type === 'lidarr')) {
+      if (
+        deps.skyhookWarmer &&
+        rec.artist?.mbid &&
+        effectiveTargets.some((t) => t.type === 'lidarr')
+      ) {
         try {
           await deps.skyhookWarmer.warm(rec.artist.mbid)
         } catch {
@@ -76,7 +86,7 @@ export function recommendationRoutes(deps: AppDependencies) {
       }
 
       // No targets configured -- just mark as approved (discovery-only mode)
-      if (targets.length === 0) {
+      if (effectiveTargets.length === 0) {
         await deps.updateRecommendationStatus(id, 'approved', { targetActions: {} })
         return c.json({ status: 'approved' })
       }
@@ -86,7 +96,7 @@ export function recommendationRoutes(deps: AppDependencies) {
       let anySuccess = false
       let lidarrResult: { externalId?: number | string; error?: string } | null = null
 
-      for (const target of targets) {
+      for (const target of effectiveTargets) {
         if (!target.capabilities?.includes('addArtist')) continue
         const result = await target.addArtist?.(
           { mbid: rec.artist.mbid, name: rec.artist.name },
@@ -102,6 +112,21 @@ export function recommendationRoutes(deps: AppDependencies) {
         if (target.type === 'lidarr') lidarrResult = result
       }
 
+      // Handle targets with addToFavorites capability (Navidrome, Jellyfin)
+      for (const target of effectiveTargets) {
+        if (!target.capabilities?.includes('addToFavorites')) continue
+        const result = await target.addToFavorites?.([
+          { mbid: rec.artist.mbid, name: rec.artist.name },
+        ])
+        if (!result) continue
+        targetActions[target.id] = {
+          action: 'addToFavorites',
+          status: result.success ? 'added' : 'failed',
+          error: result.error,
+        }
+        if (result.success) anySuccess = true
+      }
+
       // Backward compat: write Lidarr-specific columns
       const extra: Record<string, unknown> = { targetActions }
       if (lidarrResult) {
@@ -110,7 +135,7 @@ export function recommendationRoutes(deps: AppDependencies) {
       }
 
       // Use Lidarr-specific statuses for backward compat when Lidarr is involved
-      const hasLidarr = targets.some((t) => t.type === 'lidarr')
+      const hasLidarr = effectiveTargets.some((t) => t.type === 'lidarr')
       const finalStatus = anySuccess ? (hasLidarr ? 'added_to_lidarr' : 'approved') : 'add_failed'
       await deps.updateRecommendationStatus(id, finalStatus, extra)
       return c.json({
@@ -131,7 +156,11 @@ export function recommendationRoutes(deps: AppDependencies) {
 
   router.post('/api/recommendations/bulk', async (c) => {
     const body = await c.req.json()
-    const { ids, action } = body as { ids: number[]; action: 'approve' | 'reject' }
+    const { ids, action, targetId } = body as {
+      ids: number[]
+      action: 'approve' | 'reject'
+      targetId?: string
+    }
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return c.json({ error: 'ids array is required' }, 400)
@@ -148,6 +177,12 @@ export function recommendationRoutes(deps: AppDependencies) {
     // Approve: route through targets
     const userId = c.get('userId')
     const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
+
+    // Filter to specific target if targetId specified
+    const effectiveTargets = targetId
+      ? targets.filter((t) => t.id === targetId)
+      : targets
+
     const settings = await deps.getSettings()
     const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
     const addOptions = {
@@ -165,7 +200,7 @@ export function recommendationRoutes(deps: AppDependencies) {
         continue
       }
 
-      if (targets.length === 0) {
+      if (effectiveTargets.length === 0) {
         await deps.updateRecommendationStatus(id, 'approved', { targetActions: {} })
         results.push({ id, status: 'approved' })
         continue
@@ -174,7 +209,7 @@ export function recommendationRoutes(deps: AppDependencies) {
       const targetActions: Record<string, unknown> = {}
       let anySuccess = false
 
-      for (const target of targets) {
+      for (const target of effectiveTargets) {
         if (!target.capabilities?.includes('addArtist')) continue
         const result = await target.addArtist?.(
           { mbid: rec.artist.mbid, name: rec.artist.name },
@@ -199,7 +234,22 @@ export function recommendationRoutes(deps: AppDependencies) {
         }
       }
 
-      const hasLidarr = targets.some((t) => t.type === 'lidarr')
+      // Handle targets with addToFavorites capability (Navidrome, Jellyfin)
+      for (const target of effectiveTargets) {
+        if (!target.capabilities?.includes('addToFavorites')) continue
+        const result = await target.addToFavorites?.([
+          { mbid: rec.artist.mbid, name: rec.artist.name },
+        ])
+        if (!result) continue
+        targetActions[target.id] = {
+          action: 'addToFavorites',
+          status: result.success ? 'added' : 'failed',
+          error: result.error,
+        }
+        if (result.success) anySuccess = true
+      }
+
+      const hasLidarr = effectiveTargets.some((t) => t.type === 'lidarr')
       const status = anySuccess ? (hasLidarr ? 'added_to_lidarr' : 'approved') : 'add_failed'
       await deps.updateRecommendationStatus(id, status, { targetActions })
       results.push({ id, status })
