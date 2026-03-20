@@ -112,13 +112,11 @@ export function envSettingsOverrides(): Record<string, unknown> {
 
 /** True if env vars contain all required fields to auto-complete setup. */
 export function canAutoSetup(): boolean {
-  const { lidarrUrl, lidarrApiKey, aiProvider, aiModel, listenbrainzUsername, lastfmUsername } =
-    envConfig
-  return !!(
-    lidarrUrl &&
-    lidarrApiKey &&
-    aiProvider &&
-    aiModel &&
-    (listenbrainzUsername || lastfmUsername)
-  )
+  const { aiProvider, aiModel, listenbrainzUsername, lastfmUsername } = envConfig
+  // AI provider + model are always required
+  if (!aiProvider || !aiModel) return false
+  // At least one listening source is required for the pipeline to produce results
+  if (!listenbrainzUsername && !lastfmUsername) return false
+  // Lidarr is optional -- if not set, runs in discovery-only mode
+  return true
 }

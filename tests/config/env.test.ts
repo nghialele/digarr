@@ -159,15 +159,14 @@ describe('canAutoSetup', () => {
     expect(canAutoSetup()).toBe(true)
   })
 
-  it('returns false when lidarr url is missing', async () => {
+  it('returns true when Lidarr is missing but AI + listening source are set', async () => {
     setEnv({
-      LIDARR_API_KEY: 'key',
       AI_PROVIDER: 'openai',
       AI_MODEL: 'gpt-4o-mini',
       LISTENBRAINZ_USERNAME: 'user',
     })
     const { canAutoSetup } = await import('@/config/env')
-    expect(canAutoSetup()).toBe(false)
+    expect(canAutoSetup()).toBe(true)
   })
 
   it('returns false when no listening source is set', async () => {
