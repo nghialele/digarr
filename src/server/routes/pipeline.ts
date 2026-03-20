@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { HonoEnv } from '@/server/types'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
@@ -14,7 +15,7 @@ import type { AppDependencies } from '@/server'
 import { createPipelineSSEStream } from '@/server/sse'
 
 export function pipelineRoutes(deps: AppDependencies) {
-  const router = new Hono()
+  const router = new Hono<HonoEnv>()
 
   router.post('/api/pipeline/run', async (c) => {
     if (deps.orchestrator.isRunning) {
@@ -26,7 +27,7 @@ export function pipelineRoutes(deps: AppDependencies) {
       return c.json({ error: 'Settings not found' }, 400)
     }
 
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     const userConnections = userId ? await getUserConnections(deps.db, userId) : null
 
     // Fire-and-forget
@@ -89,7 +90,7 @@ export function pipelineRoutes(deps: AppDependencies) {
       return c.json({ error: 'Settings not found' }, 400)
     }
 
-    const quickDiscoverUserId = c.get('userId' as never) as number | undefined
+    const quickDiscoverUserId = c.get('userId')
     const quickDiscoverUserConns = quickDiscoverUserId
       ? await getUserConnections(deps.db, quickDiscoverUserId)
       : null

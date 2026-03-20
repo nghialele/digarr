@@ -24,6 +24,7 @@ import { authGuard } from './middleware/auth'
 import { requestLogger } from './middleware/logger'
 import { proxyAuthMiddleware } from './middleware/proxy-auth'
 import { setupGuard } from './middleware/setup-guard'
+import type { HonoEnv } from './types'
 import { analyticsRoutes } from './routes/analytics'
 import { artistRoutes } from './routes/artists'
 import { authRoutes } from './routes/auth'
@@ -110,7 +111,7 @@ export type AppDependencies = {
 }
 
 export function createApp(deps: AppDependencies) {
-  const app = new Hono()
+  const app = new Hono<HonoEnv>()
 
   // Log all requests first -- before auth/cors so we capture everything
   app.use('*', requestLogger())
@@ -144,8 +145,8 @@ export function createApp(deps: AppDependencies) {
   // Auth status (unauthenticated -- tells the frontend whether auth is required)
   app.get('/api/auth/status', async (c) => {
     const userCount = await deps.getUserCount()
-    const proxyAuth = c.get('proxyAuth' as never) as boolean | undefined
-    const sessionToken = c.get('sessionToken' as never) as string | undefined
+    const proxyAuth = c.get('proxyAuth')
+    const sessionToken = c.get('sessionToken')
     const settings = await deps.getSettings()
     const oidcEnabled = !!(
       settings &&
@@ -164,7 +165,7 @@ export function createApp(deps: AppDependencies) {
     if (proxyAuth && sessionToken) {
       response.proxyAuth = true
       response.token = sessionToken
-      response.userId = c.get('userId' as never)
+      response.userId = c.get('userId')
     }
 
     return c.json(response)

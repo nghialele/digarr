@@ -1,13 +1,14 @@
 import { Hono } from 'hono'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import type { AppDependencies } from '@/server'
+import type { HonoEnv } from '@/server/types'
 
 export function recommendationRoutes(deps: AppDependencies) {
-  const router = new Hono()
+  const router = new Hono<HonoEnv>()
 
   router.get('/api/recommendations', async (c) => {
     const query = c.req.query()
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     const filters = {
       status: query.status,
       batchId: query.batchId !== undefined ? Number(query.batchId) : undefined,

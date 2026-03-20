@@ -1,10 +1,11 @@
 import { Hono } from 'hono'
+import type { HonoEnv } from '@/server/types'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
 import type { AppDependencies } from '@/server'
 
 export function authRoutes(deps: AppDependencies) {
-  const router = new Hono()
+  const router = new Hono<HonoEnv>()
 
   // Register a new user. First user becomes admin.
   router.post('/api/auth/register', async (c) => {
@@ -70,7 +71,7 @@ export function authRoutes(deps: AppDependencies) {
 
   // Get current user from session token
   router.get('/api/auth/me', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) {
       return c.json({ error: 'Not authenticated' }, 401)
     }
@@ -83,7 +84,7 @@ export function authRoutes(deps: AppDependencies) {
 
   // Change password for the current session user (requires session auth, not legacy token)
   router.post('/api/auth/change-password', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) {
       return c.json({ error: 'Password change requires a user account' }, 403)
     }

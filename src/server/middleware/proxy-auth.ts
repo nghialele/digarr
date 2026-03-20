@@ -2,6 +2,7 @@ import { createMiddleware } from 'hono/factory'
 import { generateSessionToken, hashPassword } from '@/core/auth'
 import { isIpTrusted } from '@/core/auth/cidr'
 import { createSession, getActiveSessionForUser } from '@/core/sessions'
+import type { HonoEnv } from '@/server/types'
 
 type ProxyAuthDeps = {
   enabled: boolean
@@ -32,13 +33,14 @@ type ProxyAuthDeps = {
  * in the production runtime (Bun) and test runtime (Node/@hono/node-server).
  * Run `console.log(c.env)` in dev to inspect available properties.
  */
-function getSocketIp(c: { env?: Record<string, unknown> }): string {
+function getSocketIp(c: { env?: unknown }): string {
+  const env = c.env as Record<string, unknown> | undefined
   // Bun adapter
-  const bunAddr = c.env?.remoteAddress
+  const bunAddr = env?.remoteAddress
   if (typeof bunAddr === 'string') return bunAddr
 
   // @hono/node-server adapter
-  const incoming = c.env?.incoming as { socket?: { remoteAddress?: string } } | undefined
+  const incoming = env?.incoming as { socket?: { remoteAddress?: string } } | undefined
   const nodeAddr = incoming?.socket?.remoteAddress
   if (typeof nodeAddr === 'string') return nodeAddr
 
@@ -47,7 +49,7 @@ function getSocketIp(c: { env?: Record<string, unknown> }): string {
 }
 
 export function proxyAuthMiddleware(deps: ProxyAuthDeps) {
-  return createMiddleware(async (c, next) => {
+  return createMiddleware<HonoEnv>(async (c, next) => {
     if (!deps.enabled) return next()
 
     const proxyIp = getSocketIp(c)
@@ -82,9 +84,9 @@ export function proxyAuthMiddleware(deps: ProxyAuthDeps) {
       await createSession(user.id, sessionToken)
     }
 
-    c.set('userId' as never, user.id as never)
-    c.set('proxyAuth' as never, true as never)
-    c.set('sessionToken' as never, sessionToken as never)
+    c.set('userId', user.id)
+    c.set('proxyAuth', true)
+    c.set('sessionToken', sessionToken)
 
     return next()
   })

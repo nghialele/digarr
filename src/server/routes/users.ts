@@ -1,12 +1,13 @@
 import { Hono } from 'hono'
 import type { AppDependencies } from '@/server'
+import type { HonoEnv } from '@/server/types'
 
 export function userRoutes(deps: AppDependencies) {
-  const router = new Hono()
+  const router = new Hono<HonoEnv>()
 
   // GET /api/users -- list all users (admin only)
   router.get('/api/users', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
     const caller = await deps.getUserById(userId)
     if (!caller?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
@@ -19,7 +20,7 @@ export function userRoutes(deps: AppDependencies) {
   // Body: { isAdmin?: boolean }
   // Guard: can't remove own admin role
   router.patch('/api/users/:id', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
     const caller = await deps.getUserById(userId)
     if (!caller?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
@@ -47,7 +48,7 @@ export function userRoutes(deps: AppDependencies) {
   // DELETE /api/users/:id -- delete user (admin only)
   // Guard: can't delete self
   router.delete('/api/users/:id', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
     const caller = await deps.getUserById(userId)
     if (!caller?.isAdmin) return c.json({ error: 'Admin access required' }, 403)

@@ -1,6 +1,7 @@
 import { Cron } from 'croner'
 import { Hono } from 'hono'
 import type { AppDependencies } from '@/server'
+import type { HonoEnv } from '@/server/types'
 
 const ALLOWED_UPDATE_FIELDS = new Set([
   'name',
@@ -14,10 +15,10 @@ const ALLOWED_UPDATE_FIELDS = new Set([
 ])
 
 export function subscriptionRoutes(deps: AppDependencies) {
-  const router = new Hono()
+  const router = new Hono<HonoEnv>()
 
   router.get('/api/subscriptions', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
@@ -26,7 +27,7 @@ export function subscriptionRoutes(deps: AppDependencies) {
   })
 
   router.post('/api/subscriptions', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
@@ -76,7 +77,7 @@ export function subscriptionRoutes(deps: AppDependencies) {
   })
 
   router.patch('/api/subscriptions/:id', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
@@ -111,7 +112,7 @@ export function subscriptionRoutes(deps: AppDependencies) {
   })
 
   router.delete('/api/subscriptions/:id', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
@@ -131,7 +132,7 @@ export function subscriptionRoutes(deps: AppDependencies) {
   })
 
   router.post('/api/subscriptions/:id/run', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
@@ -156,7 +157,7 @@ export function subscriptionRoutes(deps: AppDependencies) {
   })
 
   router.get('/api/subscriptions/:id/runs', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401)
     }

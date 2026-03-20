@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { HonoEnv } from '@/server/types'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
@@ -54,10 +55,10 @@ async function buildSettingsResponse(
 }
 
 export function settingsRoutes(deps: AppDependencies) {
-  const router = new Hono()
+  const router = new Hono<HonoEnv>()
 
   router.get('/api/settings', async (c) => {
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     const response = await buildSettingsResponse(deps, userId)
     if (!response) {
       return c.json({ error: 'Settings not found' }, 404)
@@ -100,7 +101,7 @@ export function settingsRoutes(deps: AppDependencies) {
       }
     }
 
-    const userId = c.get('userId' as never) as number | undefined
+    const userId = c.get('userId')
     if (userId) {
       const userUpdate: Record<string, string | null> = {}
       const globalSanitized: Record<string, unknown> = {}
@@ -163,7 +164,7 @@ export function settingsRoutes(deps: AppDependencies) {
 
     // Fall back to stored credentials when the request sends empty keys
     const stored = (await deps.getSettings()) as Record<string, unknown> | null
-    const testUserId = c.get('userId' as never) as number | undefined
+    const testUserId = c.get('userId')
     const userConns = testUserId ? await getUserConnections(deps.db, testUserId) : null
 
     switch (service) {

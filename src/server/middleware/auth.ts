@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { createMiddleware } from 'hono/factory'
 import { envConfig } from '@/config/env'
 import { getSession } from '@/core/sessions'
+import type { HonoEnv } from '@/server/types'
 
 function safeCompare(a: string, b: string): boolean {
   const ab = Buffer.from(a)
@@ -21,12 +22,12 @@ const PUBLIC_PATHS = new Set([
 ])
 
 export function authGuard(hasUsers: () => Promise<boolean>) {
-  return createMiddleware(async (c, next) => {
+  return createMiddleware<HonoEnv>(async (c, next) => {
     // Skip auth for non-API paths (static assets, SPA routes) and public API paths
     if (!c.req.path.startsWith('/api/') || PUBLIC_PATHS.has(c.req.path)) return next()
 
     // Proxy auth already validated upstream -- skip token checks
-    const proxyAuthed = c.get('proxyAuth' as never)
+    const proxyAuthed = c.get('proxyAuth')
     if (proxyAuthed) return next()
 
     // Extract token from Authorization header or query param (SSE fallback)
@@ -43,7 +44,7 @@ export function authGuard(hasUsers: () => Promise<boolean>) {
     if (provided) {
       const session = await getSession(provided)
       if (session) {
-        c.set('userId' as never, session.userId as never)
+        c.set('userId', session.userId)
         return next()
       }
     }
