@@ -8,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/tests-758_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
-**Discover new music for your Lidarr library.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations that get added straight to Lidarr.
+**AI-powered music discovery for your *arr stack.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations -- optionally adding them straight to Lidarr, or curating a personal list to export.
 
 Think of it as Jellyseerr/Overseerr, but for music discovery.
 
@@ -20,11 +20,16 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 
 ## Why Digarr?
 
-Digarr was inspired by and builds on ideas from some great projects in the *arr ecosystem:
+Digarr was inspired by and builds on ideas from some great projects in the self-hosted music discovery space:
 
 - [**Mixarr**](https://github.com/DrMxrcy/mixarr) -- the trailblazer for AI-powered music discovery with *arr integration. Supports a wide range of listening sources and multi-user.
-- [**Aurral**](https://github.com/icefire-luo/aurral) -- a clean Last.fm-based approach to artist recommendations with tag similarity.
-- [**Lidify**](https://github.com/Gorefistus/lidify) -- a lightweight, focused tool for discovering similar artists via Last.fm.
+- [**Aurral**](https://github.com/icefire-luo/aurral) -- clean Last.fm-based artist recommendations with tag similarity and weekly Soulseek/Navidrome flows.
+- [**Lidify**](https://github.com/Gorefistus/lidify) -- lightweight and focused similar-artist discovery via Last.fm.
+- [**Explo**](https://github.com/HoreaM/explo) -- clean ListenBrainz-to-music-server pipeline written in Go.
+- [**Yoink**](https://github.com/droqen/yoink) -- multi-provider metadata aggregation with confidence-scored provider links.
+- [**Kima Hub**](https://github.com/rolinston4/KimaHub) -- neural network mood analysis and 2D/3D music maps.
+- [**Soularr**](https://github.com/mrusse/soularr) -- bridges Lidarr wanted lists to Soulseek downloads.
+- [**MusicMoveArr**](https://github.com/music-move-arr/music-move-arr) -- large Spotify/Deezer dataset used by digarr for genre gap filling and popularity scoring.
 
 Digarr takes a different approach with a **7-stage weighted scoring pipeline** that learns from your feedback, supports multiple AI providers (Claude, GPT, Gemini, Ollama, any OpenAI-compatible), and adds library health monitoring, genre-based discovery, in-app music previews, and analytics -- all in a single self-hosted container.
 
@@ -34,9 +39,10 @@ Digarr takes a different approach with a **7-stage weighted scoring pipeline** t
 
 - **Listening history analysis** -- connects to ListenBrainz and/or Last.fm to understand your taste
 - **AI-powered recommendations** -- Anthropic (Claude), OpenAI, Google Gemini, Ollama, or any OpenAI-compatible provider; includes written explanations per artist
-- **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, and feedback learning; configurable weights, thresholds, and cooldowns
-- **One-click Lidarr integration** -- approve a recommendation and it gets added with your preferred quality/metadata profiles; select specific albums to monitor with cover art previews; Lidarr is optional
-- **Artist enrichment** -- images (fanart.tv via Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata
+- **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity; configurable weights, thresholds, and cooldowns
+- **Lidarr-optional** -- approve recommendations into Lidarr, or run in discovery-only mode without Lidarr. Setup wizard lets you choose. Export your curated list as JSON, CSV, or M3U
+- **Target registry** -- pluggable approval targets (Lidarr first, Navidrome/Jellyfin planned). Configure and test targets from Settings
+- **Artist enrichment** -- images (fanart.tv via Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata; optional Spotify genre/popularity enrichment via MusicMoveArr dataset import
 - **Music previews** -- play Spotify embeds, Deezer 30-sec clips, or YouTube previews directly from recommendation cards
 - **Genre discovery** -- browse genres from your library, search the full catalog, view genre detail pages with sub-genres and library overlap; subscribe to genres for automatic discovery
 - **Library health dashboard** -- 6 automated checks (missing metadata, unmonitored artists, missing albums, duplicates, genre gaps, image gaps) with one-click batch fixes, auto-rescan after fixes, and artist links to Lidarr
@@ -73,8 +79,8 @@ Digarr runs a recommendation pipeline with 7 stages:
 1. **Collect** -- fetches your current Lidarr library
 2. **Analyze** -- builds a taste profile from your ListenBrainz/Last.fm listening data
 3. **Discover** -- queries multiple sources for similar artists (Last.fm similar artists, AI recommendations, library-seeded discovery)
-4. **Resolve** -- validates each candidate against MusicBrainz, fetches metadata, streaming URLs, and artist images
-5. **Score** -- applies a weighted composite formula (consensus, similarity, genre overlap, AI confidence, feedback boost)
+4. **Resolve** -- validates each candidate against MusicBrainz, fetches metadata, streaming URLs, and artist images; enriches sparse genres from Spotify data if available
+5. **Score** -- applies a weighted composite formula (consensus, similarity, genre overlap, AI confidence, feedback boost, popularity)
 6. **Filter** -- removes artists already in your library, previously rejected artists (with cooldown), and below-threshold scores
 7. **Store** -- persists the batch and recommendations to the database
 
@@ -86,7 +92,7 @@ The pipeline runs on a configurable cron schedule or manually via the "Run Scan"
 
 | Service | Required | Purpose |
 |---------|----------|---------|
-| **Lidarr** | Recommended | Music library management. Pipeline works without it using listening sources only |
+| **Lidarr** | Optional | Music library management + auto-download. Works without it in discovery-only mode |
 | **ListenBrainz** or **Last.fm** | At least one | Listening history for taste analysis |
 | **AI Provider** | Yes | Artist recommendations (Anthropic, OpenAI, Ollama, or any compatible endpoint) |
 | **PostgreSQL** | Yes | Data storage (included in Docker Compose) |
