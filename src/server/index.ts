@@ -212,6 +212,24 @@ export function createApp(deps: AppDependencies) {
   app.route('/', pipelineRoutes(deps))
   app.route('/', recommendationRoutes(deps))
   app.route('/', batchRoutes(deps))
+  // Admin-only guard for analytics and library health routes
+  app.use('/api/analytics/*', async (c, next) => {
+    const uid = c.get('userId')
+    if (uid) {
+      const u = await deps.getUserById(uid)
+      if (!u?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
+    }
+    await next()
+  })
+  app.use('/api/library/*', async (c, next) => {
+    const uid = c.get('userId')
+    if (uid) {
+      const u = await deps.getUserById(uid)
+      if (!u?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
+    }
+    await next()
+  })
+
   app.route('/', analyticsRoutes(deps))
   app.route('/', artistRoutes(deps))
   app.route('/', lidarrRoutes(deps))
