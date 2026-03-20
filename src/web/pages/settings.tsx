@@ -6,9 +6,13 @@ import { Field } from '../components/field'
 import { ServiceCard } from '../components/service-card'
 import {
   AiProviderIcon,
+  DiscogsIcon,
+  JellyfinIcon,
   LastfmIcon,
   LidarrIcon,
   ListenBrainzIcon,
+  PlexIcon,
+  SpotifyIcon,
   WebhookIcon,
 } from '../components/service-icons'
 import { Button } from '../components/ui/button'
@@ -20,12 +24,15 @@ import {
   changePassword,
   clearStoredToken,
   deleteTargetApi,
+  disconnectOAuth,
   getAuthStatus,
   getCurrentUser,
   getLidarrMetadataProfiles,
   getLidarrProfiles,
   getLidarrRootFolders,
+  getOAuthStatus,
   getSettings,
+  initiateOAuth,
   listTargets,
   logoutUser,
   setStoredToken,
@@ -50,6 +57,13 @@ type Settings = {
   oidcClientId?: string
   oidcClientSecret?: string
   oidcScopes?: string
+  plexUrl?: string
+  plexToken?: string
+  jellyfinUrl?: string
+  jellyfinApiKey?: string
+  jellyfinUserId?: string
+  discogsToken?: string
+  discogsUsername?: string
   preferences?: Partial<Preferences>
   setupComplete?: boolean
   _listenbrainzScope?: 'user' | 'global'
@@ -163,9 +177,32 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   const [webhookUrl, setWebhookUrl] = useState(settings.preferences?.webhookUrl ?? '')
   const [savingWebhook, setSavingWebhook] = useState(false)
   const [testingWebhook, setTestingWebhook] = useState(false)
+  const [plexUrl, setPlexUrl] = useState(settings.plexUrl ?? '')
+  const [plexToken, setPlexToken] = useState(
+    settings.plexToken === '***' ? '' : (settings.plexToken ?? ''),
+  )
+  const [jellyfinUrl, setJellyfinUrl] = useState(settings.jellyfinUrl ?? '')
+  const [jellyfinApiKey, setJellyfinApiKey] = useState(
+    settings.jellyfinApiKey === '***' ? '' : (settings.jellyfinApiKey ?? ''),
+  )
+  const [jellyfinUserId, setJellyfinUserId] = useState(settings.jellyfinUserId ?? '')
+  const [discogsUsername, setDiscogsUsername] = useState(settings.discogsUsername ?? '')
+  const [discogsToken, setDiscogsToken] = useState(
+    settings.discogsToken === '***' ? '' : (settings.discogsToken ?? ''),
+  )
+  const [spotifyClientId, setSpotifyClientId] = useState('')
+  const [spotifyClientSecret, setSpotifyClientSecret] = useState('')
 
   const [tests, setTests] = useState<Record<string, ServiceTestState>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
+
+  const queryClient = useQueryClient()
+
+  const { data: spotifyStatus } = useQuery({
+    queryKey: ['spotify-oauth-status'],
+    queryFn: () => getOAuthStatus('spotify'),
+  })
+  const spotifyConnected = spotifyStatus?.connected ?? false
 
   // Fetch Lidarr profiles
   const { data: qualityProfiles } = useQuery({
@@ -193,6 +230,9 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
     listenbrainz: Boolean(settings.listenbrainzUsername && settings.listenbrainzToken),
     lastfm: Boolean(settings.lastfmUsername && settings.lastfmApiKey),
     ai: Boolean(settings.aiProvider && settings.aiModel),
+    plex: Boolean(settings.plexUrl && settings.plexToken),
+    jellyfin: Boolean(settings.jellyfinUrl && settings.jellyfinApiKey && settings.jellyfinUserId),
+    discogs: Boolean(settings.discogsUsername && settings.discogsToken),
   }
 
   function serviceStatus(key: string): 'connected' | 'not_configured' | 'error' | 'testing' {
@@ -318,10 +358,61 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
     }),
   )
 
+  const testPlex = createTester('plex', 'Plex', () =>
+    testService('plex', { url: plexUrl, token: plexToken }),
+  )
+  const savePlex = createSaver('plex', 'Plex', () =>
+    updateSettings({ plexUrl, plexToken: plexToken || undefined }),
+  )
+
+  const testJellyfin = createTester('jellyfin', 'Jellyfin', () =>
+    testService('jellyfin', { url: jellyfinUrl, apiKey: jellyfinApiKey, userId: jellyfinUserId }),
+  )
+  const saveJellyfin = createSaver('jellyfin', 'Jellyfin', () =>
+    updateSettings({
+      jellyfinUrl,
+      jellyfinApiKey: jellyfinApiKey || undefined,
+      jellyfinUserId: jellyfinUserId || undefined,
+    }),
+  )
+
+  const testDiscogs = createTester('discogs', 'Discogs', () =>
+    testService('discogs', { username: discogsUsername, token: discogsToken }),
+  )
+  const saveDiscogs = createSaver('discogs', 'Discogs', () =>
+    updateSettings({ discogsUsername, discogsToken: discogsToken || undefined }),
+  )
+
+  async function initiateSpotifyOAuth() {
+    try {
+      const res = await initiateOAuth('spotify', {
+        clientId: spotifyClientId,
+        clientSecret: spotifyClientSecret,
+        redirectUri: `${window.location.origin}/api/auth/oauth/spotify/callback`,
+      })
+      window.location.href = res.authUrl
+    } catch {
+      toast.error('Failed to start Spotify authorization')
+    }
+  }
+
+  async function disconnectSpotify() {
+    try {
+      await disconnectOAuth('spotify')
+      queryClient.invalidateQueries({ queryKey: ['spotify-oauth-status'] })
+      toast.success('Spotify disconnected')
+    } catch {
+      toast.error('Failed to disconnect Spotify')
+    }
+  }
+
   const isLidarrConfigured = !!(lidarrUrl || settings.lidarrUrl)
   const isLbConfigured = !!(lbUsername || settings.listenbrainzUsername)
   const isLfConfigured = !!(lfUsername || settings.lastfmUsername)
   const isAiConfigured = !!(aiModel || settings.aiModel)
+  const isPlexConfigured = !!(plexUrl || settings.plexUrl)
+  const isJellyfinConfigured = !!(jellyfinUrl || settings.jellyfinUrl)
+  const isDiscogsConfigured = !!(discogsUsername || settings.discogsUsername)
 
   return (
     <div className="space-y-4">
@@ -727,6 +818,215 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
         </div>
       </ServiceCard>
 
+      {/* Spotify */}
+      <ServiceCard
+        name="Spotify"
+        description={
+          <span>
+            Listening history from Spotify.{' '}
+            <a
+              href="https://developer.spotify.com/dashboard"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent hover:underline"
+            >
+              Create a Spotify Developer App
+            </a>
+          </span>
+        }
+        status={spotifyConnected ? 'connected' : 'not_configured'}
+        icon={<SpotifyIcon />}
+      >
+        {spotifyConnected ? (
+          <div className="flex justify-end gap-2 pt-1">
+            <Button size="sm" variant="outline" onClick={disconnectSpotify}>
+              Disconnect
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Client ID" id="spotify-client-id">
+                <Input
+                  id="spotify-client-id"
+                  placeholder="Your Spotify app client ID"
+                  value={spotifyClientId}
+                  onChange={(e) => setSpotifyClientId(e.target.value)}
+                />
+              </Field>
+              <Field label="Client Secret" id="spotify-client-secret">
+                <Input
+                  id="spotify-client-secret"
+                  type="password"
+                  placeholder="Your Spotify app client secret"
+                  value={spotifyClientSecret}
+                  onChange={(e) => setSpotifyClientSecret(e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                size="sm"
+                onClick={initiateSpotifyOAuth}
+                disabled={!spotifyClientId || !spotifyClientSecret}
+              >
+                Connect with Spotify
+              </Button>
+            </div>
+          </>
+        )}
+      </ServiceCard>
+
+      {/* Plex */}
+      <div className={isPlexConfigured ? '' : 'opacity-60'}>
+        <ServiceCard
+          name="Plex"
+          description="Media server with listening history"
+          status={serviceStatus('plex')}
+          icon={<PlexIcon />}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Server URL" id="plex-url">
+              <Input
+                id="plex-url"
+                type="url"
+                placeholder="http://localhost:32400"
+                value={plexUrl}
+                onChange={(e) => setPlexUrl(e.target.value)}
+              />
+            </Field>
+            <Field label="Plex Token" id="plex-token">
+              <Input
+                id="plex-token"
+                type="password"
+                placeholder={settings.plexToken === '***' ? '(saved)' : 'Your Plex token'}
+                value={plexToken}
+                onChange={(e) => setPlexToken(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testPlex}
+              disabled={tests.plex === 'testing'}
+            >
+              {tests.plex === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
+            <Button size="sm" onClick={savePlex} disabled={saving.plex}>
+              {saving.plex ? 'Saving...' : isPlexConfigured ? 'Save' : 'Configure'}
+            </Button>
+          </div>
+        </ServiceCard>
+      </div>
+
+      {/* Jellyfin */}
+      <div className={isJellyfinConfigured ? '' : 'opacity-60'}>
+        <ServiceCard
+          name="Jellyfin"
+          description="Open-source media server with listening history"
+          status={serviceStatus('jellyfin')}
+          icon={<JellyfinIcon />}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Server URL" id="jellyfin-url">
+              <Input
+                id="jellyfin-url"
+                type="url"
+                placeholder="http://localhost:8096"
+                value={jellyfinUrl}
+                onChange={(e) => setJellyfinUrl(e.target.value)}
+              />
+            </Field>
+            <Field label="API Key" id="jellyfin-apikey">
+              <Input
+                id="jellyfin-apikey"
+                type="password"
+                placeholder={settings.jellyfinApiKey === '***' ? '(saved)' : 'Jellyfin API key'}
+                value={jellyfinApiKey}
+                onChange={(e) => setJellyfinApiKey(e.target.value)}
+              />
+            </Field>
+          </div>
+          <Field label="User ID" id="jellyfin-userid">
+            <Input
+              id="jellyfin-userid"
+              placeholder="Jellyfin user ID"
+              value={jellyfinUserId}
+              onChange={(e) => setJellyfinUserId(e.target.value)}
+            />
+          </Field>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testJellyfin}
+              disabled={tests.jellyfin === 'testing'}
+            >
+              {tests.jellyfin === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
+            <Button size="sm" onClick={saveJellyfin} disabled={saving.jellyfin}>
+              {saving.jellyfin ? 'Saving...' : isJellyfinConfigured ? 'Save' : 'Configure'}
+            </Button>
+          </div>
+        </ServiceCard>
+      </div>
+
+      {/* Discogs */}
+      <div className={isDiscogsConfigured ? '' : 'opacity-60'}>
+        <ServiceCard
+          name="Discogs"
+          description={
+            <span>
+              Collection and wantlist from Discogs.{' '}
+              <a
+                href="https://www.discogs.com/settings/developers"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent hover:underline"
+              >
+                Get personal access token
+              </a>
+            </span>
+          }
+          status={serviceStatus('discogs')}
+          icon={<DiscogsIcon />}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Username" id="discogs-username">
+              <Input
+                id="discogs-username"
+                placeholder="your-discogs-username"
+                value={discogsUsername}
+                onChange={(e) => setDiscogsUsername(e.target.value)}
+              />
+            </Field>
+            <Field label="Personal Access Token" id="discogs-token">
+              <Input
+                id="discogs-token"
+                type="password"
+                placeholder={settings.discogsToken === '***' ? '(saved)' : 'Discogs token'}
+                value={discogsToken}
+                onChange={(e) => setDiscogsToken(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testDiscogs}
+              disabled={tests.discogs === 'testing'}
+            >
+              {tests.discogs === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
+            <Button size="sm" onClick={saveDiscogs} disabled={saving.discogs}>
+              {saving.discogs ? 'Saving...' : isDiscogsConfigured ? 'Save' : 'Configure'}
+            </Button>
+          </div>
+        </ServiceCard>
+      </div>
     </div>
   )
 }
@@ -781,9 +1081,7 @@ function TargetsTab() {
         <div key={t.id} className="rounded-lg border border-border bg-surface p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {t.type === 'lidarr' && (
-                <img src="/icons/lidarr.png" alt="" className="w-5 h-5" />
-              )}
+              {t.type === 'lidarr' && <img src="/icons/lidarr.png" alt="" className="w-5 h-5" />}
               <span className="text-sm font-medium text-text">{t.name}</span>
               <span className="text-xs text-muted capitalize">({t.type})</span>
             </div>
@@ -833,7 +1131,8 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
   const [librarySeedRatio, setLibrarySeedRatio] = useState(prefs.librarySeedRatio ?? 0.3)
   const [saving, setSaving] = useState(false)
 
-  const weightSum = consensus + similarity + genreOverlap + aiConfidence + feedbackBoost + popularity
+  const weightSum =
+    consensus + similarity + genreOverlap + aiConfidence + feedbackBoost + popularity
   const weightsOk = Math.abs(weightSum - 1.0) < 0.01
 
   async function handleSave() {
@@ -843,7 +1142,14 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
         preferences: {
           ...prefs,
           scoreThreshold,
-          scoringWeights: { consensus, similarity, genreOverlap, aiConfidence, feedbackBoost, popularity },
+          scoringWeights: {
+            consensus,
+            similarity,
+            genreOverlap,
+            aiConfidence,
+            feedbackBoost,
+            popularity,
+          },
           rejectionCooldownDays: parseInt(rejectionCooldown, 10) || prefs.rejectionCooldownDays,
           topArtistsLimit: parseInt(topArtistsLimit, 10) || prefs.topArtistsLimit,
           librarySeedRatio,

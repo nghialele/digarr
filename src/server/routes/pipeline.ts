@@ -8,8 +8,8 @@ import type { PipelineDeps } from '@/core/pipeline/orchestrator'
 import { resolve } from '@/core/pipeline/resolve'
 import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
-import { getOAuthToken } from '@/db/queries/oauth-tokens'
 import { upsertArtist } from '@/db/queries/artists'
+import { getOAuthToken } from '@/db/queries/oauth-tokens'
 import { getUserConnections } from '@/db/queries/users'
 import { mergePreferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
@@ -36,7 +36,11 @@ export function pipelineRoutes(deps: AppDependencies) {
     let spotifyAccessToken: string | null = null
     if (userId) {
       const oauthToken = await getOAuthToken(deps.db, userId, 'spotify')
-      if (oauthToken?.clientId && oauthToken?.clientSecret && !oauthToken.accessToken.startsWith('pending:')) {
+      if (
+        oauthToken?.clientId &&
+        oauthToken?.clientSecret &&
+        !oauthToken.accessToken.startsWith('pending:')
+      ) {
         try {
           spotifyAccessToken = await getValidToken(deps.db, userId, 'spotify', {
             tokenEndpoint: 'https://accounts.spotify.com/api/token',
