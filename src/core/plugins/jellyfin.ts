@@ -40,9 +40,9 @@ export function createJellyfinSource(url: string, apiKey: string, userId: string
         }
       }
 
-      // Sort by play count descending and map to TopArtistEntry
       return Array.from(merged.values())
         .sort((a, b) => b.playCount - a.playCount)
+        .slice(0, limit ?? 50)
         .map((a) => ({
           name: a.name,
           playCount: a.playCount,

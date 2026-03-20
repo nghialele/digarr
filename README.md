@@ -8,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/tests-799_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
-**AI-powered music discovery for your *arr stack.** Digarr analyzes your listening history from ListenBrainz or Last.fm, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations -- optionally adding them straight to Lidarr, or curating a personal list to export.
+**AI-powered music discovery for your *arr stack.** Digarr analyzes your listening history from ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, or Discogs, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations -- optionally adding them straight to Lidarr, or curating a personal list to export.
 
 Think of it as Jellyseerr/Overseerr, but for music discovery.
 
@@ -37,7 +37,7 @@ Digarr takes a different approach with a **7-stage weighted scoring pipeline** t
 
 ## Features
 
-- **Listening history analysis** -- connects to ListenBrainz and/or Last.fm to understand your taste
+- **6 data sources** -- ListenBrainz, Last.fm, Spotify (OAuth), Plex, Jellyfin, and Discogs. Each feeds into the taste profile with listening history, play counts, or collection data
 - **AI-powered recommendations** -- Anthropic (Claude), OpenAI, Google Gemini, Ollama, or any OpenAI-compatible provider; includes written explanations per artist
 - **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity; configurable weights, thresholds, and cooldowns
 - **Lidarr-optional** -- approve recommendations into Lidarr, or run in discovery-only mode without Lidarr. Setup wizard lets you choose. Export your curated list as JSON, CSV, or M3U
@@ -77,8 +77,8 @@ For local development, see [CONTRIBUTING.md](CONTRIBUTING.md).
 Digarr runs a recommendation pipeline with 7 stages:
 
 1. **Collect** -- fetches your current Lidarr library
-2. **Analyze** -- builds a taste profile from your ListenBrainz/Last.fm listening data
-3. **Discover** -- queries multiple sources for similar artists (Last.fm similar artists, AI recommendations, library-seeded discovery)
+2. **Analyze** -- builds a taste profile from all connected sources (ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, Discogs)
+3. **Discover** -- queries sources for similar artists (Last.fm similar, Discogs genre search, AI recommendations, library-seeded discovery)
 4. **Resolve** -- validates each candidate against MusicBrainz, fetches metadata, streaming URLs, and artist images; enriches sparse genres from Spotify data if available
 5. **Score** -- applies a weighted composite formula (consensus, similarity, genre overlap, AI confidence, feedback boost, popularity)
 6. **Filter** -- removes artists already in your library, previously rejected artists (with cooldown), and below-threshold scores
@@ -93,7 +93,7 @@ The pipeline runs on a configurable cron schedule or manually via the "Run Scan"
 | Service | Required | Purpose |
 |---------|----------|---------|
 | **Lidarr** | Optional | Music library management + auto-download. Works without it in discovery-only mode |
-| **ListenBrainz** or **Last.fm** | At least one | Listening history for taste analysis |
+| **Listening source** | At least one | ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, or Discogs |
 | **AI Provider** | Yes | Artist recommendations (Anthropic, OpenAI, Ollama, or any compatible endpoint) |
 | **PostgreSQL** | Yes | Data storage (included in Docker Compose) |
 
