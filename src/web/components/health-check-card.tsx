@@ -21,10 +21,6 @@ const CHECK_ICONS: Record<string, React.ReactNode> = {
   'image-gaps': <Image size={16} className="text-muted shrink-0" />,
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function severityBorderClass(severity: HealthCheckResult['severity']): string {
   switch (severity) {
     case 'error':
@@ -46,10 +42,6 @@ function severityBadgeClass(severity: HealthCheckResult['severity']): string {
       return 'bg-accent/15 text-accent'
   }
 }
-
-// ---------------------------------------------------------------------------
-// HealthCheckCard
-// ---------------------------------------------------------------------------
 
 type Props = {
   check: HealthCheckResult

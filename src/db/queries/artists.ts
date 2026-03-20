@@ -78,17 +78,17 @@ export async function getGenreEnrichments(
   ])
 
   const result = new Map<string, GenreEnrichment>()
+  const counts = countRows.rows as { genre_name: string; cnt: string }[]
+  const examples = exRows.rows as { genre_name: string; artist_name: string }[]
 
-  for (const row of countRows.rows) {
-    const r = row as { genre_name: string; cnt: string }
-    result.set(r.genre_name, { examples: [], liveCount: Number.parseInt(r.cnt, 10) })
+  for (const { genre_name, cnt } of counts) {
+    result.set(genre_name, { examples: [], liveCount: Number.parseInt(cnt, 10) })
   }
 
-  for (const row of exRows.rows) {
-    const r = row as { genre_name: string; artist_name: string }
-    const entry = result.get(r.genre_name) ?? { examples: [], liveCount: 0 }
-    entry.examples.push(r.artist_name)
-    result.set(r.genre_name, entry)
+  for (const { genre_name, artist_name } of examples) {
+    const entry = result.get(genre_name) ?? { examples: [], liveCount: 0 }
+    entry.examples.push(artist_name)
+    result.set(genre_name, entry)
   }
 
   return result

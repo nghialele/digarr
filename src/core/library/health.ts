@@ -126,8 +126,6 @@ export class LibraryHealthService {
 
     const cachedByMbid = new Map(cachedArtists.map((a) => [a.mbid, a]))
 
-    // checkMissingAlbums fetches albums per-artist inline so we never hold
-    // all albums in memory simultaneously.
     const monitoredArtists = lidarrArtists.filter((a) => a.monitored)
 
     const results: HealthCheckResult[] = [

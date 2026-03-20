@@ -11,7 +11,6 @@ import {
   getLibraryStats,
   getSettings,
   type HealthCheckResult,
-  type HealthFixResult,
   type LibraryStats,
   scanLibraryHealth,
 } from '../lib/api'
@@ -102,9 +101,9 @@ export function LibraryHealthPage() {
 
   const handleFix = useCallback(
     async (checkId: string) => {
-      setFixingIds((prev) => new Set([...prev, checkId]))
+      setFixingIds((prev) => new Set(prev).add(checkId))
       try {
-        const data: HealthFixResult = await fixHealthCheck(checkId)
+        const data = await fixHealthCheck(checkId)
         const isDeferred = DEFERRED_FIXES.has(checkId)
 
         if (data.failed === 0) {
