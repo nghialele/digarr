@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Field } from '../components/field'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
@@ -68,17 +69,6 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           </div>
         )
       })}
-    </div>
-  )
-}
-
-function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="text-sm text-muted">
-        {label}
-      </label>
-      {children}
     </div>
   )
 }

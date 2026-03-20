@@ -200,3 +200,20 @@ export const DEFAULT_PREFERENCES: Preferences = {
   topArtistsLimit: 30,
   librarySeedRatio: 0.3,
 }
+
+/**
+ * Merge a partial/unknown preferences value with DEFAULT_PREFERENCES.
+ * Handles the scoringWeights sub-object so neither level is left with
+ * undefined fields when the DB row contains only a partial preference set.
+ */
+export function mergePreferences(raw: Preferences | Record<string, unknown> | null | undefined): Preferences {
+  const partial = (raw ?? {}) as Record<string, unknown>
+  return {
+    ...DEFAULT_PREFERENCES,
+    ...partial,
+    scoringWeights: {
+      ...DEFAULT_PREFERENCES.scoringWeights,
+      ...(partial.scoringWeights as Record<string, number> | undefined),
+    },
+  }
+}

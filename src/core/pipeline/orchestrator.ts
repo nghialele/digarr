@@ -6,7 +6,7 @@ import { createLastFmSource } from '@/core/plugins/lastfm'
 import { createListenBrainzSource } from '@/core/plugins/listenbrainz'
 import { SourceRegistry } from '@/core/plugins/registry'
 import type { AiProviderRegistry } from '@/core/providers/registry'
-import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
+import { mergePreferences, type Preferences } from '@/db/schema'
 import { analyze } from './analyze'
 import { collect } from './collect'
 import { discover } from './discover'
@@ -69,14 +69,7 @@ export class PipelineOrchestrator extends EventEmitter {
     try {
       const { db, settings, providerRegistry } = deps
       // Merge with defaults so partially-saved preferences don't leave fields undefined
-      const prefs: Preferences = {
-        ...DEFAULT_PREFERENCES,
-        ...settings.preferences,
-        scoringWeights: {
-          ...DEFAULT_PREFERENCES.scoringWeights,
-          ...settings.preferences?.scoringWeights,
-        },
-      }
+      const prefs: Preferences = mergePreferences(settings.preferences)
 
       const lidarrClient =
         settings.lidarrUrl && settings.lidarrApiKey

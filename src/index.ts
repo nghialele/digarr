@@ -62,7 +62,7 @@ import {
   updatePassword,
   updateUser,
 } from './db/queries/users'
-import { artists, DEFAULT_PREFERENCES, recommendationBatches, recommendations } from './db/schema'
+import { artists, DEFAULT_PREFERENCES, mergePreferences, recommendationBatches, recommendations } from './db/schema'
 import { setSessionStore } from './core/sessions'
 import { createApp } from './server'
 
@@ -206,14 +206,7 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   }
 
   const settings = await getSettings(db)
-  const prefs = {
-    ...DEFAULT_PREFERENCES,
-    ...settings?.preferences,
-    scoringWeights: {
-      ...DEFAULT_PREFERENCES.scoringWeights,
-      ...settings?.preferences?.scoringWeights,
-    },
-  }
+  const prefs = mergePreferences(settings?.preferences)
 
   const lidarrClient =
     settings?.lidarrUrl && settings?.lidarrApiKey

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
+import { Field } from '../components/field'
 import { ServiceCard } from '../components/service-card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -46,17 +47,6 @@ type Settings = {
 }
 
 type Tab = 'connections' | 'recommendations' | 'schedule' | 'account' | 'auth'
-
-function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="text-sm text-muted">
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-}
 
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   const tabs: { id: Tab; label: string }[] = [

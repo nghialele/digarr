@@ -10,7 +10,7 @@ import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
 import { upsertArtist } from '@/db/queries/artists'
 import { getUserConnections } from '@/db/queries/users'
-import { DEFAULT_PREFERENCES } from '@/db/schema'
+import { mergePreferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import { createPipelineSSEStream } from '@/server/sse'
 
@@ -160,15 +160,7 @@ export function pipelineRoutes(deps: AppDependencies) {
         if (discovered.length === 0) return
 
         // Merge preferences with defaults (same pattern as orchestrator)
-        const rawPrefs = (settings.preferences as Record<string, unknown>) ?? {}
-        const prefs = {
-          ...DEFAULT_PREFERENCES,
-          ...rawPrefs,
-          scoringWeights: {
-            ...DEFAULT_PREFERENCES.scoringWeights,
-            ...(rawPrefs.scoringWeights as Record<string, number> | undefined),
-          },
-        }
+        const prefs = mergePreferences(settings.preferences as Record<string, unknown> | null)
 
         const resolved = await resolve(discovered, mb, undefined, lidarr)
         const rejectedMbids = await deps.storeDb.getRejectedMbids(prefs.rejectionCooldownDays)
