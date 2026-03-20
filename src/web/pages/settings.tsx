@@ -325,7 +325,19 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
       <div className={isLidarrConfigured ? '' : 'opacity-60'}>
         <ServiceCard
           name="Lidarr"
-          description="Music library manager -- required for adding artists"
+          description={
+            <span>
+              Music library manager -- required for adding artists.{' '}
+              <a
+                href="https://wiki.servarr.com/lidarr/settings#security"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent hover:underline"
+              >
+                Get API key
+              </a>
+            </span>
+          }
           status={serviceStatus('lidarr')}
           icon={<LidarrIcon />}
         >
@@ -437,7 +449,15 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="ListenBrainz"
           description={
             <span>
-              Open-source listening history tracking
+              Open-source listening history tracking.{' '}
+              <a
+                href="https://listenbrainz.org/settings/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent hover:underline"
+              >
+                Get token
+              </a>
               {settings._listenbrainzScope === 'user' && (
                 <span className="text-xs text-accent ml-2">your account</span>
               )}
@@ -489,7 +509,15 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="Last.fm"
           description={
             <span>
-              Music scrobbling and listening history
+              Music scrobbling and listening history.{' '}
+              <a
+                href="https://www.last.fm/api/account/create"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent hover:underline"
+              >
+                Get API key
+              </a>
               {settings._lastfmScope === 'user' && (
                 <span className="text-xs text-accent ml-2">your account</span>
               )}
@@ -537,7 +565,51 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
       <div className={isAiConfigured ? '' : 'opacity-60'}>
         <ServiceCard
           name="AI Provider"
-          description="Generates music recommendations"
+          description={
+            <span>
+              Generates music recommendations.{' '}
+              {aiProvider === 'anthropic' && (
+                <a
+                  href="https://console.anthropic.com/settings/keys"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent hover:underline"
+                >
+                  Get API key
+                </a>
+              )}
+              {aiProvider === 'openai' && (
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent hover:underline"
+                >
+                  Get API key
+                </a>
+              )}
+              {aiProvider === 'gemini' && (
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent hover:underline"
+                >
+                  Get API key
+                </a>
+              )}
+              {aiProvider === 'ollama' && (
+                <a
+                  href="https://ollama.com/library"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent hover:underline"
+                >
+                  Browse models
+                </a>
+              )}
+            </span>
+          }
           status={serviceStatus('ai')}
           icon={<AiProviderIcon provider={aiProvider} />}
         >
