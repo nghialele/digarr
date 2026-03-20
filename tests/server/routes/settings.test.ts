@@ -73,7 +73,27 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       createdAt: new Date(),
     })),
     getUserByUsername: vi.fn(async () => null),
-    getUserById: vi.fn(async () => null),
+    getUserById: vi.fn(async () => ({
+      id: 1,
+      username: 'admin',
+      isAdmin: true,
+      preferences: null,
+      email: null,
+      oidcSubject: null,
+      authProvider: 'local',
+      listenbrainzUsername: null,
+      listenbrainzToken: null,
+      lastfmUsername: null,
+      lastfmApiKey: null,
+      plexUrl: null,
+      plexToken: null,
+      jellyfinUrl: null,
+      jellyfinApiKey: null,
+      jellyfinUserId: null,
+      discogsToken: null,
+      discogsUsername: null,
+      createdAt: new Date(),
+    })),
     getUserCount: vi.fn(async () => 0),
     updatePassword: vi.fn(async () => {}),
     genreService: {} as unknown as AppDependencies['genreService'],
@@ -81,6 +101,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     targetQueries: {
       createTarget: vi.fn().mockResolvedValue({ id: 1 }),
       getTargetsByUser: vi.fn().mockResolvedValue([]),
+      getAllTargets: vi.fn().mockResolvedValue([]),
       getTarget: vi.fn().mockResolvedValue(null),
       updateTarget: vi.fn().mockResolvedValue(undefined),
       deleteTarget: vi.fn().mockResolvedValue(undefined),
@@ -445,9 +466,9 @@ describe('per-user listening source connections', () => {
       }),
     })
     expect(res.status).toBe(200)
-    expect(updateSettings).toHaveBeenCalledWith(
-      expect.not.objectContaining({ lastfmUsername: expect.anything() }),
-    )
+    // Only user-connection fields sent -- global updateSettings should NOT be called
+    expect(updateSettings).not.toHaveBeenCalled()
+    // db.update was called (lastfm fields routed to user record)
     expect(dbWithUpdate.update).toHaveBeenCalled()
   })
 })

@@ -72,15 +72,24 @@ type Settings = {
 
 type Tab = 'connections' | 'targets' | 'recommendations' | 'schedule' | 'account' | 'auth'
 
-function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
-  const tabs: { id: Tab; label: string }[] = [
+function TabBar({
+  active,
+  onChange,
+  isAdmin,
+}: {
+  active: Tab
+  onChange: (t: Tab) => void
+  isAdmin: boolean
+}) {
+  const allTabs: { id: Tab; label: string; adminOnly?: boolean }[] = [
     { id: 'connections', label: 'Connections' },
     { id: 'targets', label: 'Targets' },
     { id: 'recommendations', label: 'Recommendations' },
-    { id: 'schedule', label: 'Schedule' },
+    { id: 'schedule', label: 'Schedule', adminOnly: true },
     { id: 'account', label: 'Account' },
-    { id: 'auth', label: 'Authentication' },
+    { id: 'auth', label: 'Authentication', adminOnly: true },
   ]
+  const tabs = allTabs.filter((t) => !t.adminOnly || isAdmin)
   return (
     <div
       className="flex gap-1 border-b border-border mb-6 overflow-x-auto -mx-6 px-6"
@@ -710,8 +719,12 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
       </ServiceCard>
 
       <div className="pt-2">
-        <h3 className="text-sm font-semibold text-text uppercase tracking-wide">Your Connections</h3>
-        <p className="text-xs text-muted mt-1">Personal listening sources linked to your account.</p>
+        <h3 className="text-sm font-semibold text-text uppercase tracking-wide">
+          Your Connections
+        </h3>
+        <p className="text-xs text-muted mt-1">
+          Personal listening sources linked to your account.
+        </p>
       </div>
 
       {/* ListenBrainz */}
@@ -834,63 +847,63 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
 
       {/* Spotify */}
       <div className={spotifyConnected ? '' : 'opacity-60'}>
-      <ServiceCard
-        name="Spotify"
-        description={
-          <span>
-            Listening history from Spotify.{' '}
-            <a
-              href="https://developer.spotify.com/dashboard"
-              target="_blank"
-              rel="noreferrer"
-              className="text-accent hover:underline"
-            >
-              Create a Spotify Developer App
-            </a>
-          </span>
-        }
-        status={spotifyConnected ? 'connected' : 'not_configured'}
-        icon={<SpotifyIcon />}
-      >
-        {spotifyConnected ? (
-          <div className="flex justify-end gap-2 pt-1">
-            <Button size="sm" variant="outline" onClick={disconnectSpotify}>
-              Disconnect
-            </Button>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Client ID" id="spotify-client-id">
-                <Input
-                  id="spotify-client-id"
-                  placeholder="Your Spotify app client ID"
-                  value={spotifyClientId}
-                  onChange={(e) => setSpotifyClientId(e.target.value)}
-                />
-              </Field>
-              <Field label="Client Secret" id="spotify-client-secret">
-                <Input
-                  id="spotify-client-secret"
-                  type="password"
-                  placeholder="Your Spotify app client secret"
-                  value={spotifyClientSecret}
-                  onChange={(e) => setSpotifyClientSecret(e.target.value)}
-                />
-              </Field>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                size="sm"
-                onClick={initiateSpotifyOAuth}
-                disabled={!spotifyClientId || !spotifyClientSecret}
+        <ServiceCard
+          name="Spotify"
+          description={
+            <span>
+              Listening history from Spotify.{' '}
+              <a
+                href="https://developer.spotify.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent hover:underline"
               >
-                Connect with Spotify
+                Create a Spotify Developer App
+              </a>
+            </span>
+          }
+          status={spotifyConnected ? 'connected' : 'not_configured'}
+          icon={<SpotifyIcon />}
+        >
+          {spotifyConnected ? (
+            <div className="flex justify-end gap-2 pt-1">
+              <Button size="sm" variant="outline" onClick={disconnectSpotify}>
+                Disconnect
               </Button>
             </div>
-          </>
-        )}
-      </ServiceCard>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Client ID" id="spotify-client-id">
+                  <Input
+                    id="spotify-client-id"
+                    placeholder="Your Spotify app client ID"
+                    value={spotifyClientId}
+                    onChange={(e) => setSpotifyClientId(e.target.value)}
+                  />
+                </Field>
+                <Field label="Client Secret" id="spotify-client-secret">
+                  <Input
+                    id="spotify-client-secret"
+                    type="password"
+                    placeholder="Your Spotify app client secret"
+                    value={spotifyClientSecret}
+                    onChange={(e) => setSpotifyClientSecret(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <Button
+                  size="sm"
+                  onClick={initiateSpotifyOAuth}
+                  disabled={!spotifyClientId || !spotifyClientSecret}
+                >
+                  Connect with Spotify
+                </Button>
+              </div>
+            </>
+          )}
+        </ServiceCard>
       </div>
 
       {/* Plex */}
@@ -973,7 +986,8 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               onChange={(e) => setJellyfinUserId(e.target.value)}
             />
             <p className="text-xs text-muted mt-1">
-              Your Jellyfin username (recommended) or UUID. The username is resolved automatically via the Jellyfin API.
+              Your Jellyfin username (recommended) or UUID. The username is resolved automatically
+              via the Jellyfin API.
             </p>
           </Field>
           <div className="flex justify-end gap-2 pt-1">
@@ -1096,38 +1110,48 @@ function TargetsTab() {
         </p>
       )}
 
-      {targets?.map((t) => (
-        <div key={t.id} className="rounded-lg border border-border bg-surface p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {t.type === 'lidarr' && <img src="/icons/lidarr.png" alt="" className="w-5 h-5" />}
-              <span className="text-sm font-medium text-text">{t.name}</span>
-              <span className="text-xs text-muted capitalize">({t.type})</span>
+      {targets?.map((t) => {
+        const owned = t.owned
+        return (
+          <div key={t.id} className="rounded-lg border border-border bg-surface p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {t.type === 'lidarr' && <img src="/icons/lidarr.png" alt="" className="w-5 h-5" />}
+                <span className="text-sm font-medium text-text">{t.name}</span>
+                <span className="text-xs text-muted capitalize">({t.type})</span>
+                {!owned && (
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-bg text-muted border border-border">
+                    shared
+                  </span>
+                )}
+              </div>
+              {owned && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTest(t.id)}
+                    disabled={testing === t.id}
+                  >
+                    {testing === t.id ? 'Testing...' : 'Test'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(t.id)}
+                    className="text-reject"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleTest(t.id)}
-                disabled={testing === t.id}
-              >
-                {testing === t.id ? 'Testing...' : 'Test'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDelete(t.id)}
-                className="text-reject"
-              >
-                Remove
-              </Button>
-            </div>
+            {typeof t.config.url === 'string' && (
+              <p className="text-xs text-muted mt-1">{t.config.url}</p>
+            )}
           </div>
-          {typeof t.config.url === 'string' && (
-            <p className="text-xs text-muted mt-1">{t.config.url}</p>
-          )}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -1595,6 +1619,8 @@ function SettingsSkeleton() {
 export function SettingsPage() {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('connections')
+  const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
+  const isAdmin = currentUser?.isAdmin ?? false
   const {
     data,
     isLoading: loading,
@@ -1631,7 +1657,7 @@ export function SettingsPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-text mb-6">Settings</h1>
-      <TabBar active={tab} onChange={setTab} />
+      <TabBar active={tab} onChange={setTab} isAdmin={isAdmin} />
       {tab === 'connections' && <ConnectionsTab settings={data} onSaved={refetch} />}
       {tab === 'targets' && <TargetsTab />}
       {tab === 'recommendations' && <RecommendationsTab settings={data} />}

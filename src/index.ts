@@ -57,6 +57,7 @@ import type { TargetInsert } from './db/queries/targets'
 import {
   createTarget,
   deleteTarget,
+  getAllTargets,
   getTarget,
   getTargetsByType,
   getTargetsByUser,
@@ -355,6 +356,7 @@ const app = createApp({
   targetQueries: {
     createTarget: (data: TargetInsert) => createTarget(db, data),
     getTargetsByUser: (userId: number) => getTargetsByUser(db, userId),
+    getAllTargets: () => getAllTargets(db),
     getTarget: (id: number) => getTarget(db, id),
     updateTarget: (id: number, data: Parameters<typeof updateTarget>[2]) =>
       updateTarget(db, id, data),

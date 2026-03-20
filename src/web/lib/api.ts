@@ -331,6 +331,7 @@ export type TargetInfo = {
   name: string
   config: Record<string, unknown>
   enabled: boolean
+  owned: boolean
 }
 export const listTargets = () => fetchApi<TargetInfo[]>('/targets')
 export const createTargetApi = (data: {

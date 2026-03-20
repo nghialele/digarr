@@ -2,7 +2,9 @@ import { Hono } from 'hono'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
+import { getUserConnections } from '@/db/queries/users'
 import type { AppDependencies } from '@/server'
+import type { HonoEnv } from '@/server/types'
 
 type ListenTrack = {
   artist: string
@@ -13,7 +15,7 @@ type ListenTrack = {
 }
 
 export function listeningRoutes(deps: AppDependencies) {
-  const router = new Hono()
+  const router = new Hono<HonoEnv>()
 
   router.get('/api/listening/recent', async (c) => {
     const settings = await deps.getSettings()
@@ -24,15 +26,22 @@ export function listeningRoutes(deps: AppDependencies) {
     const rangeLabel =
       range === 'week' ? 'this week' : range === 'year' ? 'this year' : 'this month'
 
+    // Resolve per-user credentials, fall back to global
+    const userId = c.get('userId')
+    const userConns = userId ? await getUserConnections(deps.db, userId) : null
+
+    const lastfmUser = userConns?.lastfmUsername || (settings.lastfmUsername as string) || ''
+    const lastfmKey = userConns?.lastfmApiKey || (settings.lastfmApiKey as string) || ''
+    const lbUser =
+      userConns?.listenbrainzUsername || (settings.listenbrainzUsername as string) || ''
+    const lbToken = userConns?.listenbrainzToken || (settings.listenbrainzToken as string) || ''
+
     const tracks: ListenTrack[] = []
 
     // Try Last.fm first (usually has richer recent track data)
-    if (settings.lastfmUsername && settings.lastfmApiKey && settings.lastfmApiKey !== '***') {
+    if (lastfmUser && lastfmKey && lastfmKey !== '***') {
       try {
-        const client = createLastFmClient(
-          settings.lastfmUsername as string,
-          settings.lastfmApiKey as string,
-        )
+        const client = createLastFmClient(lastfmUser, lastfmKey)
         const recentTracks = await client.getRecentTracks()
         for (const t of recentTracks.slice(0, limit)) {
           tracks.push({
@@ -47,17 +56,9 @@ export function listeningRoutes(deps: AppDependencies) {
     }
 
     // Try ListenBrainz if no Last.fm tracks
-    if (
-      tracks.length === 0 &&
-      settings.listenbrainzUsername &&
-      settings.listenbrainzToken &&
-      settings.listenbrainzToken !== '***'
-    ) {
+    if (tracks.length === 0 && lbUser && lbToken && lbToken !== '***') {
       try {
-        const client = createListenBrainzClient(
-          settings.listenbrainzUsername as string,
-          settings.listenbrainzToken as string,
-        )
+        const client = createListenBrainzClient(lbUser, lbToken)
         const topArtists = await client.getTopArtists(range)
         for (const a of topArtists.slice(0, limit)) {
           tracks.push({
@@ -85,7 +86,6 @@ export function listeningRoutes(deps: AppDependencies) {
           settings.lidarrApiKey as string,
           (settings.skipTlsVerify as boolean) ?? false,
         )
-        // Deduplicate artist names for lookups
         const seen = new Set<string>()
         const imageCache = new Map<string, string>()
 
@@ -112,7 +112,6 @@ export function listeningRoutes(deps: AppDependencies) {
           }
         }
 
-        // Apply cached images
         for (const t of tracks) {
           if (!t.imageUrl && imageCache.has(t.artist)) {
             t.imageUrl = imageCache.get(t.artist)

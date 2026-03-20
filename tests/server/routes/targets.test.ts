@@ -7,6 +7,7 @@ const mockDeps = {
   targetQueries: {
     createTarget: vi.fn().mockResolvedValue({ id: 1 }),
     getTargetsByUser: vi.fn().mockResolvedValue([]),
+    getAllTargets: vi.fn().mockResolvedValue([]),
     getTarget: vi.fn().mockResolvedValue(null),
     updateTarget: vi.fn().mockResolvedValue(undefined),
     deleteTarget: vi.fn().mockResolvedValue(undefined),
@@ -32,18 +33,20 @@ describe('target routes', () => {
     vi.clearAllMocks()
   })
 
-  it('GET /api/targets returns user targets', async () => {
-    mockDeps.targetQueries.getTargetsByUser.mockResolvedValue([
-      { id: 1, type: 'lidarr', name: 'My Lidarr', enabled: true, config: { url: 'http://lidarr:8686', apiKey: 'secret' } },
+  it('GET /api/targets returns all targets with ownership flag', async () => {
+    mockDeps.targetQueries.getAllTargets.mockResolvedValue([
+      { id: 1, type: 'lidarr', name: 'My Lidarr', enabled: true, userId: 1, config: { url: 'http://lidarr:8686', apiKey: 'secret' } },
+      { id: 2, type: 'lidarr', name: 'Other Lidarr', enabled: true, userId: 2, config: { url: 'http://lidarr2:8686', apiKey: 'other' } },
     ])
     const app = createTestApp()
     const res = await app.request('/api/targets')
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toHaveLength(1)
+    expect(body).toHaveLength(2)
     expect(body[0].type).toBe('lidarr')
-    // apiKey should be masked
     expect(body[0].config.apiKey).toBe('***')
+    expect(body[0].owned).toBe(true)
+    expect(body[1].owned).toBe(false)
   })
 
   it('POST /api/targets creates a target', async () => {

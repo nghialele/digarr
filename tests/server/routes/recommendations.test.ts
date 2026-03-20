@@ -113,6 +113,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     targetQueries: {
       createTarget: vi.fn().mockResolvedValue({ id: 1 }),
       getTargetsByUser: vi.fn().mockResolvedValue([]),
+      getAllTargets: vi.fn().mockResolvedValue([]),
       getTarget: vi.fn().mockResolvedValue(null),
       updateTarget: vi.fn().mockResolvedValue(undefined),
       deleteTarget: vi.fn().mockResolvedValue(undefined),

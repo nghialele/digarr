@@ -117,6 +117,7 @@ export type AppDependencies = {
   targetQueries: {
     createTarget: (data: TargetInsert) => Promise<{ id: number }>
     getTargetsByUser: (userId: number) => Promise<TargetRow[]>
+    getAllTargets: () => Promise<TargetRow[]>
     getTarget: (id: number) => Promise<TargetRow | null>
     updateTarget: (id: number, data: TargetUpdate) => Promise<void>
     deleteTarget: (id: number) => Promise<void>

@@ -29,43 +29,104 @@ function maskSecrets(settings: Record<string, unknown>): SettingsResponse {
   return masked
 }
 
+/** Strip global connection fields that should not leak to non-admin users. */
+function stripForNonAdmin(settings: Record<string, unknown>): SettingsResponse {
+  const stripped: SettingsResponse = {}
+
+  // Non-admins see: lidarrUrl (read-only context), aiProvider, aiModel (no keys),
+  // setupComplete, preferences (for scoring weights), skipTlsVerify
+  const ALLOWED_GLOBAL = new Set([
+    'id',
+    'setupComplete',
+    'lidarrUrl',
+    'aiProvider',
+    'aiModel',
+    'skipTlsVerify',
+    'preferences',
+  ])
+
+  for (const [key, val] of Object.entries(settings)) {
+    if (ALLOWED_GLOBAL.has(key) || key.startsWith('_')) {
+      stripped[key] = val
+    }
+  }
+
+  // Strip webhook URL from preferences for non-admins
+  if (stripped.preferences && typeof stripped.preferences === 'object') {
+    const prefs = { ...(stripped.preferences as Record<string, unknown>) }
+    delete prefs.webhookUrl
+    // Keep scheduleCron visible but not editable (frontend hides the tab)
+    stripped.preferences = prefs
+  }
+
+  return stripped
+}
+
 async function buildSettingsResponse(
   deps: AppDependencies,
   userId: number | undefined,
+  isAdmin: boolean,
 ): Promise<Record<string, unknown> | null> {
   const row = await deps.getSettings()
   if (!row) return null
 
-  const response: Record<string, unknown> = { ...(row as Record<string, unknown>) }
+  let response: Record<string, unknown> = { ...(row as Record<string, unknown>) }
+
+  // Non-admins get a stripped view of global settings
+  if (!isAdmin) {
+    response = stripForNonAdmin(response)
+  }
 
   if (userId) {
     const userConns = await getUserConnections(deps.db, userId)
     if (userConns) {
-      if (userConns.listenbrainzUsername !== null) {
-        response.listenbrainzUsername = userConns.listenbrainzUsername
+      // For non-admins: always set connection fields from user data (even if null)
+      // This prevents leaking global/admin credentials
+      if (!isAdmin) {
+        response.listenbrainzUsername = userConns.listenbrainzUsername ?? ''
         response.listenbrainzToken = userConns.listenbrainzToken
         response._listenbrainzScope = 'user'
-      }
-      if (userConns.lastfmUsername !== null) {
-        response.lastfmUsername = userConns.lastfmUsername
+        response.lastfmUsername = userConns.lastfmUsername ?? ''
         response.lastfmApiKey = userConns.lastfmApiKey
         response._lastfmScope = 'user'
-      }
-      if (userConns.plexUrl !== null) {
-        response.plexUrl = userConns.plexUrl
+        response.plexUrl = userConns.plexUrl ?? ''
         response.plexToken = userConns.plexToken
         response._plexScope = 'user'
-      }
-      if (userConns.jellyfinUrl !== null) {
-        response.jellyfinUrl = userConns.jellyfinUrl
+        response.jellyfinUrl = userConns.jellyfinUrl ?? ''
         response.jellyfinApiKey = userConns.jellyfinApiKey
-        response.jellyfinUserId = userConns.jellyfinUserId
+        response.jellyfinUserId = userConns.jellyfinUserId ?? ''
         response._jellyfinScope = 'user'
-      }
-      if (userConns.discogsUsername !== null) {
-        response.discogsUsername = userConns.discogsUsername
+        response.discogsUsername = userConns.discogsUsername ?? ''
         response.discogsToken = userConns.discogsToken
         response._discogsScope = 'user'
+      } else {
+        // Admin: overlay user connections only when the user has set them
+        if (userConns.listenbrainzUsername !== null) {
+          response.listenbrainzUsername = userConns.listenbrainzUsername
+          response.listenbrainzToken = userConns.listenbrainzToken
+          response._listenbrainzScope = 'user'
+        }
+        if (userConns.lastfmUsername !== null) {
+          response.lastfmUsername = userConns.lastfmUsername
+          response.lastfmApiKey = userConns.lastfmApiKey
+          response._lastfmScope = 'user'
+        }
+        if (userConns.plexUrl !== null) {
+          response.plexUrl = userConns.plexUrl
+          response.plexToken = userConns.plexToken
+          response._plexScope = 'user'
+        }
+        if (userConns.jellyfinUrl !== null) {
+          response.jellyfinUrl = userConns.jellyfinUrl
+          response.jellyfinApiKey = userConns.jellyfinApiKey
+          response.jellyfinUserId = userConns.jellyfinUserId
+          response._jellyfinScope = 'user'
+        }
+        if (userConns.discogsUsername !== null) {
+          response.discogsUsername = userConns.discogsUsername
+          response.discogsToken = userConns.discogsToken
+          response._discogsScope = 'user'
+        }
       }
     }
   }
@@ -78,21 +139,20 @@ export function settingsRoutes(deps: AppDependencies) {
 
   router.get('/api/settings', async (c) => {
     const userId = c.get('userId')
-    const response = await buildSettingsResponse(deps, userId)
+    const caller = userId ? await deps.getUserById(userId) : null
+    // No userId = legacy token auth or no auth required -- treat as admin
+    const isAdmin = !userId || (caller?.isAdmin ?? false)
+    const response = await buildSettingsResponse(deps, userId, isAdmin)
     if (!response) {
       return c.json({ error: 'Settings not found' }, 404)
     }
     return c.json(maskSecrets(response))
   })
 
-  const MUTABLE_FIELDS = new Set([
+  const GLOBAL_MUTABLE_FIELDS = new Set([
     'lidarrUrl',
     'lidarrApiKey',
     'skipTlsVerify',
-    'listenbrainzUsername',
-    'listenbrainzToken',
-    'lastfmUsername',
-    'lastfmApiKey',
     'aiProvider',
     'aiApiKey',
     'aiModel',
@@ -102,13 +162,6 @@ export function settingsRoutes(deps: AppDependencies) {
     'oidcClientId',
     'oidcClientSecret',
     'oidcScopes',
-    'plexUrl',
-    'plexToken',
-    'jellyfinUrl',
-    'jellyfinApiKey',
-    'jellyfinUserId',
-    'discogsToken',
-    'discogsUsername',
   ])
 
   const USER_CONNECTION_FIELDS = new Set([
@@ -125,16 +178,21 @@ export function settingsRoutes(deps: AppDependencies) {
     'discogsUsername',
   ])
 
+  const ALL_MUTABLE_FIELDS = new Set([...GLOBAL_MUTABLE_FIELDS, ...USER_CONNECTION_FIELDS])
+
   router.patch('/api/settings', async (c) => {
     const body = await c.req.json()
     const sanitized: Record<string, unknown> = {}
     for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
-      if (MUTABLE_FIELDS.has(key)) {
+      if (ALL_MUTABLE_FIELDS.has(key)) {
         sanitized[key] = value
       }
     }
 
     const userId = c.get('userId')
+    const caller = userId ? await deps.getUserById(userId) : null
+    const isAdmin = !userId || (caller?.isAdmin ?? false)
+
     if (userId) {
       const userUpdate: Record<string, string | null> = {}
       const globalSanitized: Record<string, unknown> = {}
@@ -151,7 +209,12 @@ export function settingsRoutes(deps: AppDependencies) {
         await updateUserConnections(deps.db, userId, userUpdate)
       }
 
-      // Replace sanitized with only global fields
+      // Non-admins cannot modify global settings
+      if (!isAdmin && Object.keys(globalSanitized).length > 0) {
+        return c.json({ error: 'Admin access required to modify global settings' }, 403)
+      }
+
+      // Replace sanitized with only global fields for the global update
       for (const key of Object.keys(sanitized)) {
         delete sanitized[key]
       }
@@ -160,7 +223,9 @@ export function settingsRoutes(deps: AppDependencies) {
       }
     }
 
-    await deps.updateSettings(sanitized)
+    if (Object.keys(sanitized).length > 0) {
+      await deps.updateSettings(sanitized)
+    }
 
     const prefs = sanitized.preferences as Record<string, unknown> | undefined
     if (prefs?.scheduleCron !== undefined && typeof prefs.scheduleCron === 'string') {
@@ -168,7 +233,7 @@ export function settingsRoutes(deps: AppDependencies) {
         deps.restartScheduler(prefs.scheduleCron || null)
       } catch (err: unknown) {
         console.error('Failed to apply cron expression:', err)
-        const row = await buildSettingsResponse(deps, userId)
+        const row = await buildSettingsResponse(deps, userId, isAdmin)
         return c.json({
           ...maskSecrets((row ?? {}) as Record<string, unknown>),
           warning: 'Settings saved but cron expression is invalid',
@@ -176,7 +241,7 @@ export function settingsRoutes(deps: AppDependencies) {
       }
     }
 
-    const response = await buildSettingsResponse(deps, userId)
+    const response = await buildSettingsResponse(deps, userId, isAdmin)
     if (!response) {
       return c.json({ error: 'Settings not found' }, 404)
     }
@@ -199,6 +264,14 @@ export function settingsRoutes(deps: AppDependencies) {
     const stored = (await deps.getSettings()) as Record<string, unknown> | null
     const testUserId = c.get('userId')
     const userConns = testUserId ? await getUserConnections(deps.db, testUserId) : null
+
+    // Admin-only services: lidarr, ai -- only enforced when user sessions are active
+    if (testUserId && (service === 'lidarr' || service === 'ai')) {
+      const caller = await deps.getUserById(testUserId)
+      if (!caller?.isAdmin) {
+        return c.json({ success: false, message: 'Admin access required' }, 403)
+      }
+    }
 
     switch (service) {
       case 'lidarr': {
@@ -273,10 +346,10 @@ export function settingsRoutes(deps: AppDependencies) {
         return c.json(result)
       }
       case 'spotify': {
-        const testUserId = c.get('userId')
-        if (!testUserId) return c.json({ success: false, message: 'Login required' })
+        const spotifyUserId = c.get('userId')
+        if (!spotifyUserId) return c.json({ success: false, message: 'Login required' })
         const { getOAuthToken } = await import('@/db/queries/oauth-tokens')
-        const oauthToken = await getOAuthToken(deps.db, testUserId, 'spotify')
+        const oauthToken = await getOAuthToken(deps.db, spotifyUserId, 'spotify')
         if (!oauthToken || oauthToken.accessToken.startsWith('pending:')) {
           return c.json({ success: false, message: 'Spotify not connected' })
         }
@@ -292,6 +365,13 @@ export function settingsRoutes(deps: AppDependencies) {
 
   // Test webhook by sending a test payload to the configured URL
   router.post('/api/settings/test-webhook', async (c) => {
+    const userId = c.get('userId')
+    const caller = userId ? await deps.getUserById(userId) : null
+    const isAdmin = !userId || (caller?.isAdmin ?? false)
+    if (!isAdmin) {
+      return c.json({ success: false, message: 'Admin access required' }, 403)
+    }
+
     const stored = await deps.getSettings()
     const prefs = (stored as Record<string, unknown> | null)?.preferences as
       | Record<string, unknown>

@@ -236,18 +236,22 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     Genres
                   </span>
                 </NavLink>
-                <NavLink to="/library/health" className={navLinkClass}>
-                  <span className="flex items-center gap-1">
-                    <HeartPulse size={14} aria-hidden="true" />
-                    Library
-                  </span>
-                </NavLink>
-                <NavLink to="/analytics" className={navLinkClass}>
-                  <span className="flex items-center gap-1">
-                    <BarChart3 size={14} aria-hidden="true" />
-                    Analytics
-                  </span>
-                </NavLink>
+                {currentUser?.isAdmin && (
+                  <NavLink to="/library/health" className={navLinkClass}>
+                    <span className="flex items-center gap-1">
+                      <HeartPulse size={14} aria-hidden="true" />
+                      Library
+                    </span>
+                  </NavLink>
+                )}
+                {currentUser?.isAdmin && (
+                  <NavLink to="/analytics" className={navLinkClass}>
+                    <span className="flex items-center gap-1">
+                      <BarChart3 size={14} aria-hidden="true" />
+                      Analytics
+                    </span>
+                  </NavLink>
+                )}
                 <NavLink to="/settings" className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <Settings size={14} aria-hidden="true" />
@@ -325,22 +329,30 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   Genres
                 </span>
               </NavLink>
-              <NavLink
-                to="/library/health"
-                className={navLinkClass}
-                onClick={() => setMenuOpen(false)}
-              >
-                <span className="flex items-center gap-1.5">
-                  <HeartPulse size={14} aria-hidden="true" />
-                  Library
-                </span>
-              </NavLink>
-              <NavLink to="/analytics" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-                <span className="flex items-center gap-1.5">
-                  <BarChart3 size={14} aria-hidden="true" />
-                  Analytics
-                </span>
-              </NavLink>
+              {currentUser?.isAdmin && (
+                <NavLink
+                  to="/library/health"
+                  className={navLinkClass}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <HeartPulse size={14} aria-hidden="true" />
+                    Library
+                  </span>
+                </NavLink>
+              )}
+              {currentUser?.isAdmin && (
+                <NavLink
+                  to="/analytics"
+                  className={navLinkClass}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <BarChart3 size={14} aria-hidden="true" />
+                    Analytics
+                  </span>
+                </NavLink>
+              )}
               <NavLink to="/settings" className={navLinkClass} onClick={() => setMenuOpen(false)}>
                 <span className="flex items-center gap-1.5">
                   <Settings size={14} aria-hidden="true" />

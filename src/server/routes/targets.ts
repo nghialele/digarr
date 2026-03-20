@@ -10,6 +10,7 @@ type TargetDeps = {
   targetQueries: {
     createTarget: (data: TargetInsert) => Promise<{ id: number }>
     getTargetsByUser: (userId: number) => Promise<TargetRow[]>
+    getAllTargets: () => Promise<TargetRow[]>
     getTarget: (id: number) => Promise<TargetRow | null>
     updateTarget: (id: number, data: TargetUpdate) => Promise<void>
     deleteTarget: (id: number) => Promise<void>
@@ -23,14 +24,17 @@ type TargetDeps = {
 export function targetRoutes(deps: TargetDeps) {
   const router = new Hono<HonoEnv>()
 
+  // Returns all targets. Each target includes `owned: true` if it belongs to the caller.
+  // Non-owners see masked configs and cannot modify/delete.
   router.get('/api/targets', async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
-    const targets = await deps.targetQueries.getTargetsByUser(userId)
+    const allTargets = await deps.targetQueries.getAllTargets()
     return c.json(
-      targets.map((t) => ({
+      allTargets.map((t) => ({
         ...t,
         config: maskConfig(t.config),
+        owned: t.userId === userId,
       })),
     )
   })
