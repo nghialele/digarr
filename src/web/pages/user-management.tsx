@@ -31,7 +31,7 @@ export function UserManagementPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl space-y-6">
+    <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-text">User Management</h1>
       <div className="space-y-2">
         {usersQuery.data?.length === 0 && <p className="text-sm text-muted">No users found.</p>}

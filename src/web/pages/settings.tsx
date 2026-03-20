@@ -1054,7 +1054,7 @@ export function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-4xl">
+      <div className="p-6 space-y-6 max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-text mb-6">Settings</h1>
         <SettingsSkeleton />
       </div>
@@ -1063,7 +1063,7 @@ export function SettingsPage() {
 
   if (error || !data) {
     return (
-      <div className="p-8 text-reject">
+      <div className="p-6 max-w-6xl mx-auto text-reject">
         <p>Failed to load settings: {error?.message ?? 'Unknown error'}</p>
         <Button variant="outline" size="sm" onClick={refetch} className="mt-3">
           Retry
@@ -1073,7 +1073,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-text mb-6">Settings</h1>
       <TabBar active={tab} onChange={setTab} />
       {tab === 'connections' && <ConnectionsTab settings={data} onSaved={refetch} />}

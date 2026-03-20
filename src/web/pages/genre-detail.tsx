@@ -50,7 +50,7 @@ function LibraryArtistCard({ artist }: { artist: LibraryArtist }) {
 
 function DetailSkeleton() {
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <Skeleton className="h-4 w-20" />
       <div className="space-y-2">
         <Skeleton className="h-8 w-48" />
@@ -95,7 +95,7 @@ export function GenreDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-6 max-w-6xl mx-auto">
         <button
           type="button"
           onClick={() => navigate('/genres')}
@@ -111,7 +111,7 @@ export function GenreDetailPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-6 space-y-6 max-w-6xl mx-auto">
       {/* Back nav */}
       <button
         type="button"

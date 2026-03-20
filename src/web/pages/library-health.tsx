@@ -82,7 +82,7 @@ export function LibraryHealthPage() {
   const stats: LibraryStats | undefined = statsQuery.data
 
   return (
-    <div className="p-6 space-y-8 max-w-4xl mx-auto">
+    <div className="p-6 space-y-8 max-w-6xl mx-auto">
       {/* Page title */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-bold text-foreground">Library Health</h1>
