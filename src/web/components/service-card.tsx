@@ -6,7 +6,7 @@ type ServiceStatus = 'connected' | 'not_configured' | 'error' | 'testing'
 
 export type ServiceCardProps = {
   name: string
-  description?: string
+  description?: React.ReactNode
   status: ServiceStatus
   onTest?: () => void
   children: React.ReactNode

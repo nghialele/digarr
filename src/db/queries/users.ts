@@ -90,6 +90,38 @@ export async function getUserByEmail(db: Database, email: string): Promise<UserR
   return rows[0] ?? null
 }
 
+export type UserConnections = {
+  listenbrainzUsername: string | null
+  listenbrainzToken: string | null
+  lastfmUsername: string | null
+  lastfmApiKey: string | null
+}
+
+export async function getUserConnections(
+  db: Database,
+  userId: number,
+): Promise<UserConnections | null> {
+  const [row] = await db
+    .select({
+      listenbrainzUsername: users.listenbrainzUsername,
+      listenbrainzToken: users.listenbrainzToken,
+      lastfmUsername: users.lastfmUsername,
+      lastfmApiKey: users.lastfmApiKey,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+  return row ?? null
+}
+
+export async function updateUserConnections(
+  db: Database,
+  userId: number,
+  data: Partial<UserConnections>,
+): Promise<void> {
+  await db.update(users).set(data).where(eq(users.id, userId))
+}
+
 export async function updateUser(
   db: Database,
   id: number,

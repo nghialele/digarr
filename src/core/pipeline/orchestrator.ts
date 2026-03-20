@@ -31,11 +31,19 @@ export interface PipelineSettings {
   skipTlsVerify?: boolean
 }
 
+export interface UserConnections {
+  listenbrainzUsername: string | null
+  listenbrainzToken: string | null
+  lastfmUsername: string | null
+  lastfmApiKey: string | null
+}
+
 export interface PipelineDeps {
   db: StoreDb
   settings: PipelineSettings
   userId?: number
   providerRegistry?: AiProviderRegistry
+  userConnections?: UserConnections | null
 }
 
 export class PipelineOrchestrator extends EventEmitter {
@@ -75,14 +83,19 @@ export class PipelineOrchestrator extends EventEmitter {
           ? createLidarrClient(settings.lidarrUrl, settings.lidarrApiKey, settings.skipTlsVerify)
           : null
 
+      // Per-user connections take precedence over global settings
+      const { userConnections } = deps
+      const lbUsername = userConnections?.listenbrainzUsername ?? settings.listenbrainzUsername
+      const lbToken = userConnections?.listenbrainzToken ?? settings.listenbrainzToken
+      const lfUsername = userConnections?.lastfmUsername ?? settings.lastfmUsername
+      const lfApiKey = userConnections?.lastfmApiKey ?? settings.lastfmApiKey
+
       const registry = new SourceRegistry()
-      if (settings.listenbrainzUsername && settings.listenbrainzToken) {
-        registry.register(
-          createListenBrainzSource(settings.listenbrainzUsername, settings.listenbrainzToken),
-        )
+      if (lbUsername && lbToken) {
+        registry.register(createListenBrainzSource(lbUsername, lbToken))
       }
-      if (settings.lastfmUsername && settings.lastfmApiKey) {
-        registry.register(createLastFmSource(settings.lastfmUsername, settings.lastfmApiKey))
+      if (lfUsername && lfApiKey) {
+        registry.register(createLastFmSource(lfUsername, lfApiKey))
       }
 
       const aiProvider =

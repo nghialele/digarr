@@ -22,6 +22,10 @@ const adminUser = {
   email: null,
   oidcSubject: null,
   authProvider: 'local' as const,
+  listenbrainzUsername: null,
+  listenbrainzToken: null,
+  lastfmUsername: null,
+  lastfmApiKey: null,
   createdAt: new Date(),
 }
 
@@ -33,6 +37,10 @@ const regularUser = {
   email: null,
   oidcSubject: null,
   authProvider: 'local' as const,
+  listenbrainzUsername: null,
+  listenbrainzToken: null,
+  lastfmUsername: null,
+  lastfmApiKey: null,
   createdAt: new Date(),
 }
 
@@ -64,6 +72,10 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       email: null,
       oidcSubject: null,
       authProvider: 'local',
+      listenbrainzUsername: null,
+      listenbrainzToken: null,
+      lastfmUsername: null,
+      lastfmApiKey: null,
       createdAt: new Date(),
     })),
     getUserByUsername: vi.fn(async () => null),

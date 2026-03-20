@@ -43,6 +43,10 @@ export const users = pgTable('users', {
   oidcSubject: text('oidc_subject'),
   authProvider: text('auth_provider').notNull().default('local'),
   preferences: jsonb('preferences').$type<Preferences>(),
+  listenbrainzUsername: text('listenbrainz_username'),
+  listenbrainzToken: text('listenbrainz_token'),
+  lastfmUsername: text('lastfm_username'),
+  lastfmApiKey: text('lastfm_api_key'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 

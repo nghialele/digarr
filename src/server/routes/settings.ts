@@ -4,6 +4,7 @@ import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
 import { sendWebhook } from '@/core/notifications'
 import { isHttpUrl } from '@/core/validation'
+import { getUserConnections, updateUserConnections } from '@/db/queries/users'
 import type { AppDependencies } from '@/server'
 
 const SECRET_FIELDS = [
@@ -24,15 +25,44 @@ function maskSecrets(settings: Record<string, unknown>): SettingsResponse {
   return masked
 }
 
+async function buildSettingsResponse(
+  deps: AppDependencies,
+  userId: number | undefined,
+): Promise<Record<string, unknown> | null> {
+  const row = await deps.getSettings()
+  if (!row) return null
+
+  const response: Record<string, unknown> = { ...(row as Record<string, unknown>) }
+
+  if (userId) {
+    const userConns = await getUserConnections(deps.db, userId)
+    if (userConns) {
+      if (userConns.listenbrainzUsername !== null) {
+        response.listenbrainzUsername = userConns.listenbrainzUsername
+        response.listenbrainzToken = userConns.listenbrainzToken
+        response._listenbrainzScope = 'user'
+      }
+      if (userConns.lastfmUsername !== null) {
+        response.lastfmUsername = userConns.lastfmUsername
+        response.lastfmApiKey = userConns.lastfmApiKey
+        response._lastfmScope = 'user'
+      }
+    }
+  }
+
+  return response
+}
+
 export function settingsRoutes(deps: AppDependencies) {
   const router = new Hono()
 
   router.get('/api/settings', async (c) => {
-    const row = await deps.getSettings()
-    if (!row) {
+    const userId = c.get('userId' as never) as number | undefined
+    const response = await buildSettingsResponse(deps, userId)
+    if (!response) {
       return c.json({ error: 'Settings not found' }, 404)
     }
-    return c.json(maskSecrets(row as Record<string, unknown>))
+    return c.json(maskSecrets(response))
   })
 
   const MUTABLE_FIELDS = new Set([
@@ -54,6 +84,13 @@ export function settingsRoutes(deps: AppDependencies) {
     'oidcScopes',
   ])
 
+  const USER_CONNECTION_FIELDS = new Set([
+    'listenbrainzUsername',
+    'listenbrainzToken',
+    'lastfmUsername',
+    'lastfmApiKey',
+  ])
+
   router.patch('/api/settings', async (c) => {
     const body = await c.req.json()
     const sanitized: Record<string, unknown> = {}
@@ -62,6 +99,33 @@ export function settingsRoutes(deps: AppDependencies) {
         sanitized[key] = value
       }
     }
+
+    const userId = c.get('userId' as never) as number | undefined
+    if (userId) {
+      const userUpdate: Record<string, string | null> = {}
+      const globalSanitized: Record<string, unknown> = {}
+
+      for (const [key, val] of Object.entries(sanitized)) {
+        if (USER_CONNECTION_FIELDS.has(key)) {
+          userUpdate[key] = (val as string | null | undefined) ?? null
+        } else {
+          globalSanitized[key] = val
+        }
+      }
+
+      if (Object.keys(userUpdate).length > 0) {
+        await updateUserConnections(deps.db, userId, userUpdate)
+      }
+
+      // Replace sanitized with only global fields
+      for (const key of Object.keys(sanitized)) {
+        delete sanitized[key]
+      }
+      for (const [key, val] of Object.entries(globalSanitized)) {
+        sanitized[key] = val
+      }
+    }
+
     await deps.updateSettings(sanitized)
 
     const prefs = sanitized.preferences as Record<string, unknown> | undefined
@@ -70,7 +134,7 @@ export function settingsRoutes(deps: AppDependencies) {
         deps.restartScheduler(prefs.scheduleCron || null)
       } catch (err: unknown) {
         console.error('Failed to apply cron expression:', err)
-        const row = await deps.getSettings()
+        const row = await buildSettingsResponse(deps, userId)
         return c.json({
           ...maskSecrets((row ?? {}) as Record<string, unknown>),
           warning: 'Settings saved but cron expression is invalid',
@@ -78,11 +142,11 @@ export function settingsRoutes(deps: AppDependencies) {
       }
     }
 
-    const row = await deps.getSettings()
-    if (!row) {
+    const response = await buildSettingsResponse(deps, userId)
+    if (!response) {
       return c.json({ error: 'Settings not found' }, 404)
     }
-    return c.json(maskSecrets(row as Record<string, unknown>))
+    return c.json(maskSecrets(response))
   })
 
   router.post('/api/settings/test/:service', async (c) => {

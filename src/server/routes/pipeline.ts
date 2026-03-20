@@ -8,6 +8,7 @@ import { resolve } from '@/core/pipeline/resolve'
 import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
 import { upsertArtist } from '@/db/queries/artists'
+import { getUserConnections } from '@/db/queries/users'
 import { DEFAULT_PREFERENCES } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import { createPipelineSSEStream } from '@/server/sse'
@@ -26,6 +27,7 @@ export function pipelineRoutes(deps: AppDependencies) {
     }
 
     const userId = c.get('userId' as never) as number | undefined
+    const userConnections = userId ? await getUserConnections(deps.db, userId) : null
 
     // Fire-and-forget
     deps.orchestrator
@@ -34,6 +36,7 @@ export function pipelineRoutes(deps: AppDependencies) {
         settings,
         userId,
         providerRegistry: deps.providerRegistry,
+        userConnections,
       } as unknown as PipelineDeps)
       .catch((err: unknown) => {
         console.error('Pipeline run failed:', err)

@@ -41,6 +41,8 @@ type Settings = {
   oidcScopes?: string
   preferences?: Partial<Preferences>
   setupComplete?: boolean
+  _listenbrainzScope?: 'user' | 'global'
+  _lastfmScope?: 'user' | 'global'
 }
 
 type Tab = 'connections' | 'recommendations' | 'schedule' | 'account' | 'auth'
@@ -416,7 +418,14 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
       <div className={isLbConfigured ? '' : 'opacity-60'}>
         <ServiceCard
           name="ListenBrainz"
-          description="Open-source listening history tracking"
+          description={
+            <span>
+              Open-source listening history tracking
+              {settings._listenbrainzScope === 'user' && (
+                <span className="text-xs text-accent ml-2">your account</span>
+              )}
+            </span>
+          }
           status={serviceStatus('listenbrainz')}
         >
           <div className="grid grid-cols-2 gap-3">
@@ -460,7 +469,14 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
       <div className={isLfConfigured ? '' : 'opacity-60'}>
         <ServiceCard
           name="Last.fm"
-          description="Music scrobbling and listening history"
+          description={
+            <span>
+              Music scrobbling and listening history
+              {settings._lastfmScope === 'user' && (
+                <span className="text-xs text-accent ml-2">your account</span>
+              )}
+            </span>
+          }
           status={serviceStatus('lastfm')}
         >
           <div className="grid grid-cols-2 gap-3">

@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clearAllSessions, createSession } from '@/core/sessions'
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'
 
@@ -58,6 +59,10 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       email: null,
       oidcSubject: null,
       authProvider: 'local',
+      listenbrainzUsername: null,
+      listenbrainzToken: null,
+      lastfmUsername: null,
+      lastfmApiKey: null,
       createdAt: new Date(),
     })),
     getUserByUsername: vi.fn(async () => null),
@@ -292,5 +297,141 @@ describe('POST /api/settings/test/:service', () => {
     // Test endpoints are exempted from setup guard so users can
     // verify connections during the setup wizard
     expect(res.status).toBe(200)
+  })
+})
+
+describe('per-user listening source connections', () => {
+  afterEach(async () => {
+    await clearAllSessions()
+  })
+
+  it('GET returns global settings with no scope indicators when no user session', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/settings')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.listenbrainzUsername).toBe('testuser')
+    expect(body._listenbrainzScope).toBeUndefined()
+    expect(body._lastfmScope).toBeUndefined()
+  })
+
+  it('PATCH passes listenbrainz fields to updateSettings when no user session', async () => {
+    const updateSettings = vi.fn(async () => {})
+    const app = createApp(makeDeps({ updateSettings }))
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        listenbrainzUsername: 'global-lb',
+        listenbrainzToken: 'global-token',
+      }),
+    })
+    expect(res.status).toBe(200)
+    // No user session -- listenbrainz fields go to global settings
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ listenbrainzUsername: 'global-lb' }),
+    )
+  })
+
+  it('PATCH excludes listenbrainz fields from global updateSettings when user is authenticated', async () => {
+    await clearAllSessions()
+    const sessionToken = 'patch-session-token-99'
+    await createSession(99, sessionToken)
+
+    const updateSettings = vi.fn(async () => {})
+    // db needs update() for updateUserConnections and select() for getUserConnections (in PATCH response)
+    const selectChain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    }
+    const dbWithUpdate = {
+      execute: vi.fn(async () => []),
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => Promise.resolve()),
+        })),
+      })),
+      select: vi.fn(() => selectChain),
+    } as unknown as AppDependencies['db']
+
+    const app = createApp(
+      makeDeps({
+        db: dbWithUpdate,
+        updateSettings,
+        getUserCount: vi.fn(async () => 1),
+      }),
+    )
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({
+        listenbrainzUsername: 'my-lb',
+        listenbrainzToken: 'my-token',
+        lidarrUrl: 'http://lidarr:8686',
+      }),
+    })
+    expect(res.status).toBe(200)
+    // lidarrUrl should go to global settings, listenbrainz fields should NOT
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ lidarrUrl: 'http://lidarr:8686' }),
+    )
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.not.objectContaining({ listenbrainzUsername: expect.anything() }),
+    )
+    // db.update was called (listenbrainz fields routed to user record)
+    expect(dbWithUpdate.update).toHaveBeenCalled()
+  })
+
+  it('PATCH excludes lastfm fields from global updateSettings when user is authenticated', async () => {
+    await clearAllSessions()
+    const sessionToken = 'patch-session-token-lfm'
+    await createSession(42, sessionToken)
+
+    const updateSettings = vi.fn(async () => {})
+    const selectChain2 = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    }
+    const dbWithUpdate = {
+      execute: vi.fn(async () => []),
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => Promise.resolve()),
+        })),
+      })),
+      select: vi.fn(() => selectChain2),
+    } as unknown as AppDependencies['db']
+
+    const app = createApp(
+      makeDeps({
+        db: dbWithUpdate,
+        updateSettings,
+        getUserCount: vi.fn(async () => 1),
+      }),
+    )
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({
+        lastfmUsername: 'my-lfm',
+        lastfmApiKey: 'my-key',
+      }),
+    })
+    expect(res.status).toBe(200)
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.not.objectContaining({ lastfmUsername: expect.anything() }),
+    )
+    expect(dbWithUpdate.update).toHaveBeenCalled()
   })
 })

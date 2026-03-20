@@ -43,6 +43,13 @@
       "when": 1773966178994,
       "tag": "0005_normal_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773966776100,
+      "tag": "0006_lumpy_cerebro",
+      "breakpoints": true
     }
   ]
 }
