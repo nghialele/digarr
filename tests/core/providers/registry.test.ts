@@ -80,9 +80,15 @@ describe('createDefaultRegistry', () => {
     expect(registry.has('ollama')).toBe(true)
   })
 
-  test('availableIds() returns all three built-in providers', () => {
+  test('availableIds() returns all built-in providers', () => {
     const registry = createDefaultRegistry()
-    expect(registry.availableIds().sort()).toEqual(['anthropic', 'ollama', 'openai'])
+    expect(registry.availableIds().sort()).toEqual([
+      'anthropic',
+      'gemini',
+      'ollama',
+      'openai',
+      'openai-compatible',
+    ])
   })
 
   test('creates AnthropicProvider for "anthropic"', async () => {

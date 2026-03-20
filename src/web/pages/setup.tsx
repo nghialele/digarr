@@ -293,8 +293,9 @@ function StepAi({
   testing: boolean
   onTest: () => void
 }) {
-  const needsApiKey = form.provider !== 'ollama'
-  const needsBaseUrl = form.provider === 'ollama'
+  const needsApiKey = form.provider !== 'ollama' && form.provider !== 'openai-compatible'
+  const apiKeyOptional = form.provider === 'openai-compatible'
+  const needsBaseUrl = form.provider === 'ollama' || form.provider === 'openai-compatible'
 
   const modelOptions: Record<string, Array<{ value: string; label: string }>> = {
     anthropic: [
@@ -343,6 +344,7 @@ function StepAi({
           <option value="openai">OpenAI</option>
           <option value="gemini">Google Gemini</option>
           <option value="ollama">Ollama (local)</option>
+          <option value="openai-compatible">OpenAI-Compatible</option>
         </Select>
       </Field>
       <Field label="Model" id="ai-model">
@@ -368,11 +370,11 @@ function StepAi({
           />
         )}
       </Field>
-      {needsApiKey && (
+      {(needsApiKey || apiKeyOptional) && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label htmlFor="ai-apikey" className="text-sm text-muted">
-              API Key
+              {apiKeyOptional ? 'API Key (optional)' : 'API Key'}
             </label>
             {link && (
               <a
@@ -399,11 +401,21 @@ function StepAi({
           <Input
             id="ai-baseurl"
             type="url"
-            placeholder="http://localhost:11434"
+            placeholder={
+              form.provider === 'openai-compatible'
+                ? 'http://localhost:8080'
+                : 'http://localhost:11434'
+            }
             value={form.baseUrl}
             onChange={(e) => onFormChange({ ...form, baseUrl: e.target.value })}
           />
         </Field>
+      )}
+      {form.provider === 'openai-compatible' && (
+        <p className="text-xs text-muted">
+          Works with Groq, OpenRouter, LiteLLM, LocalAI, and any OpenAI-compatible endpoint. API key
+          is optional for local services.
+        </p>
       )}
       <Button
         onClick={onTest}
@@ -573,8 +585,11 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       provider: form.ai.provider,
       model: form.ai.model,
     }
-    if (form.ai.provider !== 'ollama') config.apiKey = form.ai.apiKey
-    if (form.ai.provider === 'ollama') config.baseUrl = form.ai.baseUrl
+    if (form.ai.provider !== 'ollama' && form.ai.provider !== 'openai-compatible')
+      config.apiKey = form.ai.apiKey
+    if (form.ai.provider === 'openai-compatible' && form.ai.apiKey) config.apiKey = form.ai.apiKey
+    if (form.ai.provider === 'ollama' || form.ai.provider === 'openai-compatible')
+      config.baseUrl = form.ai.baseUrl
     try {
       const res = await testService('ai', config)
       if (res.success) {

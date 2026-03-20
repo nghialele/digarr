@@ -79,5 +79,15 @@ export function createDefaultRegistry(): AiProviderRegistry {
     },
   })
 
+  registry.register({
+    id: 'openai-compatible',
+    name: 'OpenAI-Compatible',
+    async create({ apiKey, model, baseUrl }) {
+      const { OpenAICompatibleProvider } = await import('./openai-compatible')
+      if (!baseUrl) throw new Error('OpenAI-Compatible requires a base URL')
+      return new OpenAICompatibleProvider(baseUrl, model, apiKey)
+    },
+  })
+
   return registry
 }

@@ -298,8 +298,9 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
 
   const testAi = createTester('ai', 'AI provider', () => {
     const config: Record<string, string> = { provider: aiProvider, model: aiModel }
-    if (aiProvider !== 'ollama') config.apiKey = aiApiKey
-    if (aiProvider === 'ollama') config.baseUrl = aiBaseUrl
+    if (aiProvider !== 'ollama' && aiProvider !== 'openai-compatible') config.apiKey = aiApiKey
+    if (aiProvider === 'openai-compatible' && aiApiKey) config.apiKey = aiApiKey
+    if (aiProvider === 'ollama' || aiProvider === 'openai-compatible') config.baseUrl = aiBaseUrl
     return testService('ai', config)
   })
   const saveAi = createSaver('ai', 'AI', () =>
@@ -532,6 +533,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
                 <option value="openai">OpenAI</option>
                 <option value="gemini">Google Gemini</option>
                 <option value="ollama">Ollama (local)</option>
+                <option value="openai-compatible">OpenAI-Compatible</option>
               </Select>
             </Field>
             <Field label="Model" id="ai-model">
@@ -544,7 +546,9 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
                       ? 'gpt-4o-mini'
                       : aiProvider === 'gemini'
                         ? 'gemini-2.0-flash'
-                        : 'llama3.2'
+                        : aiProvider === 'openai-compatible'
+                          ? 'your-model-name'
+                          : 'llama3.2'
                 }
                 value={aiModel}
                 onChange={(e) => setAiModel(e.target.value)}
@@ -552,7 +556,10 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
             </Field>
           </div>
           {aiProvider !== 'ollama' && (
-            <Field label="API Key" id="ai-apikey">
+            <Field
+              label={aiProvider === 'openai-compatible' ? 'API Key (optional)' : 'API Key'}
+              id="ai-apikey"
+            >
               <Input
                 id="ai-apikey"
                 type="password"
@@ -562,16 +569,26 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               />
             </Field>
           )}
-          {aiProvider === 'ollama' && (
+          {(aiProvider === 'ollama' || aiProvider === 'openai-compatible') && (
             <Field label="Base URL" id="ai-baseurl">
               <Input
                 id="ai-baseurl"
                 type="url"
-                placeholder="http://localhost:11434"
+                placeholder={
+                  aiProvider === 'openai-compatible'
+                    ? 'http://localhost:8080'
+                    : 'http://localhost:11434'
+                }
                 value={aiBaseUrl}
                 onChange={(e) => setAiBaseUrl(e.target.value)}
               />
             </Field>
+          )}
+          {aiProvider === 'openai-compatible' && (
+            <p className="text-xs text-muted">
+              Works with Groq, OpenRouter, LiteLLM, LocalAI, and any OpenAI-compatible endpoint. API
+              key is optional for local services.
+            </p>
           )}
           <div className="flex justify-end gap-2 pt-1">
             <Button size="sm" variant="outline" onClick={testAi} disabled={tests.ai === 'testing'}>
