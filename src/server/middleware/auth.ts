@@ -23,8 +23,13 @@ const PUBLIC_PATHS = new Set([
 
 export function authGuard(hasUsers: () => Promise<boolean>) {
   return createMiddleware<HonoEnv>(async (c, next) => {
-    // Skip auth for non-API paths (static assets, SPA routes) and public API paths
-    if (!c.req.path.startsWith('/api/') || PUBLIC_PATHS.has(c.req.path)) return next()
+    // Skip auth for non-API paths (static assets, SPA routes), public API paths, and OAuth callbacks
+    if (
+      !c.req.path.startsWith('/api/') ||
+      PUBLIC_PATHS.has(c.req.path) ||
+      c.req.path.startsWith('/api/auth/oauth/')
+    )
+      return next()
 
     // Proxy auth already validated upstream -- skip token checks
     const proxyAuthed = c.get('proxyAuth')

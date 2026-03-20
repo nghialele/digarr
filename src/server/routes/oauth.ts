@@ -1,0 +1,174 @@
+import { Hono } from 'hono'
+import { deleteOAuthToken, getOAuthToken, upsertOAuthToken } from '@/db/queries/oauth-tokens'
+import type { AppDependencies } from '@/server'
+import type { HonoEnv } from '@/server/types'
+
+const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize'
+const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
+const SPOTIFY_SCOPES = 'user-top-read user-read-recently-played'
+
+export function oauthRoutes(deps: AppDependencies) {
+  const router = new Hono<HonoEnv>()
+
+  // Initiate OAuth flow for a provider
+  router.post('/api/auth/oauth/:provider/initiate', async (c) => {
+    const provider = c.req.param('provider')
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Authentication required' }, 401)
+
+    const body = await c.req.json()
+    const { clientId, clientSecret, redirectUri } = body as {
+      clientId: string
+      clientSecret: string
+      redirectUri: string
+    }
+
+    if (!clientId || !clientSecret || !redirectUri) {
+      return c.json({ error: 'clientId, clientSecret, and redirectUri are required' }, 400)
+    }
+
+    switch (provider) {
+      case 'spotify': {
+        const state = `${userId}:${crypto.randomUUID()}`
+        // Store client credentials temporarily so the callback can use them
+        await upsertOAuthToken(deps.db, {
+          userId,
+          provider: 'spotify',
+          accessToken: `pending:${state}`,
+          refreshToken: redirectUri, // stash redirect URI for callback
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          scopes: SPOTIFY_SCOPES,
+          clientId,
+          clientSecret,
+        })
+
+        const params = new URLSearchParams({
+          response_type: 'code',
+          client_id: clientId,
+          scope: SPOTIFY_SCOPES,
+          redirect_uri: redirectUri,
+          state,
+        })
+
+        return c.json({ authUrl: `${SPOTIFY_AUTH_URL}?${params}` })
+      }
+      default:
+        return c.json({ error: `Unknown OAuth provider: ${provider}` }, 400)
+    }
+  })
+
+  // OAuth callback -- exchanges code for tokens
+  router.get('/api/auth/oauth/:provider/callback', async (c) => {
+    const provider = c.req.param('provider')
+    const code = c.req.query('code')
+    const state = c.req.query('state')
+    const error = c.req.query('error')
+
+    if (error) {
+      return c.redirect(`/settings?oauth_error=${encodeURIComponent(error)}`)
+    }
+
+    if (!code || !state) {
+      return c.redirect('/settings?oauth_error=missing_code_or_state')
+    }
+
+    const [userIdStr] = state.split(':')
+    const userId = Number.parseInt(userIdStr ?? '', 10)
+    if (!userId || Number.isNaN(userId)) {
+      return c.redirect('/settings?oauth_error=invalid_state')
+    }
+
+    switch (provider) {
+      case 'spotify': {
+        const pending = await getOAuthToken(deps.db, userId, 'spotify')
+        if (!pending || !pending.accessToken.startsWith('pending:')) {
+          return c.redirect('/settings?oauth_error=no_pending_auth')
+        }
+
+        // CSRF: verify the state matches
+        if (pending.accessToken !== `pending:${state}`) {
+          return c.redirect('/settings?oauth_error=state_mismatch')
+        }
+
+        const { clientId, clientSecret } = pending
+        if (!clientId || !clientSecret) {
+          return c.redirect('/settings?oauth_error=missing_credentials')
+        }
+
+        // Reuse the exact redirect URI from initiate (stored in refreshToken during pending)
+        const redirectUri =
+          pending.refreshToken ??
+          `${c.req.header('x-forwarded-proto') ?? 'http'}://${c.req.header('host')}/api/auth/oauth/spotify/callback`
+
+        const tokenRes = await fetch(SPOTIFY_TOKEN_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+          },
+          body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: redirectUri,
+          }),
+        })
+
+        if (!tokenRes.ok) {
+          const errorBody = await tokenRes.text()
+          console.error(`Spotify token exchange failed: ${tokenRes.status} ${errorBody}`)
+          return c.redirect('/settings?oauth_error=token_exchange_failed')
+        }
+
+        const tokenData = (await tokenRes.json()) as {
+          access_token: string
+          refresh_token: string
+          expires_in: number
+          scope: string
+          token_type: string
+        }
+
+        await upsertOAuthToken(deps.db, {
+          userId,
+          provider: 'spotify',
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token,
+          expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+          scopes: tokenData.scope,
+          clientId,
+          clientSecret,
+        })
+
+        return c.redirect('/settings?oauth_success=spotify')
+      }
+      default:
+        return c.redirect('/settings?oauth_error=unknown_provider')
+    }
+  })
+
+  // Disconnect an OAuth provider
+  router.delete('/api/auth/oauth/:provider', async (c) => {
+    const provider = c.req.param('provider')
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Authentication required' }, 401)
+
+    await deleteOAuthToken(deps.db, userId, provider)
+    return c.json({ success: true })
+  })
+
+  // Check OAuth connection status
+  router.get('/api/auth/oauth/:provider/status', async (c) => {
+    const provider = c.req.param('provider')
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Authentication required' }, 401)
+
+    const token = await getOAuthToken(deps.db, userId, provider)
+    const connected = !!token && !token.accessToken.startsWith('pending:')
+    return c.json({
+      connected,
+      scopes: connected ? token?.scopes : null,
+      expiresAt: connected ? token?.expiresAt : null,
+    })
+  })
+
+  return router
+}

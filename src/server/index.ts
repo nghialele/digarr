@@ -36,6 +36,7 @@ import { healthRoutes } from './routes/health'
 import { libraryRoutes } from './routes/library'
 import { lidarrRoutes } from './routes/lidarr'
 import { listeningRoutes } from './routes/listening'
+import { oauthRoutes } from './routes/oauth'
 import { oidcRoutes } from './routes/oidc'
 import { pipelineRoutes } from './routes/pipeline'
 import { recommendationRoutes } from './routes/recommendations'
@@ -203,6 +204,7 @@ export function createApp(deps: AppDependencies) {
     }),
   )
   app.route('/', authRoutes(deps))
+  app.route('/', oauthRoutes(deps))
   app.route('/', healthRoutes({ db: deps.db }))
   app.route('/', setupRoutes(deps))
   app.route('/', settingsRoutes(deps))
