@@ -8,6 +8,7 @@ import {
   serial,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core'
 
@@ -47,6 +48,13 @@ export const users = pgTable('users', {
   listenbrainzToken: text('listenbrainz_token'),
   lastfmUsername: text('lastfm_username'),
   lastfmApiKey: text('lastfm_api_key'),
+  plexUrl: text('plex_url'),
+  plexToken: text('plex_token'),
+  jellyfinUrl: text('jellyfin_url'),
+  jellyfinApiKey: text('jellyfin_api_key'),
+  jellyfinUserId: text('jellyfin_user_id'),
+  discogsToken: text('discogs_token'),
+  discogsUsername: text('discogs_username'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
@@ -182,6 +190,26 @@ export const oidcTokens = pgTable('oidc_tokens', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
+
+export const oauthTokens = pgTable(
+  'oauth_tokens',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    provider: text('provider').notNull(),
+    accessToken: text('access_token').notNull(),
+    refreshToken: text('refresh_token'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    scopes: text('scopes'),
+    clientId: text('client_id'),
+    clientSecret: text('client_secret'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique('oauth_tokens_user_provider').on(t.userId, t.provider)],
+)
 
 // Types
 export type Preferences = {
