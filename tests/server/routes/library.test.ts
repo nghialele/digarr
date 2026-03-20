@@ -104,6 +104,15 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     updatePassword: vi.fn(async () => {}),
     genreService: {} as unknown as AppDependencies['genreService'],
     libraryHealth: makeMockLibraryHealth() as unknown as AppDependencies['libraryHealth'],
+    targetQueries: {
+      createTarget: vi.fn().mockResolvedValue({ id: 1 }),
+      getTargetsByUser: vi.fn().mockResolvedValue([]),
+      getTarget: vi.fn().mockResolvedValue(null),
+      updateTarget: vi.fn().mockResolvedValue(undefined),
+      deleteTarget: vi.fn().mockResolvedValue(undefined),
+    },
+    testTargetConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    getEnabledTargetsForUser: vi.fn().mockResolvedValue([]),
     subscriptionQueries: {
       createSubscription: vi.fn(async () => ({}) as never),
       getSubscription: vi.fn(async () => null),

@@ -3,6 +3,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { envConfig } from '@/config/env'
+import type { ServiceTestResult } from '@/core/types'
 import type { OidcService } from '@/core/auth/oidc'
 import type { GenreService } from '@/core/genre/service'
 import type { LibraryHealthService } from '@/core/library/health'
@@ -18,6 +19,7 @@ import type {
 } from '@/db/queries/recommendations'
 import type { SetupConfig } from '@/db/queries/settings'
 import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
+import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
 import type { UserPublic } from '@/db/queries/users'
 import { VERSION } from '@/version'
 import { authGuard } from './middleware/auth'
@@ -39,6 +41,7 @@ import { recommendationRoutes } from './routes/recommendations'
 import { settingsRoutes } from './routes/settings'
 import { setupRoutes } from './routes/setup'
 import { subscriptionRoutes } from './routes/subscriptions'
+import { targetRoutes } from './routes/targets'
 import { userRoutes } from './routes/users'
 import type { HonoEnv } from './types'
 
@@ -108,6 +111,21 @@ export type AppDependencies = {
   }
   // Manual subscription trigger
   runSubscription: (id: number) => Promise<void>
+  // Target management
+  targetQueries: {
+    createTarget: (data: TargetInsert) => Promise<{ id: number }>
+    getTargetsByUser: (userId: number) => Promise<TargetRow[]>
+    getTarget: (id: number) => Promise<TargetRow | null>
+    updateTarget: (id: number, data: TargetUpdate) => Promise<void>
+    deleteTarget: (id: number) => Promise<void>
+  }
+  testTargetConnection: (
+    type: string,
+    config: Record<string, unknown>,
+  ) => Promise<ServiceTestResult>
+  getEnabledTargetsForUser: (
+    userId: number,
+  ) => Promise<import('@/core/targets/types').DestinationTarget[]>
 }
 
 export function createApp(deps: AppDependencies) {
@@ -197,6 +215,7 @@ export function createApp(deps: AppDependencies) {
   app.route('/', genreRoutes(deps))
   app.route('/', subscriptionRoutes(deps))
   app.route('/', userRoutes(deps))
+  app.route('/', targetRoutes(deps))
   app.route(
     '/',
     libraryRoutes({ libraryHealth: deps.libraryHealth, skyhookWarmer: deps.skyhookWarmer }),

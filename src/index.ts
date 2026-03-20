@@ -5,6 +5,7 @@ import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
 import { OidcService } from './core/auth/oidc'
 import { createLidarrClient } from './core/clients/lidarr'
+import { createLidarrTarget } from './core/targets/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
 import { runGenreSubscription } from './core/genre/subscription-runner'
@@ -51,6 +52,15 @@ import {
   insertRun,
   updateSubscription,
 } from './db/queries/subscriptions'
+import {
+  createTarget,
+  deleteTarget,
+  getTarget,
+  getTargetsByType,
+  getTargetsByUser,
+  updateTarget,
+} from './db/queries/targets'
+import type { TargetInsert } from './db/queries/targets'
 import {
   createUser,
   deleteUser,
@@ -339,6 +349,49 @@ const app = createApp({
   skyhookWarmer,
   subscriptionQueries: subscriptionQueriesImpl,
   runSubscription: (id) => executeSubscription(id),
+  targetQueries: {
+    createTarget: (data: TargetInsert) => createTarget(db, data),
+    getTargetsByUser: (userId: number) => getTargetsByUser(db, userId),
+    getTarget: (id: number) => getTarget(db, id),
+    updateTarget: (id: number, data: Parameters<typeof updateTarget>[2]) =>
+      updateTarget(db, id, data),
+    deleteTarget: (id: number) => deleteTarget(db, id),
+  },
+  testTargetConnection: async (type, config) => {
+    if (type === 'lidarr') {
+      const target = createLidarrTarget(0, {
+        url: config.url as string,
+        apiKey: config.apiKey as string,
+        skipTlsVerify: (config.skipTlsVerify as boolean) ?? false,
+      })
+      return target.testConnection()
+    }
+    return { success: false, message: `Unknown target type: ${type}` }
+  },
+  getEnabledTargetsForUser: async (userId) => {
+    const rows = await getTargetsByUser(db, userId)
+    const settings = await getSettings(db)
+    const prefs = (settings?.preferences ?? {}) as Record<string, unknown>
+
+    const targets: import('./core/targets/types').DestinationTarget[] = []
+    for (const row of rows) {
+      if (!row.enabled) continue
+      if (row.type === 'lidarr') {
+        targets.push(
+          createLidarrTarget(row.id, {
+            url: row.config.url as string,
+            apiKey: row.config.apiKey as string,
+            skipTlsVerify: (row.config.skipTlsVerify as boolean) ?? false,
+            qualityProfileId: Number(prefs.qualityProfileId ?? 1),
+            metadataProfileId: Number(prefs.metadataProfileId ?? 1),
+            rootFolderId: Number(prefs.rootFolderId ?? 1),
+          }),
+        )
+      }
+      // Future: navidrome, jellyfin targets registered here
+    }
+    return targets
+  },
 })
 
 const port = envConfig.port
