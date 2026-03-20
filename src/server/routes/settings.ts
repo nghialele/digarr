@@ -14,6 +14,9 @@ const SECRET_FIELDS = [
   'lastfmApiKey',
   'aiApiKey',
   'oidcClientSecret',
+  'plexToken',
+  'jellyfinApiKey',
+  'discogsToken',
 ] as const
 
 type SettingsResponse = Record<string, unknown>
@@ -47,6 +50,22 @@ async function buildSettingsResponse(
         response.lastfmUsername = userConns.lastfmUsername
         response.lastfmApiKey = userConns.lastfmApiKey
         response._lastfmScope = 'user'
+      }
+      if (userConns.plexUrl !== null) {
+        response.plexUrl = userConns.plexUrl
+        response.plexToken = userConns.plexToken
+        response._plexScope = 'user'
+      }
+      if (userConns.jellyfinUrl !== null) {
+        response.jellyfinUrl = userConns.jellyfinUrl
+        response.jellyfinApiKey = userConns.jellyfinApiKey
+        response.jellyfinUserId = userConns.jellyfinUserId
+        response._jellyfinScope = 'user'
+      }
+      if (userConns.discogsUsername !== null) {
+        response.discogsUsername = userConns.discogsUsername
+        response.discogsToken = userConns.discogsToken
+        response._discogsScope = 'user'
       }
     }
   }
@@ -83,6 +102,13 @@ export function settingsRoutes(deps: AppDependencies) {
     'oidcClientId',
     'oidcClientSecret',
     'oidcScopes',
+    'plexUrl',
+    'plexToken',
+    'jellyfinUrl',
+    'jellyfinApiKey',
+    'jellyfinUserId',
+    'discogsToken',
+    'discogsUsername',
   ])
 
   const USER_CONNECTION_FIELDS = new Set([
@@ -90,6 +116,13 @@ export function settingsRoutes(deps: AppDependencies) {
     'listenbrainzToken',
     'lastfmUsername',
     'lastfmApiKey',
+    'plexUrl',
+    'plexToken',
+    'jellyfinUrl',
+    'jellyfinApiKey',
+    'jellyfinUserId',
+    'discogsToken',
+    'discogsUsername',
   ])
 
   router.patch('/api/settings', async (c) => {

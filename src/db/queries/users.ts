@@ -95,6 +95,13 @@ export type UserConnections = {
   listenbrainzToken: string | null
   lastfmUsername: string | null
   lastfmApiKey: string | null
+  plexUrl: string | null
+  plexToken: string | null
+  jellyfinUrl: string | null
+  jellyfinApiKey: string | null
+  jellyfinUserId: string | null
+  discogsToken: string | null
+  discogsUsername: string | null
 }
 
 export async function getUserConnections(
@@ -107,6 +114,13 @@ export async function getUserConnections(
       listenbrainzToken: users.listenbrainzToken,
       lastfmUsername: users.lastfmUsername,
       lastfmApiKey: users.lastfmApiKey,
+      plexUrl: users.plexUrl,
+      plexToken: users.plexToken,
+      jellyfinUrl: users.jellyfinUrl,
+      jellyfinApiKey: users.jellyfinApiKey,
+      jellyfinUserId: users.jellyfinUserId,
+      discogsToken: users.discogsToken,
+      discogsUsername: users.discogsUsername,
     })
     .from(users)
     .where(eq(users.id, userId))

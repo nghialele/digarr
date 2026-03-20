@@ -37,6 +37,13 @@ export interface UserConnections {
   listenbrainzToken: string | null
   lastfmUsername: string | null
   lastfmApiKey: string | null
+  plexUrl: string | null
+  plexToken: string | null
+  jellyfinUrl: string | null
+  jellyfinApiKey: string | null
+  jellyfinUserId: string | null
+  discogsToken: string | null
+  discogsUsername: string | null
 }
 
 export interface PipelineDeps {
