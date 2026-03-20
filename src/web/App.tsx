@@ -22,13 +22,7 @@ import { KeyboardShortcuts } from './components/keyboard-shortcuts'
 import { PreviewPlayer } from './components/preview-player'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
 import { usePreview } from './hooks/use-preview'
-import {
-  getCurrentUser,
-  getLibraryHealth,
-  getPipelineStatus,
-  getSetupStatus,
-  triggerPipeline,
-} from './lib/api'
+import { getCurrentUser, getPipelineStatus, getSetupStatus, triggerPipeline } from './lib/api'
 import { PreviewContext } from './lib/preview-context'
 import { queryClient } from './lib/query-client'
 import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
@@ -109,12 +103,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     queryFn: getPipelineStatus,
     refetchInterval: (query) => (query.state.data?.running ? 3000 : 15000),
   })
-  const { data: healthStatus } = useQuery({
-    queryKey: ['library', 'health'],
-    queryFn: getLibraryHealth,
-    refetchInterval: (query) => (query.state.data?.scanning ? 3000 : false),
-  })
-  const anyScanRunning = pipelineStatus?.running || healthStatus?.scanning
+  const pipelineRunning = pipelineStatus?.running ?? false
 
   useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
 
@@ -205,7 +194,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <ThemeToggle theme={theme} onChange={handleThemeChange} />
               <button
                 type="button"
-                disabled={!!anyScanRunning}
+                disabled={!!pipelineRunning}
                 onClick={() =>
                   triggerPipeline()
                     .then(() => toast.success('Scan started -- check Dashboard for progress'))
@@ -216,7 +205,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 }
                 className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-60"
               >
-                {anyScanRunning ? (
+                {pipelineRunning ? (
                   <>
                     <RefreshCw size={14} className="animate-spin" />
                     <span className="hidden sm:inline">Scanning...</span>

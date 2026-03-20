@@ -3,6 +3,16 @@ import { useState } from 'react'
 import type { HealthCheckItem, HealthCheckResult } from '../lib/api'
 import { Button } from './ui/button'
 
+const FIX_HINTS: Record<string, string> = {
+  'missing-metadata': 'Triggers a metadata refresh in Lidarr for each affected artist',
+  'stale-mbids': 'Triggers a metadata refresh in Lidarr to re-sync MBIDs',
+  unmonitored: 'Sets all listed artists to monitored in Lidarr',
+  'missing-albums': 'Triggers an album search in Lidarr for each affected artist',
+  'genre-gaps': 'Triggers a metadata refresh in Lidarr to fetch genre tags',
+  'image-gaps':
+    'Looks up artist images via Lidarr and saves them locally. Some artists may not have images available on fanart.tv.',
+}
+
 const CHECK_ICONS: Record<string, React.ReactNode> = {
   'missing-metadata': <Search size={16} className="text-muted shrink-0" />,
   'stale-mbids': <AlertTriangle size={16} className="text-muted shrink-0" />,
@@ -121,9 +131,12 @@ export function HealthCheckCard({ check, onFix, fixing, lidarrBaseUrl }: Props) 
         </button>
       )}
 
-      {/* Fix button */}
+      {/* Fix button + hint */}
       {check.fixable && (
-        <div className="pt-1">
+        <div className="pt-1 space-y-1.5">
+          {FIX_HINTS[check.id] && (
+            <p className="text-xs text-muted italic">{FIX_HINTS[check.id]}</p>
+          )}
           <Button
             size="sm"
             variant="outline"

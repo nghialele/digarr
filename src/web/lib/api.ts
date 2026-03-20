@@ -263,8 +263,18 @@ export type LibraryStats = {
 export const getLibraryHealth = () => fetchApi<HealthCheckResponse>('/library/health')
 export const scanLibraryHealth = () =>
   fetchApi<{ scanning: boolean }>('/library/health/scan', { method: 'POST' })
+export type HealthFixResult = {
+  checkId: string
+  total: number
+  completed: number
+  failed: number
+  status: 'completed' | 'failed'
+  errors: string[]
+}
 export const fixHealthCheck = (checkId: string) =>
-  fetchApi<unknown>(`/library/health/${encodeURIComponent(checkId)}/fix`, { method: 'POST' })
+  fetchApi<HealthFixResult>(`/library/health/${encodeURIComponent(checkId)}/fix`, {
+    method: 'POST',
+  })
 export const getLibraryStats = () => fetchApi<LibraryStats>('/library/stats')
 
 // Genres

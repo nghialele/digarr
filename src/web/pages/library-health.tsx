@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
 import { HealthCheckCard } from '../components/health-check-card'
 import { LibraryStatsDisplay } from '../components/library-stats'
 import { Skeleton } from '../components/ui/skeleton'
@@ -9,6 +10,7 @@ import {
   getLibraryStats,
   getSettings,
   type HealthCheckResult,
+  type HealthFixResult,
   type LibraryStats,
   scanLibraryHealth,
 } from '../lib/api'
@@ -80,7 +82,17 @@ export function LibraryHealthPage() {
 
   const fixMutation = useMutation({
     mutationFn: (checkId: string) => fixHealthCheck(checkId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['library', 'health'] }),
+    onSuccess: (data: HealthFixResult) => {
+      queryClient.invalidateQueries({ queryKey: ['library', 'health'] })
+      if (data.failed === 0) {
+        toast.success(`Fixed ${data.completed} of ${data.total} items`)
+      } else {
+        toast.warning(`Fixed ${data.completed}, failed ${data.failed} of ${data.total}`, {
+          description: data.errors.slice(0, 3).join('; '),
+        })
+      }
+    },
+    onError: () => toast.error('Fix failed -- check Lidarr connection'),
   })
 
   const scanning = healthQuery.data?.scanning ?? false
