@@ -110,11 +110,7 @@ export function recommendationRoutes(deps: AppDependencies) {
 
       // Use Lidarr-specific statuses for backward compat when Lidarr is involved
       const hasLidarr = targets.some((t) => t.type === 'lidarr')
-      const finalStatus = anySuccess
-        ? hasLidarr
-          ? 'added_to_lidarr'
-          : 'approved'
-        : 'add_failed'
+      const finalStatus = anySuccess ? (hasLidarr ? 'added_to_lidarr' : 'approved') : 'add_failed'
       await deps.updateRecommendationStatus(id, finalStatus, extra)
       return c.json({
         status: finalStatus,

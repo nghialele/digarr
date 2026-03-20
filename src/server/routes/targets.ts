@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
-import type { HonoEnv } from '@/server/types'
-import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
 import type { ServiceTestResult } from '@/core/types'
+import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
+import type { HonoEnv } from '@/server/types'
 
 const VALID_TARGET_TYPES = new Set(['lidarr', 'navidrome', 'jellyfin', 'export'])
 

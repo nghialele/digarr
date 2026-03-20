@@ -154,9 +154,7 @@ function StepLidarr({
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold text-text">Connect Lidarr</h2>
-        <p className="text-sm text-muted mt-1">
-          Lidarr manages your music library and downloads.
-        </p>
+        <p className="text-sm text-muted mt-1">Lidarr manages your music library and downloads.</p>
       </div>
       <Field label="Lidarr URL" id="lidarr-url">
         <Input

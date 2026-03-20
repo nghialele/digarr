@@ -25,6 +25,10 @@ vi.mock('@/web/lib/api', () => ({
   getLidarrRootFolders: vi.fn(),
   triggerPipeline: vi.fn(),
   getStoredToken: vi.fn(() => null),
+  listTargets: vi.fn().mockResolvedValue([]),
+  deleteTargetApi: vi.fn().mockResolvedValue(undefined),
+  testTargetApi: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+  exportRecommendations: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('sonner', () => ({
