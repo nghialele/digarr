@@ -32,7 +32,11 @@ export function createJellyfinTarget(
         for (const item of items) {
           const query = item.trackName ? `${item.artistName} ${item.trackName}` : item.artistName
           const tracks = await client.searchTracks(query, 10)
-          for (const track of tracks) {
+          // Filter by artist name to avoid fuzzy-match false positives
+          const filtered = tracks.filter((t) =>
+            t.ArtistItems.some((a) => a.Name.toLowerCase() === item.artistName.toLowerCase()),
+          )
+          for (const track of filtered) {
             trackIds.push(track.Id)
           }
         }

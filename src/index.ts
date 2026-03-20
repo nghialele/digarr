@@ -397,6 +397,14 @@ const app = createApp({
       return target.testConnection()
     }
 
+    if (type === 'spotify-playlist') {
+      // Spotify test requires OAuth -- can't test from config alone
+      return {
+        success: false,
+        message: 'Spotify targets require OAuth connection. Use Settings > Connections to connect Spotify first.',
+      }
+    }
+
     return { success: false, message: `Unknown target type: ${type}` }
   },
   getEnabledTargetsForUser: async (userId) => {

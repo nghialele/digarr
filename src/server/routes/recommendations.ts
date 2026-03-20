@@ -208,6 +208,8 @@ export function recommendationRoutes(deps: AppDependencies) {
 
       const targetActions: Record<string, unknown> = {}
       let anySuccess = false
+      let lidarrArtistId: number | string | undefined
+      let lidarrError: string | undefined
 
       for (const target of effectiveTargets) {
         if (!target.capabilities?.includes('addArtist')) continue
@@ -223,14 +225,9 @@ export function recommendationRoutes(deps: AppDependencies) {
         }
         if (result.success) anySuccess = true
 
-        // Backward compat: Lidarr-specific columns
         if (target.type === 'lidarr') {
-          const extra: Record<string, unknown> = { targetActions }
-          if (result.success && result.externalId) {
-            extra.lidarrArtistId = result.externalId
-          } else if (result.error) {
-            extra.lidarrError = result.error
-          }
+          if (result.success && result.externalId) lidarrArtistId = result.externalId
+          if (result.error) lidarrError = result.error
         }
       }
 
@@ -251,7 +248,10 @@ export function recommendationRoutes(deps: AppDependencies) {
 
       const hasLidarr = effectiveTargets.some((t) => t.type === 'lidarr')
       const status = anySuccess ? (hasLidarr ? 'added_to_lidarr' : 'approved') : 'add_failed'
-      await deps.updateRecommendationStatus(id, status, { targetActions })
+      const extra: Record<string, unknown> = { targetActions }
+      if (lidarrArtistId) extra.lidarrArtistId = lidarrArtistId
+      if (lidarrError) extra.lidarrError = lidarrError
+      await deps.updateRecommendationStatus(id, status, extra)
       results.push({ id, status })
     }
 
