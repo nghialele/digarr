@@ -25,6 +25,8 @@ Digarr was inspired by and builds on ideas from some great projects in the self-
 - [**Mixarr**](https://github.com/aquantumofdonuts/mixarr) -- the trailblazer for AI-powered music discovery with *arr integration. Supports a wide range of listening sources and multi-user.
 - [**Aurral**](https://github.com/lklynet/aurral) -- artist discovery and request manager for Lidarr with tag similarity and Soulseek/Navidrome flows.
 - [**Lidify**](https://github.com/TheWicklowWolf/Lidify) -- music discovery based on selected Lidarr artists via Spotify or Last.fm.
+- [**Explo**](https://github.com/LumePart/Explo) -- Spotify's "Discover Weekly" for self-hosted music systems.
+- [**Yoink**](https://github.com/FlyinPancake/yoink) -- self-hosted music library manager with multiple metadata sources.
 - [**Kima Hub**](https://github.com/Chevron7Locked/kima-hub) -- self-hosted music streaming with artist discovery, personalized playlists, and Lidarr integration.
 - [**Soularr**](https://github.com/mrusse/soularr) -- bridges Lidarr wanted lists to Soulseek downloads.
 - [**MusicMoveArr Datasets**](https://github.com/MusicMoveArr/Datasets) -- MusicBrainz/Spotify/Deezer/Tidal datasets used by digarr for genre gap filling and popularity scoring.
