@@ -1,8 +1,8 @@
+import { SESSION_TTL_MS } from '@/db/queries/sessions'
 import type { SessionStore } from '@/db/queries/sessions'
 
 // In-memory fallback for tests and boot-time before DB is ready
 const memSessions = new Map<string, { userId: number; createdAt: number }>()
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 let dbStore: SessionStore | null = null
 

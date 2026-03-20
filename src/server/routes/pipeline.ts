@@ -88,6 +88,18 @@ export function pipelineRoutes(deps: AppDependencies) {
     if (!settings) {
       return c.json({ error: 'Settings not found' }, 400)
     }
+
+    const quickDiscoverUserId = c.get('userId' as never) as number | undefined
+    const quickDiscoverUserConns = quickDiscoverUserId
+      ? await getUserConnections(deps.db, quickDiscoverUserId)
+      : null
+
+    // Override global listening source credentials with per-user values if present
+    const lastfmApiKey =
+      (quickDiscoverUserConns?.lastfmApiKey ?? (settings.lastfmApiKey as string | null)) ?? null
+    const lastfmUsername =
+      (quickDiscoverUserConns?.lastfmUsername ?? (settings.lastfmUsername as string | null)) ?? ''
+
     // Fire-and-forget a focused pipeline run with just this artist as seed
     ;(async () => {
       try {
@@ -103,18 +115,18 @@ export function pipelineRoutes(deps: AppDependencies) {
 
         // Get similar from Last.fm
         const discovered = []
-        if (settings.lastfmApiKey && settings.lastfmApiKey !== '***') {
+        if (lastfmApiKey && lastfmApiKey !== '***') {
           const lfm = createLastFmClient(
-            (settings.lastfmUsername as string) ?? '',
-            settings.lastfmApiKey as string,
+            lastfmUsername,
+            lastfmApiKey,
           )
           try {
             const similar = await lfm.getSimilarArtists(artistName)
             for (const s of similar) {
               discovered.push(s)
             }
-          } catch {
-            // skip
+          } catch (err: unknown) {
+            console.warn('Last.fm similar artists lookup failed:', err instanceof Error ? err.message : err)
           }
         }
 
@@ -139,8 +151,8 @@ export function pipelineRoutes(deps: AppDependencies) {
                 source: 'ai' as const,
               })
             }
-          } catch {
-            // skip
+          } catch (err: unknown) {
+            console.warn('AI recommendation failed:', err instanceof Error ? err.message : err)
           }
         }
 
@@ -172,9 +184,8 @@ export function pipelineRoutes(deps: AppDependencies) {
           prefs.scoreThreshold,
         )
 
-        const userId = c.get('userId' as never) as number | undefined
         if (filtered.length > 0) {
-          await store(filtered, deps.storeDb, { userId })
+          await store(filtered, deps.storeDb, { userId: quickDiscoverUserId })
         }
       } catch (err: unknown) {
         console.error('Quick discover failed:', err)
@@ -244,12 +255,12 @@ export function pipelineRoutes(deps: AppDependencies) {
                 imageUrl: (artist.imageUrl as string) ?? img?.remoteUrl,
               })
             }
-          } catch {
-            // skip
+          } catch (err: unknown) {
+            console.warn('MusicBrainz disambiguation lookup failed:', err instanceof Error ? err.message : err)
           }
         }
-      } catch {
-        // skip individual failures
+      } catch (err: unknown) {
+        console.warn('Rescan failed for artist:', err instanceof Error ? err.message : err)
       }
     }
 

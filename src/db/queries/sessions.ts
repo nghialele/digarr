@@ -2,7 +2,7 @@ import { and, eq, gt, lt } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { sessions } from '../schema'
 
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 export function sessionQueries(db: Database) {
   return {

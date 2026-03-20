@@ -163,6 +163,8 @@ export function settingsRoutes(deps: AppDependencies) {
 
     // Fall back to stored credentials when the request sends empty keys
     const stored = (await deps.getSettings()) as Record<string, unknown> | null
+    const testUserId = c.get('userId' as never) as number | undefined
+    const userConns = testUserId ? await getUserConnections(deps.db, testUserId) : null
 
     switch (service) {
       case 'lidarr': {
@@ -173,15 +175,31 @@ export function settingsRoutes(deps: AppDependencies) {
         return c.json(result)
       }
       case 'listenbrainz': {
-        const username = body.username || (stored?.listenbrainzUsername as string) || ''
-        const token = body.token || (stored?.listenbrainzToken as string) || ''
+        const username =
+          body.username ||
+          userConns?.listenbrainzUsername ||
+          (stored?.listenbrainzUsername as string) ||
+          ''
+        const token =
+          body.token ||
+          userConns?.listenbrainzToken ||
+          (stored?.listenbrainzToken as string) ||
+          ''
         const client = createListenBrainzClient(username, token)
         const result = await client.testConnection()
         return c.json(result)
       }
       case 'lastfm': {
-        const username = body.username || (stored?.lastfmUsername as string) || ''
-        const apiKey = body.apiKey || (stored?.lastfmApiKey as string) || ''
+        const username =
+          body.username ||
+          userConns?.lastfmUsername ||
+          (stored?.lastfmUsername as string) ||
+          ''
+        const apiKey =
+          body.apiKey ||
+          userConns?.lastfmApiKey ||
+          (stored?.lastfmApiKey as string) ||
+          ''
         const client = createLastFmClient(username, apiKey)
         const result = await client.testConnection()
         return c.json(result)
