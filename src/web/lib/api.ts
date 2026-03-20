@@ -251,7 +251,7 @@ export type HealthCheckResult = {
 }
 export type HealthCheckResponse = {
   checks: HealthCheckResult[]
-  cached: boolean
+  scanning: boolean
 }
 export type LibraryStats = {
   totalArtists: number
@@ -262,7 +262,7 @@ export type LibraryStats = {
 }
 export const getLibraryHealth = () => fetchApi<HealthCheckResponse>('/library/health')
 export const scanLibraryHealth = () =>
-  fetchApi<HealthCheckResponse>('/library/health/scan', { method: 'POST' })
+  fetchApi<{ scanning: boolean }>('/library/health/scan', { method: 'POST' })
 export const fixHealthCheck = (checkId: string) =>
   fetchApi<unknown>(`/library/health/${encodeURIComponent(checkId)}/fix`, { method: 'POST' })
 export const getLibraryStats = () => fetchApi<LibraryStats>('/library/stats')

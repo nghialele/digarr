@@ -61,6 +61,8 @@ export function LibraryHealthPage() {
   const healthQuery = useQuery({
     queryKey: ['library', 'health'],
     queryFn: getLibraryHealth,
+    // Poll every 3s while a scan is in progress
+    refetchInterval: (query) => (query.state.data?.scanning ? 3000 : false),
   })
 
   const statsQuery = useQuery({
@@ -78,6 +80,7 @@ export function LibraryHealthPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['library', 'health'] }),
   })
 
+  const scanning = healthQuery.data?.scanning ?? false
   const checks: HealthCheckResult[] = healthQuery.data?.checks ?? []
   const stats: LibraryStats | undefined = statsQuery.data
 
@@ -89,23 +92,31 @@ export function LibraryHealthPage() {
         <button
           type="button"
           onClick={() => rescanMutation.mutate()}
-          disabled={rescanMutation.isPending}
+          disabled={scanning || rescanMutation.isPending}
           className="flex items-center gap-2 px-3 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          <RefreshCw size={14} className={rescanMutation.isPending ? 'animate-spin' : undefined} />
-          {rescanMutation.isPending ? 'Scanning...' : 'Re-scan'}
+          <RefreshCw size={14} className={scanning ? 'animate-spin' : undefined} />
+          {scanning ? 'Scanning...' : 'Re-scan'}
         </button>
       </div>
+
+      {/* Scanning indicator */}
+      {scanning && (
+        <div className="bg-accent/10 border border-accent/30 rounded-lg px-4 py-3 text-sm text-accent flex items-center gap-2">
+          <RefreshCw size={14} className="animate-spin shrink-0" />
+          Scanning library health... Results will appear when complete.
+        </div>
+      )}
 
       {/* Health checks */}
       <div className="space-y-3">
         {healthQuery.isLoading ? (
           <ChecksSkeleton />
-        ) : checks.length === 0 ? (
+        ) : checks.length === 0 && !scanning ? (
           <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
             No health checks available. Run a scan to inspect your library.
           </div>
-        ) : (
+        ) : checks.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {checks.map((check) => (
               <HealthCheckCard
@@ -116,7 +127,7 @@ export function LibraryHealthPage() {
               />
             ))}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Divider */}

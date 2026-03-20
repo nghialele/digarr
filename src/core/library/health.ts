@@ -96,9 +96,28 @@ const CHECK_META: Record<
 export class LibraryHealthService {
   private deps: HealthServiceDeps
   private cachedResults: HealthCheckResult[] | null = null
+  private _scanning = false
 
   constructor(deps: HealthServiceDeps) {
     this.deps = deps
+  }
+
+  get scanning(): boolean {
+    return this._scanning
+  }
+
+  // -------------------------------------------------------------------------
+  // startScan -- fire-and-forget, returns immediately
+  // -------------------------------------------------------------------------
+
+  startScan(): void {
+    if (this._scanning) return
+    this._scanning = true
+    this.runChecks()
+      .catch((err) => console.error('[library-health] scan failed:', err))
+      .finally(() => {
+        this._scanning = false
+      })
   }
 
   // -------------------------------------------------------------------------
@@ -277,30 +296,35 @@ export class LibraryHealthService {
     const meta = CHECK_META['missing-albums']
     const items: HealthCheckItem[] = []
 
-    for (const artist of monitoredArtists) {
-      try {
-        const albums = await this.deps.lidarrClient.getAlbums(artist.id)
-        // albums goes out of scope at the end of each iteration -- GC'd per artist
-        const missingCount = albums.filter(
-          (album) =>
-            album.monitored &&
-            (album.statistics?.trackFileCount ?? 0) === 0 &&
-            (album.statistics?.trackCount ?? 0) > 0,
-        ).length
+    // Rate-limit album fetches so we don't saturate the event loop or hammer Lidarr
+    const queue = new PQueue({ concurrency: 2, interval: 200, intervalCap: 2 })
 
-        if (missingCount > 0) {
-          items.push({
-            artistId: artist.id,
-            artistName: artist.artistName,
-            mbid: artist.foreignArtistId,
-            detail: `${missingCount} monitored album${missingCount === 1 ? '' : 's'} with no files`,
-          })
+    for (const artist of monitoredArtists) {
+      queue.add(async () => {
+        try {
+          const albums = await this.deps.lidarrClient.getAlbums(artist.id)
+          const missingCount = albums.filter(
+            (album) =>
+              album.monitored &&
+              (album.statistics?.trackFileCount ?? 0) === 0 &&
+              (album.statistics?.trackCount ?? 0) > 0,
+          ).length
+
+          if (missingCount > 0) {
+            items.push({
+              artistId: artist.id,
+              artistName: artist.artistName,
+              mbid: artist.foreignArtistId,
+              detail: `${missingCount} monitored album${missingCount === 1 ? '' : 's'} with no files`,
+            })
+          }
+        } catch {
+          // skip individual artist failures
         }
-      } catch {
-        // skip individual artist failures
-      }
+      })
     }
 
+    await queue.onIdle()
     return { ...meta, id: 'missing-albums', count: items.length, items }
   }
 

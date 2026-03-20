@@ -48,10 +48,12 @@ const mockFixProgress = {
   errors: [],
 }
 
-function makeMockLibraryHealth(opts: { hasCached?: boolean } = {}) {
+function makeMockLibraryHealth(opts: { hasCached?: boolean; scanning?: boolean } = {}) {
   return {
     getLastResults: vi.fn(() => (opts.hasCached ? mockChecks : null)),
     runChecks: vi.fn(async () => mockChecks),
+    startScan: vi.fn(),
+    scanning: opts.scanning ?? false,
     fixCheck: vi.fn(async () => mockFixProgress),
     getStats: vi.fn(async () => mockStats),
   }
@@ -161,7 +163,7 @@ beforeEach(() => {
 })
 
 describe('GET /api/library/health', () => {
-  it('returns cached results when available', async () => {
+  it('returns cached results and scanning status', async () => {
     const libraryHealth = makeMockLibraryHealth({
       hasCached: true,
     }) as unknown as AppDependencies['libraryHealth']
@@ -169,14 +171,12 @@ describe('GET /api/library/health', () => {
     const res = await app.request('/api/library/health')
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.cached).toBe(true)
+    expect(body.scanning).toBe(false)
     expect(body.checks).toHaveLength(1)
     expect(body.checks[0].id).toBe('missing-metadata')
-    // Should NOT have called runChecks since cached
-    expect((libraryHealth.runChecks as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0)
   })
 
-  it('runs fresh checks when no cache', async () => {
+  it('returns empty checks when no cache', async () => {
     const libraryHealth = makeMockLibraryHealth({
       hasCached: false,
     }) as unknown as AppDependencies['libraryHealth']
@@ -184,24 +184,22 @@ describe('GET /api/library/health', () => {
     const res = await app.request('/api/library/health')
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.cached).toBe(false)
-    expect(body.checks).toHaveLength(1)
-    expect((libraryHealth.runChecks as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
+    expect(body.scanning).toBe(false)
+    expect(body.checks).toHaveLength(0)
   })
 })
 
 describe('POST /api/library/health/scan', () => {
-  it('always forces a fresh scan', async () => {
+  it('starts a background scan and returns 202', async () => {
     const libraryHealth = makeMockLibraryHealth({
       hasCached: true,
     }) as unknown as AppDependencies['libraryHealth']
     const app = createApp(makeDeps({ libraryHealth }))
     const res = await app.request('/api/library/health/scan', { method: 'POST' })
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(202)
     const body = await res.json()
-    expect(body.cached).toBe(false)
-    expect(body.checks).toHaveLength(1)
-    expect((libraryHealth.runChecks as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
+    expect(body.scanning).toBe(true)
+    expect((libraryHealth.startScan as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
   })
 })
 

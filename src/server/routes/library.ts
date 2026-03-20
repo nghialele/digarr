@@ -21,18 +21,16 @@ type LibraryRouteDeps = {
 export function libraryRoutes(deps: LibraryRouteDeps) {
   const app = new Hono()
 
-  // GET /api/library/health -- return cached or fresh health checks
-  app.get('/api/library/health', async (c) => {
-    const cached = deps.libraryHealth.getLastResults()
-    if (cached) return c.json({ checks: cached, cached: true })
-    const checks = await deps.libraryHealth.runChecks()
-    return c.json({ checks, cached: false })
+  // GET /api/library/health -- return cached results + scanning status
+  app.get('/api/library/health', (c) => {
+    const checks = deps.libraryHealth.getLastResults() ?? []
+    return c.json({ checks, scanning: deps.libraryHealth.scanning })
   })
 
-  // POST /api/library/health/scan -- force fresh scan
-  app.post('/api/library/health/scan', async (c) => {
-    const checks = await deps.libraryHealth.runChecks()
-    return c.json({ checks, cached: false })
+  // POST /api/library/health/scan -- kick off background scan, return 202
+  app.post('/api/library/health/scan', (c) => {
+    deps.libraryHealth.startScan()
+    return c.json({ scanning: true }, 202)
   })
 
   // POST /api/library/health/:checkId/fix -- trigger fix for a check
