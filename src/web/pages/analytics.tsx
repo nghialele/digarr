@@ -428,7 +428,7 @@ export function AnalyticsPage() {
       </div>
 
       {/* Discovery over time chart */}
-      {batches && batches.length > 1 && (
+      {batches && batches.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
             Discovery Over Time

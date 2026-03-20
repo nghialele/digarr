@@ -12,14 +12,16 @@ export function genreRoutes(deps: AppDependencies) {
       deps.genreService.getLibraryGenres(),
       getGenreEnrichments(deps.db, 3),
     ])
-    const enriched = genres.map((g) => {
-      const e = enrichments.get(g.name)
-      return {
-        ...g,
-        artistCount: e?.liveCount ?? g.artistCount,
-        exampleArtists: e?.examples ?? [],
-      }
-    })
+    const enriched = genres
+      .map((g) => {
+        const e = enrichments.get(g.name)
+        return {
+          ...g,
+          artistCount: e?.liveCount ?? 0,
+          exampleArtists: e?.examples ?? [],
+        }
+      })
+      .filter((g) => g.artistCount > 0)
     return c.json(enriched)
   })
 

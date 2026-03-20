@@ -25,11 +25,18 @@ type JellyfinSystemInfo = {
   Version: string
 }
 
+type JellyfinUser = {
+  Id: string
+  Name: string
+}
+
+const UUID_RE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i
+
 export function createJellyfinClient(
   url: string,
   apiKey: string,
-  userId: string,
-  options?: { baseUrl?: string },
+  userIdOrName: string,
+  options?: { baseUrl?: string; skipTlsVerify?: boolean },
 ) {
   const baseUrl = options?.baseUrl ?? url
 
@@ -38,6 +45,7 @@ export function createJellyfinClient(
     headers: {
       Authorization: `MediaBrowser Token="${apiKey}"`,
     },
+    skipTlsVerify: options?.skipTlsVerify,
   })
 
   const queue = new PQueue({ concurrency: 3, interval: 1000, intervalCap: 10 })
@@ -46,7 +54,29 @@ export function createJellyfinClient(
     return queue.add(() => http.get<T>(path)) as Promise<T>
   }
 
+  let resolvedUserId: string | null = null
+
+  async function getUserId(): Promise<string> {
+    if (resolvedUserId) return resolvedUserId
+
+    if (UUID_RE.test(userIdOrName)) {
+      resolvedUserId = userIdOrName
+      return resolvedUserId
+    }
+
+    const users = await get<JellyfinUser[]>('/Users')
+    const match = users.find((u) => u.Name.toLowerCase() === userIdOrName.toLowerCase())
+    if (!match) {
+      throw new Error(
+        `Jellyfin user "${userIdOrName}" not found. Check the username or use the user ID (UUID) instead.`,
+      )
+    }
+    resolvedUserId = match.Id
+    return resolvedUserId
+  }
+
   async function getTopArtists(limit = 50): Promise<JellyfinArtist[]> {
+    const userId = await getUserId()
     const params = new URLSearchParams({
       SortBy: 'PlayCount',
       SortOrder: 'Descending',
@@ -76,6 +106,7 @@ export function createJellyfinClient(
   }
 
   async function getRecentlyPlayed(limit = 50): Promise<JellyfinRecentTrack[]> {
+    const userId = await getUserId()
     const params = new URLSearchParams({
       SortBy: 'DatePlayed',
       SortOrder: 'Descending',
@@ -102,6 +133,7 @@ export function createJellyfinClient(
   }
 
   async function getFavoriteArtists(limit = 50): Promise<JellyfinArtist[]> {
+    const userId = await getUserId()
     const params = new URLSearchParams({
       SortBy: 'SortName',
       SortOrder: 'Ascending',

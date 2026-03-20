@@ -15,6 +15,16 @@ vi.mock('@/core/pipeline/collect', () => ({
   collect: vi.fn(async () => []),
 }))
 
+vi.mock('@/db/queries/artists', () => ({
+  getGenreEnrichments: vi.fn(async () => {
+    const m = new Map()
+    m.set('Rock', { examples: ['AC/DC', 'Led Zeppelin'], liveCount: 42 })
+    m.set('Alternative Rock', { examples: ['Radiohead'], liveCount: 10 })
+    return m
+  }),
+  getArtistsByGenre: vi.fn(async () => []),
+}))
+
 function makeMockOrchestrator() {
   const emitter = new EventEmitter()
   return Object.assign(emitter, {
@@ -177,7 +187,8 @@ describe('GET /api/genres', () => {
     expect(Array.isArray(body)).toBe(true)
     expect(body).toHaveLength(2)
     expect(body[0].slug).toBe('rock')
-    expect(body[0].exampleArtists).toEqual([])
+    expect(body[0].artistCount).toBe(42)
+    expect(body[0].exampleArtists).toEqual(['AC/DC', 'Led Zeppelin'])
   })
 })
 

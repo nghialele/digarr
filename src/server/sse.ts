@@ -5,6 +5,15 @@ export function createPipelineSSEStream(orchestrator: PipelineOrchestrator): Rea
   let completeHandler: (() => void) | null = null
   let errorHandler: ((err: unknown) => void) | null = null
 
+  function cleanup() {
+    if (progressHandler) orchestrator.off('progress', progressHandler)
+    if (completeHandler) orchestrator.off('complete', completeHandler)
+    if (errorHandler) orchestrator.off('error', errorHandler)
+    progressHandler = null
+    completeHandler = null
+    errorHandler = null
+  }
+
   return new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder()
@@ -18,19 +27,21 @@ export function createPipelineSSEStream(orchestrator: PipelineOrchestrator): Rea
             typeof progress === 'object' &&
             (progress as Record<string, unknown>).stage === 'complete'
           ) {
+            cleanup()
             controller.close()
           }
         } catch {
-          // Controller may be closed already
+          cleanup()
         }
       }
 
       completeHandler = () => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ stage: 'complete' })}\n\n`))
+          cleanup()
           controller.close()
         } catch {
-          // Already closed
+          cleanup()
         }
       }
 
@@ -40,9 +51,10 @@ export function createPipelineSSEStream(orchestrator: PipelineOrchestrator): Rea
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ stage: 'error', message })}\n\n`),
           )
+          cleanup()
           controller.close()
         } catch {
-          // Already closed
+          cleanup()
         }
       }
 
@@ -52,9 +64,7 @@ export function createPipelineSSEStream(orchestrator: PipelineOrchestrator): Rea
     },
 
     cancel() {
-      if (progressHandler) orchestrator.off('progress', progressHandler)
-      if (completeHandler) orchestrator.off('complete', completeHandler)
-      if (errorHandler) orchestrator.off('error', errorHandler)
+      cleanup()
     },
   })
 }

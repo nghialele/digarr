@@ -315,6 +315,11 @@ export const listUsers = () =>
       createdAt: string
     }>
   >('/users')
+export const createUserApi = (data: { username: string; password: string; isAdmin?: boolean }) =>
+  fetchApi<{ id: number; username: string; isAdmin: boolean }>('/users', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
 export const updateUserAdmin = (id: number, isAdmin: boolean) =>
   fetchApi(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) })
 export const deleteUserApi = (id: number) => fetchApi(`/users/${id}`, { method: 'DELETE' })

@@ -259,7 +259,8 @@ export function settingsRoutes(deps: AppDependencies) {
         const apiKey = body.apiKey || userConns?.jellyfinApiKey || ''
         const jfUserId = body.userId || userConns?.jellyfinUserId || ''
         const { createJellyfinClient } = await import('@/core/clients/jellyfin')
-        const client = createJellyfinClient(url, apiKey, jfUserId)
+        const skipTls = body.skipTlsVerify ?? (stored?.skipTlsVerify as boolean) ?? false
+        const client = createJellyfinClient(url, apiKey, jfUserId, { skipTlsVerify: skipTls })
         const result = await client.testConnection()
         return c.json(result)
       }

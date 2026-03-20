@@ -29,6 +29,14 @@ vi.mock('@/web/lib/api', () => ({
   deleteTargetApi: vi.fn().mockResolvedValue(undefined),
   testTargetApi: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
   exportRecommendations: vi.fn().mockResolvedValue(undefined),
+  getCurrentUser: vi.fn().mockResolvedValue({ id: 1, username: 'admin', isAdmin: true }),
+  getOAuthStatus: vi.fn().mockResolvedValue({ connected: false, scopes: null }),
+  initiateOAuth: vi.fn().mockResolvedValue({ authUrl: '' }),
+  disconnectOAuth: vi.fn().mockResolvedValue(undefined),
+  changePassword: vi.fn().mockResolvedValue({ ok: true }),
+  logoutUser: vi.fn().mockResolvedValue({ ok: true }),
+  clearStoredToken: vi.fn(),
+  AUTH_EXPIRED_EVENT: 'digarr:auth-expired',
 }))
 
 vi.mock('sonner', () => ({

@@ -1,8 +1,13 @@
 import { createJellyfinClient } from '@/core/clients/jellyfin'
 import type { DiscoverySource } from './types'
 
-export function createJellyfinSource(url: string, apiKey: string, userId: string): DiscoverySource {
-  const client = createJellyfinClient(url, apiKey, userId)
+export function createJellyfinSource(
+  url: string,
+  apiKey: string,
+  userId: string,
+  skipTlsVerify?: boolean,
+): DiscoverySource {
+  const client = createJellyfinClient(url, apiKey, userId, { skipTlsVerify })
 
   return {
     id: 'jellyfin',

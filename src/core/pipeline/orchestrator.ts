@@ -7,8 +7,8 @@ import { createJellyfinSource } from '@/core/plugins/jellyfin'
 import { createLastFmSource } from '@/core/plugins/lastfm'
 import { createListenBrainzSource } from '@/core/plugins/listenbrainz'
 import { createPlexSource } from '@/core/plugins/plex'
-import { createSpotifySource } from '@/core/plugins/spotify'
 import { SourceRegistry } from '@/core/plugins/registry'
+import { createSpotifySource } from '@/core/plugins/spotify'
 import type { AiProviderRegistry } from '@/core/providers/registry'
 import { mergePreferences, type Preferences } from '@/db/schema'
 import { analyze } from './analyze'
@@ -121,7 +121,7 @@ export class PipelineOrchestrator extends EventEmitter {
       const jfApiKey = userConnections?.jellyfinApiKey
       const jfUserId = userConnections?.jellyfinUserId
       if (jfUrl && jfApiKey && jfUserId) {
-        registry.register(createJellyfinSource(jfUrl, jfApiKey, jfUserId))
+        registry.register(createJellyfinSource(jfUrl, jfApiKey, jfUserId, settings.skipTlsVerify))
       }
 
       // Discogs
@@ -218,7 +218,13 @@ export class PipelineOrchestrator extends EventEmitter {
         message: `Scoring ${resolved.length} resolved artists...`,
       })
       const popularityMap = (await db.getPopularityMap?.()) ?? new Map<string, number>()
-      const scored = score(resolved, libraryGenres, prefs.scoringWeights, feedbackHistory, popularityMap)
+      const scored = score(
+        resolved,
+        libraryGenres,
+        prefs.scoringWeights,
+        feedbackHistory,
+        popularityMap,
+      )
 
       this.emit('progress', {
         stage: 'filter',

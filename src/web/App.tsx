@@ -4,16 +4,18 @@ import {
   Compass,
   HeartPulse,
   LayoutDashboard,
+  LogOut,
   Monitor,
   Moon,
   Music,
   RefreshCw,
   Settings,
   Sun,
+  User,
   Users,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { BrowserRouter, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { VERSION } from '@/version'
 import { AuthGate } from './components/auth-gate'
@@ -22,7 +24,15 @@ import { KeyboardShortcuts } from './components/keyboard-shortcuts'
 import { PreviewPlayer } from './components/preview-player'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
 import { usePreview } from './hooks/use-preview'
-import { getCurrentUser, getPipelineStatus, getSetupStatus, triggerPipeline } from './lib/api'
+import {
+  AUTH_EXPIRED_EVENT,
+  clearStoredToken,
+  getCurrentUser,
+  getPipelineStatus,
+  getSetupStatus,
+  logoutUser,
+  triggerPipeline,
+} from './lib/api'
 import { PreviewContext } from './lib/preview-context'
 import { queryClient } from './lib/query-client'
 import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
@@ -89,6 +99,70 @@ function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
     >
       <Icon size={18} />
     </button>
+  )
+}
+
+function UserMenu({ username }: { username: string }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  async function handleLogout() {
+    try {
+      await logoutUser()
+    } catch {
+      // Session might already be invalid
+    }
+    clearStoredToken()
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 p-1.5 text-muted hover:text-text transition-colors"
+        title={username}
+      >
+        <User size={18} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-50 py-1">
+          <div className="px-3 py-2 border-b border-border">
+            <p className="text-sm font-medium text-text truncate">{username}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              navigate('/settings')
+              setOpen(false)
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-bg transition-colors"
+          >
+            <Settings size={14} />
+            Settings
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-bg transition-colors"
+          >
+            <LogOut size={14} />
+            Log out
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -192,6 +266,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle theme={theme} onChange={handleThemeChange} />
+              {currentUser && <UserMenu username={currentUser.username} />}
               <button
                 type="button"
                 disabled={!!pipelineRunning}

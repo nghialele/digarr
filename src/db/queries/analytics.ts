@@ -175,12 +175,12 @@ export async function getTimeToAct(db: Database): Promise<TimeToAct[]> {
   const rows = await db.execute(sql`
     SELECT
       r.status,
-      AVG(EXTRACT(EPOCH FROM (r.updated_at - r.created_at)) / 86400)::float AS avg_days,
+      AVG(EXTRACT(EPOCH FROM (r.acted_on_at - r.created_at)) / 86400)::float AS avg_days,
       COUNT(*)::int AS count
     FROM recommendations r
     WHERE r.status IN ('approved', 'added_to_lidarr', 'rejected')
-      AND r.updated_at IS NOT NULL
-      AND r.updated_at > r.created_at
+      AND r.acted_on_at IS NOT NULL
+      AND r.acted_on_at > r.created_at
     GROUP BY r.status
   `)
   return (rows.rows as { status: string; avg_days: number; count: number }[]).map((r) => ({

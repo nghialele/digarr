@@ -151,6 +151,8 @@ function SliderField({
 type ServiceTestState = 'idle' | 'testing' | 'ok' | 'error'
 
 function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: () => void }) {
+  const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
+  const isAdmin = currentUser?.isAdmin ?? false
   const prefs = settings.preferences ?? {}
   const [lidarrUrl, setLidarrUrl] = useState(settings.lidarrUrl ?? '')
   const [lidarrPublicUrl, setLidarrPublicUrl] = useState(prefs.lidarrPublicUrl ?? '')
@@ -416,6 +418,13 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
 
   return (
     <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-text uppercase tracking-wide">Global Settings</h3>
+        {!isAdmin && (
+          <p className="text-xs text-muted mt-1">Only admins can modify global settings.</p>
+        )}
+      </div>
+
       {/* Lidarr */}
       <div className={isLidarrConfigured ? '' : 'opacity-60'}>
         <ServiceCard
@@ -533,124 +542,6 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
             </Button>
             <Button size="sm" onClick={saveLidarr} disabled={saving.lidarr}>
               {saving.lidarr ? 'Saving...' : isLidarrConfigured ? 'Save' : 'Configure'}
-            </Button>
-          </div>
-        </ServiceCard>
-      </div>
-
-      {/* ListenBrainz */}
-      <div className={isLbConfigured ? '' : 'opacity-60'}>
-        <ServiceCard
-          name="ListenBrainz"
-          description={
-            <span>
-              Open-source listening history tracking.{' '}
-              <a
-                href="https://listenbrainz.org/settings/"
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent hover:underline"
-              >
-                Get token
-              </a>
-              {settings._listenbrainzScope === 'user' && (
-                <span className="text-xs text-accent ml-2">your account</span>
-              )}
-            </span>
-          }
-          status={serviceStatus('listenbrainz')}
-          icon={<ListenBrainzIcon />}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Username" id="lb-username">
-              <Input
-                id="lb-username"
-                placeholder="your-username"
-                value={lbUsername}
-                onChange={(e) => setLbUsername(e.target.value)}
-              />
-            </Field>
-            <Field label="User Token" id="lb-token">
-              <Input
-                id="lb-token"
-                type="password"
-                placeholder={
-                  settings.listenbrainzToken === '***' ? '(saved)' : 'ListenBrainz token'
-                }
-                value={lbToken}
-                onChange={(e) => setLbToken(e.target.value)}
-              />
-            </Field>
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={testListenbrainz}
-              disabled={tests.listenbrainz === 'testing'}
-            >
-              {tests.listenbrainz === 'testing' ? 'Testing...' : 'Test Connection'}
-            </Button>
-            <Button size="sm" onClick={saveListenbrainz} disabled={saving.listenbrainz}>
-              {saving.listenbrainz ? 'Saving...' : isLbConfigured ? 'Save' : 'Configure'}
-            </Button>
-          </div>
-        </ServiceCard>
-      </div>
-
-      {/* Last.fm */}
-      <div className={isLfConfigured ? '' : 'opacity-60'}>
-        <ServiceCard
-          name="Last.fm"
-          description={
-            <span>
-              Music scrobbling and listening history.{' '}
-              <a
-                href="https://www.last.fm/api/account/create"
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent hover:underline"
-              >
-                Get API key
-              </a>
-              {settings._lastfmScope === 'user' && (
-                <span className="text-xs text-accent ml-2">your account</span>
-              )}
-            </span>
-          }
-          status={serviceStatus('lastfm')}
-          icon={<LastfmIcon />}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Username" id="lfm-username">
-              <Input
-                id="lfm-username"
-                placeholder="your-username"
-                value={lfUsername}
-                onChange={(e) => setLfUsername(e.target.value)}
-              />
-            </Field>
-            <Field label="API Key" id="lfm-apikey">
-              <Input
-                id="lfm-apikey"
-                type="password"
-                placeholder={settings.lastfmApiKey === '***' ? '(saved)' : 'Last.fm API key'}
-                value={lfApiKey}
-                onChange={(e) => setLfApiKey(e.target.value)}
-              />
-            </Field>
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={testLastfm}
-              disabled={tests.lastfm === 'testing'}
-            >
-              {tests.lastfm === 'testing' ? 'Testing...' : 'Test Connection'}
-            </Button>
-            <Button size="sm" onClick={saveLastfm} disabled={saving.lastfm}>
-              {saving.lastfm ? 'Saving...' : isLfConfigured ? 'Save' : 'Configure'}
             </Button>
           </div>
         </ServiceCard>
@@ -818,7 +709,131 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
         </div>
       </ServiceCard>
 
+      <div className="pt-2">
+        <h3 className="text-sm font-semibold text-text uppercase tracking-wide">Your Connections</h3>
+        <p className="text-xs text-muted mt-1">Personal listening sources linked to your account.</p>
+      </div>
+
+      {/* ListenBrainz */}
+      <div className={isLbConfigured ? '' : 'opacity-60'}>
+        <ServiceCard
+          name="ListenBrainz"
+          description={
+            <span>
+              Open-source listening history tracking.{' '}
+              <a
+                href="https://listenbrainz.org/settings/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent hover:underline"
+              >
+                Get token
+              </a>
+              {settings._listenbrainzScope === 'user' && (
+                <span className="text-xs text-accent ml-2">your account</span>
+              )}
+            </span>
+          }
+          status={serviceStatus('listenbrainz')}
+          icon={<ListenBrainzIcon />}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Username" id="lb-username">
+              <Input
+                id="lb-username"
+                placeholder="your-username"
+                value={lbUsername}
+                onChange={(e) => setLbUsername(e.target.value)}
+              />
+            </Field>
+            <Field label="User Token" id="lb-token">
+              <Input
+                id="lb-token"
+                type="password"
+                placeholder={
+                  settings.listenbrainzToken === '***' ? '(saved)' : 'ListenBrainz token'
+                }
+                value={lbToken}
+                onChange={(e) => setLbToken(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testListenbrainz}
+              disabled={tests.listenbrainz === 'testing'}
+            >
+              {tests.listenbrainz === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
+            <Button size="sm" onClick={saveListenbrainz} disabled={saving.listenbrainz}>
+              {saving.listenbrainz ? 'Saving...' : isLbConfigured ? 'Save' : 'Configure'}
+            </Button>
+          </div>
+        </ServiceCard>
+      </div>
+
+      {/* Last.fm */}
+      <div className={isLfConfigured ? '' : 'opacity-60'}>
+        <ServiceCard
+          name="Last.fm"
+          description={
+            <span>
+              Music scrobbling and listening history.{' '}
+              <a
+                href="https://www.last.fm/api/account/create"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent hover:underline"
+              >
+                Get API key
+              </a>
+              {settings._lastfmScope === 'user' && (
+                <span className="text-xs text-accent ml-2">your account</span>
+              )}
+            </span>
+          }
+          status={serviceStatus('lastfm')}
+          icon={<LastfmIcon />}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Username" id="lfm-username">
+              <Input
+                id="lfm-username"
+                placeholder="your-username"
+                value={lfUsername}
+                onChange={(e) => setLfUsername(e.target.value)}
+              />
+            </Field>
+            <Field label="API Key" id="lfm-apikey">
+              <Input
+                id="lfm-apikey"
+                type="password"
+                placeholder={settings.lastfmApiKey === '***' ? '(saved)' : 'Last.fm API key'}
+                value={lfApiKey}
+                onChange={(e) => setLfApiKey(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testLastfm}
+              disabled={tests.lastfm === 'testing'}
+            >
+              {tests.lastfm === 'testing' ? 'Testing...' : 'Test Connection'}
+            </Button>
+            <Button size="sm" onClick={saveLastfm} disabled={saving.lastfm}>
+              {saving.lastfm ? 'Saving...' : isLfConfigured ? 'Save' : 'Configure'}
+            </Button>
+          </div>
+        </ServiceCard>
+      </div>
+
       {/* Spotify */}
+      <div className={spotifyConnected ? '' : 'opacity-60'}>
       <ServiceCard
         name="Spotify"
         description={
@@ -876,6 +891,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           </>
         )}
       </ServiceCard>
+      </div>
 
       {/* Plex */}
       <div className={isPlexConfigured ? '' : 'opacity-60'}>
@@ -949,13 +965,16 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               />
             </Field>
           </div>
-          <Field label="User ID" id="jellyfin-userid">
+          <Field label="Username or User ID" id="jellyfin-userid">
             <Input
               id="jellyfin-userid"
-              placeholder="Jellyfin user ID"
+              placeholder="e.g. admin"
               value={jellyfinUserId}
               onChange={(e) => setJellyfinUserId(e.target.value)}
             />
+            <p className="text-xs text-muted mt-1">
+              Your Jellyfin username (recommended) or UUID. The username is resolved automatically via the Jellyfin API.
+            </p>
           </Field>
           <div className="flex justify-end gap-2 pt-1">
             <Button
