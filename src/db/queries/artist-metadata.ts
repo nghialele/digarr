@@ -38,30 +38,28 @@ export async function bulkUpsert(
   rows: ArtistMetadataInsert[],
 ): Promise<number> {
   if (rows.length === 0) return 0
-  let inserted = 0
-  for (const row of rows) {
-    await db
-      .insert(artistMetadata)
-      .values({
+  await db
+    .insert(artistMetadata)
+    .values(
+      rows.map((row) => ({
         name: row.name,
         nameNormalized: row.nameNormalized,
         spotifyGenres: row.spotifyGenres ?? null,
         spotifyPopularity: row.spotifyPopularity ?? null,
         deezerFans: row.deezerFans ?? null,
-      })
-      .onConflictDoUpdate({
-        target: artistMetadata.nameNormalized,
-        set: {
-          name: sql`excluded.name`,
-          spotifyGenres: sql`excluded.spotify_genres`,
-          spotifyPopularity: sql`excluded.spotify_popularity`,
-          deezerFans: sql`excluded.deezer_fans`,
-          cachedAt: sql`now()`,
-        },
-      })
-    inserted++
-  }
-  return inserted
+      })),
+    )
+    .onConflictDoUpdate({
+      target: artistMetadata.nameNormalized,
+      set: {
+        name: sql`excluded.name`,
+        spotifyGenres: sql`excluded.spotify_genres`,
+        spotifyPopularity: sql`excluded.spotify_popularity`,
+        deezerFans: sql`excluded.deezer_fans`,
+        cachedAt: sql`now()`,
+      },
+    })
+  return rows.length
 }
 
 export async function getCount(db: Database): Promise<number> {
