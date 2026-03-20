@@ -120,6 +120,7 @@ export const recommendations = pgTable('recommendations', {
   lidarrError: text('lidarr_error'),
   recommendedReleaseGroupId: text('recommended_release_group_id'),
   recommendedReleaseGroupTitle: text('recommended_release_group_title'),
+  targetActions: jsonb('target_actions').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   actedOnAt: timestamp('acted_on_at', { withTimezone: true }),
 })
@@ -135,6 +136,17 @@ export const subscriptionRuns = pgTable('subscription_runs', {
   artistsNew: integer('artists_new').default(0),
   error: text('error'),
   batchId: integer('batch_id').references(() => recommendationBatches.id),
+})
+
+export const targets = pgTable('targets', {
+  id: serial('id').primaryKey(),
+  type: text('type').notNull(),
+  name: text('name').notNull(),
+  config: jsonb('config').$type<Record<string, unknown>>().notNull().default({}),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  enabled: boolean('enabled').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const sessions = pgTable('sessions', {
