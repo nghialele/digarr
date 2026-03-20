@@ -434,6 +434,26 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
         )}
       </div>
 
+      {!isAdmin ? (
+        <div className="space-y-2">
+          {settings.lidarrUrl && (
+            <div className="rounded-lg border border-border bg-surface p-3 flex items-center gap-3">
+              <img src="/icons/lidarr.png" alt="" className="w-5 h-5" />
+              <div>
+                <span className="text-sm font-medium text-text">Lidarr</span>
+                <p className="text-xs text-muted">{settings.lidarrUrl as string}</p>
+              </div>
+            </div>
+          )}
+          {settings.aiModel && (
+            <div className="rounded-lg border border-border bg-surface p-3 flex items-center gap-3">
+              <span className="text-sm font-medium text-text">AI Provider</span>
+              <span className="text-xs text-muted">{settings.aiProvider as string} / {settings.aiModel as string}</span>
+            </div>
+          )}
+        </div>
+      ) : (
+      <>
       {/* Lidarr */}
       <div className={isLidarrConfigured ? '' : 'opacity-60'}>
         <ServiceCard
@@ -717,6 +737,8 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           </Button>
         </div>
       </ServiceCard>
+      </>
+      )}
 
       <div className="pt-2">
         <h3 className="text-sm font-semibold text-text uppercase tracking-wide">
