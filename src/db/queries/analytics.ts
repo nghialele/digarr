@@ -127,6 +127,69 @@ export async function getTopGenres(db: Database): Promise<GenreStat[]> {
   })
 }
 
+export type ScoreBucket = { bucket: string; count: number }
+
+export async function getScoreDistribution(db: Database): Promise<ScoreBucket[]> {
+  const rows = await db.execute(sql`
+    SELECT
+      (FLOOR(score * 10) * 10)::int AS bucket_start,
+      COUNT(*)::int AS count
+    FROM recommendations
+    WHERE score IS NOT NULL
+    GROUP BY bucket_start
+    ORDER BY bucket_start
+  `)
+  return (rows.rows as { bucket_start: number; count: number }[]).map((r) => ({
+    bucket: `${r.bucket_start}-${Math.min(r.bucket_start + 10, 100)}%`,
+    count: r.count,
+  }))
+}
+
+export type ApprovalTrend = { batchId: number; createdAt: string; approvalRate: number }
+
+export async function getApprovalTrend(db: Database): Promise<ApprovalTrend[]> {
+  const rows = await db.execute(sql`
+    SELECT
+      b.id,
+      b.created_at,
+      COUNT(CASE WHEN r.status IN ('approved', 'added_to_lidarr') THEN 1 END)::int AS approved,
+      COUNT(CASE WHEN r.status IN ('approved', 'added_to_lidarr', 'rejected') THEN 1 END)::int AS acted
+    FROM recommendation_batches b
+    LEFT JOIN recommendations r ON r.batch_id = b.id
+    GROUP BY b.id
+    HAVING COUNT(CASE WHEN r.status IN ('approved', 'added_to_lidarr', 'rejected') THEN 1 END) > 0
+    ORDER BY b.created_at
+  `)
+  return (rows.rows as { id: number; created_at: string; approved: number; acted: number }[]).map(
+    (r) => ({
+      batchId: r.id,
+      createdAt: r.created_at,
+      approvalRate: r.acted > 0 ? r.approved / r.acted : 0,
+    }),
+  )
+}
+
+export type TimeToAct = { status: string; avgDays: number; count: number }
+
+export async function getTimeToAct(db: Database): Promise<TimeToAct[]> {
+  const rows = await db.execute(sql`
+    SELECT
+      r.status,
+      AVG(EXTRACT(EPOCH FROM (r.updated_at - r.created_at)) / 86400)::float AS avg_days,
+      COUNT(*)::int AS count
+    FROM recommendations r
+    WHERE r.status IN ('approved', 'added_to_lidarr', 'rejected')
+      AND r.updated_at IS NOT NULL
+      AND r.updated_at > r.created_at
+    GROUP BY r.status
+  `)
+  return (rows.rows as { status: string; avg_days: number; count: number }[]).map((r) => ({
+    status: r.status === 'added_to_lidarr' ? 'approved' : r.status,
+    avgDays: r.avg_days,
+    count: r.count,
+  }))
+}
+
 export async function getSourceEffectiveness(db: Database): Promise<SourceStat[]> {
   // The sources column is JSONB like { "consensus": 0.8, "similarity": 0.6 }
   // We unnest the keys and aggregate

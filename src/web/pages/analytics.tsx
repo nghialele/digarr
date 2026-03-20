@@ -6,10 +6,16 @@ import {
   type AnalyticsBatch,
   type AnalyticsGenre,
   type AnalyticsSource,
+  type ApprovalTrend,
   getAnalyticsBatches,
   getAnalyticsGenres,
   getAnalyticsOverview,
   getAnalyticsSources,
+  getApprovalTrend,
+  getScoreDistribution,
+  getTimeToAct,
+  type ScoreBucket,
+  type TimeToAct,
 } from '../lib/api'
 
 function formatDate(dateStr: string): string {
@@ -126,9 +132,10 @@ function BatchHistoryTable({
 }
 
 function DiscoveryChart({ batches }: { batches: AnalyticsBatch[] }) {
-  // Show last 20 batches as a mini bar chart, newest on right
   const recent = batches.slice(0, 20).reverse()
   const maxTotal = Math.max(...recent.map((b) => b.total), 1)
+  const firstDate = recent[0]?.createdAt
+  const lastDate = recent[recent.length - 1]?.createdAt
 
   return (
     <div className="bg-surface border border-border rounded-lg p-4">
@@ -152,10 +159,8 @@ function DiscoveryChart({ batches }: { batches: AnalyticsBatch[] }) {
         })}
       </div>
       <div className="flex justify-between mt-2 text-[10px] text-muted">
-        <span>{recent.length > 0 ? formatDate(recent[0]!.createdAt).split(',')[0] : ''}</span>
-        <span>
-          {recent.length > 1 ? formatDate(recent[recent.length - 1]!.createdAt).split(',')[0] : ''}
-        </span>
+        <span>{firstDate ? formatDate(firstDate).split(',')[0] : ''}</span>
+        <span>{lastDate ? formatDate(lastDate).split(',')[0] : ''}</span>
       </div>
     </div>
   )
@@ -255,6 +260,116 @@ function SourceScores({
   )
 }
 
+function ScoreDistribution({ buckets }: { buckets: ScoreBucket[] }) {
+  const maxCount = Math.max(...buckets.map((b) => b.count), 1)
+  return (
+    <div className="bg-surface border border-border rounded-lg p-4">
+      <div className="flex items-end gap-1 h-28">
+        {buckets.map((b) => {
+          const h = Math.max((b.count / maxCount) * 100, 2)
+          return (
+            <div
+              key={b.bucket}
+              className="flex-1 flex flex-col items-center justify-end"
+              title={`${b.bucket}: ${b.count} recs`}
+            >
+              <div className="w-full rounded-t bg-accent" style={{ height: `${h}%` }} />
+            </div>
+          )
+        })}
+      </div>
+      <div className="flex gap-1 mt-1.5">
+        {buckets.map((b) => (
+          <span key={b.bucket} className="flex-1 text-center text-[9px] text-muted truncate">
+            {b.bucket.replace('%', '')}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ApprovalTrendChart({ trend }: { trend: ApprovalTrend[] }) {
+  if (trend.length < 2) return null
+  const recent = trend.slice(-20)
+  const firstDate = recent[0]?.createdAt
+  const lastDate = recent[recent.length - 1]?.createdAt
+  const points = recent
+    .map((t, i) => {
+      const x = (i / (recent.length - 1)) * 100
+      const y = 100 - t.approvalRate * 100
+      return `${x},${y}`
+    })
+    .join(' ')
+
+  return (
+    <div className="bg-surface border border-border rounded-lg p-4">
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="w-full h-24"
+        role="img"
+        aria-label="Approval rate trend chart"
+      >
+        <polyline
+          points={points}
+          fill="none"
+          stroke="var(--color-approve)"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+        />
+        {recent.map((t, i) => {
+          const x = (i / (recent.length - 1)) * 100
+          const y = 100 - t.approvalRate * 100
+          return (
+            <circle
+              key={t.batchId}
+              cx={x}
+              cy={y}
+              r="3"
+              fill="var(--color-approve)"
+              vectorEffect="non-scaling-stroke"
+            >
+              <title>{`${formatDate(t.createdAt).split(',')[0]}: ${pct(t.approvalRate)}`}</title>
+            </circle>
+          )
+        })}
+      </svg>
+      <div className="flex justify-between mt-1.5 text-[10px] text-muted">
+        <span>{firstDate ? formatDate(firstDate).split(',')[0] : ''}</span>
+        <span>{lastDate ? formatDate(lastDate).split(',')[0] : ''}</span>
+      </div>
+    </div>
+  )
+}
+
+function TimeToActCards({ data }: { data: TimeToAct[] }) {
+  const approved = data.find((d) => d.status === 'approved')
+  const rejected = data.find((d) => d.status === 'rejected')
+
+  function fmt(days: number | undefined): string {
+    if (days == null) return '--'
+    if (days < 1 / 24) return `${Math.round(days * 24 * 60)}m`
+    if (days < 1) return `${Math.round(days * 24)}h`
+    return `${days.toFixed(1)}d`
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
+        <p className="text-xs text-muted">Avg time to approve</p>
+        <p className="text-xl font-bold text-approve">{fmt(approved?.avgDays)}</p>
+        {approved && <p className="text-xs text-muted">{approved.count} approvals</p>}
+      </div>
+      <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
+        <p className="text-xs text-muted">Avg time to reject</p>
+        <p className="text-xl font-bold text-reject">{fmt(rejected?.avgDays)}</p>
+        {rejected && <p className="text-xs text-muted">{rejected.count} rejections</p>}
+      </div>
+    </div>
+  )
+}
+
 export function AnalyticsPage() {
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['analytics', 'overview'],
@@ -271,6 +386,18 @@ export function AnalyticsPage() {
   const { data: sources, isLoading: sourcesLoading } = useQuery({
     queryKey: ['analytics', 'sources'],
     queryFn: getAnalyticsSources,
+  })
+  const { data: scoreDist } = useQuery({
+    queryKey: ['analytics', 'scores'],
+    queryFn: getScoreDistribution,
+  })
+  const { data: trend } = useQuery({
+    queryKey: ['analytics', 'trend'],
+    queryFn: getApprovalTrend,
+  })
+  const { data: timeToAct } = useQuery({
+    queryKey: ['analytics', 'time-to-act'],
+    queryFn: getTimeToAct,
   })
 
   return (
@@ -315,6 +442,32 @@ export function AnalyticsPage() {
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Batch History</h2>
         <BatchHistoryTable batches={batches ?? null} loading={batchesLoading} />
+      </div>
+
+      {/* Score distribution + Approval trend + Time to act */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {scoreDist && scoreDist.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+              Score Distribution
+            </h2>
+            <ScoreDistribution buckets={scoreDist} />
+          </div>
+        )}
+        {trend && trend.length > 1 && (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+              Approval Rate Trend
+            </h2>
+            <ApprovalTrendChart trend={trend} />
+          </div>
+        )}
+        {timeToAct && timeToAct.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Time to Act</h2>
+            <TimeToActCards data={timeToAct} />
+          </div>
+        )}
       </div>
 
       {/* Genre breakdown + Source scores side by side on large screens */}

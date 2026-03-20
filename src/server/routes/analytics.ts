@@ -1,8 +1,11 @@
 import { Hono } from 'hono'
 import {
+  getApprovalTrend,
   getBatchesWithCounts,
   getOverviewStats,
+  getScoreDistribution,
   getSourceEffectiveness,
+  getTimeToAct,
   getTopGenres,
 } from '@/db/queries/analytics'
 import type { AppDependencies } from '@/server'
@@ -28,6 +31,21 @@ export function analyticsRoutes(deps: AppDependencies) {
   router.get('/api/analytics/sources', async (c) => {
     const sources = await getSourceEffectiveness(deps.db)
     return c.json(sources)
+  })
+
+  router.get('/api/analytics/scores', async (c) => {
+    const dist = await getScoreDistribution(deps.db)
+    return c.json(dist)
+  })
+
+  router.get('/api/analytics/trend', async (c) => {
+    const trend = await getApprovalTrend(deps.db)
+    return c.json(trend)
+  })
+
+  router.get('/api/analytics/time-to-act', async (c) => {
+    const tta = await getTimeToAct(deps.db)
+    return c.json(tta)
   })
 
   return router

@@ -220,6 +220,12 @@ export const getAnalyticsOverview = () => fetchApi<AnalyticsOverview>('/analytic
 export const getAnalyticsBatches = () => fetchApi<AnalyticsBatch[]>('/analytics/batches')
 export const getAnalyticsGenres = () => fetchApi<AnalyticsGenre[]>('/analytics/genres')
 export const getAnalyticsSources = () => fetchApi<AnalyticsSource[]>('/analytics/sources')
+export type ScoreBucket = { bucket: string; count: number }
+export type ApprovalTrend = { batchId: number; createdAt: string; approvalRate: number }
+export type TimeToAct = { status: string; avgDays: number; count: number }
+export const getScoreDistribution = () => fetchApi<ScoreBucket[]>('/analytics/scores')
+export const getApprovalTrend = () => fetchApi<ApprovalTrend[]>('/analytics/trend')
+export const getTimeToAct = () => fetchApi<TimeToAct[]>('/analytics/time-to-act')
 
 // Lidarr
 export const getLidarrStats = () =>
