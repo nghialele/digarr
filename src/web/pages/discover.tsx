@@ -12,6 +12,7 @@ import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import {
   approveRecommendation,
   bulkAction,
+  exportRecommendations,
   getRecommendations,
   getWarmStatuses,
   rescanArtists,
@@ -170,6 +171,58 @@ function StackIcon() {
       <path d="M2 17l10 5 10-5" />
       <path d="M2 12l10 5 10-5" />
     </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Export dropdown
+// ---------------------------------------------------------------------------
+
+function ExportDropdown({ filter }: { filter?: string }) {
+  const [open, setOpen] = useState(false)
+  const [exporting, setExporting] = useState<string | null>(null)
+
+  async function handleExport(format: 'json' | 'csv' | 'm3u') {
+    setExporting(format)
+    try {
+      await exportRecommendations(format, filter ? { status: filter } : undefined)
+      toast.success(`${format.toUpperCase()} exported`)
+    } catch {
+      toast.error('Export failed')
+    } finally {
+      setExporting(null)
+      setOpen(false)
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="px-3 py-1.5 bg-surface border border-border rounded text-sm text-muted hover:text-text transition-colors"
+      >
+        Export
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-surface border border-border rounded-lg shadow-lg py-1 min-w-[120px]">
+            {(['json', 'csv', 'm3u'] as const).map((fmt) => (
+              <button
+                key={fmt}
+                type="button"
+                onClick={() => handleExport(fmt)}
+                disabled={exporting === fmt}
+                className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-bg transition-colors disabled:opacity-50"
+              >
+                {exporting === fmt ? 'Exporting...' : fmt.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -668,6 +721,7 @@ export function DiscoverPage() {
                 >
                   Refresh Data
                 </button>
+                <ExportDropdown filter={statusParam} />
                 <button
                   type="button"
                   onClick={handleToggleBulkMode}

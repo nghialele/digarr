@@ -20,7 +20,6 @@ import {
   changePassword,
   clearStoredToken,
   deleteTargetApi,
-  exportRecommendations,
   getAuthStatus,
   getCurrentUser,
   getLidarrMetadataProfiles,
@@ -57,11 +56,12 @@ type Settings = {
   _lastfmScope?: 'user' | 'global'
 }
 
-type Tab = 'connections' | 'recommendations' | 'schedule' | 'account' | 'auth'
+type Tab = 'connections' | 'targets' | 'recommendations' | 'schedule' | 'account' | 'auth'
 
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'connections', label: 'Connections' },
+    { id: 'targets', label: 'Targets' },
     { id: 'recommendations', label: 'Recommendations' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'account', label: 'Account' },
@@ -727,18 +727,11 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
         </div>
       </ServiceCard>
 
-      <hr className="border-border" />
-
-      <TargetsSection />
-
-      <hr className="border-border" />
-
-      <ExportSection />
     </div>
   )
 }
 
-function TargetsSection() {
+function TargetsTab() {
   const { data: targets, refetch } = useQuery({
     queryKey: ['targets'],
     queryFn: listTargets,
@@ -818,46 +811,6 @@ function TargetsSection() {
           )}
         </div>
       ))}
-    </div>
-  )
-}
-
-function ExportSection() {
-  const [exporting, setExporting] = useState<string | null>(null)
-
-  async function handleExport(format: 'json' | 'csv' | 'm3u') {
-    setExporting(format)
-    try {
-      await exportRecommendations(format)
-      toast.success(`${format.toUpperCase()} exported`)
-    } catch {
-      toast.error('Export failed')
-    } finally {
-      setExporting(null)
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-text">Export Recommendations</h3>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {(['json', 'csv', 'm3u'] as const).map((fmt) => (
-          <button
-            key={fmt}
-            type="button"
-            onClick={() => handleExport(fmt)}
-            disabled={exporting === fmt}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border border-border bg-surface text-text hover:bg-bg transition-colors disabled:opacity-50"
-          >
-            {exporting === fmt ? 'Exporting...' : fmt.toUpperCase()}
-          </button>
-        ))}
-      </div>
-      <p className="text-xs text-muted">
-        Exports all your recommendations. Filter by status on the Discover page first if needed.
-      </p>
     </div>
   )
 }
@@ -1290,7 +1243,7 @@ function SettingsSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex gap-1 border-b border-border mb-6">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} className="h-9 w-28 mb-1" />
         ))}
       </div>
@@ -1342,6 +1295,7 @@ export function SettingsPage() {
       <h1 className="text-2xl font-bold text-text mb-6">Settings</h1>
       <TabBar active={tab} onChange={setTab} />
       {tab === 'connections' && <ConnectionsTab settings={data} onSaved={refetch} />}
+      {tab === 'targets' && <TargetsTab />}
       {tab === 'recommendations' && <RecommendationsTab settings={data} />}
       {tab === 'schedule' && <ScheduleTab settings={data} />}
       {tab === 'account' && <AccountTab />}
