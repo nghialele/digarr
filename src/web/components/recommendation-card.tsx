@@ -1,4 +1,5 @@
-import { Pause, Play } from 'lucide-react'
+import { ChevronDown, Pause, Play } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { usePreviewContext } from '../lib/preview-context'
 import { cn } from '../lib/utils'
 import { ArtistThumb } from './artist-thumb'
@@ -43,6 +44,8 @@ type RecommendationCardProps = {
   onToggleSelect?: (id: number) => void
   warmStatus?: 'warm' | 'warming' | 'unknown'
   approveNode?: React.ReactNode
+  targets?: Array<{ id: number; type: string; name: string }>
+  onApproveToTarget?: (recId: number, targetId: string) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -146,6 +149,112 @@ function GenrePills({
 }
 
 // ---------------------------------------------------------------------------
+// Target-aware approve dropdown
+// ---------------------------------------------------------------------------
+
+function TargetIcon({ type }: { type: string }) {
+  switch (type) {
+    case 'lidarr':
+      return <img src="/icons/lidarr.png" alt="" className="w-4 h-4" />
+    case 'navidrome':
+      return <img src="/icons/navidrome.svg" alt="" className="w-4 h-4" />
+    case 'jellyfin':
+      return <img src="/icons/jellyfin.svg" alt="" className="w-4 h-4" />
+    default:
+      return <div className="w-4 h-4" />
+  }
+}
+
+function targetActionLabel(type: string, name: string): string {
+  switch (type) {
+    case 'lidarr':
+      return `Add to ${name}`
+    case 'navidrome':
+      return `Favorite in ${name}`
+    case 'jellyfin':
+      return `Favorite in ${name}`
+    case 'spotify-playlist':
+      return 'Add to Spotify playlist'
+    default:
+      return `Send to ${name}`
+  }
+}
+
+function ApproveDropdown({
+  recId,
+  targets,
+  onApprove,
+  onApproveToTarget,
+}: {
+  recId: number
+  targets: Array<{ id: number; type: string; name: string }>
+  onApprove: (id: number) => void
+  onApproveToTarget?: (recId: number, targetId: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="flex">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve rounded-r-none"
+          onClick={(e) => {
+            e.stopPropagation()
+            onApprove(recId)
+          }}
+        >
+          Approve
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve rounded-l-none border-l-0 px-1.5"
+          onClick={(e) => {
+            e.stopPropagation()
+            setOpen(!open)
+          }}
+        >
+          <ChevronDown size={14} />
+        </Button>
+      </div>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-10 rounded-lg border border-border bg-surface shadow-lg py-1 min-w-[180px]">
+          {targets.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onApproveToTarget?.(recId, `${t.type}-${t.id}`)
+                setOpen(false)
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-accent/10 flex items-center gap-2"
+            >
+              <TargetIcon type={t.type} />
+              {targetActionLabel(t.type, t.name)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Action buttons (shared between compact and expanded views)
 // ---------------------------------------------------------------------------
 
@@ -157,6 +266,8 @@ function ActionButtons({
   onApprove,
   onReject,
   approveNode,
+  targets,
+  onApproveToTarget,
 }: {
   rec: Recommendation
   bulkMode: boolean
@@ -165,6 +276,8 @@ function ActionButtons({
   onApprove: (id: number) => void
   onReject: (id: number) => void
   approveNode?: React.ReactNode
+  targets?: Array<{ id: number; type: string; name: string }>
+  onApproveToTarget?: (recId: number, targetId: string) => void
 }) {
   if (bulkMode) return null
 
@@ -175,19 +288,27 @@ function ActionButtons({
   if (isPending) {
     return (
       <div className="flex gap-2">
-        {approveNode ?? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
-            onClick={(e) => {
-              stop(e)
-              onApprove(rec.id)
-            }}
-          >
-            Approve
-          </Button>
-        )}
+        {approveNode ??
+          (targets && targets.length > 1 ? (
+            <ApproveDropdown
+              recId={rec.id}
+              targets={targets}
+              onApprove={onApprove}
+              onApproveToTarget={onApproveToTarget}
+            />
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
+              onClick={(e) => {
+                stop(e)
+                onApprove(rec.id)
+              }}
+            >
+              Approve
+            </Button>
+          ))}
         <Button
           size="sm"
           variant="outline"
@@ -256,6 +377,8 @@ export function RecommendationCard({
   onToggleSelect,
   warmStatus,
   approveNode,
+  targets,
+  onApproveToTarget,
 }: RecommendationCardProps) {
   const preview = usePreviewContext()
   const pct = `${Math.round(rec.score * 100)}%`
@@ -478,6 +601,8 @@ export function RecommendationCard({
               onApprove={onApprove}
               onReject={onReject}
               approveNode={approveNode}
+              targets={targets}
+              onApproveToTarget={onApproveToTarget}
             />
           )}
         </div>
@@ -564,6 +689,8 @@ export function RecommendationCard({
               onApprove={onApprove}
               onReject={onReject}
               approveNode={approveNode}
+              targets={targets}
+              onApproveToTarget={onApproveToTarget}
             />
           </div>
         )}

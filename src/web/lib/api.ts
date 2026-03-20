@@ -343,9 +343,26 @@ export const deleteTargetApi = (id: number) => fetchApi(`/targets/${id}`, { meth
 export const testTargetApi = (id: number) =>
   fetchApi<{ success: boolean; message: string }>(`/targets/${id}/test`, { method: 'POST' })
 
+// Target-aware approve
+export async function approveToTarget(
+  recId: number,
+  targetId: string,
+  options?: { monitorOption?: string; selectedAlbumIds?: string[] },
+): Promise<{ status: string; targetActions?: Record<string, unknown> }> {
+  return fetchApi(`/recommendations/${recId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      status: 'approved',
+      targetId,
+      ...options,
+    }),
+  })
+}
+
 // Exports
 export async function exportRecommendations(
-  format: 'json' | 'csv' | 'm3u',
+  format: 'json' | 'csv' | 'm3u' | 'xspf',
   params?: { status?: string; batchId?: number },
 ) {
   const query = new URLSearchParams()
