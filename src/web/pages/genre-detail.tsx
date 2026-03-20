@@ -125,7 +125,8 @@ export function GenreDetailPage() {
       <div>
         <h1 className="text-2xl font-bold text-text">{data.name}</h1>
         <p className="text-sm text-muted mt-1">
-          {data.artistCount} artist{data.artistCount !== 1 ? 's' : ''}
+          {data.libraryArtists.length} artist{data.libraryArtists.length !== 1 ? 's' : ''} in your
+          library
         </p>
       </div>
 

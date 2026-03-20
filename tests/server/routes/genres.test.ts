@@ -74,7 +74,7 @@ function makeChainableMockDb() {
   for (const m of methods) {
     chain[m] = vi.fn(() => Object.assign(terminal, chain))
   }
-  chain.execute = vi.fn(async () => [])
+  chain.execute = vi.fn(async () => ({ rows: [] }))
   return chain as unknown as AppDependencies['db']
 }
 
@@ -153,7 +153,7 @@ beforeEach(() => {
 })
 
 describe('GET /api/genres', () => {
-  it('returns all genres', async () => {
+  it('returns all genres with example artists', async () => {
     const app = createApp(makeDeps())
     const res = await app.request('/api/genres')
     expect(res.status).toBe(200)
@@ -161,6 +161,7 @@ describe('GET /api/genres', () => {
     expect(Array.isArray(body)).toBe(true)
     expect(body).toHaveLength(2)
     expect(body[0].slug).toBe('rock')
+    expect(body[0].exampleArtists).toEqual([])
   })
 })
 

@@ -2,8 +2,10 @@ import type { GenreInfo } from '../../core/genre/types'
 import { GenreCard } from './genre-card'
 import { Skeleton } from './ui/skeleton'
 
+type GenreWithExamples = GenreInfo & { exampleArtists?: string[] }
+
 type GenreGridProps = {
-  genres: GenreInfo[]
+  genres: GenreWithExamples[]
   loading?: boolean
 }
 
@@ -38,7 +40,13 @@ export function GenreGrid({ genres, loading = false }: GenreGridProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {genres.map((g) => (
-        <GenreCard key={g.id} name={g.name} slug={g.slug} artistCount={g.artistCount} />
+        <GenreCard
+          key={g.id}
+          name={g.name}
+          slug={g.slug}
+          artistCount={g.artistCount}
+          exampleArtists={g.exampleArtists}
+        />
       ))}
     </div>
   )

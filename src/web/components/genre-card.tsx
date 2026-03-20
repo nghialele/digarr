@@ -4,6 +4,7 @@ export type GenreCardProps = {
   name: string
   slug: string
   artistCount: number
+  exampleArtists?: string[]
 }
 
 // Stable hue from genre name -- same hash as ArtistThumb
@@ -11,7 +12,7 @@ function genreHue(name: string): number {
   return Math.abs([...name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
 }
 
-export function GenreCard({ name, slug, artistCount }: GenreCardProps) {
+export function GenreCard({ name, slug, artistCount, exampleArtists }: GenreCardProps) {
   const navigate = useNavigate()
   const hue = genreHue(name)
 
@@ -31,6 +32,9 @@ export function GenreCard({ name, slug, artistCount }: GenreCardProps) {
       <p className="text-xs text-muted mt-1">
         {artistCount} artist{artistCount !== 1 ? 's' : ''}
       </p>
+      {exampleArtists && exampleArtists.length > 0 && (
+        <p className="text-[11px] text-muted/70 mt-1.5 truncate">{exampleArtists.join(', ')}</p>
+      )}
     </button>
   )
 }
