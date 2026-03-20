@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { HealthCheckCard } from '../components/health-check-card'
 import { LibraryStatsDisplay } from '../components/library-stats'
@@ -14,6 +15,13 @@ import {
   type LibraryStats,
   scanLibraryHealth,
 } from '../lib/api'
+
+// Checks where the fix is a Lidarr background task (refresh/search),
+// not an immediate DB write. These need longer delay before rescan.
+const DEFERRED_FIXES = new Set(['missing-metadata', 'stale-mbids', 'genre-gaps', 'missing-albums'])
+
+const RESCAN_DELAY_DEFERRED = 30_000
+const RESCAN_DELAY_IMMEDIATE = 5_000
 
 // ---------------------------------------------------------------------------
 // Loading skeletons
@@ -60,11 +68,12 @@ function StatsSkeleton() {
 
 export function LibraryHealthPage() {
   const queryClient = useQueryClient()
+  const [fixingIds, setFixingIds] = useState<Set<string>>(new Set())
+  const rescanTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const healthQuery = useQuery({
     queryKey: ['library', 'health'],
     queryFn: getLibraryHealth,
-    // Poll every 3s while a scan is in progress
     refetchInterval: (query) => (query.state.data?.scanning ? 3000 : false),
   })
 
@@ -80,20 +89,52 @@ export function LibraryHealthPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['library', 'health'] }),
   })
 
-  const fixMutation = useMutation({
-    mutationFn: (checkId: string) => fixHealthCheck(checkId),
-    onSuccess: (data: HealthFixResult) => {
-      queryClient.invalidateQueries({ queryKey: ['library', 'health'] })
-      if (data.failed === 0) {
-        toast.success(`Fixed ${data.completed} of ${data.total} items`)
-      } else {
-        toast.warning(`Fixed ${data.completed}, failed ${data.failed} of ${data.total}`, {
-          description: data.errors.slice(0, 3).join('; '),
+  const scheduleRescan = useCallback(
+    (delayMs: number) => {
+      if (rescanTimer.current) clearTimeout(rescanTimer.current)
+      rescanTimer.current = setTimeout(() => {
+        rescanMutation.mutate()
+        rescanTimer.current = null
+      }, delayMs)
+    },
+    [rescanMutation],
+  )
+
+  const handleFix = useCallback(
+    async (checkId: string) => {
+      setFixingIds((prev) => new Set([...prev, checkId]))
+      try {
+        const data: HealthFixResult = await fixHealthCheck(checkId)
+        const isDeferred = DEFERRED_FIXES.has(checkId)
+
+        if (data.failed === 0) {
+          if (isDeferred) {
+            toast.success(
+              `Triggered action for ${data.completed} artist${data.completed !== 1 ? 's' : ''} -- re-scanning in 30s to verify`,
+            )
+          } else {
+            toast.success(`Updated ${data.completed} artist${data.completed !== 1 ? 's' : ''}`)
+          }
+        } else {
+          toast.warning(`Processed ${data.completed}, failed ${data.failed} of ${data.total}`, {
+            description: data.errors.slice(0, 3).join('; '),
+          })
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['library', 'health'] })
+        scheduleRescan(isDeferred ? RESCAN_DELAY_DEFERRED : RESCAN_DELAY_IMMEDIATE)
+      } catch {
+        toast.error('Fix failed -- check Lidarr connection')
+      } finally {
+        setFixingIds((prev) => {
+          const next = new Set(prev)
+          next.delete(checkId)
+          return next
         })
       }
     },
-    onError: () => toast.error('Fix failed -- check Lidarr connection'),
-  })
+    [queryClient, scheduleRescan],
+  )
 
   const scanning = healthQuery.data?.scanning ?? false
   const checks: HealthCheckResult[] = healthQuery.data?.checks ?? []
@@ -101,6 +142,7 @@ export function LibraryHealthPage() {
   const prefs = (settingsQuery.data?.preferences ?? {}) as Record<string, unknown>
   const lidarrBaseUrl =
     (prefs.lidarrPublicUrl as string) || (settingsQuery.data?.lidarrUrl as string) || null
+  const pendingRescan = rescanTimer.current !== null
 
   return (
     <div className="p-6 space-y-8 max-w-6xl mx-auto">
@@ -127,6 +169,14 @@ export function LibraryHealthPage() {
         </div>
       )}
 
+      {/* Pending rescan indicator */}
+      {pendingRescan && !scanning && (
+        <div className="bg-surface border border-border rounded-lg px-4 py-2.5 text-xs text-muted flex items-center gap-2">
+          <RefreshCw size={12} className="shrink-0" />
+          Auto re-scan scheduled to verify fix results...
+        </div>
+      )}
+
       {/* Health checks */}
       <div className="space-y-3">
         {healthQuery.isLoading ? (
@@ -141,8 +191,8 @@ export function LibraryHealthPage() {
               <HealthCheckCard
                 key={check.id}
                 check={check}
-                onFix={(checkId) => fixMutation.mutate(checkId)}
-                fixing={fixMutation.isPending && fixMutation.variables === check.id}
+                onFix={handleFix}
+                fixing={fixingIds.has(check.id)}
                 lidarrBaseUrl={lidarrBaseUrl}
               />
             ))}
