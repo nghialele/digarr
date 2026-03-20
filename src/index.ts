@@ -20,6 +20,7 @@ import { createDefaultRegistry } from './core/providers/registry'
 import { setSessionStore } from './core/sessions'
 import { createLidarrTarget } from './core/targets/lidarr'
 import { db, pool } from './db'
+import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
 import {
@@ -117,6 +118,8 @@ const storeDb: StoreDb = {
   insertRecommendation: (data) => insertRecommendation(db, data),
   getRejectedMbids: (cooldownDays) => getRejectedArtistMbids(db, cooldownDays),
   getFeedbackHistory: () => getGenreFeedbackHistory(db),
+  lookupArtistMetadata: (name) => lookupByName(db, name),
+  getPopularityMap: () => getPopularityMap(db),
 }
 
 const orchestrator = new PipelineOrchestrator()

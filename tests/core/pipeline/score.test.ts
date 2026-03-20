@@ -152,6 +152,7 @@ describe('score()', () => {
       genreOverlap: 0.2,
       aiConfidence: 0.15,
       feedbackBoost: 0.1,
+      popularity: 0.0,
     }
     // 2 sources -> consensus = 0.5
     // similarity = 0.8

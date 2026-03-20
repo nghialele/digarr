@@ -36,6 +36,13 @@ export interface StoreDb {
   getRejectedMbids: (cooldownDays: number) => Promise<Set<string>>
 
   getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
+
+  lookupArtistMetadata?: (name: string) => Promise<{
+    spotifyGenres: string[] | null
+    spotifyPopularity: number | null
+  } | null>
+
+  getPopularityMap?: () => Promise<Map<string, number>>
 }
 
 export type StoreOptions = {

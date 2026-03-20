@@ -10,6 +10,7 @@ import { mergePreferences, type Preferences } from '@/db/schema'
 import { analyze } from './analyze'
 import { collect } from './collect'
 import { discover } from './discover'
+import { enrichGenres } from './enrich'
 import { filter } from './filter'
 import { resolve } from './resolve'
 import { score } from './score'
@@ -161,7 +162,7 @@ export class PipelineOrchestrator extends EventEmitter {
         stage: 'resolve',
         message: `Resolving ${discovered.length} artists via MusicBrainz...`,
       })
-      const resolved = await resolve(
+      const rawResolved = await resolve(
         discovered,
         mbClient,
         (progress) => {
@@ -170,11 +171,15 @@ export class PipelineOrchestrator extends EventEmitter {
         lidarrClient,
       )
 
+      // Enrich sparse genres from artist_metadata (if available)
+      const resolved = await enrichGenres(rawResolved, db.lookupArtistMetadata ?? null)
+
       this.emit('progress', {
         stage: 'score',
         message: `Scoring ${resolved.length} resolved artists...`,
       })
-      const scored = score(resolved, libraryGenres, prefs.scoringWeights, feedbackHistory)
+      const popularityMap = (await db.getPopularityMap?.()) ?? new Map<string, number>()
+      const scored = score(resolved, libraryGenres, prefs.scoringWeights, feedbackHistory, popularityMap)
 
       this.emit('progress', {
         stage: 'filter',

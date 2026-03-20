@@ -115,6 +115,7 @@ const defaultSettings = {
       genreOverlap: 0.2,
       aiConfidence: 0.15,
       feedbackBoost: 0.1,
+      popularity: 0.0,
     },
     rejectionCooldownDays: 90,
     topArtistsLimit: 30,
