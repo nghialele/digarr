@@ -58,14 +58,17 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
     { id: 'auth', label: 'Authentication' },
   ]
   return (
-    <div className="flex gap-1 border-b border-border mb-6">
+    <div
+      className="flex gap-1 border-b border-border mb-6 overflow-x-auto -mx-6 px-6"
+      style={{ scrollbarWidth: 'none' }}
+    >
       {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
           onClick={() => onChange(t.id)}
           className={[
-            'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+            'px-3 sm:px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0',
             active === t.id
               ? 'border-accent text-text'
               : 'border-transparent text-muted hover:text-text',
@@ -318,7 +321,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           status={serviceStatus('lidarr')}
           icon={<LidarrIcon />}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="URL" id="lidarr-url">
               <Input
                 id="lidarr-url"
@@ -338,7 +341,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
               />
             </Field>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Quality Profile" id="quality-profile">
               <Select
                 id="quality-profile"
@@ -422,7 +425,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           status={serviceStatus('listenbrainz')}
           icon={<ListenBrainzIcon />}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Username" id="lb-username">
               <Input
                 id="lb-username"
@@ -474,7 +477,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           status={serviceStatus('lastfm')}
           icon={<LastfmIcon />}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Username" id="lfm-username">
               <Input
                 id="lfm-username"
@@ -517,7 +520,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           status={serviceStatus('ai')}
           icon={<AiProviderIcon />}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Provider" id="ai-provider">
               <Select
                 id="ai-provider"
