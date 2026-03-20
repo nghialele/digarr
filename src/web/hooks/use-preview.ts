@@ -38,7 +38,7 @@ function resolveSpotifyEmbed(spotifyUrl: string): PreviewSource | null {
   return {
     type: 'spotify-embed',
     url: spotifyUrl,
-    embedUrl: `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator&theme=0`,
+    embedUrl: `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator&theme=0&autoPlay=true`,
   }
 }
 
