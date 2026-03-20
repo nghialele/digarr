@@ -57,4 +57,12 @@ describe('TargetRegistry', () => {
     expect(reg.all()).toHaveLength(1)
     expect(reg.get('a')?.name).toBe('Second')
   })
+
+  it('filters by createPlaylist capability', () => {
+    const reg = new TargetRegistry()
+    reg.register(makeTarget({ id: 'a', capabilities: ['addArtist'] }))
+    reg.register(makeTarget({ id: 'b', capabilities: ['createPlaylist'] }))
+    reg.register(makeTarget({ id: 'c', capabilities: ['createPlaylist', 'addToFavorites'] }))
+    expect(reg.withCapability('createPlaylist')).toHaveLength(2)
+  })
 })

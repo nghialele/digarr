@@ -42,18 +42,18 @@ describe('createLidarrTarget()', () => {
       rootFolderId: 4,
     })
 
-    const result = await target.addArtist(
+    const result = await target.addArtist?.(
       { mbid: 'mbid-rh', name: 'Radiohead' },
       { monitorOption: 'all' },
     )
 
-    expect(result.success).toBe(true)
-    expect(result.externalId).toBe(42)
-    expect(result.targetType).toBe('lidarr')
-    expect(result.targetId).toBe(1)
-    expect(client.addArtist).toHaveBeenCalledWith(
-      'mbid-rh', 'Radiohead', 2, 3, 4, { monitorOption: 'all' },
-    )
+    expect(result?.success).toBe(true)
+    expect(result?.externalId).toBe(42)
+    expect(result?.targetType).toBe('lidarr')
+    expect(result?.targetId).toBe(1)
+    expect(client.addArtist).toHaveBeenCalledWith('mbid-rh', 'Radiohead', 2, 3, 4, {
+      monitorOption: 'all',
+    })
   })
 
   it('addArtist returns failure on Lidarr error', async () => {
@@ -64,9 +64,9 @@ describe('createLidarrTarget()', () => {
       apiKey: 'abc',
     })
 
-    const result = await target.addArtist({ mbid: 'mbid-rh', name: 'Radiohead' })
-    expect(result.success).toBe(false)
-    expect(result.error).toBe('Artist already exists')
+    const result = await target.addArtist?.({ mbid: 'mbid-rh', name: 'Radiohead' })
+    expect(result?.success).toBe(false)
+    expect(result?.error).toBe('Artist already exists')
   })
 
   it('addArtist with selected albums monitors individual albums', async () => {
@@ -80,14 +80,14 @@ describe('createLidarrTarget()', () => {
       apiKey: 'abc',
     })
 
-    await target.addArtist(
+    await target.addArtist?.(
       { mbid: 'mbid-rh', name: 'Radiohead' },
       { monitorOption: 'selected', selectedAlbumIds: ['album-1'] },
     )
 
-    expect(client.addArtist).toHaveBeenCalledWith(
-      'mbid-rh', 'Radiohead', 1, 1, 1, { monitorOption: 'none' },
-    )
+    expect(client.addArtist).toHaveBeenCalledWith('mbid-rh', 'Radiohead', 1, 1, 1, {
+      monitorOption: 'none',
+    })
     expect(client.updateAlbum).toHaveBeenCalledWith(10, { monitored: true })
     expect(client.updateAlbum).not.toHaveBeenCalledWith(11, expect.anything())
   })

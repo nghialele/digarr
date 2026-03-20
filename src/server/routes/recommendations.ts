@@ -88,10 +88,11 @@ export function recommendationRoutes(deps: AppDependencies) {
 
       for (const target of targets) {
         if (!target.capabilities?.includes('addArtist')) continue
-        const result = await target.addArtist(
+        const result = await target.addArtist?.(
           { mbid: rec.artist.mbid, name: rec.artist.name },
           addOptions,
         )
+        if (!result) continue
         targetActions[target.id] = {
           status: result.success ? 'added' : 'failed',
           externalId: result.externalId,
@@ -175,10 +176,11 @@ export function recommendationRoutes(deps: AppDependencies) {
 
       for (const target of targets) {
         if (!target.capabilities?.includes('addArtist')) continue
-        const result = await target.addArtist(
+        const result = await target.addArtist?.(
           { mbid: rec.artist.mbid, name: rec.artist.name },
           addOptions,
         )
+        if (!result) continue
         targetActions[target.id] = {
           status: result.success ? 'added' : 'failed',
           externalId: result.externalId,
