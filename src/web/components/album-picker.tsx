@@ -1,14 +1,35 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getAlbums } from '../lib/api'
+import { ArtistThumb } from './artist-thumb'
 import { Button } from './ui/button'
 
 type Props = {
   artistMbid: string
   artistName: string
+  artistImageUrl?: string | null
   suggestedAlbumId?: string | null
   onConfirm: (selectedAlbumIds: string[]) => void
   onCancel: () => void
+}
+
+function AlbumCover({ mbid, title }: { mbid: string; title: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <div className="w-10 h-10 rounded bg-bg shrink-0 flex items-center justify-center text-[10px] font-bold text-muted">
+        {title.slice(0, 2).toUpperCase()}
+      </div>
+    )
+  }
+  return (
+    <img
+      src={`https://coverartarchive.org/release-group/${mbid}/front-250`}
+      alt={title}
+      className="w-10 h-10 rounded object-cover bg-bg shrink-0"
+      onError={() => setFailed(true)}
+    />
+  )
 }
 
 const TYPE_PRIORITY: Record<string, number> = { Album: 0, EP: 1, Single: 2, Live: 3 }
@@ -16,6 +37,7 @@ const TYPE_PRIORITY: Record<string, number> = { Album: 0, EP: 1, Single: 2, Live
 export function AlbumPicker({
   artistMbid,
   artistName,
+  artistImageUrl,
   suggestedAlbumId,
   onConfirm,
   onCancel,
@@ -71,9 +93,12 @@ export function AlbumPicker({
       <div className="bg-surface border border-border rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border shrink-0">
-          <div>
-            <h2 className="text-sm font-semibold text-text">Select albums</h2>
-            <p className="text-xs text-muted mt-0.5">{artistName}</p>
+          <div className="flex items-center gap-3">
+            <ArtistThumb name={artistName} imageUrl={artistImageUrl} size={10} />
+            <div>
+              <h2 className="text-sm font-semibold text-text">Select albums</h2>
+              <p className="text-xs text-muted mt-0.5">{artistName}</p>
+            </div>
           </div>
           <button
             type="button"
@@ -150,6 +175,7 @@ export function AlbumPicker({
                           onChange={() => toggleAlbum(album.id)}
                           className="w-4 h-4 accent-accent cursor-pointer shrink-0"
                         />
+                        <AlbumCover mbid={album.id} title={album.title} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm text-text truncate">{album.title}</span>

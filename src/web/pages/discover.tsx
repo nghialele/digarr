@@ -981,6 +981,7 @@ export function DiscoverPage() {
             <AlbumPicker
               artistMbid={pickerRec.artist.mbid}
               artistName={pickerRec.artist.name}
+              artistImageUrl={pickerRec.artist.imageUrl}
               suggestedAlbumId={pickerRec.recommendedReleaseGroupId}
               onConfirm={(selectedAlbumIds) => {
                 setAlbumPickerRecId(null)
