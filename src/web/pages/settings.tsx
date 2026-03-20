@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { Field } from '../components/field'
 import { ServiceCard } from '../components/service-card'
+import { AiProviderIcon, LastfmIcon, LidarrIcon, ListenBrainzIcon, WebhookIcon } from '../components/service-icons'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
@@ -315,6 +316,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="Lidarr"
           description="Music library manager -- required for adding artists"
           status={serviceStatus('lidarr')}
+          icon={<LidarrIcon />}
         >
           <div className="grid grid-cols-2 gap-3">
             <Field label="URL" id="lidarr-url">
@@ -418,6 +420,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
             </span>
           }
           status={serviceStatus('listenbrainz')}
+          icon={<ListenBrainzIcon />}
         >
           <div className="grid grid-cols-2 gap-3">
             <Field label="Username" id="lb-username">
@@ -469,6 +472,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
             </span>
           }
           status={serviceStatus('lastfm')}
+          icon={<LastfmIcon />}
         >
           <div className="grid grid-cols-2 gap-3">
             <Field label="Username" id="lfm-username">
@@ -511,6 +515,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="AI Provider"
           description="Generates music recommendations"
           status={serviceStatus('ai')}
+          icon={<AiProviderIcon />}
         >
           <div className="grid grid-cols-2 gap-3">
             <Field label="Provider" id="ai-provider">
@@ -596,6 +601,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
         name="Webhook"
         description="Scan completion notifications (Discord, Slack, ntfy, Gotify, or any HTTP endpoint)"
         status={webhookUrl ? 'connected' : 'not_configured'}
+        icon={<WebhookIcon />}
       >
         <Field label="Webhook URL" id="webhook-url">
           <Input

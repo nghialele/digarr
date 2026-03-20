@@ -1,5 +1,5 @@
 import { QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { HeartPulse, Monitor, Moon, Sun } from 'lucide-react'
+import { BarChart3, Compass, HeartPulse, LayoutDashboard, Monitor, Moon, Music, Settings, Sun, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
@@ -126,14 +126,23 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </NavLink>
               {/* Desktop nav links */}
               <div className="hidden sm:flex items-center gap-6">
-                <NavLink to="/" className={navLinkClass}>
-                  Dashboard
+                <NavLink to="/" end className={navLinkClass}>
+                  <span className="flex items-center gap-1">
+                    <LayoutDashboard size={14} aria-hidden="true" />
+                    Dashboard
+                  </span>
                 </NavLink>
                 <NavLink to="/discover" className={navLinkClass}>
-                  Discover
+                  <span className="flex items-center gap-1">
+                    <Compass size={14} aria-hidden="true" />
+                    Discover
+                  </span>
                 </NavLink>
                 <NavLink to="/genres" className={navLinkClass}>
-                  Genres
+                  <span className="flex items-center gap-1">
+                    <Music size={14} aria-hidden="true" />
+                    Genres
+                  </span>
                 </NavLink>
                 <NavLink to="/library/health" className={navLinkClass}>
                   <span className="flex items-center gap-1">
@@ -142,14 +151,23 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   </span>
                 </NavLink>
                 <NavLink to="/analytics" className={navLinkClass}>
-                  Analytics
+                  <span className="flex items-center gap-1">
+                    <BarChart3 size={14} aria-hidden="true" />
+                    Analytics
+                  </span>
                 </NavLink>
                 <NavLink to="/settings" className={navLinkClass}>
-                  Settings
+                  <span className="flex items-center gap-1">
+                    <Settings size={14} aria-hidden="true" />
+                    Settings
+                  </span>
                 </NavLink>
                 {currentUser?.isAdmin && (
                   <NavLink to="/users" className={navLinkClass}>
-                    Users
+                    <span className="flex items-center gap-1">
+                      <Users size={14} aria-hidden="true" />
+                      Users
+                    </span>
                   </NavLink>
                 )}
               </div>
@@ -185,31 +203,52 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {/* Mobile nav dropdown */}
           {menuOpen && (
             <div className="sm:hidden flex flex-col gap-3 pt-3 pb-1">
-              <NavLink to="/" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-                Dashboard
+              <NavLink to="/" end className={navLinkClass} onClick={() => setMenuOpen(false)}>
+                <span className="flex items-center gap-1.5">
+                  <LayoutDashboard size={14} aria-hidden="true" />
+                  Dashboard
+                </span>
               </NavLink>
               <NavLink to="/discover" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-                Discover
+                <span className="flex items-center gap-1.5">
+                  <Compass size={14} aria-hidden="true" />
+                  Discover
+                </span>
               </NavLink>
               <NavLink to="/genres" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-                Genres
+                <span className="flex items-center gap-1.5">
+                  <Music size={14} aria-hidden="true" />
+                  Genres
+                </span>
               </NavLink>
               <NavLink
                 to="/library/health"
                 className={navLinkClass}
                 onClick={() => setMenuOpen(false)}
               >
-                Library
+                <span className="flex items-center gap-1.5">
+                  <HeartPulse size={14} aria-hidden="true" />
+                  Library
+                </span>
               </NavLink>
               <NavLink to="/analytics" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-                Analytics
+                <span className="flex items-center gap-1.5">
+                  <BarChart3 size={14} aria-hidden="true" />
+                  Analytics
+                </span>
               </NavLink>
               <NavLink to="/settings" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-                Settings
+                <span className="flex items-center gap-1.5">
+                  <Settings size={14} aria-hidden="true" />
+                  Settings
+                </span>
               </NavLink>
               {currentUser?.isAdmin && (
                 <NavLink to="/users" className={navLinkClass} onClick={() => setMenuOpen(false)}>
-                  Users
+                  <span className="flex items-center gap-1.5">
+                    <Users size={14} aria-hidden="true" />
+                    Users
+                  </span>
                 </NavLink>
               )}
             </div>

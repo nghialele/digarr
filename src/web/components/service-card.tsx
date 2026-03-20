@@ -8,6 +8,7 @@ export type ServiceCardProps = {
   name: string
   description?: React.ReactNode
   status: ServiceStatus
+  icon?: React.ReactNode
   onTest?: () => void
   children: React.ReactNode
 }
@@ -48,12 +49,17 @@ function StatusIndicator({ status }: { status: ServiceStatus }) {
   )
 }
 
-export function ServiceCard({ name, description, status, onTest, children }: ServiceCardProps) {
+export function ServiceCard({ name, description, status, icon, onTest, children }: ServiceCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle>{name}</CardTitle>
+          <CardTitle>
+            <span className="flex items-center gap-2">
+              {icon}
+              {name}
+            </span>
+          </CardTitle>
           <StatusIndicator status={status} />
         </div>
         {description && <CardDescription>{description}</CardDescription>}
