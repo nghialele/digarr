@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { exportToCsv } from '@/core/targets/export-csv'
 import { exportToJson } from '@/core/targets/export-json'
 import { exportToM3u } from '@/core/targets/export-m3u'
+import { exportToXspf } from '@/core/targets/export-xspf'
 import type { ExportableRecommendation } from '@/core/targets/types'
 import type {
   ListRecommendationsFilters,
@@ -17,12 +18,14 @@ const CONTENT_TYPES: Record<string, string> = {
   json: 'application/json',
   csv: 'text/csv',
   m3u: 'audio/x-mpegurl',
+  xspf: 'application/xspf+xml',
 }
 
 const EXPORTERS: Record<string, (recs: ExportableRecommendation[]) => string> = {
   json: exportToJson,
   csv: exportToCsv,
   m3u: exportToM3u,
+  xspf: exportToXspf,
 }
 
 export function exportRoutes(deps: ExportDeps) {
@@ -31,7 +34,7 @@ export function exportRoutes(deps: ExportDeps) {
   router.get('/api/exports/:format', async (c) => {
     const format = c.req.param('format')
     if (!CONTENT_TYPES[format] || !EXPORTERS[format]) {
-      return c.json({ error: `Unsupported format: ${format}. Use json, csv, or m3u` }, 400)
+      return c.json({ error: `Unsupported format: ${format}. Use json, csv, m3u, or xspf` }, 400)
     }
 
     const userId = c.get('userId')

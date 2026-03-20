@@ -69,6 +69,16 @@ describe('export routes', () => {
     expect(text).toContain('#EXTM3U')
   })
 
+  it('GET /api/exports/xspf returns XSPF with correct content-type', async () => {
+    const app = createTestApp()
+    const res = await app.request('/api/exports/xspf')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('application/xspf+xml')
+    const text = await res.text()
+    expect(text).toContain('<?xml')
+    expect(text).toContain('xspf.org')
+  })
+
   it('returns 400 for unknown format', async () => {
     const app = createTestApp()
     const res = await app.request('/api/exports/xml')
