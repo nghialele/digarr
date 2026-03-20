@@ -87,6 +87,7 @@ export async function getRecommendation(
 export type StatusUpdateExtra = {
   lidarrArtistId?: number
   lidarrError?: string
+  targetActions?: Record<string, unknown>
 }
 
 export async function updateRecommendationStatus(

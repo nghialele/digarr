@@ -10,6 +10,12 @@ vi.mock('@/core/clients/lidarr', () => ({
   createLidarrClient: vi.fn(),
 }))
 
+// Mock sessions so auth middleware sets userId
+vi.mock('@/core/sessions', () => ({
+  getSession: vi.fn(async () => ({ userId: 1, token: 'test-token', expiresAt: new Date(Date.now() + 86400000) })),
+  setSessionStore: vi.fn(),
+}))
+
 import { createLidarrClient } from '@/core/clients/lidarr'
 
 function makeMockOrchestrator() {
@@ -217,22 +223,30 @@ describe('PATCH /api/recommendations/:id', () => {
     expect(updateRecommendationStatus).toHaveBeenCalledWith(1, 'rejected')
   })
 
-  it('approve triggers Lidarr add and sets added_to_lidarr on success', async () => {
+  it('approve triggers target add and sets added_to_lidarr on success', async () => {
     const updateRecommendationStatus = vi.fn(async () => {})
-    mockLidarrClient.addArtist.mockResolvedValue({
-      id: 99,
-      artistName: 'Test Artist',
-      foreignArtistId: 'mbid-abc-123',
-      qualityProfileId: 1,
-      rootFolderPath: '/music',
-      monitored: true,
-      status: 'continuing',
-    })
+    const mockTarget = {
+      id: 'lidarr-1',
+      type: 'lidarr',
+      capabilities: ['addArtist'],
+      addArtist: vi.fn().mockResolvedValue({
+        success: true,
+        targetType: 'lidarr',
+        targetId: 1,
+        externalId: 99,
+      }),
+    }
 
-    const app = createApp(makeDeps({ updateRecommendationStatus }))
+    const app = createApp(
+      makeDeps({
+        updateRecommendationStatus,
+        getUserCount: vi.fn(async () => 1),
+        getEnabledTargetsForUser: vi.fn().mockResolvedValue([mockTarget]),
+      }),
+    )
     const res = await app.request('/api/recommendations/1', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
       body: JSON.stringify({ status: 'approved' }),
     })
     expect(res.status).toBe(200)
@@ -245,14 +259,30 @@ describe('PATCH /api/recommendations/:id', () => {
     )
   })
 
-  it('approve sets add_failed when Lidarr throws', async () => {
+  it('approve sets add_failed when target fails', async () => {
     const updateRecommendationStatus = vi.fn(async () => {})
-    mockLidarrClient.addArtist.mockRejectedValue(new Error('Lidarr down'))
+    const mockTarget = {
+      id: 'lidarr-1',
+      type: 'lidarr',
+      capabilities: ['addArtist'],
+      addArtist: vi.fn().mockResolvedValue({
+        success: false,
+        targetType: 'lidarr',
+        targetId: 1,
+        error: 'Lidarr down',
+      }),
+    }
 
-    const app = createApp(makeDeps({ updateRecommendationStatus }))
+    const app = createApp(
+      makeDeps({
+        updateRecommendationStatus,
+        getUserCount: vi.fn(async () => 1),
+        getEnabledTargetsForUser: vi.fn().mockResolvedValue([mockTarget]),
+      }),
+    )
     const res = await app.request('/api/recommendations/1', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
       body: JSON.stringify({ status: 'approved' }),
     })
     expect(res.status).toBe(200)

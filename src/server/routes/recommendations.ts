@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { createLidarrClient } from '@/core/clients/lidarr'
 import type { AppDependencies } from '@/server'
 import type { HonoEnv } from '@/server/types'
 
@@ -53,67 +52,75 @@ export function recommendationRoutes(deps: AppDependencies) {
       }
 
       const settings = await deps.getSettings()
-      if (!settings?.lidarrUrl || !settings?.lidarrApiKey) {
-        return c.json({ error: 'Lidarr not configured' }, 400)
-      }
+      const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
 
-      const prefs = (settings.preferences as Record<string, unknown> | null) ?? {}
-      const qualityProfileId = Number(prefs.qualityProfileId ?? 1)
-      const metadataProfileId = Number(prefs.metadataProfileId ?? 1)
-      const rootFolderId = Number(prefs.rootFolderId ?? 1)
+      // Get targets for this user
+      const userId = c.get('userId')
+      const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
 
-      const lidarr = createLidarrClient(
-        settings.lidarrUrl as string,
-        settings.lidarrApiKey as string,
-        (settings.skipTlsVerify as boolean) ?? false,
-      )
-
-      // Pre-warm SkyHook cache before adding to Lidarr to avoid 503s
-      if (deps.skyhookWarmer && rec.artist?.mbid) {
+      // Pre-warm SkyHook if any Lidarr target exists
+      if (deps.skyhookWarmer && rec.artist?.mbid && targets.some((t) => t.type === 'lidarr')) {
         try {
           await deps.skyhookWarmer.warm(rec.artist.mbid)
         } catch {
-          // Best-effort -- continue with add even if warming fails
+          // Best-effort
         }
       }
 
-      // Map 'selected' to 'none' for initial add -- we'll monitor individual albums after
-      const effectiveMonitor = monitorOption === 'selected' ? 'none' : (monitorOption ?? 'all')
+      const addOptions = {
+        monitorOption: monitorOption ?? 'all',
+        selectedAlbumIds,
+        qualityProfileId: Number(prefs.qualityProfileId ?? 1),
+        metadataProfileId: Number(prefs.metadataProfileId ?? 1),
+        rootFolderId: Number(prefs.rootFolderId ?? 1),
+      }
 
-      try {
-        const added = await lidarr.addArtist(
-          rec.artist.mbid,
-          rec.artist.name,
-          qualityProfileId,
-          metadataProfileId,
-          rootFolderId,
-          { monitorOption: effectiveMonitor },
+      // No targets configured -- just mark as approved (discovery-only mode)
+      if (targets.length === 0) {
+        await deps.updateRecommendationStatus(id, 'approved', { targetActions: {} })
+        return c.json({ status: 'approved' })
+      }
+
+      // Run through all enabled targets with addArtist capability
+      const targetActions: Record<string, unknown> = {}
+      let anySuccess = false
+      let lidarrResult: { externalId?: number | string; error?: string } | null = null
+
+      for (const target of targets) {
+        if (!target.capabilities?.includes('addArtist')) continue
+        const result = await target.addArtist(
+          { mbid: rec.artist.mbid, name: rec.artist.name },
+          addOptions,
         )
-
-        // If 'selected' mode, monitor specific albums after the add
-        if (monitorOption === 'selected' && selectedAlbumIds?.length && added.id) {
-          try {
-            const albums = await lidarr.getAlbums(added.id)
-            for (const albumMbid of selectedAlbumIds) {
-              const album = albums.find((a) => a.foreignAlbumId === albumMbid)
-              if (album) {
-                await lidarr.updateAlbum(album.id, { monitored: true })
-              }
-            }
-          } catch {
-            // Best-effort -- artist was added, album monitoring is secondary
-          }
+        targetActions[target.id] = {
+          status: result.success ? 'added' : 'failed',
+          externalId: result.externalId,
+          error: result.error,
         }
-
-        await deps.updateRecommendationStatus(id, 'added_to_lidarr', {
-          lidarrArtistId: added.id,
-        })
-        return c.json({ status: 'added_to_lidarr' })
-      } catch (err: unknown) {
-        const lidarrError = err instanceof Error ? err.message : String(err)
-        await deps.updateRecommendationStatus(id, 'add_failed', { lidarrError })
-        return c.json({ status: 'add_failed', lidarrError })
+        if (result.success) anySuccess = true
+        if (target.type === 'lidarr') lidarrResult = result
       }
+
+      // Backward compat: write Lidarr-specific columns
+      const extra: Record<string, unknown> = { targetActions }
+      if (lidarrResult) {
+        if (lidarrResult.externalId) extra.lidarrArtistId = lidarrResult.externalId
+        if (lidarrResult.error) extra.lidarrError = lidarrResult.error
+      }
+
+      // Use Lidarr-specific statuses for backward compat when Lidarr is involved
+      const hasLidarr = targets.some((t) => t.type === 'lidarr')
+      const finalStatus = anySuccess
+        ? hasLidarr
+          ? 'added_to_lidarr'
+          : 'approved'
+        : 'add_failed'
+      await deps.updateRecommendationStatus(id, finalStatus, extra)
+      return c.json({
+        status: finalStatus,
+        targetActions,
+        ...(lidarrResult?.error ? { lidarrError: lidarrResult.error } : {}),
+      })
     }
 
     const VALID_STATUSES = new Set(['rejected', 'pending', 'approved'])
@@ -141,22 +148,16 @@ export function recommendationRoutes(deps: AppDependencies) {
       return c.json({ updated: ids.length })
     }
 
-    // approve: add each to Lidarr individually
+    // Approve: route through targets
+    const userId = c.get('userId')
+    const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
     const settings = await deps.getSettings()
-    if (!settings?.lidarrUrl || !settings?.lidarrApiKey) {
-      return c.json({ error: 'Lidarr not configured' }, 400)
+    const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
+    const addOptions = {
+      qualityProfileId: Number(prefs.qualityProfileId ?? 1),
+      metadataProfileId: Number(prefs.metadataProfileId ?? 1),
+      rootFolderId: Number(prefs.rootFolderId ?? 1),
     }
-
-    const prefs = (settings.preferences as Record<string, unknown> | null) ?? {}
-    const qualityProfileId = Number(prefs.qualityProfileId ?? 1)
-    const metadataProfileId = Number(prefs.metadataProfileId ?? 1)
-    const rootFolderId = Number(prefs.rootFolderId ?? 1)
-
-    const lidarr = createLidarrClient(
-      settings.lidarrUrl as string,
-      settings.lidarrApiKey as string,
-      (settings.skipTlsVerify as boolean) ?? false,
-    )
 
     const results: Array<{ id: number; status: string; error?: string }> = []
 
@@ -166,23 +167,44 @@ export function recommendationRoutes(deps: AppDependencies) {
         results.push({ id, status: 'not_found' })
         continue
       }
-      try {
-        const added = await lidarr.addArtist(
-          rec.artist.mbid,
-          rec.artist.name,
-          qualityProfileId,
-          metadataProfileId,
-          rootFolderId,
-        )
-        await deps.updateRecommendationStatus(id, 'added_to_lidarr', {
-          lidarrArtistId: added.id,
-        })
-        results.push({ id, status: 'added_to_lidarr' })
-      } catch (err: unknown) {
-        const lidarrError = err instanceof Error ? err.message : String(err)
-        await deps.updateRecommendationStatus(id, 'add_failed', { lidarrError })
-        results.push({ id, status: 'add_failed', error: lidarrError })
+
+      if (targets.length === 0) {
+        await deps.updateRecommendationStatus(id, 'approved', { targetActions: {} })
+        results.push({ id, status: 'approved' })
+        continue
       }
+
+      const targetActions: Record<string, unknown> = {}
+      let anySuccess = false
+
+      for (const target of targets) {
+        if (!target.capabilities?.includes('addArtist')) continue
+        const result = await target.addArtist(
+          { mbid: rec.artist.mbid, name: rec.artist.name },
+          addOptions,
+        )
+        targetActions[target.id] = {
+          status: result.success ? 'added' : 'failed',
+          externalId: result.externalId,
+          error: result.error,
+        }
+        if (result.success) anySuccess = true
+
+        // Backward compat: Lidarr-specific columns
+        if (target.type === 'lidarr') {
+          const extra: Record<string, unknown> = { targetActions }
+          if (result.success && result.externalId) {
+            extra.lidarrArtistId = result.externalId
+          } else if (result.error) {
+            extra.lidarrError = result.error
+          }
+        }
+      }
+
+      const hasLidarr = targets.some((t) => t.type === 'lidarr')
+      const status = anySuccess ? (hasLidarr ? 'added_to_lidarr' : 'approved') : 'add_failed'
+      await deps.updateRecommendationStatus(id, status, { targetActions })
+      results.push({ id, status })
     }
 
     return c.json({ results })
