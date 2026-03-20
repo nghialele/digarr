@@ -53,24 +53,24 @@ export async function getGenreEnrichments(
 ): Promise<Map<string, GenreEnrichment>> {
   const [exRows, countRows] = await Promise.all([
     db.execute<{ genre_name: string; artist_name: string }>(
-      sql`SELECT g.name AS genre_name, a.name AS artist_name
+      sql`SELECT g.name AS genre_name, sub.name AS artist_name
           FROM ${genres} g
           CROSS JOIN LATERAL (
-            SELECT ${artists.name}
-            FROM ${artists}
+            SELECT ar.name
+            FROM artists ar
             WHERE EXISTS (
-              SELECT 1 FROM unnest(${artists.genres}) ag WHERE lower(ag) = lower(g.name)
+              SELECT 1 FROM unnest(ar.genres) ag WHERE lower(ag) = lower(g.name)
             )
-            ORDER BY ${artists.name}
+            ORDER BY ar.name
             LIMIT ${exampleLimit}
-          ) a
+          ) sub
           WHERE g.source = 'library'`,
     ),
     db.execute<{ genre_name: string; cnt: string }>(
       sql`SELECT g.name AS genre_name, count(*)::text AS cnt
           FROM ${genres} g
-          JOIN ${artists} a ON EXISTS (
-            SELECT 1 FROM unnest(${artists.genres}) ag WHERE lower(ag) = lower(g.name)
+          JOIN artists ar ON EXISTS (
+            SELECT 1 FROM unnest(ar.genres) ag WHERE lower(ag) = lower(g.name)
           )
           WHERE g.source = 'library'
           GROUP BY g.name`,

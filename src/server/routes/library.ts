@@ -5,7 +5,6 @@ import type { HealthCheckId } from '@/core/library/types'
 
 const VALID_CHECK_IDS: Set<string> = new Set([
   'missing-metadata',
-  'stale-mbids',
   'unmonitored',
   'missing-albums',
   'duplicate-artists',

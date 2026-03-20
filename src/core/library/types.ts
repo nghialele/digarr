@@ -1,6 +1,5 @@
 export type HealthCheckId =
   | 'missing-metadata'
-  | 'stale-mbids'
   | 'unmonitored'
   | 'missing-albums'
   | 'duplicate-artists'

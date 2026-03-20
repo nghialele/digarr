@@ -1,11 +1,10 @@
-import { AlertTriangle, Copy, Image, Music, Search, Tag, User } from 'lucide-react'
+import { Copy, Image, Music, Search, Tag, User } from 'lucide-react'
 import { useState } from 'react'
 import type { HealthCheckItem, HealthCheckResult } from '../lib/api'
 import { Button } from './ui/button'
 
 const FIX_HINTS: Record<string, string> = {
   'missing-metadata': 'Triggers a metadata refresh in Lidarr for each affected artist',
-  'stale-mbids': 'Triggers a metadata refresh in Lidarr to re-sync MBIDs',
   unmonitored: 'Sets all listed artists to monitored in Lidarr',
   'missing-albums': 'Triggers an album search in Lidarr for each affected artist',
   'genre-gaps': 'Triggers a metadata refresh in Lidarr to fetch genre tags',
@@ -15,7 +14,6 @@ const FIX_HINTS: Record<string, string> = {
 
 const CHECK_ICONS: Record<string, React.ReactNode> = {
   'missing-metadata': <Search size={16} className="text-muted shrink-0" />,
-  'stale-mbids': <AlertTriangle size={16} className="text-muted shrink-0" />,
   unmonitored: <User size={16} className="text-muted shrink-0" />,
   'missing-albums': <Music size={16} className="text-muted shrink-0" />,
   'duplicate-artists': <Copy size={16} className="text-muted shrink-0" />,

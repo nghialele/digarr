@@ -51,12 +51,6 @@ const CHECK_META: Record<
     severity: 'warning',
     fixable: true,
   },
-  'stale-mbids': {
-    name: 'Stale MBIDs',
-    description: 'Artists in Lidarr whose MBID is not found in local artist cache.',
-    severity: 'info',
-    fixable: true,
-  },
   unmonitored: {
     name: 'Unmonitored Artists',
     description: 'Artists in Lidarr that are not monitored.',
@@ -130,7 +124,6 @@ export class LibraryHealthService {
       this.deps.artistCache.getAll(),
     ])
 
-    const cachedMbidSet = new Set(cachedArtists.map((a) => a.mbid))
     const cachedByMbid = new Map(cachedArtists.map((a) => [a.mbid, a]))
 
     // checkMissingAlbums fetches albums per-artist inline so we never hold
@@ -139,7 +132,6 @@ export class LibraryHealthService {
 
     const results: HealthCheckResult[] = [
       this.checkMissingMetadata(lidarrArtists, cachedByMbid),
-      this.checkStaleMbids(lidarrArtists, cachedMbidSet),
       this.checkUnmonitored(lidarrArtists),
       await this.checkMissingAlbums(monitoredArtists),
       this.checkDuplicateArtists(lidarrArtists),
@@ -262,20 +254,6 @@ export class LibraryHealthService {
     }
 
     return { ...meta, id: 'missing-metadata', count: items.length, items }
-  }
-
-  private checkStaleMbids(artists: LidarrArtist[], cachedMbidSet: Set<string>): HealthCheckResult {
-    const meta = CHECK_META['stale-mbids']
-    const items: HealthCheckItem[] = artists
-      .filter((a) => !cachedMbidSet.has(a.foreignArtistId))
-      .map((a) => ({
-        artistId: a.id,
-        artistName: a.artistName,
-        mbid: a.foreignArtistId,
-        detail: 'MBID not found in local cache',
-      }))
-
-    return { ...meta, id: 'stale-mbids', count: items.length, items }
   }
 
   private checkUnmonitored(artists: LidarrArtist[]): HealthCheckResult {
@@ -411,7 +389,6 @@ export class LibraryHealthService {
     switch (checkId) {
       case 'missing-metadata':
       case 'genre-gaps':
-      case 'stale-mbids':
         await this.deps.lidarrClient.triggerCommand('RefreshArtist', { artistId: item.artistId })
         break
 

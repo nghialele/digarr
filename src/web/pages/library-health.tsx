@@ -18,7 +18,7 @@ import {
 
 // Checks where the fix is a Lidarr background task (refresh/search),
 // not an immediate DB write. These need longer delay before rescan.
-const DEFERRED_FIXES = new Set(['missing-metadata', 'stale-mbids', 'genre-gaps', 'missing-albums'])
+const DEFERRED_FIXES = new Set(['missing-metadata', 'genre-gaps', 'missing-albums'])
 
 const RESCAN_DELAY_DEFERRED = 30_000
 const RESCAN_DELAY_IMMEDIATE = 5_000

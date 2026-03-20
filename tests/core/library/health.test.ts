@@ -719,43 +719,6 @@ describe('LibraryHealthService', () => {
   })
 
   // -------------------------------------------------------------------------
-  // stale-mbids check
-  // -------------------------------------------------------------------------
-
-  describe('stale-mbids check', () => {
-    it('flags Lidarr artists not present in local cache', async () => {
-      mocks.getArtists.mockResolvedValue([ARTIST_RADIOHEAD])
-      mocks.cacheGetAll.mockResolvedValue([]) // empty cache
-
-      const results = await service.runChecks()
-      const check = results.find((r) => r.id === 'stale-mbids')
-
-      expect(check?.count).toBe(1)
-      expect(check?.items[0]?.detail).toBe('MBID not found in local cache')
-    })
-
-    it('returns empty when all MBIDs are in cache', async () => {
-      mocks.getArtists.mockResolvedValue([ARTIST_RADIOHEAD])
-      mocks.cacheGetAll.mockResolvedValue([
-        {
-          id: 1,
-          mbid: ARTIST_RADIOHEAD.foreignArtistId,
-          name: 'Radiohead',
-          genres: ['rock'],
-          tags: null,
-          imageUrl: 'http://img',
-          streamingUrls: null,
-        },
-      ])
-
-      const results = await service.runChecks()
-      const check = results.find((r) => r.id === 'stale-mbids')
-
-      expect(check?.count).toBe(0)
-    })
-  })
-
-  // -------------------------------------------------------------------------
   // missing-albums check
   // -------------------------------------------------------------------------
 
