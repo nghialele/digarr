@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ArtistThumb } from '../components/artist-thumb'
 import { PipelineProgress } from '../components/pipeline-progress'
 import { StatCard } from '../components/stat-card'
 import { Badge } from '../components/ui/badge'
@@ -52,24 +53,6 @@ type Batch = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function ArtistThumb({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
-  if (imageUrl) {
-    return (
-      <img src={imageUrl} alt={name} className="w-10 h-10 rounded-md object-cover bg-bg shrink-0" />
-    )
-  }
-  // Gradient placeholder based on name hash
-  const hue = Math.abs([...name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
-  return (
-    <div
-      className="w-10 h-10 rounded-md shrink-0 flex items-center justify-center text-xs font-bold text-bg"
-      style={{ background: `hsl(${hue}, 40%, 45%)` }}
-    >
-      {name.slice(0, 2).toUpperCase()}
-    </div>
-  )
-}
 
 function relativeTime(dateStr: string | Date): string {
   const ms = Date.now() - new Date(dateStr).getTime()
