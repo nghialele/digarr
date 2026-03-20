@@ -19,15 +19,19 @@ import {
   AUTH_EXPIRED_EVENT,
   changePassword,
   clearStoredToken,
+  deleteTargetApi,
+  exportRecommendations,
   getAuthStatus,
   getCurrentUser,
   getLidarrMetadataProfiles,
   getLidarrProfiles,
   getLidarrRootFolders,
   getSettings,
+  listTargets,
   logoutUser,
   setStoredToken,
   testService,
+  testTargetApi,
   testWebhook,
   updateSettings,
 } from '../lib/api'
@@ -722,6 +726,138 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           </Button>
         </div>
       </ServiceCard>
+
+      <hr className="border-border" />
+
+      <TargetsSection />
+
+      <hr className="border-border" />
+
+      <ExportSection />
+    </div>
+  )
+}
+
+function TargetsSection() {
+  const { data: targets, refetch } = useQuery({
+    queryKey: ['targets'],
+    queryFn: listTargets,
+  })
+  const [testing, setTesting] = useState<number | null>(null)
+
+  async function handleTest(id: number) {
+    setTesting(id)
+    try {
+      const result = await testTargetApi(id)
+      if (result.success) {
+        toast.success('Target connection successful')
+      } else {
+        toast.error(result.message || 'Connection failed')
+      }
+    } catch {
+      toast.error('Failed to test connection')
+    } finally {
+      setTesting(null)
+    }
+  }
+
+  async function handleDelete(id: number) {
+    try {
+      await deleteTargetApi(id)
+      toast.success('Target removed')
+      refetch()
+    } catch {
+      toast.error('Failed to remove target')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-text">Targets</h3>
+        <span className="text-xs text-muted">Where approved recommendations go</span>
+      </div>
+
+      {targets?.length === 0 && (
+        <p className="text-sm text-muted">
+          No targets configured. Approved recommendations will be saved as a curated list.
+        </p>
+      )}
+
+      {targets?.map((t) => (
+        <div key={t.id} className="rounded-lg border border-border bg-surface p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {t.type === 'lidarr' && (
+                <img src="/icons/lidarr.png" alt="" className="w-5 h-5" />
+              )}
+              <span className="text-sm font-medium text-text">{t.name}</span>
+              <span className="text-xs text-muted capitalize">({t.type})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleTest(t.id)}
+                disabled={testing === t.id}
+              >
+                {testing === t.id ? 'Testing...' : 'Test'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDelete(t.id)}
+                className="text-reject"
+              >
+                Remove
+              </Button>
+            </div>
+          </div>
+          {typeof t.config.url === 'string' && (
+            <p className="text-xs text-muted mt-1">{t.config.url}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ExportSection() {
+  const [exporting, setExporting] = useState<string | null>(null)
+
+  async function handleExport(format: 'json' | 'csv' | 'm3u') {
+    setExporting(format)
+    try {
+      await exportRecommendations(format)
+      toast.success(`${format.toUpperCase()} exported`)
+    } catch {
+      toast.error('Export failed')
+    } finally {
+      setExporting(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-text">Export Recommendations</h3>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {(['json', 'csv', 'm3u'] as const).map((fmt) => (
+          <button
+            key={fmt}
+            type="button"
+            onClick={() => handleExport(fmt)}
+            disabled={exporting === fmt}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border border-border bg-surface text-text hover:bg-bg transition-colors disabled:opacity-50"
+          >
+            {exporting === fmt ? 'Exporting...' : fmt.toUpperCase()}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-muted">
+        Exports all your recommendations. Filter by status on the Discover page first if needed.
+      </p>
     </div>
   )
 }

@@ -318,3 +318,41 @@ export const listUsers = () =>
 export const updateUserAdmin = (id: number, isAdmin: boolean) =>
   fetchApi(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) })
 export const deleteUserApi = (id: number) => fetchApi(`/users/${id}`, { method: 'DELETE' })
+
+// Targets
+export type TargetInfo = {
+  id: number
+  type: string
+  name: string
+  config: Record<string, unknown>
+  enabled: boolean
+}
+export const listTargets = () => fetchApi<TargetInfo[]>('/targets')
+export const createTargetApi = (data: { type: string; name: string; config: Record<string, unknown> }) =>
+  fetchApi<{ id: number }>('/targets', { method: 'POST', body: JSON.stringify(data) })
+export const deleteTargetApi = (id: number) => fetchApi(`/targets/${id}`, { method: 'DELETE' })
+export const testTargetApi = (id: number) =>
+  fetchApi<{ success: boolean; message: string }>(`/targets/${id}/test`, { method: 'POST' })
+
+// Exports
+export async function exportRecommendations(
+  format: 'json' | 'csv' | 'm3u',
+  params?: { status?: string; batchId?: number },
+) {
+  const query = new URLSearchParams()
+  if (params?.status) query.set('status', params.status)
+  if (params?.batchId) query.set('batchId', String(params.batchId))
+  const qs = query.toString() ? `?${query}` : ''
+  const token = getStoredToken()
+  const response = await fetch(`${BASE}/exports/${format}${qs}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!response.ok) throw new Error('Export failed')
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `digarr-export-${new Date().toISOString().slice(0, 10)}.${format}`
+  a.click()
+  URL.revokeObjectURL(url)
+}
