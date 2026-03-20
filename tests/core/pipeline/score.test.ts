@@ -10,6 +10,7 @@ const defaultWeights: Preferences['scoringWeights'] = {
   genreOverlap: 0.2,
   aiConfidence: 0.15,
   feedbackBoost: 0.1,
+  popularity: 0.0,
 }
 
 function makeArtist(overrides: Partial<ResolvedArtist> = {}): ResolvedArtist {
@@ -121,6 +122,7 @@ describe('score()', () => {
       genreOverlap: 0,
       aiConfidence: 0,
       feedbackBoost: 0,
+      popularity: 0,
     }
 
     const artist1source = makeArtist({
@@ -178,5 +180,43 @@ describe('score()', () => {
   it('handles empty artist list', () => {
     const result = score([], ['rock'], defaultWeights, new Map())
     expect(result).toEqual([])
+  })
+
+  it('popularity weight 0.0 does not change score', () => {
+    const artist = makeArtist({ name: 'Popular Artist' })
+    const popMap = new Map([['popular artist', 0.95]])
+    const withPop = score([artist], ['rock'], defaultWeights, new Map(), popMap)
+    const withoutPop = score([artist], ['rock'], defaultWeights, new Map())
+    // popularity weight is 0.0, so score should be identical
+    expect(withPop[0]?.score).toBeCloseTo(withoutPop[0]?.score ?? 0)
+  })
+
+  it('popularity weight > 0 increases score for popular artists', () => {
+    const popWeights: Preferences['scoringWeights'] = {
+      consensus: 0.2,
+      similarity: 0.2,
+      genreOverlap: 0.2,
+      aiConfidence: 0.1,
+      feedbackBoost: 0.1,
+      popularity: 0.2,
+    }
+    const artist = makeArtist({ name: 'Popular Artist' })
+    const popMap = new Map([['popular artist', 0.9]])
+    const withPop = score([artist], ['rock'], popWeights, new Map(), popMap)
+    const withoutPop = score([artist], ['rock'], popWeights, new Map())
+    // With popularity map, score should be higher
+    expect(withPop[0]?.score).toBeGreaterThan(withoutPop[0]?.score ?? 0)
+    expect(withPop[0]?.sourceScores.popularity).toBeCloseTo(0.9)
+  })
+
+  it('artist not in popularity map gets popularity 0', () => {
+    const popWeights: Preferences['scoringWeights'] = {
+      ...defaultWeights,
+      popularity: 0.2,
+    }
+    const artist = makeArtist({ name: 'Unknown Artist' })
+    const popMap = new Map([['other artist', 0.8]])
+    const result = score([artist], ['rock'], popWeights, new Map(), popMap)
+    expect(result[0]?.sourceScores.popularity).toBe(0)
   })
 })

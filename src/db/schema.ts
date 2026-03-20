@@ -196,6 +196,7 @@ export type Preferences = {
     genreOverlap: number
     aiConfidence: number
     feedbackBoost: number
+    popularity: number
   }
   rejectionCooldownDays: number
   topArtistsLimit: number
@@ -218,6 +219,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
     genreOverlap: 0.2,
     aiConfidence: 0.15,
     feedbackBoost: 0.1,
+    popularity: 0.0,
   },
   rejectionCooldownDays: 90,
   topArtistsLimit: 30,

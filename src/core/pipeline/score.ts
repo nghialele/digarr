@@ -6,8 +6,10 @@ export function score(
   libraryGenres: string[],
   weights: Preferences['scoringWeights'],
   feedbackHistory: Map<string, { approved: number; total: number }>,
+  popularityMap?: Map<string, number>,
 ): ScoredArtist[] {
   const libraryGenreSet = new Set(libraryGenres.map((g) => g.toLowerCase()))
+  const popularityWeight = weights.popularity ?? 0
 
   const scored = artists.map((artist): ScoredArtist => {
     // How many distinct sources found this artist (capped at 1.0, max 4 sources)
@@ -44,13 +46,18 @@ export function score(
     const feedbackBoost =
       genreRates.length > 0 ? genreRates.reduce((a, b) => a + b, 0) / genreRates.length : 0.5
 
+    // Popularity: normalized 0-1 from artist_metadata, 0 if not found
+    const popularity =
+      popularityMap?.get(artist.name.trim().toLowerCase()) ?? 0
+
     // Weighted composite score
     const finalScore =
       weights.consensus * consensus +
       weights.similarity * similarity +
       weights.genreOverlap * genreOverlap +
       weights.aiConfidence * aiConfidence +
-      weights.feedbackBoost * feedbackBoost
+      weights.feedbackBoost * feedbackBoost +
+      popularityWeight * popularity
 
     // AI reasoning from first AI discovery
     const aiDiscovery = artist.discoveries.find((d) => d.source === 'ai')
@@ -64,6 +71,7 @@ export function score(
         genreOverlap,
         aiConfidence,
         feedbackBoost,
+        popularity,
       },
       aiReasoning: aiDiscovery?.aiReasoning ?? undefined,
     }

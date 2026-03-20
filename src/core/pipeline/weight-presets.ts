@@ -7,6 +7,7 @@ export const WEIGHT_PRESETS = {
     genreOverlap: 0.2,
     aiConfidence: 0.15,
     feedbackBoost: 0.1,
+    popularity: 0.0,
   },
   genre: {
     consensus: 0.4,
@@ -14,6 +15,7 @@ export const WEIGHT_PRESETS = {
     genreOverlap: 0.05,
     aiConfidence: 0.1,
     feedbackBoost: 0.1,
+    popularity: 0.0,
   },
 } satisfies Record<string, ScoringWeights>
 
