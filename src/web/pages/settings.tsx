@@ -518,7 +518,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           name="AI Provider"
           description="Generates music recommendations"
           status={serviceStatus('ai')}
-          icon={<AiProviderIcon />}
+          icon={<AiProviderIcon provider={aiProvider} />}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Provider" id="ai-provider">

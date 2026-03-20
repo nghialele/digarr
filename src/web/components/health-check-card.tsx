@@ -1,6 +1,17 @@
+import { AlertTriangle, Copy, Image, Music, Search, Tag, User } from 'lucide-react'
 import { useState } from 'react'
 import type { HealthCheckItem, HealthCheckResult } from '../lib/api'
 import { Button } from './ui/button'
+
+const CHECK_ICONS: Record<string, React.ReactNode> = {
+  'missing-metadata': <Search size={16} className="text-muted shrink-0" />,
+  'stale-mbids': <AlertTriangle size={16} className="text-muted shrink-0" />,
+  unmonitored: <User size={16} className="text-muted shrink-0" />,
+  'missing-albums': <Music size={16} className="text-muted shrink-0" />,
+  'duplicate-artists': <Copy size={16} className="text-muted shrink-0" />,
+  'genre-gaps': <Tag size={16} className="text-muted shrink-0" />,
+  'image-gaps': <Image size={16} className="text-muted shrink-0" />,
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,7 +67,10 @@ export function HealthCheckCard({ check, onFix, fixing }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">{check.name}</p>
+          <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              {CHECK_ICONS[check.id]}
+              {check.name}
+            </p>
           <p className="text-xs text-muted-foreground mt-0.5">{check.description}</p>
         </div>
         <span
