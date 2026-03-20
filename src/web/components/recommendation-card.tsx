@@ -363,8 +363,9 @@ export function RecommendationCard({
           </button>
         </>
       )}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         data-testid="rec-card-button"
         className={cn(
           'bg-surface border rounded-lg transition-all cursor-pointer w-full text-left flex flex-col relative',
@@ -467,16 +468,18 @@ export function RecommendationCard({
             />
           )}
 
-          {/* Action buttons -- hidden in bulk mode */}
-          <ActionButtons
-            rec={rec}
-            bulkMode={bulkMode}
-            isPending={isPending}
-            isApproved={isApproved}
-            onApprove={onApprove}
-            onReject={onReject}
-            approveNode={approveNode}
-          />
+          {/* Action buttons -- compact mode only, hidden in bulk mode */}
+          {!expanded && (
+            <ActionButtons
+              rec={rec}
+              bulkMode={bulkMode}
+              isPending={isPending}
+              isApproved={isApproved}
+              onApprove={onApprove}
+              onReject={onReject}
+              approveNode={approveNode}
+            />
+          )}
         </div>
 
         {/* Expanded-only section */}
@@ -564,7 +567,7 @@ export function RecommendationCard({
             />
           </div>
         )}
-      </button>
+      </div>
     </div>
   )
 }

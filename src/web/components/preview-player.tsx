@@ -71,11 +71,11 @@ export function PreviewPlayer({ playing, artistName, source, loading, onStop }: 
           <button
             type="button"
             onClick={onStop}
-            className="shrink-0 flex items-center gap-1 px-2 py-1 rounded text-sm bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-            aria-label="Stop preview"
+            className="shrink-0 flex items-center gap-1 px-2 py-1 rounded text-sm text-muted hover:text-text hover:bg-bg/50 transition-colors"
+            aria-label="Close preview"
           >
             <X size={14} aria-hidden="true" />
-            <span className="hidden sm:inline">Stop</span>
+            <span className="hidden sm:inline">Close</span>
           </button>
         </div>
 
