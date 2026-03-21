@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Skeleton } from './ui/skeleton'
 
-// ---------------------------------------------------------------------------
 // RecentlyApproved
-// ---------------------------------------------------------------------------
 
 type RecentlyApprovedProps = {
   recs: Array<{

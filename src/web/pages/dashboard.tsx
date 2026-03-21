@@ -23,9 +23,7 @@ import {
   updateRecommendation,
 } from '../lib/api'
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function relativeTime(dateStr: string | Date): string {
   const ms = Date.now() - new Date(dateStr).getTime()
@@ -40,9 +38,7 @@ function relativeTime(dateStr: string | Date): string {
   return future ? `in ${days}d` : `${days}d ago`
 }
 
-// ---------------------------------------------------------------------------
 // SectionHeader
-// ---------------------------------------------------------------------------
 
 function SectionHeader({
   title,
@@ -65,9 +61,7 @@ function SectionHeader({
   )
 }
 
-// ---------------------------------------------------------------------------
 // SubscriptionPulse
-// ---------------------------------------------------------------------------
 
 function SubscriptionPulse({
   subs,
@@ -122,9 +116,7 @@ function SubscriptionPulse({
   )
 }
 
-// ---------------------------------------------------------------------------
 // ListeningActivity
-// ---------------------------------------------------------------------------
 
 function ListeningActivity({
   data,
@@ -189,9 +181,7 @@ function ListeningActivity({
   )
 }
 
-// ---------------------------------------------------------------------------
 // TasteProfile
-// ---------------------------------------------------------------------------
 
 function TasteProfile({ genres, loading }: { genres: TasteGenre[] | undefined; loading: boolean }) {
   return (
@@ -231,9 +221,7 @@ function TasteProfile({ genres, loading }: { genres: TasteGenre[] | undefined; l
   )
 }
 
-// ---------------------------------------------------------------------------
 // ActivityFeed
-// ---------------------------------------------------------------------------
 
 function ActivityFeed({
   entries,
@@ -292,9 +280,7 @@ function ActivityFeed({
   )
 }
 
-// ---------------------------------------------------------------------------
 // Dashboard
-// ---------------------------------------------------------------------------
 
 export function Dashboard() {
   const queryClient = useQueryClient()
@@ -356,9 +342,7 @@ export function Dashboard() {
     staleTime: 30_000,
   })
 
-  // ---------------------------------------------------------------------------
   // Pick selection
-  // ---------------------------------------------------------------------------
 
   const allPending = (pickData?.items ?? []) as Recommendation[]
   const currentPick = allPending.find((r) => !skippedIds.has(r.id) && !actedIds.has(r.id)) ?? null
@@ -369,17 +353,15 @@ export function Dashboard() {
   // Recently approved recs for the gallery
   const approvedRecs = (approvedData?.items ?? []) as Recommendation[]
 
-  // ---------------------------------------------------------------------------
-  // Action handlers
-  // ---------------------------------------------------------------------------
-
-  async function handleApprove(id: number) {
+  async function handleAction(id: number, status: 'approved' | 'rejected') {
     setActedIds((prev) => new Set([...prev, id]))
     try {
-      await updateRecommendation(id, { status: 'approved' })
-      toast.success('Approved')
+      await updateRecommendation(id, { status })
+      toast.success(status === 'approved' ? 'Approved' : 'Rejected')
       queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
+      if (status === 'approved') {
+        queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
+      }
     } catch {
       toast.error('Failed')
       setActedIds((prev) => {
@@ -392,22 +374,6 @@ export function Dashboard() {
 
   function handleSkip(id: number) {
     setSkippedIds((prev) => new Set([...prev, id]))
-  }
-
-  async function handleReject(id: number) {
-    setActedIds((prev) => new Set([...prev, id]))
-    try {
-      await updateRecommendation(id, { status: 'rejected' })
-      toast.success('Rejected')
-      queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
-    } catch {
-      toast.error('Failed')
-      setActedIds((prev) => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
-    }
   }
 
   return (
@@ -434,8 +400,8 @@ export function Dashboard() {
         <TodaysPick
           rec={currentPick}
           loading={pickLoading}
-          onApprove={handleApprove}
-          onReject={handleReject}
+          onApprove={(id) => handleAction(id, 'approved')}
+          onReject={(id) => handleAction(id, 'rejected')}
           onSkip={handleSkip}
           onRunScan={() => {
             triggerPipeline()

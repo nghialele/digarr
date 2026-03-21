@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { StreamingLinks } from './streaming-links'
 import { Skeleton } from './ui/skeleton'
 
-// ---------------------------------------------------------------------------
 // TodaysPick
-// ---------------------------------------------------------------------------
 
 export type Recommendation = {
   id: number
@@ -126,16 +124,13 @@ export function TodaysPick({
           <p className="text-xs text-muted line-clamp-3 mt-2">{rec.aiReasoning}</p>
         )}
 
-        {/* Streaming links */}
-        {(artist.streamingUrls || artist.name) && (
-          <div className="mt-3">
-            <StreamingLinks
-              streamingUrls={artist.streamingUrls ?? null}
-              artistName={artist.name}
-              compact
-            />
-          </div>
-        )}
+        <div className="mt-3">
+          <StreamingLinks
+            streamingUrls={artist.streamingUrls ?? null}
+            artistName={artist.name}
+            compact
+          />
+        </div>
       </div>
 
       {/* Action bar */}
