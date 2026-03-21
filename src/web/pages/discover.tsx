@@ -11,10 +11,12 @@ import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import {
   approveRecommendation,
+  approveToTarget,
   bulkAction,
   exportRecommendations,
   getRecommendations,
   getWarmStatuses,
+  listTargets,
   rescanArtists,
   triggerPipeline,
   updateRecommendation,
@@ -305,6 +307,39 @@ export function DiscoverPage() {
   })
 
   const warmStatuses = warmData?.statuses ?? {}
+
+  // ---------------------------------------------------------------------------
+  // Targets (for multi-target approve dropdown)
+  // ---------------------------------------------------------------------------
+
+  const { data: targetsData } = useQuery({
+    queryKey: ['targets'],
+    queryFn: listTargets,
+    staleTime: 60_000,
+  })
+
+  const targets = targetsData ?? []
+  const hasMultipleTargets = targets.length > 1
+
+  const handleApproveToTarget = useCallback(
+    async (recId: number, targetId: string) => {
+      setActingIds((prev) => new Set([...prev, recId]))
+      try {
+        await approveToTarget(recId, targetId)
+        refetch()
+        toast.success('Sent to target')
+      } catch {
+        toast.error('Failed to approve')
+      } finally {
+        setActingIds((prev) => {
+          const next = new Set(prev)
+          next.delete(recId)
+          return next
+        })
+      }
+    },
+    [refetch],
+  )
 
   // ---------------------------------------------------------------------------
   // Undo toast
@@ -821,8 +856,10 @@ export function DiscoverPage() {
                             | 'unknown'
                             | undefined
                         }
+                        targets={hasMultipleTargets ? targets : undefined}
+                        onApproveToTarget={hasMultipleTargets ? handleApproveToTarget : undefined}
                         approveNode={
-                          !isActing && !bulkMode ? (
+                          !isActing && !bulkMode && !hasMultipleTargets ? (
                             <MonitoringOptions
                               loading={isActing}
                               onApprove={(option) =>
@@ -875,8 +912,10 @@ export function DiscoverPage() {
                       warmStatus={
                         warmStatuses[rec.artist.mbid] as 'warm' | 'warming' | 'unknown' | undefined
                       }
+                      targets={hasMultipleTargets ? targets : undefined}
+                      onApproveToTarget={hasMultipleTargets ? handleApproveToTarget : undefined}
                       approveNode={
-                        !isActing && !bulkMode ? (
+                        !isActing && !bulkMode && !hasMultipleTargets ? (
                           <MonitoringOptions
                             loading={isActing}
                             onApprove={(option) =>

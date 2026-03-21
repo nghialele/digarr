@@ -12,6 +12,7 @@ const mockDeps = {
     updateTarget: vi.fn().mockResolvedValue(undefined),
     deleteTarget: vi.fn().mockResolvedValue(undefined),
   },
+  getUserById: vi.fn().mockResolvedValue({ isAdmin: true }),
   testTargetConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
 }
 

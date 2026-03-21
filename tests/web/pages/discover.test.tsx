@@ -33,10 +33,13 @@ vi.mock('@/web/lib/api', () => ({
   getRecommendations: vi.fn(),
   updateRecommendation: vi.fn(),
   approveRecommendation: vi.fn(),
+  approveToTarget: vi.fn(),
   bulkAction: vi.fn(),
   getWarmStatuses: vi.fn(),
   rescanArtists: vi.fn(),
   triggerPipeline: vi.fn(),
+  listTargets: vi.fn().mockResolvedValue([]),
+  exportRecommendations: vi.fn(),
 }))
 
 import {

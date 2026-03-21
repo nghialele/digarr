@@ -1237,6 +1237,8 @@ function TargetsTab() {
     queryKey: ['targets'],
     queryFn: listTargets,
   })
+  const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
+  const isAdmin = currentUser?.isAdmin ?? false
   const [testing, setTesting] = useState<number | null>(null)
   const [addOpen, setAddOpen] = useState(false)
 
@@ -1270,9 +1272,11 @@ function TargetsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-text">Targets</h3>
-        <Button variant="outline" size="sm" onClick={() => setAddOpen(!addOpen)}>
-          {addOpen ? 'Cancel' : 'Add Target'}
-        </Button>
+        {isAdmin && (
+          <Button variant="outline" size="sm" onClick={() => setAddOpen(!addOpen)}>
+            {addOpen ? 'Cancel' : 'Add Target'}
+          </Button>
+        )}
       </div>
 
       {addOpen && (

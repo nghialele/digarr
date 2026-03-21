@@ -15,6 +15,7 @@ type TargetDeps = {
     updateTarget: (id: number, data: TargetUpdate) => Promise<void>
     deleteTarget: (id: number) => Promise<void>
   }
+  getUserById: (id: number) => Promise<{ isAdmin: boolean } | null>
   testTargetConnection: (
     type: string,
     config: Record<string, unknown>,
@@ -42,6 +43,9 @@ export function targetRoutes(deps: TargetDeps) {
   router.post('/api/targets', async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+
+    const caller = await deps.getUserById(userId)
+    if (!caller?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
 
     const body = await c.req.json()
     const { type, name, config } = body as {

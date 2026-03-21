@@ -26,15 +26,14 @@ export function listeningRoutes(deps: AppDependencies) {
     const rangeLabel =
       range === 'week' ? 'this week' : range === 'year' ? 'this year' : 'this month'
 
-    // Resolve per-user credentials, fall back to global
+    // Per-user credentials only -- no fallback to global (prevents data leakage)
     const userId = c.get('userId')
     const userConns = userId ? await getUserConnections(deps.db, userId) : null
 
-    const lastfmUser = userConns?.lastfmUsername || (settings.lastfmUsername as string) || ''
-    const lastfmKey = userConns?.lastfmApiKey || (settings.lastfmApiKey as string) || ''
-    const lbUser =
-      userConns?.listenbrainzUsername || (settings.listenbrainzUsername as string) || ''
-    const lbToken = userConns?.listenbrainzToken || (settings.listenbrainzToken as string) || ''
+    const lastfmUser = userConns?.lastfmUsername || ''
+    const lastfmKey = userConns?.lastfmApiKey || ''
+    const lbUser = userConns?.listenbrainzUsername || ''
+    const lbToken = userConns?.listenbrainzToken || ''
 
     const tracks: ListenTrack[] = []
 
