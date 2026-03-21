@@ -202,7 +202,7 @@ describe('DiscoverPage', () => {
     })
   })
 
-  it('approve button shows profile dialog then calls approveRecommendation', async () => {
+  it('approve button calls approveRecommendation without dialog when no Lidarr targets', async () => {
     mockApproveRecommendation.mockResolvedValue(undefined as unknown as never)
     setupMockApi()
 
@@ -212,20 +212,13 @@ describe('DiscoverPage', () => {
       expect(screen.getByText('Test Artist')).toBeInTheDocument()
     })
 
-    // Find the card's Approve button: exact text "Approve" (not "Approved" tab, not "Approve All Above")
+    // Find the card's Approve button (from MonitoringOptions split button)
     const approveButtons = screen.getAllByText('Approve')
     expect(approveButtons.length).toBeGreaterThanOrEqual(1)
     // biome-ignore lint/style/noNonNullAssertion: checked above
     fireEvent.click(approveButtons[0]!)
 
-    // Dialog should appear
-    await waitFor(() => {
-      expect(screen.getByText('Lidarr Settings for This Artist')).toBeInTheDocument()
-    })
-
-    // Confirm via the dialog's "Add to Lidarr" button
-    fireEvent.click(screen.getByText('Add to Lidarr'))
-
+    // No Lidarr targets -> no dialog, calls approveRecommendation directly with monitorOption
     await waitFor(() => {
       expect(mockApproveRecommendation).toHaveBeenCalledWith(
         1,
