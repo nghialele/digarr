@@ -249,18 +249,16 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   const rejectedMbids = await storeDb.getRejectedMbids(prefs.rejectionCooldownDays)
   const feedbackHistory = await storeDb.getFeedbackHistory()
 
-  // Per-user connections take precedence over global settings
+  // Source connections are per-user only (no global fallback)
   const userRow = sub.userId ? await getUserById(db, sub.userId) : null
+  const u = userRow as Record<string, unknown> | null
 
-  const lbUsername =
-    (userRow as Record<string, unknown>)?.listenbrainzUsername ?? settings?.listenbrainzUsername
-  const lbToken =
-    (userRow as Record<string, unknown>)?.listenbrainzToken ?? settings?.listenbrainzToken
-  const lfUsername =
-    (userRow as Record<string, unknown>)?.lastfmUsername ?? settings?.lastfmUsername
-  const lfApiKey = (userRow as Record<string, unknown>)?.lastfmApiKey ?? settings?.lastfmApiKey
-  const dcToken = (userRow as Record<string, unknown>)?.discogsToken
-  const dcUsername = (userRow as Record<string, unknown>)?.discogsUsername
+  const lbUsername = u?.listenbrainzUsername as string | null
+  const lbToken = u?.listenbrainzToken as string | null
+  const lfUsername = u?.lastfmUsername as string | null
+  const lfApiKey = u?.lastfmApiKey as string | null
+  const dcToken = u?.discogsToken as string | null
+  const dcUsername = u?.discogsUsername as string | null
 
   // Build source registry fresh per run (same pattern as orchestrator)
   const sourceRegistry = new SourceRegistry()

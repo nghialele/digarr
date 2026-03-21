@@ -310,9 +310,10 @@ export default function SubscriptionsPage() {
   const configuredSources = (() => {
     if (!settings) return []
     const sources: string[] = []
-    // Check usernames, not API keys -- keys are masked to '***' by the settings endpoint
-    if (settings.lastfmUsername) sources.push('lastfm')
-    if (settings.discogsUsername) sources.push('discogs')
+    // Only check per-user connections (global last.fm/discogs fields are legacy leftovers).
+    // The _*Scope markers indicate user-level data was loaded by the settings endpoint.
+    if (settings._lastfmScope && settings.lastfmUsername) sources.push('lastfm')
+    if (settings._discogsScope && settings.discogsUsername) sources.push('discogs')
     return sources
   })()
 
