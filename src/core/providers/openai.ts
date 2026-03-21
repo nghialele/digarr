@@ -56,15 +56,11 @@ export class OpenAIProvider implements RecommendationProvider {
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await this.client.chat.completions.create({
+      await this.client.chat.completions.create({
         model: this.model,
         max_completion_tokens: 10,
         messages: [{ role: 'user', content: 'ping' }],
       })
-
-      if (response.choices[0]?.message?.content !== undefined) {
-        return { success: true, message: `Connected to OpenAI (${this.model})` }
-      }
 
       return { success: true, message: `Connected to OpenAI (${this.model})` }
     } catch (err: unknown) {

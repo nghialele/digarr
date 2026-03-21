@@ -328,7 +328,11 @@ describe('PATCH /api/recommendations/:id', () => {
 describe('POST /api/recommendations/bulk', () => {
   it('bulk rejects without calling Lidarr', async () => {
     const bulkUpdateStatus = vi.fn(async () => {})
-    const app = createApp(makeDeps({ bulkUpdateStatus }))
+    const getRecommendation = vi.fn(async (id: number) => ({
+      ...mockRecommendation,
+      id,
+    }))
+    const app = createApp(makeDeps({ bulkUpdateStatus, getRecommendation }))
     const res = await app.request('/api/recommendations/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

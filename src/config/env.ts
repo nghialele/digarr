@@ -81,7 +81,7 @@ export function buildDatabaseUrl(): string {
   const { dbHost, dbPort, dbUser, dbPass, dbName } = envConfig
   if (dbHost && dbUser && dbName) {
     const port = dbPort ?? 5432
-    const pass = dbPass ? `:${dbPass}` : ''
+    const pass = dbPass ? `:${encodeURIComponent(dbPass)}` : ''
     return `postgresql://${dbUser}${pass}@${dbHost}:${port}/${dbName}`
   }
 

@@ -2,9 +2,20 @@ import { Hono } from 'hono'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
 import { updateUserPreferences } from '@/db/queries/users'
-import { type Preferences, mergePreferences } from '@/db/schema'
+import { mergePreferences, type Preferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import type { HonoEnv } from '@/server/types'
+
+const ALLOWED_PREF_KEYS = new Set([
+  'scoreThreshold',
+  'scoringWeights',
+  'rejectionCooldownDays',
+  'topArtistsLimit',
+  'librarySeedRatio',
+  'scheduleCron',
+  'webhookUrl',
+  'webhookEvents',
+])
 
 export function authRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
@@ -143,9 +154,16 @@ export function authRoutes(deps: AppDependencies) {
     const body = await c.req.json()
     const user = await deps.getUserById(userId)
     if (!user) return c.json({ error: 'User not found' }, 404)
+    // Filter to allowed preference keys only
+    const filtered: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
+      if (ALLOWED_PREF_KEYS.has(key)) {
+        filtered[key] = value
+      }
+    }
     // Merge incoming with existing to preserve fields not being updated
     const current = (user.preferences ?? {}) as Record<string, unknown>
-    const updated = { ...current, ...body }
+    const updated = { ...current, ...filtered }
     await updateUserPreferences(deps.db, userId, updated as Preferences)
     return c.json({ success: true })
   })

@@ -33,16 +33,11 @@ export class AnthropicProvider implements RecommendationProvider {
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await this.client.messages.create({
+      await this.client.messages.create({
         model: this.model,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'ping' }],
       })
-
-      const firstContent = response.content[0]
-      if (firstContent && firstContent.type === 'text') {
-        return { success: true, message: `Connected to Anthropic (${this.model})` }
-      }
 
       return { success: true, message: `Connected to Anthropic (${this.model})` }
     } catch (err: unknown) {

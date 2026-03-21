@@ -29,6 +29,11 @@ export function recommendationRoutes(deps: AppDependencies) {
     if (!rec) {
       return c.json({ error: 'Recommendation not found' }, 404)
     }
+    // Ownership check: legacy recs (userId=null) are accessible to all
+    const userId = c.get('userId')
+    if (rec.userId && userId && rec.userId !== userId) {
+      return c.json({ error: 'Recommendation not found' }, 404)
+    }
     return c.json(rec)
   })
 
@@ -52,11 +57,14 @@ export function recommendationRoutes(deps: AppDependencies) {
         return c.json({ error: 'Recommendation not found' }, 404)
       }
 
+      // Ownership check: legacy recs (userId=null) are accessible to all
+      const userId = c.get('userId')
+      if (rec.userId && userId && rec.userId !== userId) {
+        return c.json({ error: 'Recommendation not found' }, 404)
+      }
+
       const settings = await deps.getSettings()
       const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
-
-      // Get targets for this user
-      const userId = c.get('userId')
       const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
 
       // Filter to specific target if targetId specified
@@ -135,6 +143,16 @@ export function recommendationRoutes(deps: AppDependencies) {
       return c.json({ error: `Invalid status: ${status}` }, 400)
     }
 
+    // Ownership check for non-approve status changes
+    const rec = await deps.getRecommendation(id)
+    if (!rec) {
+      return c.json({ error: 'Recommendation not found' }, 404)
+    }
+    const userId = c.get('userId')
+    if (rec.userId && userId && rec.userId !== userId) {
+      return c.json({ error: 'Recommendation not found' }, 404)
+    }
+
     await deps.updateRecommendationStatus(id, status)
     return c.json({ status })
   })
@@ -154,13 +172,24 @@ export function recommendationRoutes(deps: AppDependencies) {
       return c.json({ error: 'action must be approve or reject' }, 400)
     }
 
+    const userId = c.get('userId')
+
     if (action === 'reject') {
-      await deps.bulkUpdateStatus(ids, 'rejected')
-      return c.json({ updated: ids.length })
+      // Filter to only recs owned by (or accessible to) this user
+      const ownedIds: number[] = []
+      for (const id of ids) {
+        const rec = await deps.getRecommendation(id)
+        if (!rec) continue
+        if (rec.userId && userId && rec.userId !== userId) continue
+        ownedIds.push(id)
+      }
+      if (ownedIds.length > 0) {
+        await deps.bulkUpdateStatus(ownedIds, 'rejected')
+      }
+      return c.json({ updated: ownedIds.length })
     }
 
     // Approve: route through targets
-    const userId = c.get('userId')
     const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
 
     // Filter to specific target if targetId specified
@@ -181,6 +210,11 @@ export function recommendationRoutes(deps: AppDependencies) {
     for (const id of ids) {
       const rec = await deps.getRecommendation(id)
       if (!rec) {
+        results.push({ id, status: 'not_found' })
+        continue
+      }
+      // Ownership check: skip recs that don't belong to this user
+      if (rec.userId && userId && rec.userId !== userId) {
         results.push({ id, status: 'not_found' })
         continue
       }
