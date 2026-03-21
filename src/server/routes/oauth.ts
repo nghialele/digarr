@@ -5,7 +5,7 @@ import type { HonoEnv } from '@/server/types'
 
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize'
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
-const SPOTIFY_SCOPES = 'user-top-read user-read-recently-played'
+const SPOTIFY_SCOPES = 'user-top-read user-read-recently-played playlist-modify-private playlist-modify-public'
 
 export function oauthRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
@@ -137,6 +137,23 @@ export function oauthRoutes(deps: AppDependencies) {
           clientId,
           clientSecret,
         })
+
+        // Auto-create spotify-playlist target if not already present
+        try {
+          const existingTargets = await deps.targetQueries.getTargetsByUser(userId)
+          const hasSpotifyTarget = existingTargets.some((t) => t.type === 'spotify-playlist')
+          if (!hasSpotifyTarget) {
+            await deps.targetQueries.createTarget({
+              type: 'spotify-playlist',
+              name: 'Spotify Playlist',
+              config: {},
+              userId,
+            })
+          }
+        } catch (err) {
+          console.error('Failed to auto-create Spotify target:', err)
+          // Non-fatal -- OAuth succeeded, target creation is best-effort
+        }
 
         return c.redirect('/settings?oauth_success=spotify')
       }
