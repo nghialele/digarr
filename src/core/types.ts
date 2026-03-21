@@ -37,6 +37,7 @@ export type ResolvedArtist = {
   tags: string[]
   genres: string[]
   imageUrl?: string
+  imageFailed?: boolean
   streamingUrls: Record<string, string>
   suggestedAlbum?: { releaseGroupId?: string; title: string; type?: string }
   discoveries: DiscoveredArtist[]

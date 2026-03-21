@@ -175,7 +175,7 @@ async function buildResolvedArtist(
   const streamingUrls = mb.extractStreamingUrls(mbArtist.relations ?? [])
 
   // Get artist image from Lidarr's metadata (fanart.tv)
-  const imageUrl = await fetchLidarrImage(mbArtist.id, lidarr)
+  const imageResult = await fetchLidarrImage(mbArtist.id, lidarr)
 
   // Resolve suggested album from AI discoveries
   const aiSuggestion = discoveries.find((d) => d.suggestedAlbum)?.suggestedAlbum
@@ -189,7 +189,8 @@ async function buildResolvedArtist(
     disambiguation: mbArtist.disambiguation,
     tags,
     genres: tags,
-    imageUrl,
+    imageUrl: imageResult.url,
+    imageFailed: imageResult.failed,
     streamingUrls,
     suggestedAlbum,
     discoveries,
@@ -199,25 +200,25 @@ async function buildResolvedArtist(
 async function fetchLidarrImage(
   mbid: string,
   lidarr?: LidarrLookupClient | null,
-): Promise<string | undefined> {
-  if (!lidarr) return undefined
+): Promise<{ url?: string; failed: boolean }> {
+  if (!lidarr) return { failed: false }
 
   try {
     const results = await lidarr.lookupArtist(`lidarr:${mbid}`)
     const artist = results[0] as
       | { images?: Array<{ coverType: string; remoteUrl?: string }> }
       | undefined
-    if (!artist?.images) return undefined
+    if (!artist?.images?.length) return { failed: true }
 
     // Prefer poster/artistthumb, then fanart
     for (const type of ['poster', 'fanart', 'banner']) {
       const img = artist.images.find((i) => i.coverType === type && i.remoteUrl)
-      if (img?.remoteUrl) return img.remoteUrl
+      if (img?.remoteUrl) return { url: img.remoteUrl, failed: false }
     }
     // Fall back to any image with a remoteUrl
     const any = artist.images.find((i) => i.remoteUrl)
-    return any?.remoteUrl
+    return any?.remoteUrl ? { url: any.remoteUrl, failed: false } : { failed: true }
   } catch {
-    return undefined
+    return { failed: true }
   }
 }

@@ -11,13 +11,22 @@ export type ArtistInsert = {
   tags?: string[] | null
   genres?: string[] | null
   imageUrl?: string | null
+  imageFailed?: boolean
   streamingUrls?: Record<string, string> | null
 }
 
 export async function upsertArtist(db: Database, artist: ArtistInsert): Promise<ArtistRow> {
+  const { imageFailed, ...artistData } = artist
+
+  const imageFailedAtInsert = imageFailed ? new Date() : artist.imageUrl ? null : undefined
+
   const rows = await db
     .insert(artists)
-    .values({ ...artist, cachedAt: new Date() })
+    .values({
+      ...artistData,
+      imageFailedAt: imageFailedAtInsert,
+      cachedAt: new Date(),
+    })
     .onConflictDoUpdate({
       target: artists.mbid,
       set: {
@@ -27,6 +36,12 @@ export async function upsertArtist(db: Database, artist: ArtistInsert): Promise<
         genres: sql`COALESCE(excluded.genres, ${artists.genres})`,
         imageUrl: sql`COALESCE(excluded.image_url, ${artists.imageUrl})`,
         streamingUrls: sql`COALESCE(excluded.streaming_urls, ${artists.streamingUrls})`,
+        // Clear negative cache when image found; set it when lookup failed; preserve otherwise
+        imageFailedAt: artist.imageUrl
+          ? sql`NULL`
+          : imageFailed
+            ? sql`NOW()`
+            : sql`${artists.imageFailedAt}`,
         cachedAt: new Date(),
       },
     })

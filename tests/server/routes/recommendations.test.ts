@@ -35,6 +35,7 @@ const mockArtist = {
   genres: null,
   imageUrl: null,
   streamingUrls: null,
+  imageFailedAt: null,
   cachedAt: new Date('2024-01-01'),
 }
 

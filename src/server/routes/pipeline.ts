@@ -263,11 +263,17 @@ export function pipelineRoutes(deps: AppDependencies) {
     )
     const mb = createMusicBrainzClient()
 
-    // Get all artists missing images
+    const NEGATIVE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+
+    // Get all artists missing images, respecting the negative cache TTL
     const allRecs = await deps.listRecommendations({ limit: 200 })
     const artistsToUpdate = allRecs.items.filter((r: Record<string, unknown>) => {
       const artist = r.artist as Record<string, unknown> | undefined
-      return artist && !artist.imageUrl
+      if (!artist) return false
+      if (artist.imageUrl) return false // already has an image
+      const failedAt = artist.imageFailedAt as string | null | undefined
+      if (!failedAt) return true // never tried
+      return Date.now() - new Date(failedAt).getTime() > NEGATIVE_CACHE_TTL_MS
     })
 
     let updated = 0

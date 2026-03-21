@@ -238,6 +238,42 @@ describe('resolve()', () => {
     })
   })
 
+  describe('imageFailed flag', () => {
+    it('sets imageFailed when Lidarr lookup returns no images', async () => {
+      const discovered: DiscoveredArtist[] = [
+        { name: 'Obscure Artist', mbid: 'mbid-obscure', similarityScore: 0.7, source: 'ai' },
+      ]
+      const mb = makeMb(makeMbArtist({ id: 'mbid-obscure', name: 'Obscure Artist' }))
+      const mockLidarr = {
+        lookupArtist: vi.fn().mockResolvedValue([{ images: [] }]),
+      }
+
+      const result = await resolve(discovered, mb, undefined, mockLidarr)
+
+      expect(result).toHaveLength(1)
+      expect(result[0]?.imageUrl).toBeUndefined()
+      expect(result[0]?.imageFailed).toBe(true)
+    })
+
+    it('does not set imageFailed when image is found', async () => {
+      const discovered: DiscoveredArtist[] = [
+        { name: 'Famous Artist', mbid: 'mbid-famous', similarityScore: 0.9, source: 'ai' },
+      ]
+      const mb = makeMb(makeMbArtist({ id: 'mbid-famous', name: 'Famous Artist' }))
+      const mockLidarr = {
+        lookupArtist: vi.fn().mockResolvedValue([
+          { images: [{ coverType: 'poster', remoteUrl: 'https://example.com/img.jpg' }] },
+        ]),
+      }
+
+      const result = await resolve(discovered, mb, undefined, mockLidarr)
+
+      expect(result).toHaveLength(1)
+      expect(result[0]?.imageUrl).toBe('https://example.com/img.jpg')
+      expect(result[0]?.imageFailed).toBeFalsy()
+    })
+  })
+
   describe('suggestedAlbum resolution', () => {
     it('exact album title match -> gets releaseGroupId', async () => {
       const discovered: DiscoveredArtist[] = [
