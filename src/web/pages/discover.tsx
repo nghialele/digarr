@@ -185,7 +185,13 @@ function StackIcon() {
 // Mood prompt bar
 // ---------------------------------------------------------------------------
 
-function MoodPromptBar() {
+function MoodPromptBar({
+  existingArtistNames,
+  onQueued,
+}: {
+  existingArtistNames: Set<string>
+  onQueued: () => void
+}) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Array<{
     artistName: string
@@ -194,6 +200,7 @@ function MoodPromptBar() {
     genres: string[]
   }> | null>(null)
   const [loading, setLoading] = useState(false)
+  const [queued, setQueued] = useState<Set<string>>(new Set())
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -206,6 +213,22 @@ function MoodPromptBar() {
       toast.error('Mood discovery failed')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleAddToQueue(artistName: string) {
+    setQueued((prev) => new Set([...prev, artistName]))
+    try {
+      await quickDiscover(artistName)
+      toast.success(`Queued "${artistName}" for discovery`)
+      onQueued()
+    } catch {
+      toast.error(`Failed to queue "${artistName}"`)
+      setQueued((prev) => {
+        const next = new Set(prev)
+        next.delete(artistName)
+        return next
+      })
     }
   }
 
@@ -243,17 +266,40 @@ function MoodPromptBar() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {results.map((r) => (
               <div key={r.artistName} className="bg-surface border border-border rounded p-3">
-                <div className="font-medium text-sm text-text">{r.artistName}</div>
-                <p className="text-xs text-muted mt-1 line-clamp-2">{r.reasoning}</p>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {r.genres.slice(0, 3).map((g) => (
-                    <span
-                      key={g}
-                      className="text-[10px] px-1.5 py-0.5 bg-bg border border-border rounded text-muted"
-                    >
-                      {g}
-                    </span>
-                  ))}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm text-text">{r.artistName}</div>
+                    <p className="text-xs text-muted mt-1 line-clamp-2">{r.reasoning}</p>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {r.genres.slice(0, 3).map((g) => (
+                        <span
+                          key={g}
+                          className="text-[10px] px-1.5 py-0.5 bg-bg border border-border rounded text-muted"
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    {existingArtistNames.has(r.artistName.toLowerCase()) ? (
+                      <span className="text-[10px] text-muted px-2 py-1 bg-bg border border-border rounded">
+                        In queue
+                      </span>
+                    ) : queued.has(r.artistName) ? (
+                      <span className="text-[10px] text-approve px-2 py-1 bg-approve/10 border border-approve/20 rounded">
+                        Queued
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleAddToQueue(r.artistName)}
+                        className="text-[10px] px-2 py-1 bg-accent/10 text-accent border border-accent/20 rounded hover:bg-accent/20 transition-colors"
+                      >
+                        + Queue
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -986,7 +1032,10 @@ export function DiscoverPage() {
           </>
         )}
 
-        <MoodPromptBar />
+        <MoodPromptBar
+          existingArtistNames={new Set(items.map((r) => r.artist.name.toLowerCase()))}
+          onQueued={refetch}
+        />
 
         <FeedbackInsights />
 
