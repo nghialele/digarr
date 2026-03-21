@@ -1351,6 +1351,15 @@ function RecommendationsTabInner({
   )
   const [topArtistsLimit, setTopArtistsLimit] = useState(String((prefs.topArtistsLimit as number) ?? 30))
   const [librarySeedRatio, setLibrarySeedRatio] = useState((prefs.librarySeedRatio as number) ?? 0.3)
+  const [autoApproveEnabled, setAutoApproveEnabled] = useState(
+    (prefs.autoApproveEnabled as boolean) ?? false,
+  )
+  const [autoApproveThreshold, setAutoApproveThreshold] = useState(
+    (prefs.autoApproveThreshold as number) ?? 0.8,
+  )
+  const [autoApproveMonitorOption, setAutoApproveMonitorOption] = useState(
+    (prefs.autoApproveMonitorOption as string) ?? 'all',
+  )
   const [saving, setSaving] = useState(false)
 
   const weightSum =
@@ -1373,6 +1382,9 @@ function RecommendationsTabInner({
         rejectionCooldownDays: parseInt(rejectionCooldown, 10) || (prefs.rejectionCooldownDays as number),
         topArtistsLimit: parseInt(topArtistsLimit, 10) || (prefs.topArtistsLimit as number),
         librarySeedRatio,
+        autoApproveEnabled,
+        autoApproveThreshold,
+        autoApproveMonitorOption: autoApproveMonitorOption as 'all' | 'new' | 'none',
       })
       queryClient.invalidateQueries({ queryKey: ['userPreferences'] })
       toast.success('Recommendation settings saved')
@@ -1509,6 +1521,52 @@ function RecommendationsTabInner({
           step={0.05}
           onChange={setLibrarySeedRatio}
         />
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Auto-Approve</h2>
+        <p className="text-xs text-muted">
+          Automatically add high-scoring recommendations to your targets after each scan. Only runs
+          when targets are configured.
+        </p>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={autoApproveEnabled}
+            onChange={(e) => setAutoApproveEnabled(e.target.checked)}
+            className="rounded border-border"
+          />
+          <span className="text-sm text-text">Enable auto-approve</span>
+        </label>
+        {autoApproveEnabled && (
+          <div className="space-y-3 pl-6">
+            <SliderField
+              label="Minimum score"
+              id="auto-approve-threshold"
+              value={autoApproveThreshold}
+              min={0.5}
+              max={1.0}
+              step={0.05}
+              onChange={setAutoApproveThreshold}
+              displayValue={`${Math.round(autoApproveThreshold * 100)}%`}
+            />
+            <div className="space-y-1.5">
+              <label htmlFor="auto-approve-monitor" className="text-sm text-muted">
+                Monitor mode
+              </label>
+              <select
+                id="auto-approve-monitor"
+                value={autoApproveMonitorOption}
+                onChange={(e) => setAutoApproveMonitorOption(e.target.value)}
+                className="mt-1 w-full bg-bg border border-border rounded text-sm text-text px-2 py-1.5"
+              >
+                <option value="all">All albums</option>
+                <option value="new">Future releases only</option>
+                <option value="none">None (tracking only)</option>
+              </select>
+            </div>
+          </div>
+        )}
       </section>
 
       <Button onClick={handleSave} disabled={saving}>

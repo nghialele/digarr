@@ -3,6 +3,7 @@ import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
 import { getValidToken } from '@/core/oauth'
+import type { AutoApproveDeps } from '@/core/pipeline/auto-approve'
 import { filter } from '@/core/pipeline/filter'
 import type { PipelineDeps } from '@/core/pipeline/orchestrator'
 import { resolve } from '@/core/pipeline/resolve'
@@ -62,6 +63,26 @@ export function pipelineRoutes(deps: AppDependencies) {
       }
     }
 
+    // Build auto-approve deps -- closures capture userId for per-user target lookup
+    const autoApproveDeps: AutoApproveDeps = {
+      getRecommendationsByBatch: async (batchId) => {
+        const result = await deps.listRecommendations({ batchId, limit: 1000 })
+        return result.items.map((r) => ({
+          id: r.id,
+          score: r.score,
+          status: r.status,
+          artist: { mbid: r.artist.mbid, name: r.artist.name },
+        }))
+      },
+      getEnabledTargets: () =>
+        userId ? deps.getEnabledTargetsForUser(userId) : Promise.resolve([]),
+      updateRecommendationStatus: (id, status, extra) =>
+        deps.updateRecommendationStatus(id, status, extra),
+      warmArtist: deps.skyhookWarmer
+        ? ((warmer) => (mbid: string) => warmer.warm(mbid))(deps.skyhookWarmer)
+        : undefined,
+    }
+
     // Fire-and-forget
     deps.orchestrator
       .run({
@@ -70,6 +91,7 @@ export function pipelineRoutes(deps: AppDependencies) {
         userId,
         providerRegistry: deps.providerRegistry,
         userConnections,
+        autoApproveDeps,
       } as unknown as PipelineDeps)
       .catch((err: unknown) => {
         console.error('Pipeline run failed:', err)

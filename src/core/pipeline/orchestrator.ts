@@ -12,6 +12,7 @@ import { createSpotifySource } from '@/core/plugins/spotify'
 import type { AiProviderRegistry } from '@/core/providers/registry'
 import { mergePreferences, type Preferences } from '@/db/schema'
 import { analyze } from './analyze'
+import { type AutoApproveDeps, autoApprove } from './auto-approve'
 import { collect } from './collect'
 import { discover } from './discover'
 import { enrichGenres } from './enrich'
@@ -57,6 +58,7 @@ export interface PipelineDeps {
   userId?: number
   providerRegistry?: AiProviderRegistry
   userConnections?: UserConnections | null
+  autoApproveDeps?: AutoApproveDeps | null
 }
 
 export class PipelineOrchestrator extends EventEmitter {
@@ -247,6 +249,25 @@ export class PipelineOrchestrator extends EventEmitter {
         message: `Saving ${filtered.length} recommendations...`,
       })
       const batchId = await store(filtered, db, { userId: deps.userId })
+
+      // Auto-approve if enabled
+      if (prefs.autoApproveEnabled && deps.autoApproveDeps) {
+        const autoConfig = {
+          threshold: prefs.autoApproveThreshold ?? 0.8,
+          monitorOption: (prefs.autoApproveMonitorOption ?? 'all') as 'all' | 'new' | 'none',
+          qualityProfileId: prefs.qualityProfileId,
+          metadataProfileId: prefs.metadataProfileId,
+          rootFolderId: prefs.rootFolderId,
+        }
+        this.emit('progress', {
+          stage: 'store',
+          message: `Auto-approving above ${Math.round(autoConfig.threshold * 100)}%...`,
+        })
+        const autoResult = await autoApprove(batchId, autoConfig, deps.autoApproveDeps)
+        if (autoResult.approved > 0 || autoResult.failed > 0) {
+          console.log(`Auto-approve: ${autoResult.approved} added, ${autoResult.failed} failed`)
+        }
+      }
 
       // Fire-and-forget webhook notification
       const webhookUrl = prefs.webhookUrl

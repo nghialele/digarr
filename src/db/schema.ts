@@ -231,6 +231,9 @@ export type Preferences = {
   librarySeedRatio: number // 0-1: fraction of seed artists from Lidarr library
   webhookUrl?: string
   lidarrPublicUrl?: string // browser-accessible Lidarr URL (may differ from API URL)
+  autoApproveEnabled?: boolean
+  autoApproveThreshold?: number // 0-1: minimum score to auto-approve
+  autoApproveMonitorOption?: 'all' | 'new' | 'none'
 }
 
 export type ScoringWeights = Preferences['scoringWeights']
@@ -252,6 +255,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   rejectionCooldownDays: 90,
   topArtistsLimit: 30,
   librarySeedRatio: 0.3,
+  autoApproveEnabled: false,
+  autoApproveThreshold: 0.8,
+  autoApproveMonitorOption: 'all',
 }
 
 /**
