@@ -480,6 +480,7 @@ export function DiscoverPage() {
 
   const targets = targetsData ?? []
   const hasMultipleTargets = targets.length > 1
+  const hasLidarrTarget = targets.some((t) => t.type === 'lidarr')
 
   const handleApproveToTarget = useCallback(
     async (recId: number, targetId: string) => {
@@ -566,8 +567,8 @@ export function DiscoverPage() {
       selectedAlbumIds?: string[],
       prevStatus = 'pending',
     ) => {
-      // Non-selected options: show per-artist profile picker dialog first
-      if (option !== 'selected') {
+      // Non-selected options: show per-artist profile picker dialog if Lidarr targets exist
+      if (option !== 'selected' && hasLidarrTarget) {
         setApproveDialogState({ recId: id, monitorOption: option })
         return
       }
@@ -590,7 +591,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, showUndo],
+    [refetch, showUndo, hasLidarrTarget],
   )
 
   const handleApprove = useCallback(

@@ -302,6 +302,13 @@ export function pipelineRoutes(deps: AppDependencies) {
             imageUrl: img.remoteUrl,
           })
           updated++
+        } else {
+          // No image found -- refresh the negative cache TTL
+          await upsertArtist(deps.db, {
+            mbid,
+            name: artist.name as string,
+            imageFailed: true,
+          })
         }
 
         // Also update disambiguation from MB if missing

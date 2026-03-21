@@ -26,6 +26,7 @@ export function ApproveDialog({ defaults, monitorOption, onConfirm, onCancel }: 
   const [mp, setMp] = useState(String(defaults.metadataProfileId))
   const [rf, setRf] = useState(String(defaults.rootFolderId))
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     Promise.all([getLidarrProfiles(), getLidarrMetadataProfiles(), getLidarrRootFolders()])
@@ -34,6 +35,7 @@ export function ApproveDialog({ defaults, monitorOption, onConfirm, onCancel }: 
         setMetadataProfiles(m as Profile[])
         setRootFolders(r as RootFolder[])
       })
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -61,6 +63,10 @@ export function ApproveDialog({ defaults, monitorOption, onConfirm, onCancel }: 
 
           {loading ? (
             <p className="text-sm text-muted">Loading profiles...</p>
+          ) : error ? (
+            <p className="text-sm text-red-400">
+              Failed to load Lidarr profiles. Check your Lidarr connection.
+            </p>
           ) : (
             <div className="space-y-3">
               <label className="block">
@@ -115,7 +121,7 @@ export function ApproveDialog({ defaults, monitorOption, onConfirm, onCancel }: 
             <Button
               size="sm"
               className="bg-approve text-bg hover:bg-approve/90"
-              disabled={loading}
+              disabled={loading || error || profiles.length === 0}
               onClick={() =>
                 onConfirm({
                   monitorOption,
