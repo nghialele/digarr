@@ -20,7 +20,7 @@ export async function getTopGenresForUser(
   userId: number | undefined,
   limit = 5,
 ): Promise<TasteGenre[]> {
-  const statusFilter = inArray(recommendations.status, ['approved', 'added_to_lidarr'])
+  const statusFilter = inArray(recommendations.status, ['approved', 'added_to_lidarr', 'add_failed'])
   const where = userId ? and(statusFilter, eq(recommendations.userId, userId)) : statusFilter
 
   const rows = await db

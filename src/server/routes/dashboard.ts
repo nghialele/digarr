@@ -14,7 +14,7 @@ export function dashboardRoutes(deps: AppDependencies) {
   router.get('/api/dashboard/activity', async (c) => {
     const userId = c.get('userId')
     const limitParam = c.req.query('limit')
-    const limit = limitParam ? Math.min(Number(limitParam), 20) : 5
+    const limit = limitParam ? Math.min(Math.max(Number(limitParam) || 1, 1), 20) : 5
 
     const isAdmin = !userId || (await deps.getUserById(userId))?.isAdmin === true
 

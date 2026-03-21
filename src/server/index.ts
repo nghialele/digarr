@@ -17,6 +17,7 @@ import type {
   RecommendationWithArtist,
   StatusUpdateExtra,
 } from '@/db/queries/recommendations'
+import type { ActivityEntry, TasteGenre } from '@/db/queries/dashboard'
 import type { SetupConfig } from '@/db/queries/settings'
 import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
 import type { subscriptionRuns, subscriptions } from '@/db/schema'
@@ -139,8 +140,8 @@ export type AppDependencies = {
   ) => Promise<import('@/core/targets/types').DestinationTarget[]>
   getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
   dashboardQueries: {
-    getTopGenresForUser: (userId: number | undefined) => Promise<import('@/db/queries/dashboard').TasteGenre[]>
-    getRecentActivity: (userId: number | undefined, isAdmin: boolean, limit?: number) => Promise<import('@/db/queries/dashboard').ActivityEntry[]>
+    getTopGenresForUser: (userId: number | undefined) => Promise<TasteGenre[]>
+    getRecentActivity: (userId: number | undefined, isAdmin: boolean, limit?: number) => Promise<ActivityEntry[]>
   }
 }
 
