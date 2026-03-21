@@ -5,7 +5,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-822_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-836_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **AI-powered music discovery for your *arr stack.** Digarr analyzes your listening history from ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, or Discogs, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations -- optionally adding them straight to Lidarr, or curating a personal list to export.
@@ -39,11 +39,13 @@ Digarr takes a different approach with a **7-stage weighted scoring pipeline** t
 
 - **6 data sources** -- ListenBrainz, Last.fm, Spotify (OAuth), Plex, Jellyfin, and Discogs. Each feeds into the taste profile with listening history, play counts, or collection data
 - **AI-powered recommendations** -- Anthropic (Claude), OpenAI, Google Gemini, Ollama, or any OpenAI-compatible provider; includes written explanations per artist
-- **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity; configurable weights, thresholds, and cooldowns
-- **Lidarr-optional** -- approve recommendations into Lidarr, or run in discovery-only mode without Lidarr. Setup wizard lets you choose. Export your curated list as JSON, CSV, M3U, or XSPF (XSPF includes artist images, AI reasoning annotations, streaming links, and MusicBrainz metadata per track)
+- **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity; configurable weights, thresholds, and cooldowns. Auto-approve mode can automatically add high-scoring recommendations to your targets after each scan
+- **Mood discovery** -- free-text prompt discovery ("find me something like Boards of Canada but darker") powered by the same AI provider, with instant results right from the Discover page
+- **Lidarr-optional** -- approve recommendations into Lidarr, or run in discovery-only mode without Lidarr. Setup wizard lets you choose. Per-artist Lidarr profile/root folder selection on approve. Export your curated list as JSON, CSV, M3U, or XSPF (XSPF includes artist images, AI reasoning annotations, streaming links, and MusicBrainz metadata per track)
 - **Target registry** -- pluggable approval targets: Lidarr (download + monitor) and Spotify Playlist (push approved artists to a Spotify playlist via OAuth). Configure and test targets from Settings
 - **Spotify playlist push** -- connect Spotify via OAuth and auto-create a playlist target. Approved recommendations get pushed directly to a Spotify playlist
-- **Artist enrichment** -- images (fanart.tv via Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata; optional Spotify genre/popularity enrichment via [MusicMoveArr](https://github.com/MusicMoveArr/Datasets) dataset import
+- **Feedback insights** -- see how your approval patterns shape future recommendations with a genre-level feedback panel on the Discover page
+- **Artist enrichment** -- images (fanart.tv via Lidarr) with negative cache TTL (auto-retries after 7 days), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata; optional Spotify genre/popularity enrichment via [MusicMoveArr](https://github.com/MusicMoveArr/Datasets) dataset import
 - **Music previews** -- play Spotify embeds, Deezer 30-sec clips, or YouTube previews directly from recommendation cards
 - **Genre discovery** -- browse genres from your library, search the full catalog, view genre detail pages with sub-genres and library overlap; subscribe to genres for automatic discovery
 - **Library health dashboard** -- 6 automated checks (missing metadata, unmonitored artists, missing albums, duplicates, genre gaps, image gaps) with one-click batch fixes, auto-rescan after fixes, and artist links to Lidarr
@@ -80,7 +82,7 @@ Digarr runs a recommendation pipeline with 7 stages:
 1. **Collect** -- fetches your current Lidarr library
 2. **Analyze** -- builds a taste profile from all connected sources (ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, Discogs)
 3. **Discover** -- queries sources for similar artists (Last.fm similar, Discogs genre search, AI recommendations, library-seeded discovery)
-4. **Resolve** -- validates each candidate against MusicBrainz, fetches metadata, streaming URLs, and artist images; enriches sparse genres from Spotify data if available
+4. **Resolve** -- validates each candidate against MusicBrainz, fetches metadata, streaming URLs, and artist images; genre-aware disambiguation picks the correct artist when multiple share the same name; enriches sparse genres from Spotify data if available
 5. **Score** -- applies a weighted composite formula (consensus, similarity, genre overlap, AI confidence, feedback boost, popularity)
 6. **Filter** -- removes artists already in your library, previously rejected artists (with cooldown), and below-threshold scores
 7. **Store** -- persists the batch and recommendations to the database
