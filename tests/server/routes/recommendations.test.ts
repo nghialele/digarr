@@ -142,6 +142,10 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     updateUser: vi.fn(async () => {}),
     listUsers: vi.fn(async () => []),
     deleteUser: vi.fn(async () => {}),
+    dashboardQueries: {
+      getTopGenresForUser: vi.fn(async () => []),
+      getRecentActivity: vi.fn(async () => []),
+    },
     ...overrides,
   }
 }

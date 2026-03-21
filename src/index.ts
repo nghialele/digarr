@@ -24,6 +24,7 @@ import { setSessionStore } from './core/sessions'
 import { createLidarrTarget } from './core/targets/lidarr'
 import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
 import { db, pool } from './db'
+import { getRecentActivity, getTopGenresForUser } from './db/queries/dashboard'
 import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
@@ -415,6 +416,10 @@ const app = createApp({
     return { success: false, message: `Unknown target type: ${type}` }
   },
   getFeedbackHistory: () => getGenreFeedbackHistory(db),
+  dashboardQueries: {
+    getTopGenresForUser: (userId) => getTopGenresForUser(db, userId),
+    getRecentActivity: (userId, isAdmin, limit) => getRecentActivity(db, userId, isAdmin, limit),
+  },
   getEnabledTargetsForUser: async (userId) => {
     const rows = await getTargetsByUser(db, userId)
     const settings = await getSettings(db)

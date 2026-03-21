@@ -49,6 +49,7 @@ import { recommendationRoutes } from './routes/recommendations'
 import { settingsRoutes } from './routes/settings'
 import { setupRoutes } from './routes/setup'
 import { subscriptionRoutes } from './routes/subscriptions'
+import { dashboardRoutes } from './routes/dashboard'
 import { targetRoutes } from './routes/targets'
 import { userRoutes } from './routes/users'
 import type { HonoEnv } from './types'
@@ -137,6 +138,10 @@ export type AppDependencies = {
     userId: number,
   ) => Promise<import('@/core/targets/types').DestinationTarget[]>
   getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
+  dashboardQueries: {
+    getTopGenresForUser: (userId: number | undefined) => Promise<import('@/db/queries/dashboard').TasteGenre[]>
+    getRecentActivity: (userId: number | undefined, isAdmin: boolean, limit?: number) => Promise<import('@/db/queries/dashboard').ActivityEntry[]>
+  }
 }
 
 export function createApp(deps: AppDependencies) {
@@ -246,6 +251,7 @@ export function createApp(deps: AppDependencies) {
   app.route('/', subscriptionRoutes(deps))
   app.route('/', userRoutes(deps))
   app.route('/', targetRoutes(deps))
+  app.route('/', dashboardRoutes(deps))
   app.route('/', exportRoutes(deps))
   app.route(
     '/',
