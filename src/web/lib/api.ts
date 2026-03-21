@@ -528,3 +528,29 @@ export const bulkToggleSubscriptions = (enabled: boolean) =>
   })
 
 export const getSchedulerInfo = () => fetchApi<{ jobs: SchedulerJob[] }>('/subscriptions/scheduler')
+
+// Dashboard
+export type TasteGenre = {
+  genre: string
+  count: number
+  percentage: number
+}
+
+export type ActivityEntry = {
+  type: 'approved' | 'rejected' | 'subscription_run' | 'scan_completed'
+  timestamp: string
+  data: {
+    artistName?: string
+    subscriptionName?: string
+    artistsFound?: number
+    artistsNew?: number
+    discovered?: number
+    added?: number
+    username?: string
+  }
+}
+
+export const getDashboardTaste = () => fetchApi<TasteGenre[]>('/dashboard/taste')
+
+export const getDashboardActivity = (limit = 5) =>
+  fetchApi<ActivityEntry[]>(`/dashboard/activity?limit=${limit}`)
