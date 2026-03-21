@@ -40,15 +40,16 @@ Digarr takes a different approach with a **7-stage weighted scoring pipeline** t
 - **6 data sources** -- ListenBrainz, Last.fm, Spotify (OAuth), Plex, Jellyfin, and Discogs. Each feeds into the taste profile with listening history, play counts, or collection data
 - **AI-powered recommendations** -- Anthropic (Claude), OpenAI, Google Gemini, Ollama, or any OpenAI-compatible provider; includes written explanations per artist
 - **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity; configurable weights, thresholds, and cooldowns
-- **Lidarr-optional** -- approve recommendations into Lidarr, or run in discovery-only mode without Lidarr. Setup wizard lets you choose. Export your curated list as JSON, CSV, or M3U
-- **Target registry** -- pluggable approval targets (Lidarr first, Navidrome/Jellyfin planned). Configure and test targets from Settings
+- **Lidarr-optional** -- approve recommendations into Lidarr, or run in discovery-only mode without Lidarr. Setup wizard lets you choose. Export your curated list as JSON, CSV, M3U, or XSPF (XSPF includes artist images, AI reasoning annotations, streaming links, and MusicBrainz metadata per track)
+- **Target registry** -- pluggable approval targets: Lidarr (download + monitor) and Spotify Playlist (push approved artists to a Spotify playlist via OAuth). Configure and test targets from Settings
+- **Spotify playlist push** -- connect Spotify via OAuth and auto-create a playlist target. Approved recommendations get pushed directly to a Spotify playlist
 - **Artist enrichment** -- images (fanart.tv via Lidarr), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata; optional Spotify genre/popularity enrichment via [MusicMoveArr](https://github.com/MusicMoveArr/Datasets) dataset import
 - **Music previews** -- play Spotify embeds, Deezer 30-sec clips, or YouTube previews directly from recommendation cards
 - **Genre discovery** -- browse genres from your library, search the full catalog, view genre detail pages with sub-genres and library overlap; subscribe to genres for automatic discovery
 - **Library health dashboard** -- 6 automated checks (missing metadata, unmonitored artists, missing albums, duplicates, genre gaps, image gaps) with one-click batch fixes, auto-rescan after fixes, and artist links to Lidarr
 - **Swipe-to-approve** -- swipe right to approve, left to reject on mobile; desktop gets hover action buttons and a card-stack mode
 - **Bulk actions** -- select multiple recommendations, approve or reject in batch
-- **Multi-user** -- per-user recommendation queues, session auth with username/password, admin role, installable as a PWA
+- **Multi-user** -- per-user recommendation queues, session auth with username/password, admin role, installable as a PWA. Each user has independent scoring weights, listening source connections, recommendation preferences (rejection cooldown, seed ratio, thresholds), and target configurations
 - **Analytics dashboard** -- approval rates, genre trends, source effectiveness, batch history with pagination, discovery-over-time chart, score distribution histogram, approval rate trend, and time-to-act metrics
 - **Webhook notifications** -- Discord, Slack, ntfy, Gotify, or any HTTP endpoint
 - **Self-hosted** -- single container, runs alongside your existing *arr stack
