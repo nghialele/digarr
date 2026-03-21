@@ -21,6 +21,7 @@ import {
   getWarmStatuses,
   listTargets,
   moodDiscover,
+  quickDiscover,
   rescanArtists,
   triggerPipeline,
   updateRecommendation,
@@ -673,6 +674,23 @@ export function DiscoverPage() {
       refetch()
     } catch {
       toast.error('Bulk approve failed')
+    }
+  }
+
+  async function handleClearAll() {
+    if (!confirm('Reject all pending recommendations? This cannot be undone.')) return
+    try {
+      const pending = await getRecommendations({ status: 'pending', limit: '10000' })
+      const ids = (pending.items as Array<{ id: number }>).map((r) => r.id)
+      if (ids.length === 0) {
+        toast.info('No pending recommendations to clear')
+        return
+      }
+      await bulkAction(ids, 'reject')
+      toast.success(`Cleared ${ids.length} pending recommendations`)
+      refetch()
+    } catch {
+      toast.error('Failed to clear recommendations')
     }
   }
 

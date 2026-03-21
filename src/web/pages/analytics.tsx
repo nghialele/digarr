@@ -428,15 +428,23 @@ export function AnalyticsPage() {
       </div>
 
       {/* Discovery over time chart */}
-      {batches && batches.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-            Discovery Over Time
-          </h2>
-          <p className="text-xs text-muted -mt-2">Recommendations per batch (green = approved)</p>
-          <DiscoveryChart batches={batches} />
-        </div>
-      )}
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+          Discovery Over Time
+        </h2>
+        {batches && batches.length > 0 ? (
+          <>
+            <p className="text-xs text-muted -mt-2">Recommendations per batch (green = approved)</p>
+            <DiscoveryChart batches={batches} />
+          </>
+        ) : (
+          <div className="bg-surface border border-border rounded-lg p-6 text-center">
+            <p className="text-sm text-muted">
+              No discovery batches yet. Run a scan to see your history here.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Batch history */}
       <div className="space-y-3">
@@ -446,28 +454,42 @@ export function AnalyticsPage() {
 
       {/* Score distribution + Approval trend + Time to act */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {scoreDist && scoreDist.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-              Score Distribution
-            </h2>
+        <div className="space-y-3 min-h-[180px]">
+          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+            Score Distribution
+          </h2>
+          {scoreDist && scoreDist.length > 0 ? (
             <ScoreDistribution buckets={scoreDist} />
-          </div>
-        )}
-        {trend && trend.length > 1 && (
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-              Approval Rate Trend
-            </h2>
+          ) : (
+            <div className="bg-surface border border-border rounded-lg p-6 text-center h-full flex items-center justify-center">
+              <p className="text-sm text-muted">No score data yet</p>
+            </div>
+          )}
+        </div>
+        <div className="space-y-3 min-h-[180px]">
+          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+            Approval Rate Trend
+          </h2>
+          {trend && trend.length > 1 ? (
             <ApprovalTrendChart trend={trend} />
-          </div>
-        )}
-        {timeToAct && timeToAct.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Time to Act</h2>
+          ) : (
+            <div className="bg-surface border border-border rounded-lg p-6 text-center h-full flex items-center justify-center">
+              <p className="text-sm text-muted">Need 2+ batches to show trend</p>
+            </div>
+          )}
+        </div>
+        <div className="space-y-3 min-h-[180px]">
+          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Time to Act</h2>
+          {timeToAct && timeToAct.length > 0 ? (
             <TimeToActCards data={timeToAct} />
-          </div>
-        )}
+          ) : (
+            <div className="bg-surface border border-border rounded-lg p-6 text-center h-full flex items-center justify-center">
+              <p className="text-sm text-muted">
+                Approve or reject recommendations to see timing data
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Genre breakdown + Source scores side by side on large screens */}
