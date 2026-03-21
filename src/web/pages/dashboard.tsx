@@ -1,25 +1,30 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArtistThumb } from '../components/artist-thumb'
+import { MoodPromptBar } from '../components/mood-prompt-bar'
 import { PipelineProgress } from '../components/pipeline-progress'
-import { StatCard } from '../components/stat-card'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
+import { RecentlyApproved } from '../components/recently-approved'
+import { TodaysPick } from '../components/todays-pick'
 import { Skeleton } from '../components/ui/skeleton'
 import {
-  getBatches,
-  getLidarrStats,
+  type ActivityEntry,
+  getDashboardActivity,
+  getDashboardTaste,
   getRecentListens,
   getRecommendations,
-  quickDiscover,
+  getSchedulerInfo,
+  getSubscriptions,
+  type SchedulerJob,
+  type Subscription,
+  type TasteGenre,
+  triggerPipeline,
   updateRecommendation,
 } from '../lib/api'
 
 // ---------------------------------------------------------------------------
-// Local types (API returns unknown[], we narrow here)
+// Local types
 // ---------------------------------------------------------------------------
 
 type Recommendation = {
@@ -31,23 +36,9 @@ type Recommendation = {
     id: number
     name: string
     genres?: string[] | null
-    tags?: string[] | null
     imageUrl?: string | null
     streamingUrls?: Record<string, string> | null
   }
-}
-
-type Batch = {
-  id: number
-  status: string
-  createdAt: string
-  stats?: {
-    discovered: number
-    filtered: number
-    scored: number
-    added: number
-    failed: number
-  } | null
 }
 
 // ---------------------------------------------------------------------------
@@ -58,115 +49,261 @@ function relativeTime(dateStr: string | Date): string {
   const ms = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(ms / 60_000)
   if (mins < 2) return 'just now'
-  if (mins < 60) return `${mins} minutes ago`
+  if (mins < 60) return `${mins}m ago`
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs === 1 ? '1 hour' : `${hrs} hours`} ago`
+  if (hrs < 24) return `${hrs}h ago`
   const days = Math.floor(hrs / 24)
-  return `${days === 1 ? '1 day' : `${days} days`} ago`
+  return `${days}d ago`
 }
 
 // ---------------------------------------------------------------------------
-// Latest batch panel
+// SectionHeader
 // ---------------------------------------------------------------------------
 
-function LatestBatchPanel({
-  recs,
-  total,
-  loading,
-  onAction,
-  onClickRec,
+function SectionHeader({
+  title,
+  linkText,
+  linkTo,
 }: {
-  recs: Recommendation[]
-  total: number
-  loading: boolean
-  onAction: (id: number, action: 'approved' | 'rejected') => void
-  onClickRec?: () => void
+  title: string
+  linkText?: string
+  linkTo?: string
 }) {
-  if (loading) {
-    return (
-      <div className="bg-surface border border-border rounded-lg divide-y divide-border">
-        {(['a', 'b', 'c'] as const).map((k) => (
-          <div key={k} className="flex items-center justify-between px-4 py-3 gap-4">
-            <div className="space-y-1 flex-1">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-48" />
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-7 w-16" />
-              <Skeleton className="h-7 w-16" />
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  }
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-sm font-semibold text-text uppercase tracking-wide">{title}</h2>
+      {linkText && linkTo && (
+        <Link to={linkTo} className="text-xs text-accent hover:underline">
+          {linkText}
+        </Link>
+      )}
+    </div>
+  )
+}
 
-  if (recs.length === 0) {
+// ---------------------------------------------------------------------------
+// SubscriptionPulse
+// ---------------------------------------------------------------------------
+
+function SubscriptionPulse({
+  subs,
+  scheduler,
+}: {
+  subs: Subscription[] | undefined
+  scheduler: { jobs: SchedulerJob[] } | undefined
+}) {
+  if (!subs || subs.length === 0) {
     return (
-      <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-        No pending recommendations. Run a scan to discover new artists.
+      <div>
+        <SectionHeader title="Subscriptions" linkText="Manage" linkTo="/subscriptions" />
+        <div className="bg-surface border border-border rounded-lg p-6 text-center">
+          <p className="text-sm text-muted">No subscriptions yet</p>
+          <Link
+            to="/subscriptions"
+            className="text-xs text-accent hover:underline mt-1 inline-block"
+          >
+            Create one
+          </Link>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg divide-y divide-border">
-      {recs.map((rec) => (
-        <button
-          type="button"
-          key={rec.id}
-          className="flex items-center justify-between px-4 py-3 gap-4 cursor-pointer hover:bg-bg/50 transition-colors w-full text-left"
-          onClick={onClickRec}
-        >
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <ArtistThumb name={rec.artist.name} imageUrl={rec.artist.imageUrl} />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-text truncate">{rec.artist.name}</p>
-              <div className="flex items-center gap-2 mt-0.5 overflow-hidden">
-                <span className="text-xs text-accent font-medium shrink-0">
-                  {Math.round((rec.score ?? 0) * 100)}%
-                </span>
-                {rec.artist.genres?.slice(0, 3).map((g, i) => (
-                  <Badge key={g} variant="outline" className={i > 0 ? 'hidden sm:inline-flex' : ''}>
-                    {g}
-                  </Badge>
-                ))}
+    <div>
+      <SectionHeader title="Subscriptions" linkText="Manage" linkTo="/subscriptions" />
+      <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        {subs.slice(0, 5).map((sub) => {
+          const job = scheduler?.jobs.find((j) => j.name === `subscription-${sub.id}`)
+          const nextRun = job?.nextRun ? relativeTime(job.nextRun) : null
+          return (
+            <div key={sub.id} className="flex items-center gap-3 px-4 py-2.5">
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${sub.enabled ? 'bg-approve' : 'bg-muted/40'}`}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-text truncate">{sub.name}</p>
+                <p className="text-xs text-muted">
+                  {sub.lastResultCount != null
+                    ? `${sub.lastResultCount} found last run`
+                    : 'No runs yet'}
+                  {nextRun && ` \u00b7 next ${nextRun}`}
+                </p>
               </div>
             </div>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-approve border-approve/40 hover:bg-approve/10 hover:text-approve"
-              onClick={(e) => {
-                e.stopPropagation()
-                onAction(rec.id, 'approved')
-              }}
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// ListeningActivity
+// ---------------------------------------------------------------------------
+
+function ListeningActivity({
+  data,
+  range,
+  onRangeChange,
+}: {
+  data:
+    | {
+        tracks: Array<{
+          artist: string
+          track: string
+          source: string
+          imageUrl?: string
+          mbid?: string
+        }>
+      }
+    | undefined
+  range: 'week' | 'month'
+  onRangeChange: (r: 'week' | 'month') => void
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Listening</h2>
+        <div className="flex gap-1">
+          {(['week', 'month'] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => onRangeChange(r)}
+              className={`text-xs px-2 py-0.5 rounded ${range === r ? 'bg-accent/20 text-accent' : 'text-muted hover:text-text'}`}
             >
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
-              onClick={(e) => {
-                e.stopPropagation()
-                onAction(rec.id, 'rejected')
-              }}
-            >
-              Reject
-            </Button>
-          </div>
-        </button>
-      ))}
-      {total > recs.length && (
-        <div className="px-4 py-3">
-          <Link to="/discover" className="text-sm text-accent hover:underline">
-            View all {total} recommendations
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+      {!data || data.tracks.length === 0 ? (
+        <div className="bg-surface border border-border rounded-lg p-6 text-center">
+          <p className="text-sm text-muted">Connect a listening source in Settings</p>
+          <Link to="/settings" className="text-xs text-accent hover:underline mt-1 inline-block">
+            Settings
           </Link>
         </div>
+      ) : (
+        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+          {data.tracks.map((t) => (
+            <div
+              key={`${t.source}-${t.artist}-${t.track}`}
+              className="flex items-center gap-3 px-4 py-2.5"
+            >
+              <ArtistThumb name={t.artist} imageUrl={t.imageUrl} size={8} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-text truncate">{t.artist}</p>
+                <p className="text-xs text-muted truncate">{t.track}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// TasteProfile
+// ---------------------------------------------------------------------------
+
+function TasteProfile({ genres, loading }: { genres: TasteGenre[] | undefined; loading: boolean }) {
+  return (
+    <div>
+      <SectionHeader title="Your Taste" />
+      <div className="bg-surface border border-border rounded-lg p-4">
+        {loading ? (
+          <div className="space-y-3">
+            {['t1', 't2', 't3', 't4', 't5'].map((k) => (
+              <Skeleton key={k} className="h-4 w-full" />
+            ))}
+          </div>
+        ) : !genres || genres.length === 0 ? (
+          <p className="text-sm text-muted text-center py-4">
+            Approve some recommendations to build your taste profile
+          </p>
+        ) : (
+          <div className="space-y-2.5">
+            {genres.map((g, i) => (
+              <div key={g.genre}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-text truncate">{g.genre}</span>
+                  <span className="text-muted shrink-0 ml-2">{g.percentage}%</span>
+                </div>
+                <div className="h-2 bg-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all"
+                    style={{ width: `${g.percentage}%`, opacity: 1 - i * 0.15 }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// ActivityFeed
+// ---------------------------------------------------------------------------
+
+function ActivityFeed({
+  entries,
+  loading,
+}: {
+  entries: ActivityEntry[] | undefined
+  loading: boolean
+}) {
+  return (
+    <div>
+      <SectionHeader title="Recent Activity" />
+      <div className="bg-surface border border-border rounded-lg">
+        {loading ? (
+          <div className="p-4 space-y-3">
+            {['a1', 'a2', 'a3', 'a4', 'a5'].map((k) => (
+              <Skeleton key={k} className="h-4 w-full" />
+            ))}
+          </div>
+        ) : !entries || entries.length === 0 ? (
+          <p className="text-sm text-muted text-center py-6">No recent activity</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {entries.map((entry) => (
+              <div
+                key={`${entry.type}-${entry.timestamp}-${entry.data.artistName ?? entry.data.subscriptionName ?? ''}`}
+                className="flex items-center gap-3 px-4 py-2.5"
+              >
+                <span className="text-xs shrink-0">
+                  {entry.type === 'approved'
+                    ? '\u2713'
+                    : entry.type === 'rejected'
+                      ? '\u2717'
+                      : entry.type === 'subscription_run'
+                        ? '\u21BB'
+                        : '\u25C9'}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-text truncate">
+                    {entry.data.username && (
+                      <span className="text-muted">{entry.data.username}: </span>
+                    )}
+                    {entry.type === 'approved' && `Approved ${entry.data.artistName}`}
+                    {entry.type === 'rejected' && `Rejected ${entry.data.artistName}`}
+                    {entry.type === 'subscription_run' &&
+                      `${entry.data.subscriptionName}: ${entry.data.artistsNew} new`}
+                    {entry.type === 'scan_completed' && `Scan: ${entry.data.discovered} discovered`}
+                  </p>
+                </div>
+                <span className="text-xs text-muted shrink-0">{relativeTime(entry.timestamp)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -176,77 +313,91 @@ function LatestBatchPanel({
 // ---------------------------------------------------------------------------
 
 export function Dashboard() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [skippedIds, setSkippedIds] = useState<Set<number>>(new Set())
   const [actedIds, setActedIds] = useState<Set<number>>(new Set())
-  const [listenRange, setListenRange] = useState<'week' | 'month' | 'year'>('month')
-  const [listenLimit, setListenLimit] = useState(5)
+  const [listenRange, setListenRange] = useState<'week' | 'month'>('month')
 
-  // Pending recommendations (top 5 for latest batch panel)
-  const { data: pendingData, isLoading: pendingLoading } = useQuery({
-    queryKey: ['recommendations', { status: 'pending', sort: 'score_desc', limit: '5' }],
-    queryFn: () => getRecommendations({ status: 'pending', sort: 'score_desc', limit: '5' }),
+  // Pending pick -- fetch 10 so skip has runway
+  const { data: pickData, isLoading: pickLoading } = useQuery({
+    queryKey: ['dashboard-pick'],
+    queryFn: () => getRecommendations({ status: 'pending', sort: 'score_desc', limit: '10' }),
+    staleTime: 30_000,
   })
 
-  // All-time stats: approved + added_to_lidarr = "approved", rejected = "rejected"
+  // Recently approved
   const { data: approvedData, isLoading: approvedLoading } = useQuery({
-    queryKey: ['recommendations', { status: 'added_to_lidarr', limit: '1' }],
-    queryFn: () => getRecommendations({ status: 'added_to_lidarr', limit: '1' }),
+    queryKey: ['dashboard-approved'],
+    queryFn: () =>
+      getRecommendations({
+        status: 'added_to_lidarr,approved',
+        sort: 'acted_on_desc',
+        limit: '6',
+      }),
+    staleTime: 30_000,
   })
 
-  const { data: rejectedData, isLoading: rejectedLoading } = useQuery({
-    queryKey: ['recommendations', { status: 'rejected', limit: '1' }],
-    queryFn: () => getRecommendations({ status: 'rejected', limit: '1' }),
+  // Subscriptions
+  const { data: subsData } = useQuery({
+    queryKey: ['subscriptions'],
+    queryFn: getSubscriptions,
+    staleTime: 30_000,
   })
 
-  // Batches for "last scan"
-  const { data: batchesData, isLoading: batchesLoading } = useQuery({
-    queryKey: ['batches'],
-    queryFn: getBatches,
+  // Scheduler
+  const { data: schedulerData } = useQuery({
+    queryKey: ['scheduler-info'],
+    queryFn: getSchedulerInfo,
+    staleTime: 30_000,
   })
 
-  // Recent listens
+  // Listening
   const { data: listensData } = useQuery({
-    queryKey: ['recentListens', listenRange, listenLimit],
-    queryFn: () => getRecentListens(listenRange, listenLimit),
+    queryKey: ['dashboard-listens', listenRange],
+    queryFn: () => getRecentListens(listenRange, 3),
+    staleTime: 30_000,
   })
 
-  // Lidarr library stats
-  const { data: lidarrStats, isLoading: lidarrLoading } = useQuery({
-    queryKey: ['lidarrStats'],
-    queryFn: getLidarrStats,
+  // Taste
+  const { data: tasteData, isLoading: tasteLoading } = useQuery({
+    queryKey: ['dashboard-taste'],
+    queryFn: getDashboardTaste,
+    staleTime: 30_000,
+  })
+
+  // Activity
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['dashboard-activity'],
+    queryFn: () => getDashboardActivity(5),
+    staleTime: 30_000,
   })
 
   // ---------------------------------------------------------------------------
-  // Derive stats
+  // Pick selection
   // ---------------------------------------------------------------------------
 
-  const pendingRecs = (pendingData?.items ?? []) as Recommendation[]
-  const pendingTotal = pendingData?.total ?? 0
+  const allPending = (pickData?.items ?? []) as Recommendation[]
+  const currentPick = allPending.find((r) => !skippedIds.has(r.id) && !actedIds.has(r.id)) ?? null
 
-  const approvedCount = approvedData?.total ?? 0
-  const rejectedCount = rejectedData?.total ?? 0
-  const actedTotal = approvedCount + rejectedCount
-  const approvalRate = actedTotal > 0 ? `${Math.round((approvedCount / actedTotal) * 100)}%` : '--'
+  // Existing artist names for mood prompt dedup
+  const existingArtistNames = new Set(allPending.map((r) => r.artist.name.toLowerCase()))
 
-  const batches = (batchesData ?? []) as Batch[]
-  const lastBatch = batches[0] ?? null
-  const lastScan = lastBatch?.createdAt ? relativeTime(lastBatch.createdAt) : 'Never'
-
-  const statsLoading = approvedLoading || rejectedLoading || batchesLoading
+  // Recently approved recs for the gallery
+  const approvedRecs = (approvedData?.items ?? []) as Recommendation[]
 
   // ---------------------------------------------------------------------------
-  // Actions
+  // Action handlers
   // ---------------------------------------------------------------------------
 
-  async function handleAction(id: number, action: 'approved' | 'rejected') {
+  async function handleApprove(id: number) {
     setActedIds((prev) => new Set([...prev, id]))
     try {
-      await updateRecommendation(id, { status: action })
-      toast.success(action === 'approved' ? 'Added to Lidarr' : 'Rejected')
-      queryClient.invalidateQueries({ queryKey: ['recommendations'] })
+      await updateRecommendation(id, { status: 'approved' })
+      toast.success('Approved')
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
     } catch {
-      toast.error('Action failed -- please try again')
+      toast.error('Failed')
       setActedIds((prev) => {
         const next = new Set(prev)
         next.delete(id)
@@ -255,124 +406,75 @@ export function Dashboard() {
     }
   }
 
-  const visibleRecs = pendingRecs.filter((r) => !actedIds.has(r.id))
+  function handleSkip(id: number) {
+    setSkippedIds((prev) => new Set([...prev, id]))
+  }
+
+  async function handleReject(id: number) {
+    setActedIds((prev) => new Set([...prev, id]))
+    try {
+      await updateRecommendation(id, { status: 'rejected' })
+      toast.success('Rejected')
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
+    } catch {
+      toast.error('Failed')
+      setActedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard
-          label="Lidarr Library"
-          value={lidarrLoading ? '--' : (lidarrStats?.artists ?? 0)}
-          subValue={lidarrLoading ? undefined : `${lidarrStats?.monitored ?? 0} monitored`}
-          loading={lidarrLoading}
-        />
-        <StatCard
-          label="Pending Recs"
-          value={pendingLoading ? '--' : pendingTotal}
-          loading={pendingLoading}
-        />
-        <StatCard
-          label="Approval Rate"
-          value={statsLoading ? '--' : approvalRate}
-          subValue={actedTotal > 0 ? `${actedTotal} acted on` : undefined}
-          loading={statsLoading}
-        />
-        <StatCard
-          label="Last Scan"
-          value={batchesLoading ? '--' : lastScan}
-          subValue={lastBatch?.status}
-          loading={batchesLoading}
-        />
-      </div>
-
-      {/* Pipeline progress (self-hides when not running) */}
-      <PipelineProgress
-        onComplete={() => {
-          queryClient.invalidateQueries({ queryKey: ['recommendations'] })
-          queryClient.invalidateQueries({ queryKey: ['batches'] })
+    <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
+      {/* MoodPromptBar (full width) */}
+      <MoodPromptBar
+        existingArtistNames={existingArtistNames}
+        onQueued={() => {
+          queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
         }}
       />
 
-      {/* Latest batch panel */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-            Latest Recommendations
-          </h2>
-          {pendingTotal > 0 && (
-            <Link to="/discover" className="text-xs text-accent hover:underline">
-              View all {pendingTotal}
-            </Link>
-          )}
-        </div>
-        <LatestBatchPanel
-          recs={visibleRecs}
-          total={pendingTotal}
-          loading={pendingLoading}
-          onAction={handleAction}
-          onClickRec={() => navigate('/discover')}
+      {/* Pipeline progress (self-hides) */}
+      <PipelineProgress
+        onComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
+          queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
+          queryClient.invalidateQueries({ queryKey: ['dashboard-activity'] })
+        }}
+      />
+
+      {/* Today's Pick + Recently Approved */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TodaysPick
+          rec={currentPick}
+          loading={pickLoading}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onSkip={handleSkip}
+          onRunScan={() => {
+            triggerPipeline()
+            toast.success('Scan started')
+          }}
         />
+        <div>
+          <SectionHeader title="Recently Approved" linkText="View all" linkTo="/discover" />
+          <RecentlyApproved recs={approvedRecs} loading={approvedLoading} />
+        </div>
       </div>
 
-      {/* Recent listens */}
-      {listensData && listensData.tracks.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-              Listening Activity
-            </h2>
-            <div className="flex items-center gap-2">
-              {(['week', 'month', 'year'] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setListenRange(r)}
-                  className={`text-xs px-2 py-0.5 rounded ${listenRange === r ? 'bg-accent/20 text-accent' : 'text-muted hover:text-text'}`}
-                >
-                  {r}
-                </button>
-              ))}
-              <Input
-                type="number"
-                min={1}
-                max={50}
-                value={listenLimit}
-                onChange={(e) => setListenLimit(Math.max(1, Number(e.target.value) || 5))}
-                className="w-14 h-6 text-xs text-center px-1"
-              />
-            </div>
-          </div>
-          <div className="bg-surface border border-border rounded-lg divide-y divide-border">
-            {listensData.tracks.map((t) => (
-              <div
-                key={`${t.source}-${t.artist}-${t.track}`}
-                className="flex items-center gap-3 px-4 py-2.5"
-              >
-                <ArtistThumb name={t.artist} imageUrl={t.imageUrl} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-text truncate">{t.artist}</p>
-                  <p className="text-xs text-muted truncate">{t.track}</p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="shrink-0 text-xs text-accent border-accent/40 hover:bg-accent/10"
-                  onClick={() => {
-                    toast.promise(quickDiscover(t.artist), {
-                      loading: `Finding artists similar to ${t.artist}...`,
-                      success: (r) => r.message,
-                      error: 'Discovery failed',
-                    })
-                  }}
-                >
-                  Find Similar
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Subscription Pulse + Listening Activity */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SubscriptionPulse subs={subsData} scheduler={schedulerData} />
+        <ListeningActivity data={listensData} range={listenRange} onRangeChange={setListenRange} />
+      </div>
+
+      {/* Taste Profile + Activity Feed */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TasteProfile genres={tasteData} loading={tasteLoading} />
+        <ActivityFeed entries={activityData} loading={activityLoading} />
+      </div>
     </div>
   )
 }
