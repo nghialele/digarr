@@ -10,6 +10,7 @@ import {
   createSubscriptionApi,
   deleteSubscriptionApi,
   getSchedulerInfo,
+  getSettings,
   getSubscriptionRuns,
   getSubscriptions,
   type Subscription,
@@ -187,7 +188,11 @@ function SubscriptionCard({
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted flex-wrap">
-            <span>{sub.sourceProvider}</span>
+            <span>
+              {Array.isArray((sub.sourceConfig as Record<string, unknown>)?.providers)
+                ? ((sub.sourceConfig as Record<string, unknown>).providers as string[]).join(', ')
+                : sub.sourceProvider}
+            </span>
             <span>{actionLabel}</span>
             <span className="font-mono">{sub.cron}</span>
           </div>
@@ -297,6 +302,19 @@ export default function SubscriptionsPage() {
   }, [prefillGenre, setSearchParams])
 
   // Queries
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings,
+  })
+
+  const configuredSources = (() => {
+    if (!settings) return []
+    const sources: string[] = []
+    if (settings.lastfmApiKey) sources.push('lastfm')
+    if (settings.discogsToken) sources.push('discogs')
+    return sources
+  })()
+
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ['subscriptions'],
     queryFn: getSubscriptions,
@@ -470,6 +488,7 @@ export default function SubscriptionsPage() {
       {showForm && (
         <SubscriptionForm
           mode={showForm.mode}
+          configuredSources={configuredSources}
           initial={
             showForm.mode === 'edit'
               ? {

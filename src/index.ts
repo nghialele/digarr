@@ -15,6 +15,7 @@ import { getValidToken } from './core/oauth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
+import { createDiscogsSource } from './core/plugins/discogs'
 import { createLastFmSource } from './core/plugins/lastfm'
 import { createListenBrainzSource } from './core/plugins/listenbrainz'
 import { SourceRegistry } from './core/plugins/registry'
@@ -248,15 +249,29 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   const rejectedMbids = await storeDb.getRejectedMbids(prefs.rejectionCooldownDays)
   const feedbackHistory = await storeDb.getFeedbackHistory()
 
+  // Per-user connections take precedence over global settings
+  const userRow = sub.userId ? await getUserById(db, sub.userId) : null
+
+  const lbUsername =
+    (userRow as Record<string, unknown>)?.listenbrainzUsername ?? settings?.listenbrainzUsername
+  const lbToken =
+    (userRow as Record<string, unknown>)?.listenbrainzToken ?? settings?.listenbrainzToken
+  const lfUsername =
+    (userRow as Record<string, unknown>)?.lastfmUsername ?? settings?.lastfmUsername
+  const lfApiKey = (userRow as Record<string, unknown>)?.lastfmApiKey ?? settings?.lastfmApiKey
+  const dcToken = (userRow as Record<string, unknown>)?.discogsToken
+  const dcUsername = (userRow as Record<string, unknown>)?.discogsUsername
+
   // Build source registry fresh per run (same pattern as orchestrator)
   const sourceRegistry = new SourceRegistry()
-  if (settings?.listenbrainzUsername && settings?.listenbrainzToken) {
-    sourceRegistry.register(
-      createListenBrainzSource(settings.listenbrainzUsername, settings.listenbrainzToken),
-    )
+  if (lbUsername && lbToken) {
+    sourceRegistry.register(createListenBrainzSource(lbUsername as string, lbToken as string))
   }
-  if (settings?.lastfmUsername && settings?.lastfmApiKey) {
-    sourceRegistry.register(createLastFmSource(settings.lastfmUsername, settings.lastfmApiKey))
+  if (lfUsername && lfApiKey) {
+    sourceRegistry.register(createLastFmSource(lfUsername as string, lfApiKey as string))
+  }
+  if (dcToken && dcUsername) {
+    sourceRegistry.register(createDiscogsSource(dcToken as string, dcUsername as string))
   }
 
   await runGenreSubscription({

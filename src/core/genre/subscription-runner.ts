@@ -95,7 +95,15 @@ export async function runGenreSubscription(
       (s) => s.capabilities.includes('genreArtists') && typeof s.getGenreArtists === 'function',
     )
 
-    if (capableSources.length === 0) {
+    // If subscription specifies providers, filter to only those
+    const providers = Array.isArray(subscription.sourceConfig.providers)
+      ? (subscription.sourceConfig.providers as string[])
+      : null
+    const filteredSources = providers
+      ? capableSources.filter((s) => providers.includes(s.id))
+      : capableSources
+
+    if (filteredSources.length === 0) {
       await subscriptionQueries.completeRun(run.id, {
         completedAt: new Date(),
         artistsFound: 0,
@@ -110,7 +118,7 @@ export async function runGenreSubscription(
     }
 
     const discovered: DiscoveredArtist[] = []
-    for (const source of capableSources) {
+    for (const source of filteredSources) {
       try {
         // biome-ignore lint/style/noNonNullAssertion: filtered above
         const entries = await source.getGenreArtists!(genre, {

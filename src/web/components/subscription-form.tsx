@@ -19,6 +19,7 @@ type SubscriptionFormProps = {
   onSubmit: (data: SubscriptionFormData) => Promise<void>
   onCancel: () => void
   mode: 'create' | 'edit'
+  configuredSources: string[]
 }
 
 const SOURCE_TYPES = [
@@ -42,10 +43,19 @@ const WEIGHT_PRESETS = [
   { value: 'genre', label: 'Genre-optimized' },
 ] as const
 
-export function SubscriptionForm({ initial, onSubmit, onCancel, mode }: SubscriptionFormProps) {
+export function SubscriptionForm({
+  initial,
+  onSubmit,
+  onCancel,
+  mode,
+  configuredSources,
+}: SubscriptionFormProps) {
   const [name, setName] = useState(initial?.name ?? '')
   const [sourceType] = useState(initial?.sourceType ?? 'genre')
-  const [sourceProvider, setSourceProvider] = useState(initial?.sourceProvider ?? 'lastfm')
+  const [providers, setProviders] = useState<string[]>(
+    (initial?.sourceConfig?.providers as string[]) ??
+      configuredSources.filter((id) => SOURCE_PROVIDERS.some((p) => p.value === id)),
+  )
   const [genre, setGenre] = useState((initial?.sourceConfig?.genre as string) ?? '')
   const [cron, setCron] = useState(initial?.cron ?? '0 8 * * 0')
   const [enabled, setEnabled] = useState(initial?.enabled ?? true)
@@ -66,14 +76,18 @@ export function SubscriptionForm({ initial, onSubmit, onCancel, mode }: Subscrip
       setError('Genre is required')
       return
     }
+    if (providers.length === 0) {
+      setError('Select at least one source')
+      return
+    }
     setError(null)
     setSubmitting(true)
     try {
       await onSubmit({
         name: name.trim(),
         sourceType,
-        sourceProvider,
-        sourceConfig: { genre: genre.trim() },
+        sourceProvider: providers.join(','),
+        sourceConfig: { genre: genre.trim(), providers },
         cron,
         enabled,
         maxArtistsPerRun: maxArtists,
@@ -155,23 +169,43 @@ export function SubscriptionForm({ initial, onSubmit, onCancel, mode }: Subscrip
             />
           </div>
 
-          {/* Source provider */}
+          {/* Source providers (multiselect) */}
           <div>
-            <label htmlFor="sub-provider" className="block text-sm font-medium text-text mb-1">
-              Source
-            </label>
-            <select
-              id="sub-provider"
-              value={sourceProvider}
-              onChange={(e) => setSourceProvider(e.target.value)}
-              className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text focus:border-accent focus:outline-none"
-            >
-              {SOURCE_PROVIDERS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
+            <span className="block text-sm font-medium text-text mb-1">Sources</span>
+            <div className="flex flex-wrap gap-2">
+              {SOURCE_PROVIDERS.map((p) => {
+                const configured = configuredSources.includes(p.value)
+                const selected = providers.includes(p.value)
+                return (
+                  <button
+                    key={p.value}
+                    type="button"
+                    disabled={!configured}
+                    onClick={() => {
+                      setProviders((prev) =>
+                        prev.includes(p.value)
+                          ? prev.filter((v) => v !== p.value)
+                          : [...prev, p.value],
+                      )
+                    }}
+                    className={`px-3 py-1.5 rounded text-sm border transition-colors ${
+                      !configured
+                        ? 'border-border text-muted/50 cursor-not-allowed bg-surface/50'
+                        : selected
+                          ? 'border-accent/50 bg-accent/15 text-accent'
+                          : 'border-border text-muted hover:border-accent/40 hover:text-text'
+                    }`}
+                    title={configured ? undefined : 'Configure in Settings > Connections'}
+                  >
+                    {p.label}
+                    {!configured && <span className="text-xs ml-1">(not configured)</span>}
+                  </button>
+                )
+              })}
+            </div>
+            {providers.length === 0 && (
+              <p className="text-xs text-reject mt-1">Select at least one source</p>
+            )}
           </div>
 
           {/* Schedule */}
