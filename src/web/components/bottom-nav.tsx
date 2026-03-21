@@ -1,4 +1,3 @@
-import { HeartPulse } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '../lib/utils'
 
@@ -66,8 +65,25 @@ function GenresIcon({ className }: { className?: string }) {
   )
 }
 
-function LibraryIcon({ className }: { className?: string }) {
-  return <HeartPulse className={cn('w-5 h-5', className)} aria-hidden="true" strokeWidth={2} />
+function SubsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn('w-5 h-5', className)}
+      aria-hidden="true"
+    >
+      <path d="M17 2.1l4 4-4 4" />
+      <path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8" />
+      <path d="M7 21.9l-4-4 4-4" />
+      <path d="M21 11.8v2a4 4 0 0 1-4 4H4.2" />
+    </svg>
+  )
 }
 
 function SettingsIcon({ className }: { className?: string }) {
@@ -97,7 +113,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon, exact: true },
   { to: '/discover', label: 'Discover', Icon: DiscoverIcon, exact: false },
   { to: '/genres', label: 'Genres', Icon: GenresIcon, exact: false },
-  { to: '/library/health', label: 'Library', Icon: LibraryIcon, exact: false },
+  { to: '/subscriptions', label: 'Subs', Icon: SubsIcon, exact: false },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon, exact: false },
 ] as const
 

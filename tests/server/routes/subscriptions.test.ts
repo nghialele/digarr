@@ -50,7 +50,7 @@ const mockScheduler = {
   schedule: vi.fn(),
   remove: vi.fn(),
   has: vi.fn(() => false),
-  listJobs: vi.fn(() => []),
+  listJobs: vi.fn((): Array<{ name: string; expression: string; nextRun: Date | null }> => []),
   stopAll: vi.fn(),
   nextRun: vi.fn(() => null),
 }

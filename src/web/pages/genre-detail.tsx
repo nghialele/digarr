@@ -199,7 +199,7 @@ export function GenreDetailPage() {
       <div className="pt-2">
         <button
           type="button"
-          onClick={() => alert(`Subscriptions for "${data.name}" coming soon`)}
+          onClick={() => navigate(`/subscriptions?genre=${encodeURIComponent(data.name)}`)}
           className="px-4 py-2 bg-surface border border-border rounded-md text-sm text-muted hover:text-text hover:border-accent/60 transition-colors"
         >
           Create Subscription

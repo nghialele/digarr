@@ -23,6 +23,7 @@ import type { subscriptionRuns, subscriptions } from '@/db/schema'
 
 type SubscriptionRow = typeof subscriptions.$inferSelect
 type SubscriptionRunRow = typeof subscriptionRuns.$inferSelect
+
 import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
 import type { UserPublic } from '@/db/queries/users'
 import { VERSION } from '@/version'

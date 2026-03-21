@@ -44,6 +44,7 @@ import { GenresPage } from './pages/genres'
 import { LibraryHealthPage } from './pages/library-health'
 import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
+import SubscriptionsPage from './pages/subscriptions'
 import { UserManagementPage } from './pages/user-management'
 
 // ---------------------------------------------------------------------------
@@ -236,6 +237,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     Genres
                   </span>
                 </NavLink>
+                <NavLink to="/subscriptions" className={navLinkClass}>
+                  <span className="flex items-center gap-1">
+                    <Monitor size={14} aria-hidden="true" />
+                    Subscriptions
+                  </span>
+                </NavLink>
                 {currentUser?.isAdmin && (
                   <NavLink to="/library/health" className={navLinkClass}>
                     <span className="flex items-center gap-1">
@@ -329,6 +336,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   Genres
                 </span>
               </NavLink>
+              <NavLink
+                to="/subscriptions"
+                className={navLinkClass}
+                onClick={() => setMenuOpen(false)}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Monitor size={14} aria-hidden="true" />
+                  Subscriptions
+                </span>
+              </NavLink>
               {currentUser?.isAdmin && (
                 <NavLink
                   to="/library/health"
@@ -419,6 +436,7 @@ function InnerApp() {
             <Route path="/discover" element={<DiscoverPage />} />
             <Route path="/genres" element={<GenresPage />} />
             <Route path="/genres/:slug" element={<GenreDetailPage />} />
+            <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/library/health" element={<LibraryHealthPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

@@ -527,5 +527,4 @@ export const bulkToggleSubscriptions = (enabled: boolean) =>
     body: JSON.stringify({ enabled }),
   })
 
-export const getSchedulerInfo = () =>
-  fetchApi<{ jobs: SchedulerJob[] }>('/subscriptions/scheduler')
+export const getSchedulerInfo = () => fetchApi<{ jobs: SchedulerJob[] }>('/subscriptions/scheduler')
