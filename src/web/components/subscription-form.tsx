@@ -97,10 +97,11 @@ export function SubscriptionForm({ initial, onSubmit, onCancel, mode }: Subscrip
       aria-modal="true"
       aria-label={mode === 'create' ? 'Create subscription' : 'Edit subscription'}
     >
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: modal content panel */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: stop-propagation prevents backdrop dismiss */}
       <div
         className="bg-bg border border-border rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={() => {}}
       >
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <h2 className="text-lg font-semibold text-text">
