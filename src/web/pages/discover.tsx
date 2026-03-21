@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AlbumPicker } from '../components/album-picker'
 import { ApproveDialog } from '../components/approve-dialog'
@@ -15,6 +15,7 @@ import {
   approveToTarget,
   bulkAction,
   exportRecommendations,
+  getFeedbackSummary,
   getRecommendations,
   getUserPreferences,
   getWarmStatuses,
@@ -175,6 +176,61 @@ function StackIcon() {
       <path d="M2 17l10 5 10-5" />
       <path d="M2 12l10 5 10-5" />
     </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Feedback insights
+// ---------------------------------------------------------------------------
+
+function FeedbackInsights() {
+  const [data, setData] = useState<Array<{ genre: string; rate: number; total: number }>>([])
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (open && data.length === 0) {
+      getFeedbackSummary()
+        .then((r) => setData(r.summary))
+        .catch(() => {})
+    }
+  }, [open, data.length])
+
+  return (
+    <div className="mb-4">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="text-xs text-muted hover:text-text transition-colors"
+      >
+        {open ? 'Hide' : 'Show'} feedback insights
+      </button>
+      {open && data.length > 0 && (
+        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          {data.slice(0, 12).map((g) => (
+            <div key={g.genre} className="bg-surface border border-border rounded px-2 py-1.5">
+              <div className="text-xs font-medium text-text truncate">{g.genre}</div>
+              <div className="flex items-center gap-1 mt-0.5">
+                <div className="flex-1 h-1 bg-bg rounded overflow-hidden">
+                  <div
+                    className="h-full bg-approve rounded"
+                    style={{ width: `${Math.round(g.rate * 100)}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-muted tabular-nums">
+                  {Math.round(g.rate * 100)}%
+                </span>
+              </div>
+              <div className="text-[10px] text-muted mt-0.5">{g.total} rated</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {open && data.length === 0 && (
+        <p className="text-xs text-muted mt-2">
+          Not enough feedback data yet. Approve or reject more recommendations.
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -810,6 +866,8 @@ export function DiscoverPage() {
             </p>
           </>
         )}
+
+        <FeedbackInsights />
 
         {/* Stack view */}
         {viewMode === 'stack' &&

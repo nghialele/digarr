@@ -85,6 +85,7 @@ function makeDeps() {
     updateUser: vi.fn(async () => {}),
     listUsers: vi.fn(async () => []),
     deleteUser: vi.fn(async () => {}),
+    getFeedbackHistory: vi.fn(async () => new Map()),
   } satisfies AppDependencies
 }
 

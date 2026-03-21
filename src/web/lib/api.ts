@@ -154,6 +154,17 @@ export const approveRecommendation = (
 export const bulkAction = (ids: number[], action: string) =>
   fetchApi('/recommendations/bulk', { method: 'POST', body: JSON.stringify({ ids, action }) })
 
+export const getFeedbackSummary = () =>
+  fetchApi<{
+    summary: Array<{
+      genre: string
+      approved: number
+      rejected: number
+      total: number
+      rate: number
+    }>
+  }>('/recommendations/feedback-summary')
+
 // Albums
 export type ReleaseGroup = {
   id: string

@@ -23,6 +23,23 @@ export function recommendationRoutes(deps: AppDependencies) {
     return c.json(result)
   })
 
+  router.get('/api/recommendations/feedback-summary', async (c) => {
+    const history = await deps.getFeedbackHistory()
+    const summary = [...history.entries()]
+      .map(([genre, { approved, total }]) => ({
+        genre,
+        approved,
+        rejected: total - approved,
+        total,
+        rate: total > 0 ? approved / total : 0,
+      }))
+      .filter((e) => e.total >= 3)
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, 20)
+
+    return c.json({ summary })
+  })
+
   router.get('/api/recommendations/:id', async (c) => {
     const id = Number(c.req.param('id'))
     const rec = await deps.getRecommendation(id)

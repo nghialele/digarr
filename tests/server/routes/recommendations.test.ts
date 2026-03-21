@@ -130,6 +130,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       getRunsForSubscription: vi.fn(async () => []),
     },
     runSubscription: vi.fn(async () => {}),
+    getFeedbackHistory: vi.fn(async () => new Map()),
     getOidcService: vi.fn(async () => null),
     getUserByOidcSubject: vi.fn(async () => null),
     getUserByEmail: vi.fn(async () => null),
@@ -407,5 +408,33 @@ describe('POST /api/recommendations/bulk', () => {
       body: JSON.stringify({ ids: [], action: 'reject' }),
     })
     expect(res.status).toBe(400)
+  })
+})
+
+describe('GET /api/recommendations/feedback-summary', () => {
+  it('returns genre feedback summary sorted by approval rate', async () => {
+    const history = new Map([
+      ['rock', { approved: 8, total: 10 }],
+      ['jazz', { approved: 2, total: 5 }],
+      ['pop', { approved: 1, total: 1 }],
+    ])
+    const app = createApp(makeDeps({
+      getFeedbackHistory: vi.fn().mockResolvedValue(history),
+    }))
+    const res = await app.request('/api/recommendations/feedback-summary')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.summary).toHaveLength(2) // pop excluded (below 3 total)
+    expect(body.summary[0].genre).toBe('rock')
+    expect(body.summary[0].rate).toBe(0.8)
+    expect(body.summary[1].genre).toBe('jazz')
+  })
+
+  it('returns empty summary when no feedback data', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/recommendations/feedback-summary')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.summary).toHaveLength(0)
   })
 })

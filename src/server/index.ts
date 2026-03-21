@@ -129,6 +129,7 @@ export type AppDependencies = {
   getEnabledTargetsForUser: (
     userId: number,
   ) => Promise<import('@/core/targets/types').DestinationTarget[]>
+  getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
 }
 
 export function createApp(deps: AppDependencies) {

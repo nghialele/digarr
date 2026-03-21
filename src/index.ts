@@ -396,6 +396,7 @@ const app = createApp({
 
     return { success: false, message: `Unknown target type: ${type}` }
   },
+  getFeedbackHistory: () => getGenreFeedbackHistory(db),
   getEnabledTargetsForUser: async (userId) => {
     const rows = await getTargetsByUser(db, userId)
     const settings = await getSettings(db)
