@@ -43,6 +43,7 @@ vi.mock('@/web/lib/api', () => ({
   getDashboardTaste: vi.fn(),
   getDashboardActivity: vi.fn(),
   triggerPipeline: vi.fn(),
+  rescanArtists: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
   moodDiscover: vi.fn(),
   quickDiscover: vi.fn(),
   getPipelineStatus: vi.fn(),

@@ -93,7 +93,11 @@ export function TodaysPick({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
 
         {/* Score badge */}
-        <span className="absolute top-3 right-3 bg-accent text-accent-fg text-xs font-bold px-2 py-1 rounded">
+        <span
+          role="img"
+          className="absolute top-3 right-3 bg-accent text-accent-fg text-xs font-bold px-2 py-1 rounded"
+          aria-label={`Match score: ${Math.round(rec.score * 100)}%`}
+        >
           {Math.round(rec.score * 100)}
         </span>
 
@@ -125,11 +129,7 @@ export function TodaysPick({
         )}
 
         <div className="mt-3">
-          <StreamingLinks
-            streamingUrls={artist.streamingUrls ?? null}
-            artistName={artist.name}
-            compact
-          />
+          <StreamingLinks streamingUrls={artist.streamingUrls ?? null} artistName={artist.name} />
         </div>
       </div>
 
@@ -138,21 +138,21 @@ export function TodaysPick({
         <button
           type="button"
           onClick={() => onReject(rec.id)}
-          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-reject hover:bg-reject/10"
+          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-reject hover:bg-reject/10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-reject"
         >
           Reject
         </button>
         <button
           type="button"
           onClick={() => onSkip(rec.id)}
-          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-muted hover:bg-surface"
+          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-muted hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
         >
           Skip
         </button>
         <button
           type="button"
           onClick={() => onApprove(rec.id)}
-          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-approve hover:bg-approve/10"
+          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-approve hover:bg-approve/10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-approve"
         >
           Approve
         </button>

@@ -59,12 +59,12 @@ export function MoodPromptBar({
           onChange={(e) => setQuery(e.target.value)}
           placeholder='Try: "something like Boards of Canada but darker"'
           maxLength={500}
-          className="flex-1 bg-surface border border-border rounded px-3 py-1.5 text-sm text-text placeholder:text-muted/50"
+          className="flex-1 bg-surface border border-border rounded px-3 py-1.5 text-sm text-text placeholder:text-muted/50 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-1px]"
         />
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="px-3 py-1.5 bg-accent text-accent-fg rounded text-sm font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 bg-accent text-accent-fg rounded text-sm font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
         >
           {loading ? 'Discovering...' : 'Discover'}
         </button>

@@ -111,8 +111,15 @@ function ThemePicker({
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [open])
 
   const ModeIcon = mode === 'dark' ? Moon : mode === 'light' ? Sun : Monitor
@@ -122,14 +129,19 @@ function ThemePicker({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="p-1.5 text-muted hover:text-text transition-colors"
+        className="p-1.5 text-muted hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
         aria-label="Theme settings"
+        aria-expanded={open}
+        aria-haspopup="menu"
         title="Theme"
       >
         <ModeIcon size={18} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-50 py-1">
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-50 py-1"
+        >
           <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted">Mode</div>
           {(['dark', 'light', 'system'] as const).map((m) => {
             const Icon = m === 'dark' ? Moon : m === 'light' ? Sun : Monitor
@@ -137,8 +149,9 @@ function ThemePicker({
               <button
                 key={m}
                 type="button"
+                role="menuitem"
                 onClick={() => onModeChange(m)}
-                className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-bg transition-colors ${mode === m ? 'text-accent' : 'text-text'}`}
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-bg transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px] ${mode === m ? 'text-accent' : 'text-text'}`}
               >
                 <Icon size={14} />
                 <span className="capitalize">{m}</span>
@@ -151,8 +164,9 @@ function ThemePicker({
             <button
               key={t.id}
               type="button"
+              role="menuitem"
               onClick={() => onColorThemeChange(t.id)}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-bg transition-colors ${colorTheme === t.id ? 'text-accent' : 'text-text'}`}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-bg transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px] ${colorTheme === t.id ? 'text-accent' : 'text-text'}`}
             >
               <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
               {t.name}

@@ -12,7 +12,7 @@ type RecentlyApprovedProps = {
   loading: boolean
 }
 
-const SLOTS = ['s0', 's1', 's2', 's3', 's4', 's5'] as const
+const SLOTS = ['s0', 's1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'] as const
 
 function Tile({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
   const [imgError, setImgError] = useState(false)
@@ -60,7 +60,7 @@ export function RecentlyApproved({ recs, loading }: RecentlyApprovedProps) {
 
   return (
     <div className="grid grid-cols-3 gap-1.5">
-      {recs.slice(0, 6).map((rec) => (
+      {recs.slice(0, 9).map((rec) => (
         <Tile key={rec.id} name={rec.artist.name} imageUrl={rec.artist.imageUrl} />
       ))}
       {SLOTS.slice(recs.length).map((key) => (

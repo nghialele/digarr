@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArtistThumb } from '../components/artist-thumb'
@@ -16,6 +16,7 @@ import {
   getRecommendations,
   getSchedulerInfo,
   getSubscriptions,
+  rescanArtists,
   type SchedulerJob,
   type Subscription,
   type TasteGenre,
@@ -302,7 +303,7 @@ export function Dashboard() {
       getRecommendations({
         status: 'added_to_lidarr,approved',
         sort: 'acted_on_desc',
-        limit: '6',
+        limit: '9',
       }),
     staleTime: 30_000,
   })
@@ -342,7 +343,25 @@ export function Dashboard() {
     staleTime: 30_000,
   })
 
-  // Pick selection
+  // Auto-rescan images for artists that are missing them (once per mount)
+  const rescannedRef = useRef(false)
+  useEffect(() => {
+    if (rescannedRef.current) return
+    const all = [
+      ...((pickData?.items ?? []) as Recommendation[]),
+      ...((approvedData?.items ?? []) as Recommendation[]),
+    ]
+    const missing = all.some((r) => !r.artist.imageUrl)
+    if (missing && all.length > 0) {
+      rescannedRef.current = true
+      rescanArtists()
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
+          queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
+        })
+        .catch(() => {})
+    }
+  }, [pickData, approvedData, queryClient])
 
   const allPending = (pickData?.items ?? []) as Recommendation[]
   const currentPick = allPending.find((r) => !skippedIds.has(r.id) && !actedIds.has(r.id)) ?? null
