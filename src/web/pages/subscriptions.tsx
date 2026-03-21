@@ -310,8 +310,9 @@ export default function SubscriptionsPage() {
   const configuredSources = (() => {
     if (!settings) return []
     const sources: string[] = []
-    if (settings.lastfmApiKey) sources.push('lastfm')
-    if (settings.discogsToken) sources.push('discogs')
+    // Check usernames, not API keys -- keys are masked to '***' by the settings endpoint
+    if (settings.lastfmUsername) sources.push('lastfm')
+    if (settings.discogsUsername) sources.push('discogs')
     return sources
   })()
 
