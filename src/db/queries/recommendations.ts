@@ -11,7 +11,7 @@ export type ListRecommendationsFilters = {
   status?: string
   batchId?: number
   userId?: number
-  sort?: 'score_desc' | 'score_asc' | 'created_desc'
+  sort?: 'score_desc' | 'score_asc' | 'created_desc' | 'acted_on_desc'
   limit?: number
   offset?: number
 }
@@ -45,7 +45,9 @@ export async function listRecommendations(
       ? recommendations.score
       : sort === 'created_desc'
         ? desc(recommendations.createdAt)
-        : desc(recommendations.score)
+        : sort === 'acted_on_desc'
+          ? desc(recommendations.actedOnAt)
+          : desc(recommendations.score)
 
   const [rows, countRows] = await Promise.all([
     db
