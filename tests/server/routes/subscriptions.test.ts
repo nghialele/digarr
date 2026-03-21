@@ -40,9 +40,19 @@ const mockSubQueries = {
   createSubscription: vi.fn(async () => mockSub),
   getSubscription: vi.fn(async (id: number) => (id === 1 ? mockSub : null)),
   getSubscriptionsByUser: vi.fn(async () => [mockSub]),
+  getEnabledSubscriptions: vi.fn(async () => [mockSub]),
   updateSubscription: vi.fn(async () => {}),
   deleteSubscription: vi.fn(async () => {}),
   getRunsForSubscription: vi.fn(async () => []),
+}
+
+const mockScheduler = {
+  schedule: vi.fn(),
+  remove: vi.fn(),
+  has: vi.fn(() => false),
+  listJobs: vi.fn(() => []),
+  stopAll: vi.fn(),
+  nextRun: vi.fn(() => null),
 }
 
 const mockGenreService = {
@@ -60,7 +70,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     db: { execute: vi.fn(async () => []) } as unknown as AppDependencies['db'],
     storeDb: {} as unknown as AppDependencies['storeDb'],
     orchestrator: makeMockOrchestrator() as unknown as AppDependencies['orchestrator'],
-    scheduler: { remove: vi.fn() } as unknown as AppDependencies['scheduler'],
+    scheduler: mockScheduler as unknown as AppDependencies['scheduler'],
     providerRegistry: {} as unknown as AppDependencies['providerRegistry'],
     isSetupComplete: async () => true,
     getSettings: vi.fn(async () => ({
@@ -190,9 +200,14 @@ beforeEach(() => {
     id === 1 ? mockSub : null,
   )
   mockSubQueries.getSubscriptionsByUser.mockResolvedValue([mockSub])
+  mockSubQueries.getEnabledSubscriptions.mockResolvedValue([mockSub])
   mockSubQueries.updateSubscription.mockResolvedValue(undefined)
   mockSubQueries.deleteSubscription.mockResolvedValue(undefined)
   mockSubQueries.getRunsForSubscription.mockResolvedValue([])
+  mockScheduler.schedule.mockReset()
+  mockScheduler.remove.mockReset()
+  mockScheduler.has.mockReturnValue(false)
+  mockScheduler.listJobs.mockReturnValue([])
 })
 
 describe('GET /api/subscriptions', () => {
@@ -333,17 +348,11 @@ describe('PATCH /api/subscriptions/:id', () => {
 
 describe('DELETE /api/subscriptions/:id', () => {
   it('deletes subscription and removes from scheduler', async () => {
-    const schedulerRemove = vi.fn()
-    const app = createTestApp(
-      makeDeps({
-        scheduler: { remove: schedulerRemove } as unknown as AppDependencies['scheduler'],
-      }),
-      USER_ID,
-    )
+    const app = createTestApp(makeDeps(), USER_ID)
     const res = await app.request('/api/subscriptions/1', { method: 'DELETE' })
     expect(res.status).toBe(200)
     expect(mockSubQueries.deleteSubscription).toHaveBeenCalledWith(1)
-    expect(schedulerRemove).toHaveBeenCalledWith('subscription-1')
+    expect(mockScheduler.remove).toHaveBeenCalledWith('subscription-1')
   })
 
   it('returns 403 when user does not own subscription', async () => {

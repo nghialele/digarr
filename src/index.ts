@@ -217,6 +217,7 @@ const subscriptionQueriesImpl = {
     createSubscription(db, data),
   getSubscription: (id: number) => getSubscription(db, id),
   getSubscriptionsByUser: (userId: number) => getSubscriptionsByUser(db, userId),
+  getEnabledSubscriptions: () => getEnabledSubscriptions(db),
   updateSubscription: (id: number, data: Parameters<typeof updateSubscription>[2]) =>
     updateSubscription(db, id, data),
   deleteSubscription: (id: number) => deleteSubscription(db, id),

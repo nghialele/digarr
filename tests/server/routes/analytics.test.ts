@@ -76,6 +76,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       createSubscription: vi.fn(async () => ({}) as never),
       getSubscription: vi.fn(async () => null),
       getSubscriptionsByUser: vi.fn(async () => []),
+      getEnabledSubscriptions: vi.fn(async () => []),
       updateSubscription: vi.fn(async () => {}),
       deleteSubscription: vi.fn(async () => {}),
       getRunsForSubscription: vi.fn(async () => []),
