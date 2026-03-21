@@ -50,9 +50,7 @@ export function exportToXspf(
     if (rec.imageUrl) {
       parts.push(`      <image>${escapeXml(rec.imageUrl)}</image>`)
     }
-    parts.push(
-      `      <info>https://musicbrainz.org/artist/${escapeXml(rec.artistMbid)}</info>`,
-    )
+    parts.push(`      <info>https://musicbrainz.org/artist/${escapeXml(rec.artistMbid)}</info>`)
     parts.push('    </track>')
     return parts.join('\n')
   })

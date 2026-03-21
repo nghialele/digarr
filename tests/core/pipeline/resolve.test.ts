@@ -261,9 +261,11 @@ describe('resolve()', () => {
       ]
       const mb = makeMb(makeMbArtist({ id: 'mbid-famous', name: 'Famous Artist' }))
       const mockLidarr = {
-        lookupArtist: vi.fn().mockResolvedValue([
-          { images: [{ coverType: 'poster', remoteUrl: 'https://example.com/img.jpg' }] },
-        ]),
+        lookupArtist: vi
+          .fn()
+          .mockResolvedValue([
+            { images: [{ coverType: 'poster', remoteUrl: 'https://example.com/img.jpg' }] },
+          ]),
       }
 
       const result = await resolve(discovered, mb, undefined, mockLidarr)

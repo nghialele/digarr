@@ -380,7 +380,7 @@ const app = createApp({
       const client = createJellyfinClient(
         config.url as string,
         config.apiKey as string,
-        config.userId as string ?? '',
+        (config.userId as string) ?? '',
         { skipTlsVerify: (config.skipTlsVerify as boolean) ?? false },
       )
       return client.testConnection()
@@ -390,7 +390,8 @@ const app = createApp({
       // Spotify test requires OAuth -- can't test from config alone
       return {
         success: false,
-        message: 'Spotify targets require OAuth connection. Use Settings > Connections to connect Spotify first.',
+        message:
+          'Spotify targets require OAuth connection. Use Settings > Connections to connect Spotify first.',
       }
     }
 

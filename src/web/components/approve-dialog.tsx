@@ -49,9 +49,13 @@ export function ApproveDialog({ defaults, monitorOption, onConfirm, onCancel }: 
         role="dialog"
         aria-modal="true"
       >
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: dialog content wrapper prevents click-through */}
         <div
           className="bg-surface border border-border rounded-lg shadow-lg w-full max-w-sm p-4"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onCancel()
+          }}
         >
           <h3 className="text-sm font-medium text-text mb-3">Lidarr Settings for This Artist</h3>
 

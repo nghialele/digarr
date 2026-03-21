@@ -16,10 +16,7 @@ export type ArtistMetadataInsert = {
   deezerFans?: number | null
 }
 
-export async function lookupByName(
-  db: Database,
-  name: string,
-): Promise<ArtistMetadataRow | null> {
+export async function lookupByName(db: Database, name: string): Promise<ArtistMetadataRow | null> {
   const normalized = name.trim().toLowerCase()
   const [row] = await db
     .select({
@@ -33,10 +30,7 @@ export async function lookupByName(
   return row ?? null
 }
 
-export async function bulkUpsert(
-  db: Database,
-  rows: ArtistMetadataInsert[],
-): Promise<number> {
+export async function bulkUpsert(db: Database, rows: ArtistMetadataInsert[]): Promise<number> {
   if (rows.length === 0) return 0
   await db
     .insert(artistMetadata)
@@ -67,9 +61,7 @@ export async function getCount(db: Database): Promise<number> {
   return row?.total ?? 0
 }
 
-export async function getPopularityMap(
-  db: Database,
-): Promise<Map<string, number>> {
+export async function getPopularityMap(db: Database): Promise<Map<string, number>> {
   const rows = await db
     .select({
       nameNormalized: artistMetadata.nameNormalized,

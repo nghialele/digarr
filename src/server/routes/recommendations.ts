@@ -57,7 +57,15 @@ export function recommendationRoutes(deps: AppDependencies) {
   router.patch('/api/recommendations/:id', async (c) => {
     const id = Number(c.req.param('id'))
     const body = await c.req.json()
-    const { status, monitorOption, selectedAlbumIds, targetId, qualityProfileId: qpOverride, metadataProfileId: mpOverride, rootFolderId: rfOverride } = body as {
+    const {
+      status,
+      monitorOption,
+      selectedAlbumIds,
+      targetId,
+      qualityProfileId: qpOverride,
+      metadataProfileId: mpOverride,
+      rootFolderId: rfOverride,
+    } = body as {
       status: string
       monitorOption?: 'all' | 'new' | 'none' | 'selected'
       selectedAlbumIds?: string[]
@@ -88,9 +96,7 @@ export function recommendationRoutes(deps: AppDependencies) {
       const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
 
       // Filter to specific target if targetId specified
-      const effectiveTargets = targetId
-        ? targets.filter((t) => t.id === targetId)
-        : targets
+      const effectiveTargets = targetId ? targets.filter((t) => t.id === targetId) : targets
 
       // Pre-warm SkyHook if any Lidarr target exists
       if (
@@ -179,7 +185,14 @@ export function recommendationRoutes(deps: AppDependencies) {
 
   router.post('/api/recommendations/bulk', async (c) => {
     const body = await c.req.json()
-    const { ids, action, targetId, qualityProfileId: qpOverride, metadataProfileId: mpOverride, rootFolderId: rfOverride } = body as {
+    const {
+      ids,
+      action,
+      targetId,
+      qualityProfileId: qpOverride,
+      metadataProfileId: mpOverride,
+      rootFolderId: rfOverride,
+    } = body as {
       ids: number[]
       action: 'approve' | 'reject'
       targetId?: string
@@ -216,9 +229,7 @@ export function recommendationRoutes(deps: AppDependencies) {
     const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
 
     // Filter to specific target if targetId specified
-    const effectiveTargets = targetId
-      ? targets.filter((t) => t.id === targetId)
-      : targets
+    const effectiveTargets = targetId ? targets.filter((t) => t.id === targetId) : targets
 
     const settings = await deps.getSettings()
     const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}

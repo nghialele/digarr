@@ -59,17 +59,17 @@ describe('createJellyfinSource()', () => {
     // Bjork: 100 plays + favorite = 120 (1.2x boost)
     const bjork = artists.find((a) => a.name === 'Bjork')
     expect(bjork).toBeDefined()
-    expect(bjork!.playCount).toBe(120)
+    expect(bjork?.playCount).toBe(120)
 
     // Radiohead: 80 plays, not a favorite, unchanged
     const radiohead = artists.find((a) => a.name === 'Radiohead')
     expect(radiohead).toBeDefined()
-    expect(radiohead!.playCount).toBe(80)
+    expect(radiohead?.playCount).toBe(80)
 
     // Portishead: favorite with 0 plays, added with min 1
     const portishead = artists.find((a) => a.name === 'Portishead')
     expect(portishead).toBeDefined()
-    expect(portishead!.playCount).toBe(1)
+    expect(portishead?.playCount).toBe(1)
 
     // All entries have source 'jellyfin'
     for (const a of artists) {

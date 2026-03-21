@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+
 import { Hono } from 'hono'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { HonoEnv } from '@/server/types'
 
 const mockDeps = {
@@ -36,8 +37,22 @@ describe('target routes', () => {
 
   it('GET /api/targets returns all targets with ownership flag', async () => {
     mockDeps.targetQueries.getAllTargets.mockResolvedValue([
-      { id: 1, type: 'lidarr', name: 'My Lidarr', enabled: true, userId: 1, config: { url: 'http://lidarr:8686', apiKey: 'secret' } },
-      { id: 2, type: 'lidarr', name: 'Other Lidarr', enabled: true, userId: 2, config: { url: 'http://lidarr2:8686', apiKey: 'other' } },
+      {
+        id: 1,
+        type: 'lidarr',
+        name: 'My Lidarr',
+        enabled: true,
+        userId: 1,
+        config: { url: 'http://lidarr:8686', apiKey: 'secret' },
+      },
+      {
+        id: 2,
+        type: 'lidarr',
+        name: 'Other Lidarr',
+        enabled: true,
+        userId: 2,
+        config: { url: 'http://lidarr2:8686', apiKey: 'other' },
+      },
     ])
     const app = createTestApp()
     const res = await app.request('/api/targets')
@@ -87,7 +102,9 @@ describe('target routes', () => {
 
   it('DELETE /api/targets/:id deletes a target', async () => {
     mockDeps.targetQueries.getTarget.mockResolvedValue({
-      id: 1, userId: 1, type: 'lidarr',
+      id: 1,
+      userId: 1,
+      type: 'lidarr',
     })
     const app = createTestApp()
     const res = await app.request('/api/targets/1', { method: 'DELETE' })
@@ -104,7 +121,10 @@ describe('target routes', () => {
 
   it('POST /api/targets/:id/test tests connection', async () => {
     mockDeps.targetQueries.getTarget.mockResolvedValue({
-      id: 1, userId: 1, type: 'lidarr', config: { url: 'http://lidarr:8686', apiKey: 'abc' },
+      id: 1,
+      userId: 1,
+      type: 'lidarr',
+      config: { url: 'http://lidarr:8686', apiKey: 'abc' },
     })
     const app = createTestApp()
     const res = await app.request('/api/targets/1/test', { method: 'POST' })
@@ -113,7 +133,9 @@ describe('target routes', () => {
 
   it('PATCH /api/targets/:id updates a target', async () => {
     mockDeps.targetQueries.getTarget.mockResolvedValue({
-      id: 1, userId: 1, type: 'lidarr',
+      id: 1,
+      userId: 1,
+      type: 'lidarr',
     })
     const app = createTestApp()
     const res = await app.request('/api/targets/1', {

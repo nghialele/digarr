@@ -45,7 +45,12 @@ describe('artist-metadata queries', () => {
 
   it('bulkUpsert inserts rows', async () => {
     const count = await bulkUpsert(mockDb as never, [
-      { name: 'Radiohead', nameNormalized: 'radiohead', spotifyGenres: ['rock'], spotifyPopularity: 87 },
+      {
+        name: 'Radiohead',
+        nameNormalized: 'radiohead',
+        spotifyGenres: ['rock'],
+        spotifyPopularity: 87,
+      },
     ])
     expect(count).toBe(1)
     expect(mockDb.insert).toHaveBeenCalled()

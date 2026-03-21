@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+
 import { Hono } from 'hono'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { HonoEnv } from '@/server/types'
 
 const mockDeps = {

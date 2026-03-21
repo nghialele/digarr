@@ -12,7 +12,11 @@ vi.mock('@/core/clients/lidarr', () => ({
 
 // Mock sessions so auth middleware sets userId
 vi.mock('@/core/sessions', () => ({
-  getSession: vi.fn(async () => ({ userId: 1, token: 'test-token', expiresAt: new Date(Date.now() + 86400000) })),
+  getSession: vi.fn(async () => ({
+    userId: 1,
+    token: 'test-token',
+    expiresAt: new Date(Date.now() + 86400000),
+  })),
   setSessionStore: vi.fn(),
 }))
 
@@ -418,9 +422,11 @@ describe('GET /api/recommendations/feedback-summary', () => {
       ['jazz', { approved: 2, total: 5 }],
       ['pop', { approved: 1, total: 1 }],
     ])
-    const app = createApp(makeDeps({
-      getFeedbackHistory: vi.fn().mockResolvedValue(history),
-    }))
+    const app = createApp(
+      makeDeps({
+        getFeedbackHistory: vi.fn().mockResolvedValue(history),
+      }),
+    )
     const res = await app.request('/api/recommendations/feedback-summary')
     expect(res.status).toBe(200)
     const body = await res.json()

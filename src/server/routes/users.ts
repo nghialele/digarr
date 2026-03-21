@@ -6,7 +6,7 @@ import type { HonoEnv } from '@/server/types'
 export function userRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
 
-  async function isLastAdmin(targetId: number): Promise<boolean> {
+  async function isLastAdmin(_targetId: number): Promise<boolean> {
     const all = await deps.listUsers()
     return all.filter((u) => u.isAdmin).length <= 1
   }
@@ -78,7 +78,10 @@ export function userRoutes(deps: AppDependencies) {
       return c.json({ error: 'Cannot remove admin from the last admin user' }, 400)
     }
 
-    await deps.updateUser(targetId, typeof body.isAdmin === 'boolean' ? { isAdmin: body.isAdmin } : {})
+    await deps.updateUser(
+      targetId,
+      typeof body.isAdmin === 'boolean' ? { isAdmin: body.isAdmin } : {},
+    )
     return c.json({ ok: true })
   })
 

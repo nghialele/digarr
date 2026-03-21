@@ -486,6 +486,7 @@ export function RecommendationCard({
           </button>
         </>
       )}
+      {/* biome-ignore lint/a11y/useSemanticElements: intentional div[role=button] -- nesting <button> inside <button> is invalid HTML */}
       <div
         role="button"
         tabIndex={0}

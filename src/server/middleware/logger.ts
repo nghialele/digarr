@@ -56,5 +56,3 @@ export function requestLogger(): MiddlewareHandler {
     }
   }
 }
-
-

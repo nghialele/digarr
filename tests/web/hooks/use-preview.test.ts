@@ -29,8 +29,8 @@ describe('resolvePreviewSource', () => {
       'Radiohead',
     )
     expect(result).not.toBeNull()
-    expect(result!.type).toBe('spotify-embed')
-    expect(result!.embedUrl).toContain('autoPlay=true')
+    expect(result?.type).toBe('spotify-embed')
+    expect(result?.embedUrl).toContain('autoPlay=true')
   })
 
   it('resolves Spotify album embed URL with autoPlay', async () => {
@@ -39,9 +39,9 @@ describe('resolvePreviewSource', () => {
       'Radiohead',
     )
     expect(result).not.toBeNull()
-    expect(result!.type).toBe('spotify-embed')
-    expect(result!.embedUrl).toContain('autoPlay=true')
-    expect(result!.embedUrl).toContain('/embed/album/')
+    expect(result?.type).toBe('spotify-embed')
+    expect(result?.embedUrl).toContain('autoPlay=true')
+    expect(result?.embedUrl).toContain('/embed/album/')
   })
 
   it('resolves YouTube embed URL with autoplay when Deezer fails', async () => {
@@ -50,8 +50,8 @@ describe('resolvePreviewSource', () => {
       'Rick Astley',
     )
     expect(result).not.toBeNull()
-    expect(result!.type).toBe('youtube-embed')
-    expect(result!.embedUrl).toContain('autoplay=1')
+    expect(result?.type).toBe('youtube-embed')
+    expect(result?.embedUrl).toContain('autoplay=1')
   })
 
   it('returns null for invalid Spotify URL with no fallbacks', async () => {

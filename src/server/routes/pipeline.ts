@@ -79,7 +79,10 @@ export function pipelineRoutes(deps: AppDependencies) {
       updateRecommendationStatus: (id, status, extra) =>
         deps.updateRecommendationStatus(id, status, extra),
       warmArtist: deps.skyhookWarmer
-        ? ((warmer) => (mbid: string) => warmer.warm(mbid))(deps.skyhookWarmer)
+        ? (
+            (warmer) => (mbid: string) =>
+              warmer.warm(mbid)
+          )(deps.skyhookWarmer)
         : undefined,
     }
 

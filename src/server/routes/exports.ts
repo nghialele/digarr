@@ -63,7 +63,7 @@ export function exportRoutes(deps: ExportDeps) {
     }))
 
     // format already validated above -- safe to index directly
-    const output = EXPORTERS[format]!(exportable)
+    const output = EXPORTERS[format]?.(exportable)
     const timestamp = new Date().toISOString().slice(0, 10)
 
     return new Response(output, {

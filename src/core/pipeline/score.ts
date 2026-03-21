@@ -47,8 +47,7 @@ export function score(
       genreRates.length > 0 ? genreRates.reduce((a, b) => a + b, 0) / genreRates.length : 0.5
 
     // Popularity: normalized 0-1 from artist_metadata, 0 if not found
-    const popularity =
-      popularityMap?.get(artist.name.trim().toLowerCase()) ?? 0
+    const popularity = popularityMap?.get(artist.name.trim().toLowerCase()) ?? 0
 
     // Weighted composite score
     const finalScore =

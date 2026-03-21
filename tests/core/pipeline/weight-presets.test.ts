@@ -4,7 +4,9 @@ import { resolveWeights, WEIGHT_PRESETS } from '@/core/pipeline/weight-presets'
 import type { ScoringWeights } from '@/db/schema'
 
 function sumWeights(w: ScoringWeights): number {
-  return w.consensus + w.similarity + w.genreOverlap + w.aiConfidence + w.feedbackBoost + w.popularity
+  return (
+    w.consensus + w.similarity + w.genreOverlap + w.aiConfidence + w.feedbackBoost + w.popularity
+  )
 }
 
 describe('WEIGHT_PRESETS', () => {

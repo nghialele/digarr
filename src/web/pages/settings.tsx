@@ -451,296 +451,305 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           {settings.aiModel && (
             <div className="rounded-lg border border-border bg-surface p-3 flex items-center gap-3">
               <span className="text-sm font-medium text-text">AI Provider</span>
-              <span className="text-xs text-muted">{settings.aiProvider as string} / {settings.aiModel as string}</span>
+              <span className="text-xs text-muted">
+                {settings.aiProvider as string} / {settings.aiModel as string}
+              </span>
             </div>
           )}
         </div>
       ) : (
-      <>
-      {/* Lidarr */}
-      <div className={isLidarrConfigured ? '' : 'opacity-60'}>
-        <ServiceCard
-          name="Lidarr"
-          description={
-            <span>
-              Music library manager -- required for adding artists.{' '}
-              <a
-                href="https://wiki.servarr.com/lidarr/settings#security"
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent hover:underline"
-              >
-                Get API key
-              </a>
-            </span>
-          }
-          status={serviceStatus('lidarr')}
-          icon={<LidarrIcon />}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="URL" id="lidarr-url">
-              <Input
-                id="lidarr-url"
-                type="url"
-                placeholder="http://localhost:8686"
-                value={lidarrUrl}
-                onChange={(e) => setLidarrUrl(e.target.value)}
-              />
-            </Field>
-            <Field label="API Key" id="lidarr-apikey">
-              <Input
-                id="lidarr-apikey"
-                type="password"
-                placeholder={settings.lidarrApiKey === '***' ? '(saved)' : 'Your Lidarr API key'}
-                value={lidarrApiKey}
-                onChange={(e) => setLidarrApiKey(e.target.value)}
-              />
-            </Field>
-          </div>
-          <Field label="Public URL (optional)" id="lidarr-public-url">
-            <Input
-              id="lidarr-public-url"
-              type="url"
-              placeholder="https://lidarr.example.com"
-              value={lidarrPublicUrl}
-              onChange={(e) => setLidarrPublicUrl(e.target.value)}
-            />
-            <p className="text-xs text-muted mt-1">
-              Browser-accessible URL for linking to Lidarr artist pages. Leave empty if the API URL
-              is already reachable from your browser.
-            </p>
-          </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="Quality Profile" id="quality-profile">
-              <Select
-                id="quality-profile"
-                value={qualityProfileId}
-                onChange={(e) => setQualityProfileId(e.target.value)}
-              >
-                {qualityProfiles ? (
-                  qualityProfiles.map((p) => (
-                    <option key={p.id} value={String(p.id)}>
-                      {p.name}
-                    </option>
-                  ))
-                ) : (
-                  <option value={qualityProfileId}>Loading...</option>
-                )}
-              </Select>
-            </Field>
-            <Field label="Metadata Profile" id="metadata-profile">
-              <Select
-                id="metadata-profile"
-                value={metadataProfileId}
-                onChange={(e) => setMetadataProfileId(e.target.value)}
-              >
-                {metadataProfiles ? (
-                  metadataProfiles.map((p) => (
-                    <option key={p.id} value={String(p.id)}>
-                      {p.name}
-                    </option>
-                  ))
-                ) : (
-                  <option value={metadataProfileId}>Loading...</option>
-                )}
-              </Select>
-            </Field>
-            <Field label="Root Folder" id="root-folder">
-              <Select
-                id="root-folder"
-                value={rootFolderId}
-                onChange={(e) => setRootFolderId(e.target.value)}
-              >
-                {rootFolders ? (
-                  rootFolders.map((f) => (
-                    <option key={f.id} value={String(f.id)}>
-                      {f.path}
-                    </option>
-                  ))
-                ) : (
-                  <option value={rootFolderId}>Loading...</option>
-                )}
-              </Select>
-            </Field>
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={testLidarr}
-              disabled={tests.lidarr === 'testing'}
+        <>
+          {/* Lidarr */}
+          <div className={isLidarrConfigured ? '' : 'opacity-60'}>
+            <ServiceCard
+              name="Lidarr"
+              description={
+                <span>
+                  Music library manager -- required for adding artists.{' '}
+                  <a
+                    href="https://wiki.servarr.com/lidarr/settings#security"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent hover:underline"
+                  >
+                    Get API key
+                  </a>
+                </span>
+              }
+              status={serviceStatus('lidarr')}
+              icon={<LidarrIcon />}
             >
-              {tests.lidarr === 'testing' ? 'Testing...' : 'Test Connection'}
-            </Button>
-            <Button size="sm" onClick={saveLidarr} disabled={saving.lidarr}>
-              {saving.lidarr ? 'Saving...' : isLidarrConfigured ? 'Save' : 'Configure'}
-            </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="URL" id="lidarr-url">
+                  <Input
+                    id="lidarr-url"
+                    type="url"
+                    placeholder="http://localhost:8686"
+                    value={lidarrUrl}
+                    onChange={(e) => setLidarrUrl(e.target.value)}
+                  />
+                </Field>
+                <Field label="API Key" id="lidarr-apikey">
+                  <Input
+                    id="lidarr-apikey"
+                    type="password"
+                    placeholder={
+                      settings.lidarrApiKey === '***' ? '(saved)' : 'Your Lidarr API key'
+                    }
+                    value={lidarrApiKey}
+                    onChange={(e) => setLidarrApiKey(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <Field label="Public URL (optional)" id="lidarr-public-url">
+                <Input
+                  id="lidarr-public-url"
+                  type="url"
+                  placeholder="https://lidarr.example.com"
+                  value={lidarrPublicUrl}
+                  onChange={(e) => setLidarrPublicUrl(e.target.value)}
+                />
+                <p className="text-xs text-muted mt-1">
+                  Browser-accessible URL for linking to Lidarr artist pages. Leave empty if the API
+                  URL is already reachable from your browser.
+                </p>
+              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="Quality Profile" id="quality-profile">
+                  <Select
+                    id="quality-profile"
+                    value={qualityProfileId}
+                    onChange={(e) => setQualityProfileId(e.target.value)}
+                  >
+                    {qualityProfiles ? (
+                      qualityProfiles.map((p) => (
+                        <option key={p.id} value={String(p.id)}>
+                          {p.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={qualityProfileId}>Loading...</option>
+                    )}
+                  </Select>
+                </Field>
+                <Field label="Metadata Profile" id="metadata-profile">
+                  <Select
+                    id="metadata-profile"
+                    value={metadataProfileId}
+                    onChange={(e) => setMetadataProfileId(e.target.value)}
+                  >
+                    {metadataProfiles ? (
+                      metadataProfiles.map((p) => (
+                        <option key={p.id} value={String(p.id)}>
+                          {p.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={metadataProfileId}>Loading...</option>
+                    )}
+                  </Select>
+                </Field>
+                <Field label="Root Folder" id="root-folder">
+                  <Select
+                    id="root-folder"
+                    value={rootFolderId}
+                    onChange={(e) => setRootFolderId(e.target.value)}
+                  >
+                    {rootFolders ? (
+                      rootFolders.map((f) => (
+                        <option key={f.id} value={String(f.id)}>
+                          {f.path}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={rootFolderId}>Loading...</option>
+                    )}
+                  </Select>
+                </Field>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={testLidarr}
+                  disabled={tests.lidarr === 'testing'}
+                >
+                  {tests.lidarr === 'testing' ? 'Testing...' : 'Test Connection'}
+                </Button>
+                <Button size="sm" onClick={saveLidarr} disabled={saving.lidarr}>
+                  {saving.lidarr ? 'Saving...' : isLidarrConfigured ? 'Save' : 'Configure'}
+                </Button>
+              </div>
+            </ServiceCard>
           </div>
-        </ServiceCard>
-      </div>
 
-      {/* AI Provider */}
-      <div className={isAiConfigured ? '' : 'opacity-60'}>
-        <ServiceCard
-          name="AI Provider"
-          description={
-            <span>
-              Generates music recommendations.{' '}
-              {aiProvider === 'anthropic' && (
-                <a
-                  href="https://console.anthropic.com/settings/keys"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent hover:underline"
-                >
-                  Get API key
-                </a>
-              )}
-              {aiProvider === 'openai' && (
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent hover:underline"
-                >
-                  Get API key
-                </a>
-              )}
-              {aiProvider === 'gemini' && (
-                <a
-                  href="https://aistudio.google.com/apikey"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent hover:underline"
-                >
-                  Get API key
-                </a>
-              )}
-              {aiProvider === 'ollama' && (
-                <a
-                  href="https://ollama.com/library"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent hover:underline"
-                >
-                  Browse models
-                </a>
-              )}
-            </span>
-          }
-          status={serviceStatus('ai')}
-          icon={<AiProviderIcon provider={aiProvider} />}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Provider" id="ai-provider">
-              <Select
-                id="ai-provider"
-                value={aiProvider}
-                onChange={(e) => setAiProvider(e.target.value)}
-              >
-                <option value="anthropic">Anthropic</option>
-                <option value="openai">OpenAI</option>
-                <option value="gemini">Google Gemini</option>
-                <option value="ollama">Ollama (local)</option>
-                <option value="openai-compatible">OpenAI-Compatible</option>
-              </Select>
-            </Field>
-            <Field label="Model" id="ai-model">
-              <Input
-                id="ai-model"
-                placeholder={
-                  aiProvider === 'anthropic'
-                    ? 'claude-haiku-4-5-20251001'
-                    : aiProvider === 'openai'
-                      ? 'gpt-5.4-mini'
-                      : aiProvider === 'gemini'
-                        ? 'gemini-3-flash-preview'
-                        : aiProvider === 'openai-compatible'
-                          ? 'your-model-name'
-                          : 'llama4'
-                }
-                value={aiModel}
-                onChange={(e) => setAiModel(e.target.value)}
-              />
-            </Field>
-          </div>
-          {aiProvider !== 'ollama' && (
-            <Field
-              label={aiProvider === 'openai-compatible' ? 'API Key (optional)' : 'API Key'}
-              id="ai-apikey"
+          {/* AI Provider */}
+          <div className={isAiConfigured ? '' : 'opacity-60'}>
+            <ServiceCard
+              name="AI Provider"
+              description={
+                <span>
+                  Generates music recommendations.{' '}
+                  {aiProvider === 'anthropic' && (
+                    <a
+                      href="https://console.anthropic.com/settings/keys"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-accent hover:underline"
+                    >
+                      Get API key
+                    </a>
+                  )}
+                  {aiProvider === 'openai' && (
+                    <a
+                      href="https://platform.openai.com/api-keys"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-accent hover:underline"
+                    >
+                      Get API key
+                    </a>
+                  )}
+                  {aiProvider === 'gemini' && (
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-accent hover:underline"
+                    >
+                      Get API key
+                    </a>
+                  )}
+                  {aiProvider === 'ollama' && (
+                    <a
+                      href="https://ollama.com/library"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-accent hover:underline"
+                    >
+                      Browse models
+                    </a>
+                  )}
+                </span>
+              }
+              status={serviceStatus('ai')}
+              icon={<AiProviderIcon provider={aiProvider} />}
             >
-              <Input
-                id="ai-apikey"
-                type="password"
-                placeholder={settings.aiApiKey === '***' ? '(saved)' : 'API key'}
-                value={aiApiKey}
-                onChange={(e) => setAiApiKey(e.target.value)}
-              />
-            </Field>
-          )}
-          {(aiProvider === 'ollama' || aiProvider === 'openai-compatible') && (
-            <Field label="Base URL" id="ai-baseurl">
-              <Input
-                id="ai-baseurl"
-                type="url"
-                placeholder={
-                  aiProvider === 'openai-compatible'
-                    ? 'http://localhost:8080'
-                    : 'http://localhost:11434'
-                }
-                value={aiBaseUrl}
-                onChange={(e) => setAiBaseUrl(e.target.value)}
-              />
-            </Field>
-          )}
-          {aiProvider === 'openai-compatible' && (
-            <p className="text-xs text-muted">
-              Works with Groq, OpenRouter, LiteLLM, LocalAI, and any OpenAI-compatible endpoint. API
-              key is optional for local services.
-            </p>
-          )}
-          <div className="flex justify-end gap-2 pt-1">
-            <Button size="sm" variant="outline" onClick={testAi} disabled={tests.ai === 'testing'}>
-              {tests.ai === 'testing' ? 'Testing...' : 'Test Connection'}
-            </Button>
-            <Button size="sm" onClick={saveAi} disabled={saving.ai}>
-              {saving.ai ? 'Saving...' : isAiConfigured ? 'Save' : 'Configure'}
-            </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Provider" id="ai-provider">
+                  <Select
+                    id="ai-provider"
+                    value={aiProvider}
+                    onChange={(e) => setAiProvider(e.target.value)}
+                  >
+                    <option value="anthropic">Anthropic</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="ollama">Ollama (local)</option>
+                    <option value="openai-compatible">OpenAI-Compatible</option>
+                  </Select>
+                </Field>
+                <Field label="Model" id="ai-model">
+                  <Input
+                    id="ai-model"
+                    placeholder={
+                      aiProvider === 'anthropic'
+                        ? 'claude-haiku-4-5-20251001'
+                        : aiProvider === 'openai'
+                          ? 'gpt-5.4-mini'
+                          : aiProvider === 'gemini'
+                            ? 'gemini-3-flash-preview'
+                            : aiProvider === 'openai-compatible'
+                              ? 'your-model-name'
+                              : 'llama4'
+                    }
+                    value={aiModel}
+                    onChange={(e) => setAiModel(e.target.value)}
+                  />
+                </Field>
+              </div>
+              {aiProvider !== 'ollama' && (
+                <Field
+                  label={aiProvider === 'openai-compatible' ? 'API Key (optional)' : 'API Key'}
+                  id="ai-apikey"
+                >
+                  <Input
+                    id="ai-apikey"
+                    type="password"
+                    placeholder={settings.aiApiKey === '***' ? '(saved)' : 'API key'}
+                    value={aiApiKey}
+                    onChange={(e) => setAiApiKey(e.target.value)}
+                  />
+                </Field>
+              )}
+              {(aiProvider === 'ollama' || aiProvider === 'openai-compatible') && (
+                <Field label="Base URL" id="ai-baseurl">
+                  <Input
+                    id="ai-baseurl"
+                    type="url"
+                    placeholder={
+                      aiProvider === 'openai-compatible'
+                        ? 'http://localhost:8080'
+                        : 'http://localhost:11434'
+                    }
+                    value={aiBaseUrl}
+                    onChange={(e) => setAiBaseUrl(e.target.value)}
+                  />
+                </Field>
+              )}
+              {aiProvider === 'openai-compatible' && (
+                <p className="text-xs text-muted">
+                  Works with Groq, OpenRouter, LiteLLM, LocalAI, and any OpenAI-compatible endpoint.
+                  API key is optional for local services.
+                </p>
+              )}
+              <div className="flex justify-end gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={testAi}
+                  disabled={tests.ai === 'testing'}
+                >
+                  {tests.ai === 'testing' ? 'Testing...' : 'Test Connection'}
+                </Button>
+                <Button size="sm" onClick={saveAi} disabled={saving.ai}>
+                  {saving.ai ? 'Saving...' : isAiConfigured ? 'Save' : 'Configure'}
+                </Button>
+              </div>
+            </ServiceCard>
           </div>
-        </ServiceCard>
-      </div>
 
-      {/* Webhook */}
-      <ServiceCard
-        name="Webhook"
-        description="Scan completion notifications (Discord, Slack, ntfy, Gotify, or any HTTP endpoint)"
-        status={webhookUrl ? 'connected' : 'not_configured'}
-        icon={<WebhookIcon />}
-      >
-        <Field label="Webhook URL" id="webhook-url">
-          <Input
-            id="webhook-url"
-            type="url"
-            placeholder="https://ntfy.sh/my-topic"
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-          />
-        </Field>
-        <div className="flex justify-end gap-2 pt-1">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleTestWebhook}
-            disabled={testingWebhook || !webhookUrl}
+          {/* Webhook */}
+          <ServiceCard
+            name="Webhook"
+            description="Scan completion notifications (Discord, Slack, ntfy, Gotify, or any HTTP endpoint)"
+            status={webhookUrl ? 'connected' : 'not_configured'}
+            icon={<WebhookIcon />}
           >
-            {testingWebhook ? 'Sending...' : 'Test Webhook'}
-          </Button>
-          <Button size="sm" onClick={handleSaveWebhook} disabled={savingWebhook}>
-            {savingWebhook ? 'Saving...' : webhookUrl ? 'Save' : 'Configure'}
-          </Button>
-        </div>
-      </ServiceCard>
-      </>
+            <Field label="Webhook URL" id="webhook-url">
+              <Input
+                id="webhook-url"
+                type="url"
+                placeholder="https://ntfy.sh/my-topic"
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+              />
+            </Field>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleTestWebhook}
+                disabled={testingWebhook || !webhookUrl}
+              >
+                {testingWebhook ? 'Sending...' : 'Test Webhook'}
+              </Button>
+              <Button size="sm" onClick={handleSaveWebhook} disabled={savingWebhook}>
+                {savingWebhook ? 'Saving...' : webhookUrl ? 'Save' : 'Configure'}
+              </Button>
+            </div>
+          </ServiceCard>
+        </>
       )}
 
       <div className="pt-2">
@@ -1115,13 +1124,7 @@ function TargetTypeIcon({ type }: { type: string }) {
   )
 }
 
-function AddTargetDialog({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void
-  onCreated: () => void
-}) {
+function AddTargetDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [type, setType] = useState('')
   const [name, setName] = useState('')
   const [config, setConfig] = useState<Record<string, string>>({})
@@ -1153,46 +1156,52 @@ function AddTargetDialog({
       <h4 className="text-sm font-medium text-text">Add Target</h4>
 
       <div>
-        <label className="block text-xs text-muted mb-1">Type</label>
-        <select
-          value={type}
-          onChange={(e) => {
-            setType(e.target.value)
-            setConfig({})
-          }}
-          className="w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
-        >
-          <option value="">Select a target type...</option>
-          {TARGET_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+        <label className="block text-xs text-muted mb-1">
+          Type
+          <select
+            value={type}
+            onChange={(e) => {
+              setType(e.target.value)
+              setConfig({})
+            }}
+            className="mt-1 w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
+          >
+            <option value="">Select a target type...</option>
+            {TARGET_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {selectedType && (
         <>
           <div>
-            <label className="block text-xs text-muted mb-1">Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={selectedType.label}
-              className="w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
-            />
+            <label className="block text-xs text-muted mb-1">
+              Name
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={selectedType.label}
+                className="mt-1 w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
+              />
+            </label>
           </div>
 
           {selectedType.fields.map((field) => (
             <div key={field.key}>
-              <label className="block text-xs text-muted mb-1">{field.label}</label>
-              <input
-                type={'type' in field ? field.type : 'text'}
-                value={config[field.key] ?? ''}
-                onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })}
-                placeholder={field.placeholder}
-                className="w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
-              />
+              <label className="block text-xs text-muted mb-1">
+                {field.label}
+                <input
+                  type={'type' in field ? field.type : 'text'}
+                  value={config[field.key] ?? ''}
+                  onChange={(e) => setConfig({ ...config, [field.key]: e.target.value })}
+                  placeholder={field.placeholder}
+                  className="mt-1 w-full rounded-md border border-border bg-bg text-text text-sm px-3 py-2"
+                />
+              </label>
             </div>
           ))}
 
@@ -1257,12 +1266,7 @@ function TargetsTab() {
         )}
       </div>
 
-      {addOpen && (
-        <AddTargetDialog
-          onClose={() => setAddOpen(false)}
-          onCreated={() => refetch()}
-        />
-      )}
+      {addOpen && <AddTargetDialog onClose={() => setAddOpen(false)} onCreated={() => refetch()} />}
 
       {!addOpen && targets?.length === 0 && (
         <p className="text-sm text-muted">
@@ -1337,7 +1341,8 @@ function RecommendationsTabInner({
   prefs: Record<string, unknown>
   queryClient: ReturnType<typeof useQueryClient>
 }) {
-  const weights = (prefs.scoringWeights as Preferences['scoringWeights']) ?? DEFAULT_PREFERENCES.scoringWeights
+  const weights =
+    (prefs.scoringWeights as Preferences['scoringWeights']) ?? DEFAULT_PREFERENCES.scoringWeights
 
   const [scoreThreshold, setScoreThreshold] = useState((prefs.scoreThreshold as number) ?? 0.5)
   const [consensus, setConsensus] = useState(weights.consensus)
@@ -1349,8 +1354,12 @@ function RecommendationsTabInner({
   const [rejectionCooldown, setRejectionCooldown] = useState(
     String((prefs.rejectionCooldownDays as number) ?? 90),
   )
-  const [topArtistsLimit, setTopArtistsLimit] = useState(String((prefs.topArtistsLimit as number) ?? 30))
-  const [librarySeedRatio, setLibrarySeedRatio] = useState((prefs.librarySeedRatio as number) ?? 0.3)
+  const [topArtistsLimit, setTopArtistsLimit] = useState(
+    String((prefs.topArtistsLimit as number) ?? 30),
+  )
+  const [librarySeedRatio, setLibrarySeedRatio] = useState(
+    (prefs.librarySeedRatio as number) ?? 0.3,
+  )
   const [autoApproveEnabled, setAutoApproveEnabled] = useState(
     (prefs.autoApproveEnabled as boolean) ?? false,
   )
@@ -1379,7 +1388,8 @@ function RecommendationsTabInner({
           feedbackBoost,
           popularity,
         },
-        rejectionCooldownDays: parseInt(rejectionCooldown, 10) || (prefs.rejectionCooldownDays as number),
+        rejectionCooldownDays:
+          parseInt(rejectionCooldown, 10) || (prefs.rejectionCooldownDays as number),
         topArtistsLimit: parseInt(topArtistsLimit, 10) || (prefs.topArtistsLimit as number),
         librarySeedRatio,
         autoApproveEnabled,

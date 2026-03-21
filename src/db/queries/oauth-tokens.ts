@@ -5,7 +5,7 @@ import { oauthTokens } from '@/db/schema'
 type OAuthTokenRow = typeof oauthTokens.$inferSelect
 type OAuthTokenInsert = typeof oauthTokens.$inferInsert
 
-export type { OAuthTokenRow, OAuthTokenInsert }
+export type { OAuthTokenInsert, OAuthTokenRow }
 
 export async function getOAuthToken(
   db: Database,

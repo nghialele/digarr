@@ -49,7 +49,14 @@ function StatusIndicator({ status }: { status: ServiceStatus }) {
   )
 }
 
-export function ServiceCard({ name, description, status, icon, onTest, children }: ServiceCardProps) {
+export function ServiceCard({
+  name,
+  description,
+  status,
+  icon,
+  onTest,
+  children,
+}: ServiceCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">

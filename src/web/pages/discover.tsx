@@ -266,7 +266,14 @@ function ExportDropdown({ filter }: { filter?: string }) {
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay for closing dropdown */}
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setOpen(false)
+            }}
+          />
           <div className="absolute right-0 top-full mt-1 z-20 bg-surface border border-border rounded-lg shadow-lg py-1 min-w-[120px]">
             {(['json', 'csv', 'm3u'] as const).map((fmt) => (
               <button
