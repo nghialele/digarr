@@ -953,6 +953,15 @@ export function DiscoverPage() {
                 >
                   {bulkMode ? 'Cancel' : 'Select'}
                 </button>
+                {filter !== 'rejected' && (
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="px-2 py-1 text-xs text-muted hover:text-red-400 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                )}
               </>
             )}
           </div>
