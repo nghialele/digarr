@@ -59,6 +59,7 @@ export function TodaysPick({
   onRunScan,
 }: TodaysPickProps) {
   const [imgError, setImgError] = useState(false)
+  const [coverError, setCoverError] = useState(false)
 
   const { data: albumData } = useQuery({
     queryKey: ['todays-pick-albums', rec?.artist.mbid],
@@ -99,11 +100,18 @@ export function TodaysPick({
 
   const { artist } = rec
   const hue = Math.abs([...artist.name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
-  const hasImage = !!artist.imageUrl && !imgError
+
+  // Fallback chain: artist image -> first album cover (Cover Art Archive) -> gradient
+  const firstAlbumId = albumData?.find((a) => a.type === 'Album')?.id
+  const coverFallback = firstAlbumId
+    ? `https://coverartarchive.org/release-group/${firstAlbumId}/front-500`
+    : null
+  const bannerUrl = (!imgError && artist.imageUrl) || coverFallback
+  const hasImage = !!bannerUrl && !coverError
 
   const bannerStyle = hasImage
     ? {
-        backgroundImage: `url(${artist.imageUrl})`,
+        backgroundImage: `url(${bannerUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -115,10 +123,13 @@ export function TodaysPick({
       <div className="relative h-56 shrink-0" style={bannerStyle}>
         {hasImage && (
           <img
-            src={artist.imageUrl ?? ''}
+            src={bannerUrl}
             alt={artist.name}
             className="sr-only"
-            onError={() => setImgError(true)}
+            onError={() => {
+              if (bannerUrl === artist.imageUrl) setImgError(true)
+              else setCoverError(true)
+            }}
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
