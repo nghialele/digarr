@@ -10,7 +10,7 @@ import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
 import { upsertArtist } from '@/db/queries/artists'
 import { getOAuthToken } from '@/db/queries/oauth-tokens'
-import { getUserConnections } from '@/db/queries/users'
+import { getUserById, getUserConnections } from '@/db/queries/users'
 import { mergePreferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import { createPipelineSSEStream } from '@/server/sse'
@@ -53,11 +53,20 @@ export function pipelineRoutes(deps: AppDependencies) {
       }
     }
 
+    // Read per-user preferences, fallback to global
+    let userPreferences = settings.preferences as Record<string, unknown> | null
+    if (userId) {
+      const user = await getUserById(deps.db, userId)
+      if (user?.preferences && Object.keys(user.preferences).length > 0) {
+        userPreferences = user.preferences as Record<string, unknown>
+      }
+    }
+
     // Fire-and-forget
     deps.orchestrator
       .run({
         db: deps.storeDb,
-        settings: { ...settings, spotifyAccessToken },
+        settings: { ...settings, preferences: userPreferences, spotifyAccessToken },
         userId,
         providerRegistry: deps.providerRegistry,
         userConnections,
@@ -180,8 +189,15 @@ export function pipelineRoutes(deps: AppDependencies) {
 
         if (discovered.length === 0) return
 
-        // Merge preferences with defaults (same pattern as orchestrator)
-        const prefs = mergePreferences(settings.preferences as Record<string, unknown> | null)
+        // Read per-user preferences for quick-discover, fallback to global
+        let qdPreferences = settings.preferences as Record<string, unknown> | null
+        if (quickDiscoverUserId) {
+          const qdUser = await getUserById(deps.db, quickDiscoverUserId)
+          if (qdUser?.preferences && Object.keys(qdUser.preferences).length > 0) {
+            qdPreferences = qdUser.preferences as Record<string, unknown>
+          }
+        }
+        const prefs = mergePreferences(qdPreferences)
 
         const resolved = await resolve(discovered, mb, undefined, lidarr)
         const rejectedMbids = await deps.storeDb.getRejectedMbids(prefs.rejectionCooldownDays)

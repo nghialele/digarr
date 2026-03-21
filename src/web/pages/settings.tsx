@@ -33,6 +33,7 @@ import {
   getLidarrRootFolders,
   getOAuthStatus,
   getSettings,
+  getUserPreferences,
   initiateOAuth,
   listTargets,
   logoutUser,
@@ -41,6 +42,7 @@ import {
   testTargetApi,
   testWebhook,
   updateSettings,
+  updateUserPreferences,
 } from '../lib/api'
 
 type Settings = {
@@ -1313,11 +1315,30 @@ function TargetsTab() {
   )
 }
 
-function RecommendationsTab({ settings }: { settings: Settings }) {
-  const prefs = settings.preferences ?? {}
-  const weights = prefs.scoringWeights ?? DEFAULT_PREFERENCES.scoringWeights
+function RecommendationsTab() {
+  const queryClient = useQueryClient()
+  const { data: prefs, isLoading: prefsLoading } = useQuery({
+    queryKey: ['userPreferences'],
+    queryFn: getUserPreferences,
+  })
 
-  const [scoreThreshold, setScoreThreshold] = useState(prefs.scoreThreshold ?? 0.5)
+  if (prefsLoading || !prefs) {
+    return <div className="text-sm text-muted">Loading preferences...</div>
+  }
+
+  return <RecommendationsTabInner prefs={prefs} queryClient={queryClient} />
+}
+
+function RecommendationsTabInner({
+  prefs,
+  queryClient,
+}: {
+  prefs: Record<string, unknown>
+  queryClient: ReturnType<typeof useQueryClient>
+}) {
+  const weights = (prefs.scoringWeights as Preferences['scoringWeights']) ?? DEFAULT_PREFERENCES.scoringWeights
+
+  const [scoreThreshold, setScoreThreshold] = useState((prefs.scoreThreshold as number) ?? 0.5)
   const [consensus, setConsensus] = useState(weights.consensus)
   const [similarity, setSimilarity] = useState(weights.similarity)
   const [genreOverlap, setGenreOverlap] = useState(weights.genreOverlap)
@@ -1325,10 +1346,10 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
   const [feedbackBoost, setFeedbackBoost] = useState(weights.feedbackBoost)
   const [popularity, setPopularity] = useState(weights.popularity ?? 0)
   const [rejectionCooldown, setRejectionCooldown] = useState(
-    String(prefs.rejectionCooldownDays ?? 90),
+    String((prefs.rejectionCooldownDays as number) ?? 90),
   )
-  const [topArtistsLimit, setTopArtistsLimit] = useState(String(prefs.topArtistsLimit ?? 30))
-  const [librarySeedRatio, setLibrarySeedRatio] = useState(prefs.librarySeedRatio ?? 0.3)
+  const [topArtistsLimit, setTopArtistsLimit] = useState(String((prefs.topArtistsLimit as number) ?? 30))
+  const [librarySeedRatio, setLibrarySeedRatio] = useState((prefs.librarySeedRatio as number) ?? 0.3)
   const [saving, setSaving] = useState(false)
 
   const weightSum =
@@ -1338,23 +1359,21 @@ function RecommendationsTab({ settings }: { settings: Settings }) {
   async function handleSave() {
     setSaving(true)
     try {
-      await updateSettings({
-        preferences: {
-          ...prefs,
-          scoreThreshold,
-          scoringWeights: {
-            consensus,
-            similarity,
-            genreOverlap,
-            aiConfidence,
-            feedbackBoost,
-            popularity,
-          },
-          rejectionCooldownDays: parseInt(rejectionCooldown, 10) || prefs.rejectionCooldownDays,
-          topArtistsLimit: parseInt(topArtistsLimit, 10) || prefs.topArtistsLimit,
-          librarySeedRatio,
+      await updateUserPreferences({
+        scoreThreshold,
+        scoringWeights: {
+          consensus,
+          similarity,
+          genreOverlap,
+          aiConfidence,
+          feedbackBoost,
+          popularity,
         },
+        rejectionCooldownDays: parseInt(rejectionCooldown, 10) || (prefs.rejectionCooldownDays as number),
+        topArtistsLimit: parseInt(topArtistsLimit, 10) || (prefs.topArtistsLimit as number),
+        librarySeedRatio,
       })
+      queryClient.invalidateQueries({ queryKey: ['userPreferences'] })
       toast.success('Recommendation settings saved')
     } catch {
       toast.error('Failed to save settings')
@@ -1817,7 +1836,7 @@ export function SettingsPage() {
       <TabBar active={tab} onChange={setTab} isAdmin={isAdmin} />
       {tab === 'connections' && <ConnectionsTab settings={data} onSaved={refetch} />}
       {tab === 'targets' && <TargetsTab />}
-      {tab === 'recommendations' && <RecommendationsTab settings={data} />}
+      {tab === 'recommendations' && <RecommendationsTab />}
       {tab === 'schedule' && <ScheduleTab settings={data} />}
       {tab === 'account' && <AccountTab />}
       {tab === 'auth' && <AuthTab settings={data} onSaved={refetch} />}

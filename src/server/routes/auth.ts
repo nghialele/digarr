@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
+import { updateUserPreferences } from '@/db/queries/users'
+import { type Preferences, mergePreferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import type { HonoEnv } from '@/server/types'
 
@@ -122,6 +124,30 @@ export function authRoutes(deps: AppDependencies) {
     await createSession(userId, newToken)
 
     return c.json({ ok: true, token: newToken })
+  })
+
+  // Get the authenticated user's merged preferences
+  router.get('/api/auth/me/preferences', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Not authenticated' }, 401)
+    const user = await deps.getUserById(userId)
+    if (!user) return c.json({ error: 'User not found' }, 404)
+    const merged = mergePreferences(user.preferences as Record<string, unknown> | null)
+    return c.json(merged)
+  })
+
+  // Update the authenticated user's preferences (partial merge)
+  router.patch('/api/auth/me/preferences', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Not authenticated' }, 401)
+    const body = await c.req.json()
+    const user = await deps.getUserById(userId)
+    if (!user) return c.json({ error: 'User not found' }, 404)
+    // Merge incoming with existing to preserve fields not being updated
+    const current = (user.preferences ?? {}) as Record<string, unknown>
+    const updated = { ...current, ...body }
+    await updateUserPreferences(deps.db, userId, updated as Preferences)
+    return c.json({ success: true })
   })
 
   return router

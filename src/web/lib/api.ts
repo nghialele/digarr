@@ -394,6 +394,11 @@ export async function initiateOAuth(
   })
 }
 
+// User preferences (per-user scoring weights, thresholds, etc.)
+export const getUserPreferences = () => fetchApi<Record<string, unknown>>('/auth/me/preferences')
+export const updateUserPreferences = (prefs: Record<string, unknown>) =>
+  fetchApi('/auth/me/preferences', { method: 'PATCH', body: JSON.stringify(prefs) })
+
 export async function disconnectOAuth(provider: string): Promise<void> {
   await fetchApi(`/auth/oauth/${provider}`, { method: 'DELETE' })
 }

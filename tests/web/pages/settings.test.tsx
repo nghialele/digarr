@@ -37,6 +37,21 @@ vi.mock('@/web/lib/api', () => ({
   logoutUser: vi.fn().mockResolvedValue({ ok: true }),
   clearStoredToken: vi.fn(),
   AUTH_EXPIRED_EVENT: 'digarr:auth-expired',
+  getUserPreferences: vi.fn().mockResolvedValue({
+    scoreThreshold: 0.5,
+    scoringWeights: {
+      consensus: 0.3,
+      similarity: 0.25,
+      genreOverlap: 0.2,
+      aiConfidence: 0.15,
+      feedbackBoost: 0.1,
+      popularity: 0.0,
+    },
+    rejectionCooldownDays: 90,
+    topArtistsLimit: 30,
+    librarySeedRatio: 0.3,
+  }),
+  updateUserPreferences: vi.fn().mockResolvedValue({ success: true }),
 }))
 
 vi.mock('sonner', () => ({
