@@ -198,6 +198,7 @@ function MoodPromptBar({
     reasoning: string
     confidence: number
     genres: string[]
+    inLibrary?: boolean
   }> | null>(null)
   const [loading, setLoading] = useState(false)
   const [queued, setQueued] = useState<Set<string>>(new Set())
@@ -282,7 +283,11 @@ function MoodPromptBar({
                     </div>
                   </div>
                   <div className="shrink-0">
-                    {existingArtistNames.has(r.artistName.toLowerCase()) ? (
+                    {r.inLibrary ? (
+                      <span className="text-[10px] text-muted px-2 py-1 bg-bg border border-border rounded">
+                        In library
+                      </span>
+                    ) : existingArtistNames.has(r.artistName.toLowerCase()) ? (
                       <span className="text-[10px] text-muted px-2 py-1 bg-bg border border-border rounded">
                         In queue
                       </span>

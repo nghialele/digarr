@@ -415,6 +415,7 @@ export const moodDiscover = (query: string) =>
       confidence: number
       genres: string[]
       suggestedAlbum?: string
+      inLibrary?: boolean
     }>
   }>('/mood/discover', { method: 'POST', body: JSON.stringify({ query }) })
 

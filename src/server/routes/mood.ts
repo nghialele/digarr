@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { createLidarrClient } from '@/core/clients/lidarr'
 import { buildMoodPrompt } from '@/core/providers/prompt'
 import type { AiProviderRegistry } from '@/core/providers/registry'
 import type { HonoEnv } from '@/server/types'
@@ -46,7 +47,29 @@ export function moodRoutes(deps: MoodDeps) {
       _rawPrompt: prompt,
     })
 
-    return c.json({ results: recs })
+    // Check which results are already in the user's Lidarr library
+    let libraryNames = new Set<string>()
+    const { lidarrUrl, lidarrApiKey, skipTlsVerify } = settings as Record<string, unknown>
+    if (lidarrUrl && lidarrApiKey) {
+      try {
+        const lidarr = createLidarrClient(
+          lidarrUrl as string,
+          lidarrApiKey as string,
+          (skipTlsVerify as boolean) ?? false,
+        )
+        const artists = await lidarr.getArtists()
+        libraryNames = new Set(artists.map((a) => a.artistName.toLowerCase()))
+      } catch {
+        // Lidarr unavailable -- skip library check
+      }
+    }
+
+    const results = recs.map((r) => ({
+      ...r,
+      inLibrary: libraryNames.has(r.artistName.toLowerCase()),
+    }))
+
+    return c.json({ results })
   })
 
   return router
