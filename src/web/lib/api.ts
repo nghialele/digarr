@@ -444,3 +444,88 @@ export async function getOAuthStatus(
 ): Promise<{ connected: boolean; scopes: string | null }> {
   return fetchApi(`/auth/oauth/${provider}/status`)
 }
+
+// Subscriptions
+export type Subscription = {
+  id: number
+  name: string
+  userId: number | null
+  enabled: boolean
+  sourceType: string
+  sourceProvider: string
+  sourceConfig: Record<string, unknown>
+  maxArtistsPerRun: number
+  listenerRange: { min?: number; max?: number } | null
+  cron: string
+  action: string
+  scoreThreshold: number | null
+  scoringWeightPreset: string | null
+  scoringWeightOverrides: Record<string, number> | null
+  lastRunAt: string | null
+  lastResultCount: number | null
+  lastError: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type SubscriptionRun = {
+  id: number
+  subscriptionId: number
+  startedAt: string
+  completedAt: string | null
+  artistsFound: number
+  artistsNew: number
+  error: string | null
+  batchId: number | null
+}
+
+export type SchedulerJob = {
+  name: string
+  expression: string
+  nextRun: string | null
+}
+
+export const getSubscriptions = () => fetchApi<Subscription[]>('/subscriptions')
+
+export const createSubscriptionApi = (data: {
+  name: string
+  sourceType: string
+  sourceProvider: string
+  sourceConfig: Record<string, unknown>
+  cron: string
+  enabled?: boolean
+  maxArtistsPerRun?: number
+  listenerRange?: { min?: number; max?: number } | null
+  action?: string
+  scoreThreshold?: number | null
+  scoringWeightPreset?: string | null
+  scoringWeightOverrides?: Record<string, number> | null
+}) =>
+  fetchApi<Subscription>('/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
+export const updateSubscriptionApi = (id: number, data: Partial<Subscription>) =>
+  fetchApi<{ updated: boolean }>(`/subscriptions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+
+export const deleteSubscriptionApi = (id: number) =>
+  fetchApi<{ deleted: boolean }>(`/subscriptions/${id}`, { method: 'DELETE' })
+
+export const triggerSubscriptionRun = (id: number) =>
+  fetchApi<{ message: string }>(`/subscriptions/${id}/run`, { method: 'POST' })
+
+export const getSubscriptionRuns = (id: number) =>
+  fetchApi<SubscriptionRun[]>(`/subscriptions/${id}/runs`)
+
+export const bulkToggleSubscriptions = (enabled: boolean) =>
+  fetchApi<{ updated: number }>('/subscriptions/bulk-toggle', {
+    method: 'POST',
+    body: JSON.stringify({ enabled }),
+  })
+
+export const getSchedulerInfo = () =>
+  fetchApi<{ jobs: SchedulerJob[] }>('/subscriptions/scheduler')
