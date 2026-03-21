@@ -364,7 +364,13 @@ export const testTargetApi = (id: number) =>
 export async function approveToTarget(
   recId: number,
   targetId: string,
-  options?: { monitorOption?: string; selectedAlbumIds?: string[] },
+  options?: {
+    monitorOption?: string
+    selectedAlbumIds?: string[]
+    qualityProfileId?: number
+    metadataProfileId?: number
+    rootFolderId?: number
+  },
 ): Promise<{ status: string; targetActions?: Record<string, unknown> }> {
   return fetchApi(`/recommendations/${recId}`, {
     method: 'PATCH',

@@ -444,6 +444,7 @@ export function DiscoverPage() {
   const [approveDialogState, setApproveDialogState] = useState<{
     recId: number
     monitorOption: MonitorOption
+    targetId?: string
   } | null>(null)
 
   const { data: prefsData } = useQuery({
@@ -531,6 +532,15 @@ export function DiscoverPage() {
 
   const handleApproveToTarget = useCallback(
     async (recId: number, targetId: string) => {
+      // Show profile picker dialog for Lidarr targets
+      const target = targets.find(
+        (t) => `${t.type}-${t.id}` === targetId || String(t.id) === targetId,
+      )
+      if (target?.type === 'lidarr') {
+        setApproveDialogState({ recId, monitorOption: 'all', targetId })
+        return
+      }
+
       setActingIds((prev) => new Set([...prev, recId]))
       try {
         await approveToTarget(recId, targetId)
@@ -546,7 +556,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch],
+    [refetch, targets],
   )
 
   // ---------------------------------------------------------------------------
@@ -1323,11 +1333,15 @@ export function DiscoverPage() {
           monitorOption={approveDialogState.monitorOption}
           onCancel={() => setApproveDialogState(null)}
           onConfirm={async (overrides) => {
-            const { recId } = approveDialogState
+            const { recId, targetId } = approveDialogState
             setApproveDialogState(null)
             setActingIds((prev) => new Set([...prev, recId]))
             try {
-              await approveRecommendation(recId, overrides)
+              if (targetId) {
+                await approveToTarget(recId, targetId, overrides)
+              } else {
+                await approveRecommendation(recId, overrides)
+              }
               toast.success('Added to Lidarr')
               refetch()
             } catch {
