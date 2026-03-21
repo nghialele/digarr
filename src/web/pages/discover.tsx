@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AlbumPicker } from '../components/album-picker'
 import { ApproveDialog } from '../components/approve-dialog'
@@ -530,6 +530,11 @@ export function DiscoverPage() {
   const hasMultipleTargets = targets.length > 1
   const hasLidarrTarget = targets.some((t) => t.type === 'lidarr')
 
+  const existingArtistNames = useMemo(
+    () => new Set(items.map((r) => r.artist.name.toLowerCase())),
+    [items],
+  )
+
   const handleApproveToTarget = useCallback(
     async (recId: number, targetId: string) => {
       // Show profile picker dialog for Lidarr targets
@@ -1009,7 +1014,7 @@ export function DiscoverPage() {
                 >
                   {bulkMode ? 'Cancel' : 'Select'}
                 </button>
-                {filter !== 'rejected' && (
+                {filter === 'pending' && (
                   <button
                     type="button"
                     onClick={handleClearAll}
@@ -1042,10 +1047,7 @@ export function DiscoverPage() {
           </>
         )}
 
-        <MoodPromptBar
-          existingArtistNames={new Set(items.map((r) => r.artist.name.toLowerCase()))}
-          onQueued={refetch}
-        />
+        <MoodPromptBar existingArtistNames={existingArtistNames} onQueued={refetch} />
 
         <FeedbackInsights />
 
