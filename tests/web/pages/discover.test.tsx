@@ -40,6 +40,10 @@ vi.mock('@/web/lib/api', () => ({
   triggerPipeline: vi.fn(),
   listTargets: vi.fn().mockResolvedValue([]),
   exportRecommendations: vi.fn(),
+  getUserPreferences: vi.fn().mockResolvedValue({}),
+  getLidarrProfiles: vi.fn().mockResolvedValue([{ id: 1, name: 'Any' }]),
+  getLidarrMetadataProfiles: vi.fn().mockResolvedValue([{ id: 1, name: 'Standard' }]),
+  getLidarrRootFolders: vi.fn().mockResolvedValue([{ id: 1, path: '/music', freeSpace: 0 }]),
 }))
 
 import {
@@ -198,7 +202,7 @@ describe('DiscoverPage', () => {
     })
   })
 
-  it('approve button calls approveRecommendation with all monitor option', async () => {
+  it('approve button shows profile dialog then calls approveRecommendation', async () => {
     mockApproveRecommendation.mockResolvedValue(undefined as unknown as never)
     setupMockApi()
 
@@ -210,13 +214,23 @@ describe('DiscoverPage', () => {
 
     // Find the card's Approve button: exact text "Approve" (not "Approved" tab, not "Approve All Above")
     const approveButtons = screen.getAllByText('Approve')
-    // There should be exactly one card Approve button
     expect(approveButtons.length).toBeGreaterThanOrEqual(1)
     // biome-ignore lint/style/noNonNullAssertion: checked above
     fireEvent.click(approveButtons[0]!)
 
+    // Dialog should appear
     await waitFor(() => {
-      expect(mockApproveRecommendation).toHaveBeenCalledWith(1, { monitorOption: 'all' })
+      expect(screen.getByText('Lidarr Settings for This Artist')).toBeInTheDocument()
+    })
+
+    // Confirm via the dialog's "Add to Lidarr" button
+    fireEvent.click(screen.getByText('Add to Lidarr'))
+
+    await waitFor(() => {
+      expect(mockApproveRecommendation).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ monitorOption: 'all' }),
+      )
     })
   })
 

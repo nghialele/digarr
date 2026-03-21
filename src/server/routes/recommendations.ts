@@ -40,11 +40,14 @@ export function recommendationRoutes(deps: AppDependencies) {
   router.patch('/api/recommendations/:id', async (c) => {
     const id = Number(c.req.param('id'))
     const body = await c.req.json()
-    const { status, monitorOption, selectedAlbumIds, targetId } = body as {
+    const { status, monitorOption, selectedAlbumIds, targetId, qualityProfileId: qpOverride, metadataProfileId: mpOverride, rootFolderId: rfOverride } = body as {
       status: string
       monitorOption?: 'all' | 'new' | 'none' | 'selected'
       selectedAlbumIds?: string[]
       targetId?: string
+      qualityProfileId?: number
+      metadataProfileId?: number
+      rootFolderId?: number
     }
 
     if (!status) {
@@ -88,9 +91,9 @@ export function recommendationRoutes(deps: AppDependencies) {
       const addOptions = {
         monitorOption: monitorOption ?? 'all',
         selectedAlbumIds,
-        qualityProfileId: Number(prefs.qualityProfileId ?? 1),
-        metadataProfileId: Number(prefs.metadataProfileId ?? 1),
-        rootFolderId: Number(prefs.rootFolderId ?? 1),
+        qualityProfileId: qpOverride ?? Number(prefs.qualityProfileId ?? 1),
+        metadataProfileId: mpOverride ?? Number(prefs.metadataProfileId ?? 1),
+        rootFolderId: rfOverride ?? Number(prefs.rootFolderId ?? 1),
       }
 
       // No targets configured -- just mark as approved (discovery-only mode)
@@ -159,10 +162,13 @@ export function recommendationRoutes(deps: AppDependencies) {
 
   router.post('/api/recommendations/bulk', async (c) => {
     const body = await c.req.json()
-    const { ids, action, targetId } = body as {
+    const { ids, action, targetId, qualityProfileId: qpOverride, metadataProfileId: mpOverride, rootFolderId: rfOverride } = body as {
       ids: number[]
       action: 'approve' | 'reject'
       targetId?: string
+      qualityProfileId?: number
+      metadataProfileId?: number
+      rootFolderId?: number
     }
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -200,9 +206,9 @@ export function recommendationRoutes(deps: AppDependencies) {
     const settings = await deps.getSettings()
     const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
     const addOptions = {
-      qualityProfileId: Number(prefs.qualityProfileId ?? 1),
-      metadataProfileId: Number(prefs.metadataProfileId ?? 1),
-      rootFolderId: Number(prefs.rootFolderId ?? 1),
+      qualityProfileId: qpOverride ?? Number(prefs.qualityProfileId ?? 1),
+      metadataProfileId: mpOverride ?? Number(prefs.metadataProfileId ?? 1),
+      rootFolderId: rfOverride ?? Number(prefs.rootFolderId ?? 1),
     }
 
     const results: Array<{ id: number; status: string; error?: string }> = []

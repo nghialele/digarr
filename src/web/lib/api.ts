@@ -143,7 +143,13 @@ export const updateRecommendation = (id: number, body: Record<string, unknown>) 
   fetchApi(`/recommendations/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
 export const approveRecommendation = (
   id: number,
-  options?: { monitorOption?: string; selectedAlbumIds?: string[] },
+  options?: {
+    monitorOption?: string
+    selectedAlbumIds?: string[]
+    qualityProfileId?: number
+    metadataProfileId?: number
+    rootFolderId?: number
+  },
 ) => updateRecommendation(id, { status: 'approved', ...options })
 export const bulkAction = (ids: number[], action: string) =>
   fetchApi('/recommendations/bulk', { method: 'POST', body: JSON.stringify({ ids, action }) })

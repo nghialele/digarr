@@ -323,6 +323,50 @@ describe('PATCH /api/recommendations/:id', () => {
     })
     expect(res.status).toBe(404)
   })
+
+  it('passes per-request profile overrides to target addArtist', async () => {
+    const mockAddArtist = vi.fn().mockResolvedValue({
+      success: true,
+      targetType: 'lidarr',
+      targetId: 1,
+      externalId: 99,
+    })
+    const mockTarget = {
+      id: 'lidarr-1',
+      name: 'Lidarr',
+      type: 'lidarr',
+      capabilities: ['addArtist'],
+      addArtist: mockAddArtist,
+      testConnection: vi.fn(),
+    }
+
+    const app = createApp(
+      makeDeps({
+        getEnabledTargetsForUser: vi.fn().mockResolvedValue([mockTarget]),
+      }),
+    )
+
+    const res = await app.request('/api/recommendations/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+      body: JSON.stringify({
+        status: 'approved',
+        qualityProfileId: 5,
+        metadataProfileId: 3,
+        rootFolderId: 2,
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(mockAddArtist).toHaveBeenCalledWith(
+      { mbid: 'mbid-abc-123', name: 'Test Artist' },
+      expect.objectContaining({
+        qualityProfileId: 5,
+        metadataProfileId: 3,
+        rootFolderId: 2,
+      }),
+    )
+  })
 })
 
 describe('POST /api/recommendations/bulk', () => {

@@ -1,0 +1,131 @@
+import { useEffect, useState } from 'react'
+import { getLidarrMetadataProfiles, getLidarrProfiles, getLidarrRootFolders } from '../lib/api'
+import type { MonitorOption } from './monitoring-options'
+import { Button } from './ui/button'
+
+type Profile = { id: number; name: string }
+type RootFolder = { id: number; path: string; freeSpace: number }
+
+type Props = {
+  defaults: { qualityProfileId: number; metadataProfileId: number; rootFolderId: number }
+  monitorOption: MonitorOption
+  onConfirm: (overrides: {
+    monitorOption: MonitorOption
+    qualityProfileId: number
+    metadataProfileId: number
+    rootFolderId: number
+  }) => void
+  onCancel: () => void
+}
+
+export function ApproveDialog({ defaults, monitorOption, onConfirm, onCancel }: Props) {
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [metadataProfiles, setMetadataProfiles] = useState<Profile[]>([])
+  const [rootFolders, setRootFolders] = useState<RootFolder[]>([])
+  const [qp, setQp] = useState(String(defaults.qualityProfileId))
+  const [mp, setMp] = useState(String(defaults.metadataProfileId))
+  const [rf, setRf] = useState(String(defaults.rootFolderId))
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([getLidarrProfiles(), getLidarrMetadataProfiles(), getLidarrRootFolders()])
+      .then(([p, m, r]) => {
+        setProfiles(p as Profile[])
+        setMetadataProfiles(m as Profile[])
+        setRootFolders(r as RootFolder[])
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 bg-bg/70 backdrop-blur-sm z-50"
+        onClick={onCancel}
+        aria-hidden="true"
+      />
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="bg-surface border border-border rounded-lg shadow-lg w-full max-w-sm p-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 className="text-sm font-medium text-text mb-3">Lidarr Settings for This Artist</h3>
+
+          {loading ? (
+            <p className="text-sm text-muted">Loading profiles...</p>
+          ) : (
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-xs text-muted">Quality Profile</span>
+                <select
+                  value={qp}
+                  onChange={(e) => setQp(e.target.value)}
+                  className="mt-1 w-full bg-bg border border-border rounded text-sm text-text px-2 py-1.5"
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs text-muted">Metadata Profile</span>
+                <select
+                  value={mp}
+                  onChange={(e) => setMp(e.target.value)}
+                  className="mt-1 w-full bg-bg border border-border rounded text-sm text-text px-2 py-1.5"
+                >
+                  {metadataProfiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs text-muted">Root Folder</span>
+                <select
+                  value={rf}
+                  onChange={(e) => setRf(e.target.value)}
+                  className="mt-1 w-full bg-bg border border-border rounded text-sm text-text px-2 py-1.5"
+                >
+                  {rootFolders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.path}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button size="sm" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="bg-approve text-bg hover:bg-approve/90"
+              disabled={loading}
+              onClick={() =>
+                onConfirm({
+                  monitorOption,
+                  qualityProfileId: parseInt(qp, 10),
+                  metadataProfileId: parseInt(mp, 10),
+                  rootFolderId: parseInt(rf, 10),
+                })
+              }
+            >
+              Add to Lidarr
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}

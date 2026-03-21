@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AlbumPicker } from '../components/album-picker'
+import { ApproveDialog } from '../components/approve-dialog'
 import { CardStack } from '../components/card-stack'
 import { MonitoringOptions, type MonitorOption } from '../components/monitoring-options'
 import { type Recommendation, RecommendationCard } from '../components/recommendation-card'
@@ -15,6 +16,7 @@ import {
   bulkAction,
   exportRecommendations,
   getRecommendations,
+  getUserPreferences,
   getWarmStatuses,
   listTargets,
   rescanArtists,
@@ -245,6 +247,17 @@ export function DiscoverPage() {
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set())
   const [bulkActing, setBulkActing] = useState(false)
   const [albumPickerRecId, setAlbumPickerRecId] = useState<number | null>(null)
+  const [approveDialogState, setApproveDialogState] = useState<{
+    recId: number
+    monitorOption: MonitorOption
+  } | null>(null)
+
+  const { data: prefsData } = useQuery({
+    queryKey: ['user-preferences'],
+    queryFn: getUserPreferences,
+    staleTime: 60_000,
+  })
+  const prefs = prefsData ?? {}
 
   const refetch = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['recommendations'] })
@@ -406,11 +419,17 @@ export function DiscoverPage() {
       selectedAlbumIds?: string[],
       prevStatus = 'pending',
     ) => {
+      // Non-selected options: show per-artist profile picker dialog first
+      if (option !== 'selected') {
+        setApproveDialogState({ recId: id, monitorOption: option })
+        return
+      }
+      // 'selected' flow -- album picker already ran, call API directly
       setActingIds((prev) => new Set([...prev, id]))
       try {
         await approveRecommendation(id, {
           monitorOption: option,
-          selectedAlbumIds: option === 'selected' ? selectedAlbumIds : undefined,
+          selectedAlbumIds,
         })
         showUndo({ id, prevStatus })
         refetch()
@@ -1063,6 +1082,37 @@ export function DiscoverPage() {
             <polygon points="5 3 19 12 5 21 5 3" />
           </svg>
         </button>
+      )}
+
+      {/* Per-artist Lidarr profile picker dialog */}
+      {approveDialogState && (
+        <ApproveDialog
+          defaults={{
+            qualityProfileId: Number(prefs.qualityProfileId ?? 1),
+            metadataProfileId: Number(prefs.metadataProfileId ?? 1),
+            rootFolderId: Number(prefs.rootFolderId ?? 1),
+          }}
+          monitorOption={approveDialogState.monitorOption}
+          onCancel={() => setApproveDialogState(null)}
+          onConfirm={async (overrides) => {
+            const { recId } = approveDialogState
+            setApproveDialogState(null)
+            setActingIds((prev) => new Set([...prev, recId]))
+            try {
+              await approveRecommendation(recId, overrides)
+              toast.success('Added to Lidarr')
+              refetch()
+            } catch {
+              toast.error('Failed to add to Lidarr')
+            } finally {
+              setActingIds((prev) => {
+                const next = new Set(prev)
+                next.delete(recId)
+                return next
+              })
+            }
+          }}
+        />
       )}
 
       {/* Album picker modal */}
