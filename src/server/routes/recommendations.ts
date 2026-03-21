@@ -12,7 +12,7 @@ export function recommendationRoutes(deps: AppDependencies) {
       status: query.status,
       batchId: query.batchId !== undefined ? Number(query.batchId) : undefined,
       userId,
-      sort: query.sort as 'score_desc' | 'score_asc' | 'created_desc' | undefined,
+      sort: query.sort as 'score_desc' | 'score_asc' | 'created_desc' | 'acted_on_desc' | undefined,
       limit:
         query.limit !== undefined
           ? Math.max(1, Math.min(200, Number(query.limit) || 20))
