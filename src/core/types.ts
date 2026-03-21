@@ -26,6 +26,7 @@ export type DiscoveredArtist = {
   similarityScore: number
   aiReasoning?: string
   suggestedAlbum?: string
+  genres?: string[]
   source: string
 }
 

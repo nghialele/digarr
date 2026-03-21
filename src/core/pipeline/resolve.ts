@@ -16,6 +16,14 @@ interface LidarrLookupClient {
   lookupArtist: (term: string) => Promise<unknown[]>
 }
 
+/** Fraction of discovery genres found in MB tags. Returns -1 when either list is empty (no data). */
+function genreOverlapScore(discoveryGenres: string[], mbTags: Array<{ name: string }>): number {
+  if (discoveryGenres.length === 0 || mbTags.length === 0) return -1
+  const mbGenres = new Set(mbTags.map((t) => t.name.toLowerCase()))
+  const matches = discoveryGenres.filter((g) => mbGenres.has(g.toLowerCase()))
+  return matches.length / discoveryGenres.length
+}
+
 export async function resolve(
   discovered: DiscoveredArtist[],
   mb: MusicBrainzClient,
@@ -69,17 +77,37 @@ export async function resolve(
 
     try {
       const searchResult = await mb.searchArtist(firstName)
-      const topHit = searchResult.artists[0]
-      if (!topHit) continue
+      const discoveryGenres = discoveries.flatMap((d) => d.genres ?? [])
+      const maxCandidates = discoveryGenres.length > 0 ? 5 : 1
 
-      // Check if this MBID was already resolved
-      if (byMbid.has(topHit.id)) continue
+      let bestCandidate: MBArtist | null = null
+      let bestOverlap = -1
 
-      const mbArtist = await mb.lookupArtist(topHit.id)
-      resolved.push(await buildResolvedArtist(mbArtist, discoveries, mb, lidarr))
+      for (const hit of searchResult.artists.slice(0, maxCandidates)) {
+        if (byMbid.has(hit.id)) continue
+        try {
+          const mbArtist = await mb.lookupArtist(hit.id)
 
-      // Mark as resolved so we don't add duplicate later
-      byMbid.set(topHit.id, discoveries)
+          if (discoveryGenres.length === 0) {
+            // No genre data -- trust MB search ranking
+            bestCandidate = mbArtist
+            break
+          }
+
+          const overlap = genreOverlapScore(discoveryGenres, mbArtist.tags ?? [])
+          if (overlap > bestOverlap) {
+            bestCandidate = mbArtist
+            bestOverlap = overlap
+          }
+          if (overlap > 0) break // good enough
+        } catch {
+          // skip failed lookup, try next candidate
+        }
+      }
+
+      if (!bestCandidate || byMbid.has(bestCandidate.id)) continue
+      resolved.push(await buildResolvedArtist(bestCandidate, discoveries, mb, lidarr))
+      byMbid.set(bestCandidate.id, discoveries)
     } catch {
       // Drop unresolvable
     }

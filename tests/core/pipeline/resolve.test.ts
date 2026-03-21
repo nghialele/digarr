@@ -175,6 +175,69 @@ describe('resolve()', () => {
     expect(result[0]?.genres).toContain('art rock')
   })
 
+  describe('MBID disambiguation', () => {
+    it('picks MB result with best genre overlap when AI provides genres', async () => {
+      const discovered: DiscoveredArtist[] = [
+        {
+          name: 'Burial',
+          similarityScore: 0.85,
+          source: 'ai',
+          aiReasoning: 'UK dubstep artist',
+          genres: ['dubstep', 'electronic', 'uk garage'],
+        },
+      ]
+
+      const wrongArtist = makeMbArtist({
+        id: 'mbid-wrong',
+        name: 'Burial',
+        tags: [
+          { name: 'black metal', count: 10 },
+          { name: 'death metal', count: 5 },
+        ],
+      })
+      const rightArtist = makeMbArtist({
+        id: 'mbid-right',
+        name: 'Burial',
+        tags: [
+          { name: 'electronic', count: 10 },
+          { name: 'dubstep', count: 8 },
+        ],
+      })
+
+      const mb = makeMb()
+      mb.searchArtist = vi.fn().mockResolvedValue({
+        artists: [
+          { id: 'mbid-wrong', name: 'Burial', score: 100 },
+          { id: 'mbid-right', name: 'Burial', score: 95 },
+        ],
+      })
+      mb.lookupArtist = vi.fn().mockImplementation((mbid: string) => {
+        if (mbid === 'mbid-wrong') return Promise.resolve(wrongArtist)
+        if (mbid === 'mbid-right') return Promise.resolve(rightArtist)
+        return Promise.reject(new Error('not found'))
+      })
+
+      const result = await resolve(discovered, mb)
+
+      expect(result).toHaveLength(1)
+      expect(result[0]?.mbid).toBe('mbid-right')
+    })
+
+    it('falls back to first MB result when no genre data available', async () => {
+      const discovered: DiscoveredArtist[] = [
+        { name: 'SomeArtist', similarityScore: 0.8, source: 'lastfm' },
+      ]
+      const mb = makeMb(makeMbArtist({ id: 'mbid-first', name: 'SomeArtist' }))
+
+      const result = await resolve(discovered, mb)
+
+      expect(result).toHaveLength(1)
+      expect(result[0]?.mbid).toBe('mbid-first')
+      // Only one lookup call (the first hit)
+      expect(mb.lookupArtist).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('suggestedAlbum resolution', () => {
     it('exact album title match -> gets releaseGroupId', async () => {
       const discovered: DiscoveredArtist[] = [
