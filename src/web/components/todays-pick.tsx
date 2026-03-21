@@ -6,7 +6,7 @@ import { Skeleton } from './ui/skeleton'
 // TodaysPick
 // ---------------------------------------------------------------------------
 
-type Recommendation = {
+export type Recommendation = {
   id: number
   score: number
   status: string

@@ -6,7 +6,7 @@ import { ArtistThumb } from '../components/artist-thumb'
 import { MoodPromptBar } from '../components/mood-prompt-bar'
 import { PipelineProgress } from '../components/pipeline-progress'
 import { RecentlyApproved } from '../components/recently-approved'
-import { TodaysPick } from '../components/todays-pick'
+import { type Recommendation, TodaysPick } from '../components/todays-pick'
 import { Skeleton } from '../components/ui/skeleton'
 import {
   type ActivityEntry,
@@ -24,36 +24,20 @@ import {
 } from '../lib/api'
 
 // ---------------------------------------------------------------------------
-// Local types
-// ---------------------------------------------------------------------------
-
-type Recommendation = {
-  id: number
-  score: number
-  status: string
-  aiReasoning?: string | null
-  artist: {
-    id: number
-    name: string
-    genres?: string[] | null
-    imageUrl?: string | null
-    streamingUrls?: Record<string, string> | null
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function relativeTime(dateStr: string | Date): string {
   const ms = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(ms / 60_000)
-  if (mins < 2) return 'just now'
-  if (mins < 60) return `${mins}m ago`
+  const future = ms < 0
+  const abs = Math.abs(ms)
+  const mins = Math.floor(abs / 60_000)
+  if (mins < 2) return future ? 'soon' : 'just now'
+  if (mins < 60) return future ? `in ${mins}m` : `${mins}m ago`
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
+  if (hrs < 24) return future ? `in ${hrs}h` : `${hrs}h ago`
   const days = Math.floor(hrs / 24)
-  return `${days}d ago`
+  return future ? `in ${days}d` : `${days}d ago`
 }
 
 // ---------------------------------------------------------------------------
