@@ -29,7 +29,14 @@ type TodaysPickProps = {
   onRunScan: () => void
 }
 
-export function TodaysPick({ rec, loading, onApprove, onReject, onSkip, onRunScan }: TodaysPickProps) {
+export function TodaysPick({
+  rec,
+  loading,
+  onApprove,
+  onReject,
+  onSkip,
+  onRunScan,
+}: TodaysPickProps) {
   const [imgError, setImgError] = useState(false)
 
   if (loading) {
@@ -65,7 +72,11 @@ export function TodaysPick({ rec, loading, onApprove, onReject, onSkip, onRunSca
   const hasImage = !!artist.imageUrl && !imgError
 
   const bannerStyle = hasImage
-    ? { backgroundImage: `url(${artist.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    ? {
+        backgroundImage: `url(${artist.imageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
     : { background: `hsl(${hue}, 40%, 35%)` }
 
   return (

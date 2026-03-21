@@ -11,13 +11,13 @@ import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
 import type { SubscriptionScheduler } from '@/core/pipeline/subscription-scheduler'
 import type { AiProviderRegistry } from '@/core/providers/registry'
 import type { ServiceTestResult } from '@/core/types'
+import type { ActivityEntry, TasteGenre } from '@/db/queries/dashboard'
 import type {
   ListRecommendationsFilters,
   ListRecommendationsResult,
   RecommendationWithArtist,
   StatusUpdateExtra,
 } from '@/db/queries/recommendations'
-import type { ActivityEntry, TasteGenre } from '@/db/queries/dashboard'
 import type { SetupConfig } from '@/db/queries/settings'
 import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
 import type { subscriptionRuns, subscriptions } from '@/db/schema'
@@ -36,6 +36,7 @@ import { analyticsRoutes } from './routes/analytics'
 import { artistRoutes } from './routes/artists'
 import { authRoutes } from './routes/auth'
 import { batchRoutes } from './routes/batches'
+import { dashboardRoutes } from './routes/dashboard'
 import { exportRoutes } from './routes/exports'
 import { genreRoutes } from './routes/genres'
 import { healthRoutes } from './routes/health'
@@ -50,7 +51,6 @@ import { recommendationRoutes } from './routes/recommendations'
 import { settingsRoutes } from './routes/settings'
 import { setupRoutes } from './routes/setup'
 import { subscriptionRoutes } from './routes/subscriptions'
-import { dashboardRoutes } from './routes/dashboard'
 import { targetRoutes } from './routes/targets'
 import { userRoutes } from './routes/users'
 import type { HonoEnv } from './types'
@@ -141,7 +141,11 @@ export type AppDependencies = {
   getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
   dashboardQueries: {
     getTopGenresForUser: (userId: number | undefined) => Promise<TasteGenre[]>
-    getRecentActivity: (userId: number | undefined, isAdmin: boolean, limit?: number) => Promise<ActivityEntry[]>
+    getRecentActivity: (
+      userId: number | undefined,
+      isAdmin: boolean,
+      limit?: number,
+    ) => Promise<ActivityEntry[]>
   }
 }
 

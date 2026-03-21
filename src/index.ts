@@ -24,10 +24,10 @@ import { setSessionStore } from './core/sessions'
 import { createLidarrTarget } from './core/targets/lidarr'
 import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
 import { db, pool } from './db'
-import { getRecentActivity, getTopGenresForUser } from './db/queries/dashboard'
 import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
+import { getRecentActivity, getTopGenresForUser } from './db/queries/dashboard'
 import {
   getAllGenres,
   getChildGenres,

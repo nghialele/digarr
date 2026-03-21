@@ -16,10 +16,8 @@ function renderWithQuery(ui: ReactElement) {
 // Mock dependencies
 // ---------------------------------------------------------------------------
 
-const mockNavigate = vi.fn()
-
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => mockNavigate,
+  useNavigate: () => vi.fn(),
   Link: ({ to, children, ...props }: { to: string; children: React.ReactNode }) => (
     <a href={to} {...props}>
       {children}
@@ -39,9 +37,13 @@ vi.mock('sonner', () => ({
 vi.mock('@/web/lib/api', () => ({
   getRecommendations: vi.fn(),
   updateRecommendation: vi.fn(),
-  getBatches: vi.fn(),
   getRecentListens: vi.fn(),
-  getLidarrStats: vi.fn(),
+  getSubscriptions: vi.fn(),
+  getSchedulerInfo: vi.fn(),
+  getDashboardTaste: vi.fn(),
+  getDashboardActivity: vi.fn(),
+  triggerPipeline: vi.fn(),
+  moodDiscover: vi.fn(),
   quickDiscover: vi.fn(),
   getPipelineStatus: vi.fn(),
   getStoredToken: vi.fn(() => null),
@@ -57,18 +59,22 @@ vi.mock('@/web/lib/hooks', async (importOriginal) => {
 })
 
 import {
-  getBatches,
-  getLidarrStats,
+  getDashboardActivity,
+  getDashboardTaste,
   getPipelineStatus,
   getRecentListens,
   getRecommendations,
+  getSchedulerInfo,
+  getSubscriptions,
 } from '@/web/lib/api'
 import { Dashboard } from '@/web/pages/dashboard'
 
 const mockGetRecommendations = vi.mocked(getRecommendations)
-const mockGetBatches = vi.mocked(getBatches)
 const mockGetRecentListens = vi.mocked(getRecentListens)
-const mockGetLidarrStats = vi.mocked(getLidarrStats)
+const mockGetSubscriptions = vi.mocked(getSubscriptions)
+const mockGetSchedulerInfo = vi.mocked(getSchedulerInfo)
+const mockGetDashboardTaste = vi.mocked(getDashboardTaste)
+const mockGetDashboardActivity = vi.mocked(getDashboardActivity)
 const mockGetPipelineStatus = vi.mocked(getPipelineStatus)
 
 // ---------------------------------------------------------------------------
@@ -79,38 +85,70 @@ const pendingRec = {
   id: 1,
   score: 0.85,
   status: 'pending',
+  aiReasoning: 'Great post-rock vibes',
   artist: {
     id: 10,
     name: 'Sigur Ros',
     genres: ['post-rock', 'ambient'],
-    tags: null,
     imageUrl: null,
     streamingUrls: null,
   },
 }
 
+const approvedRec = {
+  id: 2,
+  score: 0.78,
+  status: 'approved',
+  artist: {
+    id: 11,
+    name: 'Slowdive',
+    genres: ['shoegaze'],
+    imageUrl: 'https://example.com/slowdive.jpg',
+    streamingUrls: null,
+  },
+}
+
 function setupMocks() {
-  // Pending recommendations (first call is pending, rest are for counts)
   mockGetRecommendations.mockImplementation((params) => {
     const p = params as Record<string, string> | undefined
     if (p?.status === 'pending') {
       return Promise.resolve({ items: [pendingRec], total: 1 })
     }
+    if (p?.status?.includes('approved')) {
+      return Promise.resolve({ items: [approvedRec], total: 1 })
+    }
     return Promise.resolve({ items: [], total: 0 })
   })
 
-  mockGetBatches.mockResolvedValue([
-    { id: 1, status: 'completed', createdAt: new Date().toISOString() },
-  ] as unknown[])
-
   mockGetRecentListens.mockResolvedValue({
-    tracks: [
-      { artist: 'Bon Iver', track: 'Holocene', source: 'listenbrainz' },
-      { artist: 'Fleet Foxes', track: 'White Winter Hymnal', source: 'lastfm' },
-    ],
+    tracks: [{ artist: 'Bon Iver', track: 'Holocene', source: 'listenbrainz' }],
   })
 
-  mockGetLidarrStats.mockResolvedValue({ artists: 247, monitored: 200 })
+  mockGetSubscriptions.mockResolvedValue([
+    {
+      id: 1,
+      name: 'Rock Discovery',
+      enabled: true,
+      lastResultCount: 5,
+    },
+  ] as never)
+
+  mockGetSchedulerInfo.mockResolvedValue({
+    jobs: [{ name: 'subscription-1', expression: '0 9 * * *', nextRun: null }],
+  })
+
+  mockGetDashboardTaste.mockResolvedValue([
+    { genre: 'post-rock', count: 10, percentage: 40 },
+    { genre: 'shoegaze', count: 5, percentage: 20 },
+  ])
+
+  mockGetDashboardActivity.mockResolvedValue([
+    {
+      type: 'approved',
+      timestamp: new Date().toISOString(),
+      data: { artistName: 'Mogwai' },
+    },
+  ])
 
   mockGetPipelineStatus.mockResolvedValue({ running: false })
 }
@@ -124,66 +162,58 @@ describe('Dashboard', () => {
     vi.clearAllMocks()
   })
 
-  it('renders stat cards with library stats', async () => {
-    setupMocks()
-    renderWithQuery(<Dashboard />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Lidarr Library')).toBeInTheDocument()
-      expect(screen.getByText('247')).toBeInTheDocument()
-      expect(screen.getByText('200 monitored')).toBeInTheDocument()
-    })
-  })
-
-  it('renders pending count', async () => {
-    setupMocks()
-    renderWithQuery(<Dashboard />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Pending Recs')).toBeInTheDocument()
-      expect(screen.getByText('1')).toBeInTheDocument()
-    })
-  })
-
-  it('renders recommendation with artist name and score', async () => {
+  it("renders today's pick with artist name and score", async () => {
     setupMocks()
     renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
       expect(screen.getByText('Sigur Ros')).toBeInTheDocument()
-      expect(screen.getByText('85%')).toBeInTheDocument()
+      expect(screen.getByText('85')).toBeInTheDocument()
     })
   })
 
-  it('renders recent listening activity', async () => {
+  it('renders listening activity', async () => {
     setupMocks()
     renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('Listening Activity')).toBeInTheDocument()
       expect(screen.getByText('Bon Iver')).toBeInTheDocument()
       expect(screen.getByText('Holocene')).toBeInTheDocument()
-      expect(screen.getByText('Fleet Foxes')).toBeInTheDocument()
     })
   })
 
-  it('shows Find Similar buttons for recent listens', async () => {
+  it('renders taste profile genres', async () => {
     setupMocks()
     renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
-      const buttons = screen.getAllByText('Find Similar')
-      expect(buttons).toHaveLength(2)
+      expect(screen.getByText('40%')).toBeInTheDocument()
+      expect(screen.getByText('20%')).toBeInTheDocument()
+    })
+  })
+
+  it('renders activity feed entries', async () => {
+    setupMocks()
+    renderWithQuery(<Dashboard />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Approved Mogwai/)).toBeInTheDocument()
+    })
+  })
+
+  it('renders subscription pulse', async () => {
+    setupMocks()
+    renderWithQuery(<Dashboard />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Rock Discovery')).toBeInTheDocument()
+      expect(screen.getByText(/5 found last run/)).toBeInTheDocument()
     })
   })
 
   it('shows empty state when no pending recommendations', async () => {
+    setupMocks()
     mockGetRecommendations.mockResolvedValue({ items: [], total: 0 })
-    mockGetBatches.mockResolvedValue([])
-    mockGetRecentListens.mockResolvedValue({ tracks: [] })
-    mockGetLidarrStats.mockResolvedValue({ artists: 0, monitored: 0 })
-    mockGetPipelineStatus.mockResolvedValue({ running: false })
-
     renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
@@ -191,14 +221,13 @@ describe('Dashboard', () => {
     })
   })
 
-  it('renders last scan time', async () => {
+  it('shows Run Scan button in empty state', async () => {
     setupMocks()
+    mockGetRecommendations.mockResolvedValue({ items: [], total: 0 })
     renderWithQuery(<Dashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('Last Scan')).toBeInTheDocument()
-      // "just now" since we set createdAt to now
-      expect(screen.getByText('just now')).toBeInTheDocument()
+      expect(screen.getByText('Run Scan')).toBeInTheDocument()
     })
   })
 })
