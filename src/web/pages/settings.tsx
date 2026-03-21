@@ -1103,6 +1103,7 @@ const TARGET_TYPES = [
 function TargetTypeIcon({ type }: { type: string }) {
   const iconMap: Record<string, string> = {
     lidarr: '/icons/lidarr.png',
+    jellyfin: '/icons/jellyfin.svg',
     'spotify-playlist': '/icons/spotify.svg',
   }
   const src = iconMap[type]

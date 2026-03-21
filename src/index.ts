@@ -4,6 +4,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
 import { OidcService } from './core/auth/oidc'
+import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
@@ -373,6 +374,16 @@ const app = createApp({
         skipTlsVerify: (config.skipTlsVerify as boolean) ?? false,
       })
       return target.testConnection()
+    }
+
+    if (type === 'jellyfin') {
+      const client = createJellyfinClient(
+        config.url as string,
+        config.apiKey as string,
+        config.userId as string ?? '',
+        { skipTlsVerify: (config.skipTlsVerify as boolean) ?? false },
+      )
+      return client.testConnection()
     }
 
     if (type === 'spotify-playlist') {
