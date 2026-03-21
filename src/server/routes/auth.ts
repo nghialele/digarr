@@ -15,6 +15,9 @@ const ALLOWED_PREF_KEYS = new Set([
   'scheduleCron',
   'webhookUrl',
   'webhookEvents',
+  'autoApproveEnabled',
+  'autoApproveThreshold',
+  'autoApproveMonitorOption',
 ])
 
 export function authRoutes(deps: AppDependencies) {
