@@ -283,6 +283,21 @@ describe('POST /api/subscriptions', () => {
     })
     expect(res.status).toBe(401)
   })
+
+  it('auto-schedules new subscription in scheduler', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validBody),
+    })
+    expect(res.status).toBe(201)
+    expect(mockScheduler.schedule).toHaveBeenCalledWith(
+      `subscription-${mockSub.id}`,
+      validBody.cron,
+      expect.any(Function),
+    )
+  })
 })
 
 describe('PATCH /api/subscriptions/:id', () => {
@@ -330,6 +345,48 @@ describe('PATCH /api/subscriptions/:id', () => {
       body: JSON.stringify({ cron: 'bad-cron' }),
     })
     expect(res.status).toBe(400)
+  })
+
+  it('reschedules in scheduler when cron changes', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cron: '0 12 * * 1' }),
+    })
+    expect(res.status).toBe(200)
+    expect(mockScheduler.schedule).toHaveBeenCalledWith(
+      'subscription-1',
+      '0 12 * * 1',
+      expect.any(Function),
+    )
+  })
+
+  it('removes from scheduler when disabled via PATCH', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    })
+    expect(res.status).toBe(200)
+    expect(mockScheduler.remove).toHaveBeenCalledWith('subscription-1')
+  })
+
+  it('re-schedules when re-enabled via PATCH', async () => {
+    mockSubQueries.getSubscription.mockResolvedValueOnce({ ...mockSub, enabled: false })
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: true }),
+    })
+    expect(res.status).toBe(200)
+    expect(mockScheduler.schedule).toHaveBeenCalledWith(
+      'subscription-1',
+      '0 9 * * *',
+      expect.any(Function),
+    )
   })
 
   it('strips non-allowlisted fields from update', async () => {

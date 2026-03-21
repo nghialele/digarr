@@ -8,10 +8,12 @@ const ALLOWED_UPDATE_FIELDS = new Set([
   'enabled',
   'sourceConfig',
   'maxArtistsPerRun',
+  'listenerRange',
   'cron',
   'action',
   'scoreThreshold',
   'scoringWeightPreset',
+  'scoringWeightOverrides',
 ])
 
 export function subscriptionRoutes(deps: AppDependencies) {
@@ -69,9 +71,20 @@ export function subscriptionRoutes(deps: AppDependencies) {
         typeof body.maxArtistsPerRun === 'number' ? body.maxArtistsPerRun : undefined,
       action: typeof body.action === 'string' ? body.action : undefined,
       scoreThreshold: typeof body.scoreThreshold === 'number' ? body.scoreThreshold : undefined,
+      listenerRange:
+        body.listenerRange && typeof body.listenerRange === 'object'
+          ? (body.listenerRange as { min?: number; max?: number })
+          : undefined,
       scoringWeightPreset:
         typeof body.scoringWeightPreset === 'string' ? body.scoringWeightPreset : undefined,
     })
+
+    // Auto-schedule if enabled (default is true)
+    if (sub.enabled !== false) {
+      deps.scheduler.schedule(`subscription-${sub.id}`, sub.cron, () =>
+        deps.runSubscription(sub.id),
+      )
+    }
 
     return c.json(sub, 201)
   })
@@ -108,6 +121,21 @@ export function subscriptionRoutes(deps: AppDependencies) {
     }
 
     await deps.subscriptionQueries.updateSubscription(id, update)
+
+    // Sync scheduler when cron or enabled changes
+    const jobName = `subscription-${id}`
+    const newEnabled = Object.hasOwn(update, 'enabled')
+      ? (update.enabled as boolean)
+      : existing.enabled
+    const newCron = (update.cron as string | undefined) ?? existing.cron
+
+    if (!newEnabled) {
+      deps.scheduler.remove(jobName)
+    } else if (Object.hasOwn(update, 'enabled') || Object.hasOwn(update, 'cron')) {
+      // Re/schedule if enabled toggled on OR cron changed while enabled
+      deps.scheduler.schedule(jobName, newCron, () => deps.runSubscription(id))
+    }
+
     return c.json({ updated: true })
   })
 
