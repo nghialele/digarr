@@ -1,6 +1,8 @@
 import type { AiRecommendation, TasteProfile } from '@/core/types'
 
 export function buildRecommendationPrompt(profile: TasteProfile): string {
+  if (profile._rawPrompt) return profile._rawPrompt
+
   const topArtistNames = profile.topArtists
     .slice(0, 20)
     .map((a) => `${a.name} (${a.playCount} plays)`)
@@ -47,6 +49,26 @@ Example:
 ]
 
 Provide 15-20 diverse recommendations. Prioritize lesser-known artists alongside some well-known ones. Do not include artists already in the listener's top artists list.`
+}
+
+export function buildMoodPrompt(query: string, excludeArtists: string[] = []): string {
+  const exclusionClause =
+    excludeArtists.length > 0
+      ? `\n\nDo NOT recommend any of these artists (already in library): ${excludeArtists.join(', ')}`
+      : ''
+
+  return `You are a music discovery expert. A listener described what they want to hear:
+
+"${query}"
+
+Recommend 10-15 artists that match this mood, vibe, or description. Prioritize lesser-known artists alongside a few well-known anchors.
+
+Return ONLY a JSON array. Each element must have:
+- artistName: string
+- reasoning: string (2-3 sentences describing the artist and why they match)
+- confidence: number (0.0-1.0)
+- genres: string[]
+- suggestedAlbum: string (optional)${exclusionClause}`
 }
 
 export function parseRecommendationResponse(text: string): AiRecommendation[] {

@@ -36,6 +36,7 @@ import { healthRoutes } from './routes/health'
 import { libraryRoutes } from './routes/library'
 import { lidarrRoutes } from './routes/lidarr'
 import { listeningRoutes } from './routes/listening'
+import { moodRoutes } from './routes/mood'
 import { oauthRoutes } from './routes/oauth'
 import { oidcRoutes } from './routes/oidc'
 import { pipelineRoutes } from './routes/pipeline'
@@ -240,6 +241,10 @@ export function createApp(deps: AppDependencies) {
   app.route('/', userRoutes(deps))
   app.route('/', targetRoutes(deps))
   app.route('/', exportRoutes(deps))
+  app.route(
+    '/',
+    moodRoutes({ getSettings: deps.getSettings, providerRegistry: deps.providerRegistry }),
+  )
   app.route(
     '/',
     libraryRoutes({ libraryHealth: deps.libraryHealth, skyhookWarmer: deps.skyhookWarmer }),

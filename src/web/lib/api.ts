@@ -400,6 +400,18 @@ export async function exportRecommendations(
   URL.revokeObjectURL(url)
 }
 
+// Mood discovery
+export const moodDiscover = (query: string) =>
+  fetchApi<{
+    results: Array<{
+      artistName: string
+      reasoning: string
+      confidence: number
+      genres: string[]
+      suggestedAlbum?: string
+    }>
+  }>('/mood/discover', { method: 'POST', body: JSON.stringify({ query }) })
+
 // OAuth
 export async function initiateOAuth(
   provider: string,

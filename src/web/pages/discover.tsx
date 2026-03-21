@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AlbumPicker } from '../components/album-picker'
 import { ApproveDialog } from '../components/approve-dialog'
@@ -20,6 +20,7 @@ import {
   getUserPreferences,
   getWarmStatuses,
   listTargets,
+  moodDiscover,
   rescanArtists,
   triggerPipeline,
   updateRecommendation,
@@ -176,6 +177,89 @@ function StackIcon() {
       <path d="M2 17l10 5 10-5" />
       <path d="M2 12l10 5 10-5" />
     </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Mood prompt bar
+// ---------------------------------------------------------------------------
+
+function MoodPromptBar() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<Array<{
+    artistName: string
+    reasoning: string
+    confidence: number
+    genres: string[]
+  }> | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!query.trim() || loading) return
+    setLoading(true)
+    try {
+      const res = await moodDiscover(query.trim())
+      setResults(res.results)
+    } catch {
+      toast.error('Mood discovery failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mb-4">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder='Try: "something like Boards of Canada but darker"'
+          maxLength={500}
+          className="flex-1 bg-surface border border-border rounded px-3 py-1.5 text-sm text-text placeholder:text-muted/50"
+        />
+        <button
+          type="submit"
+          disabled={loading || !query.trim()}
+          className="px-3 py-1.5 bg-accent text-bg rounded text-sm font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {loading ? 'Discovering...' : 'Discover'}
+        </button>
+      </form>
+      {results && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-text">Mood results ({results.length})</h3>
+            <button
+              type="button"
+              onClick={() => setResults(null)}
+              className="text-xs text-muted hover:text-text"
+            >
+              Clear
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {results.map((r) => (
+              <div key={r.artistName} className="bg-surface border border-border rounded p-3">
+                <div className="font-medium text-sm text-text">{r.artistName}</div>
+                <p className="text-xs text-muted mt-1 line-clamp-2">{r.reasoning}</p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {r.genres.slice(0, 3).map((g) => (
+                    <span
+                      key={g}
+                      className="text-[10px] px-1.5 py-0.5 bg-bg border border-border rounded text-muted"
+                    >
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -873,6 +957,8 @@ export function DiscoverPage() {
             </p>
           </>
         )}
+
+        <MoodPromptBar />
 
         <FeedbackInsights />
 

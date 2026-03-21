@@ -10,6 +10,7 @@ export type TasteProfile = {
     totalListens: number
     recentTrend: 'increasing' | 'stable' | 'decreasing'
   }
+  _rawPrompt?: string
 }
 
 export type AiRecommendation = {
