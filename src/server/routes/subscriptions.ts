@@ -89,6 +89,44 @@ export function subscriptionRoutes(deps: AppDependencies) {
     return c.json(sub, 201)
   })
 
+  router.post('/api/subscriptions/bulk-toggle', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+
+    const body = await c.req.json()
+    const enabled =
+      typeof (body as Record<string, unknown>).enabled === 'boolean'
+        ? ((body as Record<string, unknown>).enabled as boolean)
+        : null
+    if (enabled === null) return c.json({ error: 'enabled (boolean) is required' }, 400)
+
+    const subs = await deps.subscriptionQueries.getSubscriptionsByUser(userId)
+    let updated = 0
+    for (const sub of subs) {
+      try {
+        await deps.subscriptionQueries.updateSubscription(sub.id, { enabled })
+        const jobName = `subscription-${sub.id}`
+        if (enabled) {
+          deps.scheduler.schedule(jobName, sub.cron, () => deps.runSubscription(sub.id))
+        } else {
+          deps.scheduler.remove(jobName)
+        }
+        updated++
+      } catch (err: unknown) {
+        console.error(`[subscriptions] Failed to toggle subscription ${sub.id}:`, err)
+      }
+    }
+    return c.json({ updated })
+  })
+
+  router.get('/api/subscriptions/scheduler', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+
+    const jobs = deps.scheduler.listJobs()
+    return c.json({ jobs })
+  })
+
   router.patch('/api/subscriptions/:id', async (c) => {
     const userId = c.get('userId')
     if (!userId) {

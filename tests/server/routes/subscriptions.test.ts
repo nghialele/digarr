@@ -403,6 +403,83 @@ describe('PATCH /api/subscriptions/:id', () => {
   })
 })
 
+describe('POST /api/subscriptions/bulk-toggle', () => {
+  it('disables all user subscriptions and removes from scheduler', async () => {
+    const subs = [mockSub, { ...mockSub, id: 2, name: 'Sub B', cron: '0 0 * * 1' }]
+    mockSubQueries.getSubscriptionsByUser.mockResolvedValueOnce(subs)
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/bulk-toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.updated).toBe(2)
+    expect(mockSubQueries.updateSubscription).toHaveBeenCalledTimes(2)
+    expect(mockScheduler.remove).toHaveBeenCalledWith('subscription-1')
+    expect(mockScheduler.remove).toHaveBeenCalledWith('subscription-2')
+  })
+
+  it('enables all user subscriptions and schedules them', async () => {
+    const subs = [{ ...mockSub, enabled: false }]
+    mockSubQueries.getSubscriptionsByUser.mockResolvedValueOnce(subs)
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/bulk-toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: true }),
+    })
+    expect(res.status).toBe(200)
+    expect(mockScheduler.schedule).toHaveBeenCalledWith(
+      'subscription-1',
+      mockSub.cron,
+      expect.any(Function),
+    )
+  })
+
+  it('returns 400 when enabled is missing', async () => {
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/bulk-toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    const app = createTestApp(makeDeps(), undefined)
+    const res = await app.request('/api/subscriptions/bulk-toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    })
+    expect(res.status).toBe(401)
+  })
+})
+
+describe('GET /api/subscriptions/scheduler', () => {
+  it('returns scheduler job info', async () => {
+    mockScheduler.listJobs.mockReturnValueOnce([
+      { name: 'subscription-1', expression: '0 9 * * *', nextRun: new Date('2026-04-01') },
+    ])
+    const app = createTestApp(makeDeps(), USER_ID)
+    const res = await app.request('/api/subscriptions/scheduler')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(Array.isArray(body.jobs)).toBe(true)
+    expect(body.jobs).toHaveLength(1)
+    expect(body.jobs[0].name).toBe('subscription-1')
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    const app = createTestApp(makeDeps(), undefined)
+    const res = await app.request('/api/subscriptions/scheduler')
+    expect(res.status).toBe(401)
+  })
+})
+
 describe('DELETE /api/subscriptions/:id', () => {
   it('deletes subscription and removes from scheduler', async () => {
     const app = createTestApp(makeDeps(), USER_ID)
