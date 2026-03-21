@@ -54,9 +54,3 @@ export function applyTheme(colorTheme: ColorTheme, mode: Mode): void {
   const resolved = resolveMode(mode)
   document.documentElement.setAttribute('data-theme', `${colorTheme}-${resolved}`)
 }
-
-// Backward-compat aliases
-export type Theme = Mode
-export const getStoredTheme = getStoredMode
-export const setStoredTheme = setStoredMode
-export const resolveTheme = resolveMode

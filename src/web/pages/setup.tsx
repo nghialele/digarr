@@ -44,7 +44,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
               className={[
                 'flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold border',
                 active
-                  ? 'bg-accent text-bg border-accent'
+                  ? 'bg-accent text-accent-fg border-accent'
                   : done
                     ? 'bg-approve text-bg border-approve'
                     : 'bg-surface text-muted border-border',

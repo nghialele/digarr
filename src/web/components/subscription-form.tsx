@@ -378,7 +378,7 @@ export function SubscriptionForm({
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 text-sm bg-accent text-bg rounded font-medium hover:opacity-90 disabled:opacity-60"
+              className="px-4 py-2 text-sm bg-accent text-accent-fg rounded font-medium hover:opacity-90 disabled:opacity-60"
             >
               {submitting ? 'Saving...' : mode === 'create' ? 'Create' : 'Save'}
             </button>

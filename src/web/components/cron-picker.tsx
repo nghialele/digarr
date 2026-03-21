@@ -27,7 +27,7 @@ export function CronPicker({ value, onChange }: CronPickerProps) {
           onClick={() => setMode('preset')}
           className={`px-3 py-1 rounded text-sm ${
             mode === 'preset'
-              ? 'bg-accent text-bg'
+              ? 'bg-accent text-accent-fg'
               : 'bg-surface border border-border text-muted hover:text-text'
           }`}
         >
@@ -38,7 +38,7 @@ export function CronPicker({ value, onChange }: CronPickerProps) {
           onClick={() => setMode('custom')}
           className={`px-3 py-1 rounded text-sm ${
             mode === 'custom'
-              ? 'bg-accent text-bg'
+              ? 'bg-accent text-accent-fg'
               : 'bg-surface border border-border text-muted hover:text-text'
           }`}
         >

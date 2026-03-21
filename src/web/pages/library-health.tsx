@@ -152,7 +152,7 @@ export function LibraryHealthPage() {
           type="button"
           onClick={() => rescanMutation.mutate()}
           disabled={scanning || rescanMutation.isPending}
-          className="flex items-center gap-2 px-3 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+          className="flex items-center gap-2 px-3 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           <RefreshCw size={14} className={scanning ? 'animate-spin' : undefined} />
           {scanning ? 'Scanning...' : 'Re-scan'}

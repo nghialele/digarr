@@ -161,7 +161,7 @@ export function GenreDetailPage() {
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                activeTab === tab.id ? 'bg-accent text-bg' : 'text-muted hover:text-text'
+                activeTab === tab.id ? 'bg-accent text-accent-fg' : 'text-muted hover:text-text'
               }`}
             >
               {tab.label}

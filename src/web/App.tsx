@@ -362,7 +362,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                       toast.error(msg.includes('409') ? 'Scan already running' : msg)
                     })
                 }
-                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-60"
               >
                 {pipelineRunning ? (
                   <>

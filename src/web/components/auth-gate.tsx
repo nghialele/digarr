@@ -192,7 +192,7 @@ function LoginForm({
             <div className="space-y-3 mb-4">
               <a
                 href="/api/auth/oidc/login"
-                className="block w-full text-center px-4 py-2 rounded bg-accent text-bg font-medium hover:bg-accent/90"
+                className="block w-full text-center px-4 py-2 rounded bg-accent text-accent-fg font-medium hover:bg-accent/90"
               >
                 Sign in with SSO
               </a>

@@ -96,7 +96,7 @@ export function GenresPage() {
             type="button"
             onClick={handleSeed}
             disabled={seeding}
-            className="px-4 py-2 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {seeding ? 'Seeding...' : 'Seed genres from your library'}
           </button>
@@ -130,7 +130,7 @@ export function GenresPage() {
         disabled={seeding}
         aria-label={seeding ? 'Seeding...' : 'Seed genres'}
         title={seeding ? 'Seeding...' : 'Seed genres from your library'}
-        className="md:hidden fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-accent text-bg shadow-lg flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition-opacity"
+        className="md:hidden fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-accent text-accent-fg shadow-lg flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
         {seeding ? (
           <svg

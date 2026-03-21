@@ -425,7 +425,7 @@ export default function SubscriptionsPage() {
           <button
             type="button"
             onClick={() => setShowForm({ mode: 'create' })}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus size={14} />
             New
@@ -462,7 +462,7 @@ export default function SubscriptionsPage() {
           <button
             type="button"
             onClick={() => setShowForm({ mode: 'create' })}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-bg rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus size={14} />
             Create your first subscription

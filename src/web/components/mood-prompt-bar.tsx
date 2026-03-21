@@ -64,7 +64,7 @@ export function MoodPromptBar({
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="px-3 py-1.5 bg-accent text-bg rounded text-sm font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 bg-accent text-accent-fg rounded text-sm font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Discovering...' : 'Discover'}
         </button>

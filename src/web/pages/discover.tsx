@@ -785,7 +785,7 @@ export function DiscoverPage() {
                   setCheckedIds(new Set())
                 }}
                 className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                  filter === tab ? 'bg-accent text-bg' : 'text-muted hover:text-text'
+                  filter === tab ? 'bg-accent text-accent-fg' : 'text-muted hover:text-text'
                 }`}
               >
                 {FILTER_LABELS[tab]}
@@ -824,7 +824,7 @@ export function DiscoverPage() {
                   aria-label={label}
                   title={label}
                   className={`p-1.5 rounded transition-colors ${
-                    viewMode === mode ? 'bg-accent text-bg' : 'text-muted hover:text-text'
+                    viewMode === mode ? 'bg-accent text-accent-fg' : 'text-muted hover:text-text'
                   }`}
                 >
                   <Icon />
@@ -878,7 +878,7 @@ export function DiscoverPage() {
                   onClick={handleToggleBulkMode}
                   className={`px-3 py-1.5 border rounded text-sm font-medium transition-colors ${
                     bulkMode
-                      ? 'bg-accent text-bg border-accent'
+                      ? 'bg-accent text-accent-fg border-accent'
                       : 'bg-surface border-border text-muted hover:text-text'
                   }`}
                 >
@@ -1176,7 +1176,7 @@ export function DiscoverPage() {
               })
           }
           aria-label="Run Scan"
-          className="md:hidden fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-accent text-bg shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
+          className="md:hidden fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-accent text-accent-fg shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

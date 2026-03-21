@@ -57,7 +57,7 @@ export function TodaysPick({
         <button
           type="button"
           onClick={onRunScan}
-          className="px-4 py-2 bg-accent text-bg rounded text-sm font-medium hover:bg-accent/90 transition-colors"
+          className="px-4 py-2 bg-accent text-accent-fg rounded text-sm font-medium hover:bg-accent/90 transition-colors"
         >
           Run Scan
         </button>
@@ -93,7 +93,7 @@ export function TodaysPick({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
 
         {/* Score badge */}
-        <span className="absolute top-3 right-3 bg-accent text-bg text-xs font-bold px-2 py-1 rounded">
+        <span className="absolute top-3 right-3 bg-accent text-accent-fg text-xs font-bold px-2 py-1 rounded">
           {Math.round(rec.score * 100)}
         </span>
 
