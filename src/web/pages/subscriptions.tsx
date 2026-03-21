@@ -152,7 +152,16 @@ function SubscriptionCard({
 }) {
   const [expanded, setExpanded] = useState(false)
 
-  const genre = (sub.sourceConfig?.genre as string) ?? null
+  const sourceLabel = (() => {
+    if (sub.sourceType === 'genre') {
+      return (sub.sourceConfig as { genre?: string })?.genre ?? null
+    }
+    if (sub.sourceType === 'similar') {
+      const seeds = (sub.sourceConfig as { seedArtists?: Array<{ name: string }> })?.seedArtists
+      return seeds?.map((s) => s.name).join(', ') ?? null
+    }
+    return sub.sourceType
+  })()
 
   const actionLabel =
     sub.action === 'auto_approve'
@@ -181,9 +190,9 @@ function SubscriptionCard({
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-text truncate">{sub.name}</span>
-            {genre && (
+            {sourceLabel && (
               <span className="text-xs px-2 py-0.5 bg-accent/15 text-accent rounded-full shrink-0">
-                {genre}
+                {sourceLabel}
               </span>
             )}
           </div>
@@ -313,6 +322,7 @@ export default function SubscriptionsPage() {
     // Only check per-user connections (global last.fm/discogs fields are legacy leftovers).
     // The _*Scope markers indicate user-level data was loaded by the settings endpoint.
     if (settings._lastfmScope && settings.lastfmUsername) sources.push('lastfm')
+    if (settings._listenbrainzScope && settings.listenbrainzUsername) sources.push('listenbrainz')
     if (settings._discogsScope && settings.discogsUsername) sources.push('discogs')
     return sources
   })()

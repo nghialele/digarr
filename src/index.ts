@@ -8,7 +8,7 @@ import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
-import { runGenreSubscription } from './core/genre/subscription-runner'
+import { runGenreSubscription, runSimilarSubscription } from './core/genre/subscription-runner'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
 import { getValidToken } from './core/oauth'
@@ -272,7 +272,10 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
     sourceRegistry.register(createDiscogsSource(dcToken as string, dcUsername as string))
   }
 
-  await runGenreSubscription({
+  const runnerFn = sub.sourceType === 'similar' ? runSimilarSubscription : runGenreSubscription
+  const capability = sub.sourceType === 'similar' ? 'similarArtists' : 'genreArtists'
+
+  await runnerFn({
     subscription: {
       id: sub.id,
       userId: sub.userId,
@@ -282,7 +285,7 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
       scoringWeightPreset: sub.scoringWeightPreset,
       scoringWeightOverrides: sub.scoringWeightOverrides,
     },
-    sources: sourceRegistry.withCapability('genreArtists'),
+    sources: sourceRegistry.withCapability(capability),
     mbClient: createMusicBrainzClient(),
     lidarrClient,
     storeDb,

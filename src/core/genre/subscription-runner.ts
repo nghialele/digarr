@@ -62,6 +62,8 @@ export type GenreSubscriptionDeps = {
   defaultScoreThreshold: number
 }
 
+export type SimilarSubscriptionDeps = GenreSubscriptionDeps
+
 const LISTENER_SCALE = 1_000_000
 const DEFAULT_SIMILARITY = 0.5
 
@@ -202,6 +204,165 @@ export async function runGenreSubscription(
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error(`[subscription-runner] Subscription ${subscription.id} failed:`, err)
+
+    await subscriptionQueries
+      .completeRun(run.id, {
+        completedAt: new Date(),
+        artistsFound: 0,
+        artistsNew: 0,
+        error: errorMessage,
+      })
+      .catch((e: unknown) =>
+        console.error('[subscription-runner] Failed to complete run record:', e),
+      )
+
+    await subscriptionQueries
+      .updateSubscription(subscription.id, {
+        lastRunAt: new Date(),
+        lastError: errorMessage,
+      })
+      .catch((e: unknown) =>
+        console.error('[subscription-runner] Failed to update subscription error:', e),
+      )
+
+    throw err
+  }
+}
+
+export async function runSimilarSubscription(
+  deps: SimilarSubscriptionDeps,
+): Promise<{ artistsFound: number; artistsNew: number }> {
+  const {
+    subscription,
+    sources,
+    mbClient,
+    lidarrClient,
+    storeDb,
+    subscriptionQueries,
+    libraryMbids,
+    libraryGenres,
+    rejectedMbids,
+    feedbackHistory,
+    cooldownDays,
+    defaultScoreThreshold,
+  } = deps
+
+  const seedArtists = Array.isArray(subscription.sourceConfig.seedArtists)
+    ? (subscription.sourceConfig.seedArtists as Array<{ name: string; mbid?: string }>)
+    : []
+
+  const run = await subscriptionQueries.insertRun({ subscriptionId: subscription.id })
+
+  try {
+    const capableSources = sources.filter((s) => s.capabilities.includes('similarArtists'))
+
+    // Filter by selected providers if specified
+    const providers = Array.isArray(subscription.sourceConfig.providers)
+      ? (subscription.sourceConfig.providers as string[])
+      : null
+    const filteredSources = providers
+      ? capableSources.filter((s) => providers.includes(s.id))
+      : capableSources
+
+    if (filteredSources.length === 0 || seedArtists.length === 0) {
+      await subscriptionQueries.completeRun(run.id, {
+        completedAt: new Date(),
+        artistsFound: 0,
+        artistsNew: 0,
+      })
+      await subscriptionQueries.updateSubscription(subscription.id, {
+        lastRunAt: new Date(),
+        lastResultCount: 0,
+        lastError: null,
+      })
+      return { artistsFound: 0, artistsNew: 0 }
+    }
+
+    // Collect similar artists from all sources for all seed artists
+    const discovered: DiscoveredArtist[] = []
+    const seen = new Set<string>() // dedup by lowercase name
+
+    for (const seed of seedArtists) {
+      for (const source of filteredSources) {
+        try {
+          const entries = await source.getSimilarArtists(seed.name, seed.mbid)
+          for (const entry of entries.slice(0, subscription.maxArtistsPerRun)) {
+            const key = entry.name.toLowerCase()
+            if (seen.has(key)) continue
+            seen.add(key)
+            discovered.push({
+              name: entry.name,
+              mbid: entry.mbid,
+              similarityScore: entry.similarityScore,
+              source: `similar-subscription:${source.id}`,
+            })
+          }
+        } catch (err: unknown) {
+          console.error(
+            `[subscription-runner] Source '${source.id}' failed for similar '${seed.name}':`,
+            err,
+          )
+        }
+      }
+    }
+
+    const artistsFound = discovered.length
+
+    if (artistsFound === 0) {
+      await subscriptionQueries.completeRun(run.id, {
+        completedAt: new Date(),
+        artistsFound: 0,
+        artistsNew: 0,
+      })
+      await subscriptionQueries.updateSubscription(subscription.id, {
+        lastRunAt: new Date(),
+        lastResultCount: 0,
+        lastError: null,
+      })
+      return { artistsFound: 0, artistsNew: 0 }
+    }
+
+    // Resolve -> score -> filter -> store (same as genre subscriptions)
+    const resolved = await resolve(
+      discovered,
+      mbClient as Parameters<typeof resolve>[1],
+      undefined,
+      lidarrClient as Parameters<typeof resolve>[3],
+    )
+
+    const weights = resolveWeights(
+      subscription.scoringWeightPreset ?? 'default',
+      subscription.scoringWeightOverrides,
+    )
+
+    const scored = score(resolved, libraryGenres, weights, feedbackHistory)
+    const threshold = subscription.scoreThreshold ?? defaultScoreThreshold
+    const filtered = filter(scored, libraryMbids, rejectedMbids, cooldownDays, threshold)
+
+    let batchId: number | undefined
+    if (filtered.length > 0) {
+      batchId = await store(filtered, storeDb, { userId: subscription.userId ?? undefined })
+    }
+
+    const artistsNew = filtered.length
+
+    await subscriptionQueries.completeRun(run.id, {
+      completedAt: new Date(),
+      artistsFound,
+      artistsNew,
+      batchId: batchId ?? null,
+    })
+
+    await subscriptionQueries.updateSubscription(subscription.id, {
+      lastRunAt: new Date(),
+      lastResultCount: artistsNew,
+      lastError: null,
+    })
+
+    return { artistsFound, artistsNew }
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error(`[subscription-runner] Similar subscription ${subscription.id} failed:`, err)
 
     await subscriptionQueries
       .completeRun(run.id, {

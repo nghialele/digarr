@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CronPicker } from './cron-picker'
 
 export type SubscriptionFormData = {
@@ -24,12 +24,18 @@ type SubscriptionFormProps = {
 
 const SOURCE_TYPES = [
   { value: 'genre', label: 'Genre', description: 'Discover artists in a specific genre' },
+  { value: 'similar', label: 'Similar', description: 'Find artists similar to your favorites' },
 ] as const
 
-const SOURCE_PROVIDERS = [
-  { value: 'lastfm', label: 'Last.fm' },
-  { value: 'discogs', label: 'Discogs' },
-] as const
+const SOURCE_PROVIDERS: ReadonlyArray<{
+  value: string
+  label: string
+  capabilities: string[]
+}> = [
+  { value: 'lastfm', label: 'Last.fm', capabilities: ['genreArtists', 'similarArtists'] },
+  { value: 'listenbrainz', label: 'ListenBrainz', capabilities: ['similarArtists'] },
+  { value: 'discogs', label: 'Discogs', capabilities: ['genreArtists'] },
+]
 
 const ACTIONS = [
   { value: 'add_to_recommendations', label: 'Add to recommendations' },
@@ -51,20 +57,36 @@ export function SubscriptionForm({
   configuredSources,
 }: SubscriptionFormProps) {
   const [name, setName] = useState(initial?.name ?? '')
-  const [sourceType] = useState(initial?.sourceType ?? 'genre')
+  const [sourceType, setSourceType] = useState(initial?.sourceType ?? 'genre')
   const [providers, setProviders] = useState<string[]>(
     (initial?.sourceConfig?.providers as string[]) ??
       configuredSources.filter((id) => SOURCE_PROVIDERS.some((p) => p.value === id)),
   )
   const [genre, setGenre] = useState((initial?.sourceConfig?.genre as string) ?? '')
+  const [seedArtistInput, setSeedArtistInput] = useState(
+    (initial?.sourceConfig?.seedArtists as Array<{ name: string }>)
+      ?.map((a) => a.name)
+      .join(', ') ?? '',
+  )
   const [cron, setCron] = useState(initial?.cron ?? '0 8 * * 0')
   const [enabled, setEnabled] = useState(initial?.enabled ?? true)
   const [maxArtists, setMaxArtists] = useState(initial?.maxArtistsPerRun ?? 20)
   const [action, setAction] = useState(initial?.action ?? 'add_to_recommendations')
   const [scoreThreshold, setScoreThreshold] = useState(initial?.scoreThreshold ?? null)
-  const [weightPreset, setWeightPreset] = useState(initial?.scoringWeightPreset ?? 'genre')
+  const [weightPreset, setWeightPreset] = useState(
+    initial?.scoringWeightPreset ??
+      ((initial?.sourceType ?? 'genre') === 'similar' ? 'default' : 'genre'),
+  )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Reset providers when source type changes (only show relevant ones)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset providers on source type change
+  useEffect(() => {
+    const cap = sourceType === 'similar' ? 'similarArtists' : 'genreArtists'
+    const relevant = SOURCE_PROVIDERS.filter((p) => p.capabilities.includes(cap))
+    setProviders(configuredSources.filter((id) => relevant.some((p) => p.value === id)))
+  }, [sourceType])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,8 +94,12 @@ export function SubscriptionForm({
       setError('Name is required')
       return
     }
-    if (!genre.trim()) {
+    if (sourceType === 'genre' && !genre.trim()) {
       setError('Genre is required')
+      return
+    }
+    if (sourceType === 'similar' && !seedArtistInput.trim()) {
+      setError('At least one seed artist is required')
       return
     }
     if (providers.length === 0) {
@@ -87,7 +113,17 @@ export function SubscriptionForm({
         name: name.trim(),
         sourceType,
         sourceProvider: providers.join(','),
-        sourceConfig: { genre: genre.trim(), providers },
+        sourceConfig:
+          sourceType === 'genre'
+            ? { genre: genre.trim(), providers }
+            : {
+                seedArtists: seedArtistInput
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                  .map((n) => ({ name: n })),
+                providers,
+              },
         cron,
         enabled,
         maxArtistsPerRun: maxArtists,
@@ -143,37 +179,66 @@ export function SubscriptionForm({
             />
           </div>
 
-          {/* Source type badge */}
+          {/* Source type */}
           <div>
-            <span className="block text-sm font-medium text-text mb-1">Source Type</span>
-            <div className="px-3 py-2 bg-surface border border-border rounded text-sm text-muted">
-              {SOURCE_TYPES.find((t) => t.value === sourceType)?.label ?? sourceType}
-              <span className="text-xs ml-2">
-                ({SOURCE_TYPES.find((t) => t.value === sourceType)?.description})
-              </span>
-            </div>
-          </div>
-
-          {/* Genre input */}
-          <div>
-            <label htmlFor="sub-genre" className="block text-sm font-medium text-text mb-1">
-              Genre
+            <label htmlFor="sub-source-type" className="block text-sm font-medium text-text mb-1">
+              Source Type
             </label>
-            <input
-              id="sub-genre"
-              type="text"
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-              placeholder="shoegaze"
-              className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none"
-            />
+            <select
+              id="sub-source-type"
+              value={sourceType}
+              onChange={(e) => setSourceType(e.target.value)}
+              className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text focus:border-accent focus:outline-none"
+            >
+              {SOURCE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label} -- {t.description}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Source providers (multiselect) */}
+          {/* Config: depends on source type */}
+          {sourceType === 'genre' ? (
+            <div>
+              <label htmlFor="sub-genre" className="block text-sm font-medium text-text mb-1">
+                Genre
+              </label>
+              <input
+                id="sub-genre"
+                type="text"
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                placeholder="shoegaze"
+                className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+            </div>
+          ) : (
+            <div>
+              <label htmlFor="sub-seeds" className="block text-sm font-medium text-text mb-1">
+                Seed Artists
+              </label>
+              <input
+                id="sub-seeds"
+                type="text"
+                value={seedArtistInput}
+                onChange={(e) => setSeedArtistInput(e.target.value)}
+                placeholder="Radiohead, Portishead, Massive Attack"
+                className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+              <p className="text-xs text-muted mt-1">Comma-separated artist names</p>
+            </div>
+          )}
+
+          {/* Source providers (multiselect, filtered by capability) */}
           <div>
             <span className="block text-sm font-medium text-text mb-1">Sources</span>
             <div className="flex flex-wrap gap-2">
-              {SOURCE_PROVIDERS.map((p) => {
+              {SOURCE_PROVIDERS.filter((p) =>
+                p.capabilities.includes(
+                  sourceType === 'similar' ? 'similarArtists' : 'genreArtists',
+                ),
+              ).map((p) => {
                 const configured = configuredSources.includes(p.value)
                 const selected = providers.includes(p.value)
                 return (
