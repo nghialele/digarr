@@ -35,7 +35,16 @@ import {
 } from './lib/api'
 import { PreviewContext } from './lib/preview-context'
 import { queryClient } from './lib/query-client'
-import { applyTheme, getStoredTheme, setStoredTheme, type Theme } from './lib/theme'
+import {
+  applyTheme,
+  COLOR_THEMES,
+  type ColorTheme,
+  getStoredColorTheme,
+  getStoredMode,
+  type Mode,
+  setStoredColorTheme,
+  setStoredMode,
+} from './lib/theme'
 import { AnalyticsPage } from './pages/analytics'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
@@ -83,23 +92,75 @@ function MobileMenuIcon({ open }: { open: boolean }) {
 // App shell
 // ---------------------------------------------------------------------------
 
-const THEME_CYCLE: Theme[] = ['dark', 'light', 'system']
-const THEME_ICONS = { dark: Moon, light: Sun, system: Monitor } as const
-const THEME_LABELS = { dark: 'Dark', light: 'Light', system: 'System' } as const
+function ThemePicker({
+  mode,
+  colorTheme,
+  onModeChange,
+  onColorThemeChange,
+}: {
+  mode: Mode
+  colorTheme: ColorTheme
+  onModeChange: (m: Mode) => void
+  onColorThemeChange: (t: ColorTheme) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
 
-function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) => void }) {
-  const Icon = THEME_ICONS[theme]
-  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length] ?? 'dark'
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  const ModeIcon = mode === 'dark' ? Moon : mode === 'light' ? Sun : Monitor
+
   return (
-    <button
-      type="button"
-      onClick={() => onChange(next)}
-      className="p-1.5 text-muted hover:text-text transition-colors"
-      aria-label={`Theme: ${THEME_LABELS[theme]}. Click for ${THEME_LABELS[next]}`}
-      title={`${THEME_LABELS[theme]} theme`}
-    >
-      <Icon size={18} />
-    </button>
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="p-1.5 text-muted hover:text-text transition-colors"
+        aria-label="Theme settings"
+        title="Theme"
+      >
+        <ModeIcon size={18} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-50 py-1">
+          <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted">Mode</div>
+          {(['dark', 'light', 'system'] as const).map((m) => {
+            const Icon = m === 'dark' ? Moon : m === 'light' ? Sun : Monitor
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onModeChange(m)}
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-bg transition-colors ${mode === m ? 'text-accent' : 'text-text'}`}
+              >
+                <Icon size={14} />
+                <span className="capitalize">{m}</span>
+              </button>
+            )
+          })}
+          <div className="border-t border-border my-1" />
+          <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted">Theme</div>
+          {COLOR_THEMES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onColorThemeChange(t.id)}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-bg transition-colors ${colorTheme === t.id ? 'text-accent' : 'text-text'}`}
+            >
+              <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -169,7 +230,8 @@ function UserMenu({ username }: { username: string }) {
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [theme, setThemeState] = useState<Theme>(getStoredTheme)
+  const [mode, setModeState] = useState<Mode>(getStoredMode)
+  const [colorTheme, setColorThemeState] = useState<ColorTheme>(getStoredColorTheme)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const preview = usePreview()
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
@@ -182,20 +244,26 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
 
-  function handleThemeChange(t: Theme) {
-    setThemeState(t)
-    setStoredTheme(t)
-    applyTheme(t)
+  function handleModeChange(m: Mode) {
+    setModeState(m)
+    setStoredMode(m)
+    applyTheme(colorTheme, m)
+  }
+
+  function handleColorThemeChange(t: ColorTheme) {
+    setColorThemeState(t)
+    setStoredColorTheme(t)
+    applyTheme(t, mode)
   }
 
   // Listen for system preference changes when in system mode
   useEffect(() => {
-    if (theme !== 'system') return
+    if (mode !== 'system') return
     const mq = window.matchMedia('(prefers-color-scheme: light)')
-    const handler = () => applyTheme('system')
+    const handler = () => applyTheme(colorTheme, 'system')
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, [theme])
+  }, [mode, colorTheme])
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'text-text' : 'text-muted hover:text-text'
@@ -276,7 +344,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <ThemeToggle theme={theme} onChange={handleThemeChange} />
+              <ThemePicker
+                mode={mode}
+                colorTheme={colorTheme}
+                onModeChange={handleModeChange}
+                onColorThemeChange={handleColorThemeChange}
+              />
               {currentUser && <UserMenu username={currentUser.username} />}
               <button
                 type="button"
@@ -453,7 +526,7 @@ function InnerApp() {
 export function App() {
   // Apply theme immediately on mount (before first render flicker)
   useEffect(() => {
-    applyTheme(getStoredTheme())
+    applyTheme(getStoredColorTheme(), getStoredMode())
   }, [])
 
   return (

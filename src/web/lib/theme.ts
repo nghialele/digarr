@@ -1,25 +1,62 @@
-export type Theme = 'dark' | 'light' | 'system'
+export type Mode = 'dark' | 'light' | 'system'
 
-const STORAGE_KEY = 'digarr-theme'
+export type ColorTheme =
+  | 'tokyonight'
+  | 'catppuccin'
+  | 'dracula'
+  | 'nord'
+  | 'gruvbox'
+  | 'solarized'
+  | 'rosepine'
 
-export function getStoredTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY)
+export const COLOR_THEMES: { id: ColorTheme; name: string }[] = [
+  { id: 'tokyonight', name: 'Tokyo Night' },
+  { id: 'catppuccin', name: 'Catppuccin' },
+  { id: 'dracula', name: 'Dracula' },
+  { id: 'nord', name: 'Nord' },
+  { id: 'gruvbox', name: 'Gruvbox' },
+  { id: 'solarized', name: 'Solarized' },
+  { id: 'rosepine', name: 'Rose Pine' },
+]
+
+const MODE_KEY = 'digarr-theme'
+const COLOR_KEY = 'digarr-color-theme'
+
+// Keep backward compat: old 'dark'/'light' values still work as Mode
+export function getStoredMode(): Mode {
+  const stored = localStorage.getItem(MODE_KEY)
   if (stored === 'dark' || stored === 'light' || stored === 'system') return stored
   return 'system'
 }
 
-export function setStoredTheme(theme: Theme): void {
-  localStorage.setItem(STORAGE_KEY, theme)
+export function setStoredMode(mode: Mode): void {
+  localStorage.setItem(MODE_KEY, mode)
 }
 
-export function resolveTheme(theme: Theme): 'dark' | 'light' {
-  if (theme === 'system') {
+export function getStoredColorTheme(): ColorTheme {
+  const stored = localStorage.getItem(COLOR_KEY)
+  if (COLOR_THEMES.some((t) => t.id === stored)) return stored as ColorTheme
+  return 'tokyonight'
+}
+
+export function setStoredColorTheme(theme: ColorTheme): void {
+  localStorage.setItem(COLOR_KEY, theme)
+}
+
+export function resolveMode(mode: Mode): 'dark' | 'light' {
+  if (mode === 'system') {
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
   }
-  return theme
+  return mode
 }
 
-export function applyTheme(theme: Theme): void {
-  const resolved = resolveTheme(theme)
-  document.documentElement.setAttribute('data-theme', resolved)
+export function applyTheme(colorTheme: ColorTheme, mode: Mode): void {
+  const resolved = resolveMode(mode)
+  document.documentElement.setAttribute('data-theme', `${colorTheme}-${resolved}`)
 }
+
+// Backward-compat aliases
+export type Theme = Mode
+export const getStoredTheme = getStoredMode
+export const setStoredTheme = setStoredMode
+export const resolveTheme = resolveMode
