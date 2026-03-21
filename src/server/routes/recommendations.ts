@@ -112,21 +112,6 @@ export function recommendationRoutes(deps: AppDependencies) {
         if (target.type === 'lidarr') lidarrResult = result
       }
 
-      // Handle targets with addToFavorites capability (Navidrome, Jellyfin)
-      for (const target of effectiveTargets) {
-        if (!target.capabilities?.includes('addToFavorites')) continue
-        const result = await target.addToFavorites?.([
-          { mbid: rec.artist.mbid, name: rec.artist.name },
-        ])
-        if (!result) continue
-        targetActions[target.id] = {
-          action: 'addToFavorites',
-          status: result.success ? 'added' : 'failed',
-          error: result.error,
-        }
-        if (result.success) anySuccess = true
-      }
-
       // Backward compat: write Lidarr-specific columns
       const extra: Record<string, unknown> = { targetActions }
       if (lidarrResult) {
@@ -229,21 +214,6 @@ export function recommendationRoutes(deps: AppDependencies) {
           if (result.success && result.externalId) lidarrArtistId = result.externalId
           if (result.error) lidarrError = result.error
         }
-      }
-
-      // Handle targets with addToFavorites capability (Navidrome, Jellyfin)
-      for (const target of effectiveTargets) {
-        if (!target.capabilities?.includes('addToFavorites')) continue
-        const result = await target.addToFavorites?.([
-          { mbid: rec.artist.mbid, name: rec.artist.name },
-        ])
-        if (!result) continue
-        targetActions[target.id] = {
-          action: 'addToFavorites',
-          status: result.success ? 'added' : 'failed',
-          error: result.error,
-        }
-        if (result.success) anySuccess = true
       }
 
       const hasLidarr = effectiveTargets.some((t) => t.type === 'lidarr')

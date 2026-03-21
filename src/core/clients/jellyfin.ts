@@ -54,10 +54,6 @@ export function createJellyfinClient(
     return queue.add(() => http.get<T>(path)) as Promise<T>
   }
 
-  function post<T>(path: string, body?: unknown): Promise<T> {
-    return queue.add(() => http.post<T>(path, body)) as Promise<T>
-  }
-
   let resolvedUserId: string | null = null
 
   async function getUserId(): Promise<string> {
@@ -183,75 +179,10 @@ export function createJellyfinClient(
     }
   }
 
-  async function searchArtist(name: string): Promise<Array<{ Id: string; Name: string }>> {
-    const userId = await getUserId()
-    const params = new URLSearchParams({
-      searchTerm: name,
-      IncludeItemTypes: 'MusicArtist',
-      Recursive: 'true',
-      Limit: '10',
-    })
-    const result = await get<JellyfinItemsResponse>(`/Users/${userId}/Items?${params}`)
-    return (result.Items ?? []).map((item) => ({
-      Id: item.Id as string,
-      Name: item.Name as string,
-    }))
-  }
-
-  async function searchTracks(
-    artistName: string,
-    limit = 50,
-  ): Promise<
-    Array<{
-      Id: string
-      Name: string
-      ArtistItems: Array<{ Id: string; Name: string }>
-    }>
-  > {
-    const userId = await getUserId()
-    const params = new URLSearchParams({
-      searchTerm: artistName,
-      IncludeItemTypes: 'Audio',
-      Recursive: 'true',
-      Limit: String(limit),
-    })
-    const result = await get<JellyfinItemsResponse>(`/Users/${userId}/Items?${params}`)
-    return (result.Items ?? []).map((item) => ({
-      Id: item.Id as string,
-      Name: item.Name as string,
-      ArtistItems: (item.ArtistItems as Array<{ Id: string; Name: string }>) ?? [],
-    }))
-  }
-
-  async function createPlaylist(name: string, trackIds: string[]): Promise<{ Id: string }> {
-    const userId = await getUserId()
-    return post<{ Id: string }>('/Playlists', {
-      Name: name,
-      Ids: trackIds,
-      UserId: userId,
-      MediaType: 'Audio',
-    })
-  }
-
-  async function addToPlaylist(playlistId: string, trackIds: string[]): Promise<void> {
-    const userId = await getUserId()
-    await post(`/Playlists/${playlistId}/Items?userId=${userId}&Ids=${trackIds.join(',')}`)
-  }
-
-  async function favoriteArtist(artistId: string): Promise<void> {
-    const userId = await getUserId()
-    await post(`/Users/${userId}/FavoriteItems/${artistId}`)
-  }
-
   return {
     getTopArtists,
     getRecentlyPlayed,
     getFavoriteArtists,
     testConnection,
-    searchArtist,
-    searchTracks,
-    createPlaylist,
-    addToPlaylist,
-    favoriteArtist,
   }
 }

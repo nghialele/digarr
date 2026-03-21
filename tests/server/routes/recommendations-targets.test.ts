@@ -114,44 +114,12 @@ describe('target-aware approval', () => {
     expect(body.status).toBe('add_failed')
   })
 
-  it('approves to Navidrome target -- calls addToFavorites', async () => {
-    mockDeps.getRecommendation.mockResolvedValue({
-      id: 1,
-      artist: { mbid: 'mbid-1', name: 'Radiohead' },
-    })
-    const mockTarget = {
-      id: 'navidrome-1',
-      type: 'navidrome',
-      capabilities: ['createPlaylist', 'addToFavorites'],
-      addToFavorites: vi.fn().mockResolvedValue({
-        success: true,
-        targetType: 'navidrome',
-        targetId: 1,
-      }),
-      testConnection: vi.fn(),
-    }
-    mockDeps.getEnabledTargetsForUser.mockResolvedValue([mockTarget])
-
-    const app = createTestApp()
-    const res = await app.request('/api/recommendations/1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'approved' }),
-    })
-
-    const body = await res.json()
-    expect(body.status).toBe('approved')
-    expect(mockTarget.addToFavorites).toHaveBeenCalledWith([
-      { mbid: 'mbid-1', name: 'Radiohead' },
-    ])
-  })
-
   it('approves to specific target via targetId', async () => {
     mockDeps.getRecommendation.mockResolvedValue({
       id: 1,
       artist: { mbid: 'mbid-1', name: 'Radiohead' },
     })
-    const lidarrTarget = {
+    const lidarrTarget1 = {
       id: 'lidarr-1',
       type: 'lidarr',
       capabilities: ['addArtist'],
@@ -163,39 +131,40 @@ describe('target-aware approval', () => {
       }),
       testConnection: vi.fn(),
     }
-    const navidromeTarget = {
-      id: 'navidrome-2',
-      type: 'navidrome',
-      capabilities: ['createPlaylist', 'addToFavorites'],
-      addToFavorites: vi.fn().mockResolvedValue({
+    const lidarrTarget2 = {
+      id: 'lidarr-2',
+      type: 'lidarr',
+      capabilities: ['addArtist'],
+      addArtist: vi.fn().mockResolvedValue({
         success: true,
-        targetType: 'navidrome',
+        targetType: 'lidarr',
         targetId: 2,
+        externalId: 99,
       }),
       testConnection: vi.fn(),
     }
-    mockDeps.getEnabledTargetsForUser.mockResolvedValue([lidarrTarget, navidromeTarget])
+    mockDeps.getEnabledTargetsForUser.mockResolvedValue([lidarrTarget1, lidarrTarget2])
 
     const app = createTestApp()
     const res = await app.request('/api/recommendations/1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'approved', targetId: 'navidrome-2' }),
+      body: JSON.stringify({ status: 'approved', targetId: 'lidarr-2' }),
     })
 
     const body = await res.json()
-    expect(body.status).toBe('approved')
-    // Only Navidrome target should be called
-    expect(navidromeTarget.addToFavorites).toHaveBeenCalled()
-    expect(lidarrTarget.addArtist).not.toHaveBeenCalled()
+    expect(body.status).toBe('added_to_lidarr')
+    // Only lidarr-2 should be called
+    expect(lidarrTarget2.addArtist).toHaveBeenCalled()
+    expect(lidarrTarget1.addArtist).not.toHaveBeenCalled()
   })
 
-  it('handles mixed targets -- calls both addArtist and addToFavorites', async () => {
+  it('handles multiple addArtist targets', async () => {
     mockDeps.getRecommendation.mockResolvedValue({
       id: 1,
       artist: { mbid: 'mbid-1', name: 'Radiohead' },
     })
-    const lidarrTarget = {
+    const lidarrTarget1 = {
       id: 'lidarr-1',
       type: 'lidarr',
       capabilities: ['addArtist'],
@@ -207,18 +176,19 @@ describe('target-aware approval', () => {
       }),
       testConnection: vi.fn(),
     }
-    const navidromeTarget = {
-      id: 'navidrome-1',
-      type: 'navidrome',
-      capabilities: ['createPlaylist', 'addToFavorites'],
-      addToFavorites: vi.fn().mockResolvedValue({
+    const lidarrTarget2 = {
+      id: 'lidarr-2',
+      type: 'lidarr',
+      capabilities: ['addArtist'],
+      addArtist: vi.fn().mockResolvedValue({
         success: true,
-        targetType: 'navidrome',
+        targetType: 'lidarr',
         targetId: 2,
+        externalId: 99,
       }),
       testConnection: vi.fn(),
     }
-    mockDeps.getEnabledTargetsForUser.mockResolvedValue([lidarrTarget, navidromeTarget])
+    mockDeps.getEnabledTargetsForUser.mockResolvedValue([lidarrTarget1, lidarrTarget2])
 
     const app = createTestApp()
     const res = await app.request('/api/recommendations/1', {
@@ -228,29 +198,27 @@ describe('target-aware approval', () => {
     })
 
     const body = await res.json()
-    // Lidarr present -> added_to_lidarr status
     expect(body.status).toBe('added_to_lidarr')
-    expect(lidarrTarget.addArtist).toHaveBeenCalled()
-    expect(navidromeTarget.addToFavorites).toHaveBeenCalled()
-    // Both targets recorded in targetActions
+    expect(lidarrTarget1.addArtist).toHaveBeenCalled()
+    expect(lidarrTarget2.addArtist).toHaveBeenCalled()
     expect(body.targetActions['lidarr-1'].status).toBe('added')
-    expect(body.targetActions['navidrome-1'].action).toBe('addToFavorites')
-    expect(body.targetActions['navidrome-1'].status).toBe('added')
+    expect(body.targetActions['lidarr-2'].status).toBe('added')
   })
 
-  it('bulk approve with addToFavorites targets', async () => {
+  it('bulk approve with addArtist targets', async () => {
     mockDeps.getRecommendation.mockResolvedValue({
       id: 1,
       artist: { mbid: 'mbid-1', name: 'Radiohead' },
     })
     const mockTarget = {
-      id: 'navidrome-1',
-      type: 'navidrome',
-      capabilities: ['createPlaylist', 'addToFavorites'],
-      addToFavorites: vi.fn().mockResolvedValue({
+      id: 'lidarr-1',
+      type: 'lidarr',
+      capabilities: ['addArtist'],
+      addArtist: vi.fn().mockResolvedValue({
         success: true,
-        targetType: 'navidrome',
+        targetType: 'lidarr',
         targetId: 1,
+        externalId: 42,
       }),
       testConnection: vi.fn(),
     }
@@ -264,10 +232,11 @@ describe('target-aware approval', () => {
     })
 
     const body = await res.json()
-    expect(body.results[0].status).toBe('approved')
-    expect(mockTarget.addToFavorites).toHaveBeenCalledWith([
+    expect(body.results[0].status).toBe('added_to_lidarr')
+    expect(mockTarget.addArtist).toHaveBeenCalledWith(
       { mbid: 'mbid-1', name: 'Radiohead' },
-    ])
+      expect.any(Object),
+    )
   })
 
   it('bulk approve without targets marks all as approved', async () => {

@@ -1,11 +1,9 @@
 import type { ServiceTestResult } from '@/core/types'
 
-export type TargetCapability = 'addArtist' | 'addAlbum' | 'createPlaylist' | 'addToFavorites'
+export type TargetCapability = 'addArtist' | 'addAlbum' | 'createPlaylist'
 
 export const TARGET_TYPES = [
   'lidarr',
-  'navidrome',
-  'jellyfin',
   'spotify-playlist',
   'export',
 ] as const
@@ -44,13 +42,6 @@ export type PlaylistResult = {
   error?: string
 }
 
-export type FavoritesResult = {
-  success: boolean
-  targetType: string
-  targetId: number
-  error?: string
-}
-
 export interface DestinationTarget {
   id: string
   name: string
@@ -67,8 +58,6 @@ export interface DestinationTarget {
     items: PlaylistItem[],
     options?: { description?: string; public?: boolean; replace?: boolean },
   ): Promise<PlaylistResult>
-
-  addToFavorites?(artists: Array<{ mbid: string; name: string }>): Promise<FavoritesResult>
 
   testConnection(): Promise<ServiceTestResult>
 }

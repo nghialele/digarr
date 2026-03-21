@@ -19,9 +19,7 @@ import { createListenBrainzSource } from './core/plugins/listenbrainz'
 import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
 import { setSessionStore } from './core/sessions'
-import { createJellyfinTarget } from './core/targets/jellyfin'
 import { createLidarrTarget } from './core/targets/lidarr'
-import { createNavidromeTarget } from './core/targets/navidrome'
 import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
 import { db, pool } from './db'
 import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
@@ -377,26 +375,6 @@ const app = createApp({
       return target.testConnection()
     }
 
-    if (type === 'navidrome') {
-      const target = createNavidromeTarget(0, {
-        url: config.url as string,
-        username: config.username as string,
-        password: config.password as string,
-        skipTlsVerify: (config.skipTlsVerify as boolean) ?? false,
-      })
-      return target.testConnection()
-    }
-
-    if (type === 'jellyfin') {
-      const target = createJellyfinTarget(0, {
-        url: config.url as string,
-        apiKey: config.apiKey as string,
-        userId: config.userId as string | undefined,
-        skipTlsVerify: (config.skipTlsVerify as boolean) ?? false,
-      })
-      return target.testConnection()
-    }
-
     if (type === 'spotify-playlist') {
       // Spotify test requires OAuth -- can't test from config alone
       return {
@@ -424,28 +402,6 @@ const app = createApp({
             qualityProfileId: Number(prefs.qualityProfileId ?? 1),
             metadataProfileId: Number(prefs.metadataProfileId ?? 1),
             rootFolderId: Number(prefs.rootFolderId ?? 1),
-          }),
-        )
-      }
-
-      if (row.type === 'navidrome') {
-        targets.push(
-          createNavidromeTarget(row.id, {
-            url: row.config.url as string,
-            username: row.config.username as string,
-            password: row.config.password as string,
-            skipTlsVerify: (row.config.skipTlsVerify as boolean) ?? false,
-          }),
-        )
-      }
-
-      if (row.type === 'jellyfin') {
-        targets.push(
-          createJellyfinTarget(row.id, {
-            url: row.config.url as string,
-            apiKey: row.config.apiKey as string,
-            userId: row.config.userId as string | undefined,
-            skipTlsVerify: (row.config.skipTlsVerify as boolean) ?? false,
           }),
         )
       }

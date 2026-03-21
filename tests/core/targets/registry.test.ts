@@ -62,7 +62,7 @@ describe('TargetRegistry', () => {
     const reg = new TargetRegistry()
     reg.register(makeTarget({ id: 'a', capabilities: ['addArtist'] }))
     reg.register(makeTarget({ id: 'b', capabilities: ['createPlaylist'] }))
-    reg.register(makeTarget({ id: 'c', capabilities: ['createPlaylist', 'addToFavorites'] }))
+    reg.register(makeTarget({ id: 'c', capabilities: ['createPlaylist'] }))
     expect(reg.withCapability('createPlaylist')).toHaveLength(2)
   })
 })

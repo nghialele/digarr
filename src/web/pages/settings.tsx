@@ -1096,40 +1096,15 @@ const TARGET_TYPES = [
       { key: 'apiKey', label: 'API Key', placeholder: 'Enter API key', type: 'password' as const },
     ],
   },
-  {
-    value: 'navidrome',
-    label: 'Navidrome',
-    fields: [
-      { key: 'url', label: 'URL', placeholder: 'http://navidrome:4533' },
-      { key: 'username', label: 'Username', placeholder: 'Enter username' },
-      {
-        key: 'password',
-        label: 'Password',
-        placeholder: 'Enter password',
-        type: 'password' as const,
-      },
-    ],
-  },
-  {
-    value: 'jellyfin',
-    label: 'Jellyfin',
-    fields: [
-      { key: 'url', label: 'URL', placeholder: 'http://jellyfin:8096' },
-      { key: 'apiKey', label: 'API Key', placeholder: 'Enter API key', type: 'password' as const },
-      { key: 'userId', label: 'User ID (optional)', placeholder: 'UUID or username' },
-    ],
-  },
 ]
 
 function TargetTypeIcon({ type }: { type: string }) {
   const iconMap: Record<string, string> = {
     lidarr: '/icons/lidarr.png',
-    jellyfin: '/icons/jellyfin.svg',
     'spotify-playlist': '/icons/spotify.svg',
   }
   const src = iconMap[type]
   if (src) return <img src={src} alt="" className="w-5 h-5" />
-  // Text fallback for types without icons (e.g. navidrome)
   return (
     <span className="w-5 h-5 rounded bg-accent/20 text-accent text-[10px] font-bold flex items-center justify-center uppercase">
       {type.charAt(0)}
