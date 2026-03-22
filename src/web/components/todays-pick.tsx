@@ -52,7 +52,7 @@ export function TodaysPick({
   if (loading) {
     return (
       <div className="bg-surface border border-border rounded-lg overflow-hidden h-full">
-        <Skeleton className="h-1/3 w-full" />
+        <Skeleton className="h-52 w-full" />
         <div className="p-4 space-y-3">
           <Skeleton className="h-5 w-2/3" />
           <Skeleton className="h-3 w-full" />
@@ -101,7 +101,7 @@ export function TodaysPick({
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden flex flex-col">
       {/* Banner -- fills ~40% of card height */}
-      <div className="relative shrink-0 basis-2/5 min-h-[120px]" style={bannerStyle}>
+      <div className="relative shrink-0 h-52" style={bannerStyle}>
         {hasImage && (
           <img
             src={bannerUrl}
@@ -178,26 +178,26 @@ export function TodaysPick({
         </div>
       </div>
 
-      {/* Action bar -- pinned to bottom */}
-      <div className="border-t border-border flex shrink-0">
+      {/* Action buttons */}
+      <div className="px-4 pb-4 pt-2 flex gap-2 shrink-0">
         <button
           type="button"
           onClick={() => onReject(rec.id)}
-          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-reject hover:bg-reject/10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-reject"
+          className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-reject/30 text-reject bg-reject/5 hover:bg-reject/15 transition-colors"
         >
           Reject
         </button>
         <button
           type="button"
           onClick={() => onSkip(rec.id)}
-          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-muted hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
+          className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-border text-muted bg-surface hover:bg-bg transition-colors"
         >
           Skip
         </button>
         <button
           type="button"
           onClick={() => onApprove(rec.id)}
-          className="flex-1 py-3 text-sm font-medium text-center transition-colors text-approve hover:bg-approve/10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-approve"
+          className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
         >
           Approve
         </button>
