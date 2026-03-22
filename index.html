@@ -14,13 +14,13 @@
   <body>
     <script>
       // Apply theme before React mounts to prevent FOUC
-      (function() {
+      (() => {
         var m = localStorage.getItem('digarr-theme') || 'system';
         var c = localStorage.getItem('digarr-color-theme') || 'tokyonight';
         var resolved = m === 'system'
           ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
           : m;
-        document.documentElement.setAttribute('data-theme', c + '-' + resolved);
+        document.documentElement.setAttribute('data-theme', `${c}-${resolved}`);
       })();
     </script>
     <div id="root"></div>

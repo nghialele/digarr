@@ -886,14 +886,14 @@ export function DiscoverPage() {
                   {bulkMode ? 'Cancel' : 'Select'}
                 </button>
                 {filter === 'pending' && (
-                    <button
-                      type="button"
-                      onClick={handleClearAll}
-                      className="px-2 py-1 text-xs text-muted hover:text-red-400 transition-colors"
-                      title="Rejects all pending recommendations at once -- useful after reviewing a batch"
-                    >
-                      Clear All
-                    </button>
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="px-2 py-1 text-xs text-muted hover:text-red-400 transition-colors"
+                    title="Rejects all pending recommendations at once -- useful after reviewing a batch"
+                  >
+                    Clear All
+                  </button>
                 )}
               </>
             )}

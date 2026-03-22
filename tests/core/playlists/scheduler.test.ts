@@ -6,7 +6,6 @@ import { PlaylistScheduler } from '@/core/playlists/scheduler'
 // Mock croner so tests don't run real timers
 vi.mock('croner', () => {
   class MockCron {
-    private _stopped = false
     private _nextRun: Date | null
 
     constructor(
@@ -18,7 +17,6 @@ vi.mock('croner', () => {
     }
 
     stop() {
-      this._stopped = true
       this._nextRun = null
     }
 
@@ -52,7 +50,7 @@ describe('PlaylistScheduler', () => {
 
     const next = scheduler.nextRun()
     expect(next).toBeInstanceOf(Date)
-    expect(next!.getTime()).toBeGreaterThan(Date.now())
+    expect(next?.getTime()).toBeGreaterThan(Date.now())
   })
 
   it('nextRun returns null before start', () => {
@@ -84,7 +82,6 @@ describe('PlaylistScheduler', () => {
   })
 
   it('swallows errors thrown by the run function', async () => {
-    const { Cron } = await import('croner')
     const errorFn = vi.fn(async () => {
       throw new Error('boom')
     })
@@ -92,7 +89,7 @@ describe('PlaylistScheduler', () => {
     scheduler.start('0 6 * * 1', errorFn)
 
     // Trigger the cron via the mock helper -- should not throw
-    const job = (scheduler as unknown as { job: InstanceType<typeof Cron> & { trigger: () => Promise<void> } }).job
+    const job = (scheduler as unknown as { job: { trigger: () => Promise<void> } }).job
     await expect(job.trigger()).resolves.toBeUndefined()
   })
 })

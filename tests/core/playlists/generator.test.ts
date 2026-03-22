@@ -90,7 +90,8 @@ describe('weekly_digest strategy', () => {
     await impl.selectArtists(deps, { size: 9 })
 
     expect(deps.getApprovedArtists).toHaveBeenCalledOnce()
-    const firstCall = (deps.getApprovedArtists as ReturnType<typeof vi.fn>).mock.calls[0] as unknown[]
+    const firstCall = (deps.getApprovedArtists as ReturnType<typeof vi.fn>).mock
+      .calls[0] as unknown[]
     const opts = firstCall[0] as { since: Date; genre?: string; limit?: number }
     expect(opts.since).toBeInstanceOf(Date)
 
@@ -247,7 +248,8 @@ describe('rediscover strategy', () => {
     await impl.selectArtists(deps, { size: 9 })
 
     expect(deps.getOlderApprovedArtists).toHaveBeenCalledOnce()
-    const firstCall = (deps.getOlderApprovedArtists as ReturnType<typeof vi.fn>).mock.calls[0] as unknown[]
+    const firstCall = (deps.getOlderApprovedArtists as ReturnType<typeof vi.fn>).mock
+      .calls[0] as unknown[]
     const opts = firstCall[0] as { olderThan: Date; limit: number }
     expect(opts.olderThan).toBeInstanceOf(Date)
 

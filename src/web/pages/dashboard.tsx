@@ -5,15 +5,16 @@ import { toast } from 'sonner'
 import { ApproveDialog } from '../components/approve-dialog'
 import { ArtistThumb } from '../components/artist-thumb'
 import { Hint } from '../components/hint'
+import type { MonitorOption } from '../components/monitoring-options'
 import { MoodPromptBar } from '../components/mood-prompt-bar'
 import { PipelineProgress } from '../components/pipeline-progress'
 import { RecentlyApproved } from '../components/recently-approved'
 import { type Recommendation, TodaysPick } from '../components/todays-pick'
 import { Skeleton } from '../components/ui/skeleton'
 import {
+  type ActivityEntry,
   approveRecommendation,
   approveToTarget,
-  type ActivityEntry,
   getDashboardActivity,
   getDashboardTaste,
   getRecentListens,
@@ -29,7 +30,6 @@ import {
   triggerPipeline,
   updateRecommendation,
 } from '../lib/api'
-import type { MonitorOption } from '../components/monitoring-options'
 
 // Helpers
 
@@ -510,12 +510,16 @@ export function Dashboard() {
         <div className="space-y-3">
           <SubscriptionPulse subs={subsData} scheduler={schedulerData} />
           <Hint id="dashboard-subscriptions-tip" type="inline">
-            Subscriptions automatically find new artists on a schedule. Check the Subscriptions
-            page to set one up.
+            Subscriptions automatically find new artists on a schedule. Check the Subscriptions page
+            to set one up.
           </Hint>
         </div>
         <div className="space-y-3">
-          <ListeningActivity data={listensData} range={listenRange} onRangeChange={setListenRange} />
+          <ListeningActivity
+            data={listensData}
+            range={listenRange}
+            onRangeChange={setListenRange}
+          />
           <Hint id="dashboard-listening-tip" type="inline">
             Your listening data comes from ListenBrainz or Last.fm. Make sure your token is set in
             Settings for accurate results.

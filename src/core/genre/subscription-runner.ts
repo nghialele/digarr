@@ -106,9 +106,10 @@ export async function runGenreSubscription(
       : capableSources
 
     if (filteredSources.length === 0) {
-      const reason = capableSources.length === 0
-        ? `No sources with genreArtists capability (available sources: ${sources.map((s) => s.id).join(', ') || 'none'})`
-        : `Provider filter [${providers?.join(', ')}] matched no capable sources (capable: ${capableSources.map((s) => s.id).join(', ')})`
+      const reason =
+        capableSources.length === 0
+          ? `No sources with genreArtists capability (available sources: ${sources.map((s) => s.id).join(', ') || 'none'})`
+          : `Provider filter [${providers?.join(', ')}] matched no capable sources (capable: ${capableSources.map((s) => s.id).join(', ')})`
       console.warn(`[subscription] id=${subscription.id}: ${reason}`)
       await subscriptionQueries.completeRun(run.id, {
         completedAt: new Date(),

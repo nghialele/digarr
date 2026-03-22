@@ -191,7 +191,9 @@ describe('replacePlaylistTracks', () => {
       insert: vi.fn().mockReturnValue(insertChain),
     }
     const db = {
-      transaction: vi.fn().mockImplementation((fn: (tx: typeof txMock) => Promise<void>) => fn(txMock)),
+      transaction: vi
+        .fn()
+        .mockImplementation((fn: (tx: typeof txMock) => Promise<void>) => fn(txMock)),
     } as unknown as Database
 
     const tracks: PlaylistTrackInsert[] = [
@@ -218,7 +220,9 @@ describe('replacePlaylistTracks', () => {
       insert: vi.fn(),
     }
     const db = {
-      transaction: vi.fn().mockImplementation((fn: (tx: typeof txMock) => Promise<void>) => fn(txMock)),
+      transaction: vi
+        .fn()
+        .mockImplementation((fn: (tx: typeof txMock) => Promise<void>) => fn(txMock)),
     } as unknown as Database
 
     await replacePlaylistTracks(db, 1, [])

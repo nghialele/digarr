@@ -2,8 +2,8 @@
 
 import { Hono } from 'hono'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { playlistRoutes } from '@/server/routes/playlists'
 import type { PlaylistDeps } from '@/server/routes/playlists'
+import { playlistRoutes } from '@/server/routes/playlists'
 
 const USER_ID = 42
 
