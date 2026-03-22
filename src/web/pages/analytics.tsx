@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Hint } from '../components/hint'
 import { StatCard } from '../components/stat-card'
 import { Skeleton } from '../components/ui/skeleton'
+import { useHints } from '../hooks/use-hints'
 import {
   type AnalyticsBatch,
   type AnalyticsGenre,
@@ -264,13 +266,13 @@ function ScoreDistribution({ buckets }: { buckets: ScoreBucket[] }) {
   const maxCount = Math.max(...buckets.map((b) => b.count), 1)
   return (
     <div className="bg-surface border border-border rounded-lg p-4">
-      <div className="flex items-end gap-1 h-28">
+      <div className="relative flex items-end gap-1 h-28">
         {buckets.map((b) => {
           const h = Math.max((b.count / maxCount) * 100, 2)
           return (
             <div
               key={b.bucket}
-              className="flex-1 flex flex-col items-center justify-end"
+              className="flex-1 h-full flex flex-col justify-end"
               title={`${b.bucket}: ${b.count} recs`}
             >
               <div className="w-full rounded-t bg-accent" style={{ height: `${h}%` }} />
@@ -371,6 +373,7 @@ function TimeToActCards({ data }: { data: TimeToAct[] }) {
 }
 
 export function AnalyticsPage() {
+  const { isHintDismissed, dismissHint } = useHints()
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: getAnalyticsOverview,
@@ -402,6 +405,16 @@ export function AnalyticsPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      <Hint
+        id="analytics-intro-tip"
+        type="inline"
+        dismissed={isHintDismissed('analytics-intro-tip')}
+        onDismiss={() => dismissHint('analytics-intro-tip')}
+      >
+        Track how your discovery pipeline performs over time. Higher approval rates mean Digarr is
+        learning your taste well.
+      </Hint>
+
       {/* Overview cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
@@ -453,37 +466,43 @@ export function AnalyticsPage() {
       </div>
 
       {/* Score distribution + Approval trend + Time to act */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-3 min-h-[180px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
+        <div className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
             Score Distribution
           </h2>
           {scoreDist && scoreDist.length > 0 ? (
-            <ScoreDistribution buckets={scoreDist} />
+            <div className="flex-1">
+              <ScoreDistribution buckets={scoreDist} />
+            </div>
           ) : (
-            <div className="bg-surface border border-border rounded-lg p-6 text-center h-full flex items-center justify-center">
+            <div className="flex-1 bg-surface border border-border rounded-lg p-6 text-center flex items-center justify-center">
               <p className="text-sm text-muted">No score data yet</p>
             </div>
           )}
         </div>
-        <div className="space-y-3 min-h-[180px]">
+        <div className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
             Approval Rate Trend
           </h2>
           {trend && trend.length > 1 ? (
-            <ApprovalTrendChart trend={trend} />
+            <div className="flex-1">
+              <ApprovalTrendChart trend={trend} />
+            </div>
           ) : (
-            <div className="bg-surface border border-border rounded-lg p-6 text-center h-full flex items-center justify-center">
+            <div className="flex-1 bg-surface border border-border rounded-lg p-6 text-center flex items-center justify-center">
               <p className="text-sm text-muted">Need 2+ batches to show trend</p>
             </div>
           )}
         </div>
-        <div className="space-y-3 min-h-[180px]">
+        <div className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Time to Act</h2>
           {timeToAct && timeToAct.length > 0 ? (
-            <TimeToActCards data={timeToAct} />
+            <div className="flex-1">
+              <TimeToActCards data={timeToAct} />
+            </div>
           ) : (
-            <div className="bg-surface border border-border rounded-lg p-6 text-center h-full flex items-center justify-center">
+            <div className="flex-1 bg-surface border border-border rounded-lg p-6 text-center flex items-center justify-center">
               <p className="text-sm text-muted">
                 Approve or reject recommendations to see timing data
               </p>
