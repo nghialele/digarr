@@ -1,1 +1,1 @@
-ALTER TABLE "artists" ADD COLUMN "logo_url" text;
+ALTER TABLE "artists" ADD COLUMN IF NOT EXISTS "logo_url" text;
