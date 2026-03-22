@@ -19,6 +19,60 @@ const ALLOWED_UPDATE_FIELDS = new Set([
 export function subscriptionRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
 
+  router.get('/api/subscriptions/adapter-types', (c) => {
+    return c.json({
+      types: [
+        {
+          type: 'genre',
+          label: 'Genre Discovery',
+          configFields: [{ key: 'genre', label: 'Genre', type: 'text', required: true }],
+        },
+        {
+          type: 'similar',
+          label: 'Similar Artists',
+          configFields: [{ key: 'seedArtists', label: 'Seed Artists', type: 'text', required: true }],
+        },
+        {
+          type: 'spotify-playlist',
+          label: 'Spotify Playlist',
+          configFields: [
+            { key: 'playlistId', label: 'Playlist ID or URL', type: 'text', required: true },
+          ],
+          requiredService: 'spotify',
+        },
+        {
+          type: 'spotify-charts',
+          label: 'Spotify Charts',
+          configFields: [
+            { key: 'region', label: 'Region', type: 'select' },
+            { key: 'chartType', label: 'Chart Type', type: 'select' },
+          ],
+          requiredService: 'spotify',
+        },
+        {
+          type: 'lastfm-tag',
+          label: 'Last.fm Tag',
+          configFields: [{ key: 'tag', label: 'Tag', type: 'text', required: true }],
+          requiredService: 'lastfm',
+        },
+        {
+          type: 'lastfm-charts',
+          label: 'Last.fm Charts',
+          configFields: [{ key: 'period', label: 'Period', type: 'select' }],
+          requiredService: 'lastfm',
+        },
+        {
+          type: 'listenbrainz',
+          label: 'ListenBrainz Feeds',
+          configFields: [
+            { key: 'feedType', label: 'Feed Type', type: 'select', required: true },
+          ],
+          requiredService: 'listenbrainz',
+        },
+      ],
+    })
+  })
+
   router.get('/api/subscriptions', async (c) => {
     const userId = c.get('userId')
     if (!userId) {

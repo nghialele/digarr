@@ -24,7 +24,12 @@ import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
 import { setSessionStore } from './core/sessions'
 import { createGenreAdapter } from './core/subscriptions/adapters/genre'
+import { createLastfmChartsAdapter } from './core/subscriptions/adapters/lastfm-charts'
+import { createLastfmTagAdapter } from './core/subscriptions/adapters/lastfm-tag'
+import { createListenBrainzAdapter } from './core/subscriptions/adapters/listenbrainz'
 import { createSimilarAdapter } from './core/subscriptions/adapters/similar'
+import { createSpotifyChartsAdapter } from './core/subscriptions/adapters/spotify-charts'
+import { createSpotifyPlaylistAdapter } from './core/subscriptions/adapters/spotify-playlist'
 import { AdapterRegistry } from './core/subscriptions/registry'
 import { runSubscription } from './core/subscriptions/runner'
 import type {
@@ -300,6 +305,42 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   const adapterRegistry = new AdapterRegistry()
   adapterRegistry.register(createGenreAdapter(sourceRegistry.withCapability('genreArtists')))
   adapterRegistry.register(createSimilarAdapter(sourceRegistry.withCapability('similarArtists')))
+
+  // Last.fm adapters -- only if the user has a Last.fm API key
+  if (lfApiKey) {
+    adapterRegistry.register(createLastfmTagAdapter({ apiKey: lfApiKey }))
+    adapterRegistry.register(createLastfmChartsAdapter({ apiKey: lfApiKey }))
+  }
+
+  // ListenBrainz adapter -- only if the user has LB credentials
+  if (lbUsername && lbToken) {
+    adapterRegistry.register(createListenBrainzAdapter({ username: lbUsername, token: lbToken }))
+  }
+
+  // Spotify adapters -- only if the user has a stored OAuth token
+  const userId = sub.userId
+  if (userId !== null && userId !== undefined) {
+    const spotifyOAuthRow = await getOAuthToken(db, userId, 'spotify')
+    if (spotifyOAuthRow) {
+      const getToken = async (): Promise<string> => {
+        const oauthRow = await getOAuthToken(db, userId, 'spotify')
+        if (!oauthRow) throw new Error('No Spotify OAuth token -- connect Spotify in Settings')
+        if (oauthRow.clientId && oauthRow.clientSecret) {
+          const token = await getValidToken(db, userId, 'spotify', {
+            tokenEndpoint: 'https://accounts.spotify.com/api/token',
+            clientId: oauthRow.clientId,
+            clientSecret: oauthRow.clientSecret,
+          })
+          if (!token) throw new Error('Spotify OAuth token expired and could not be refreshed')
+          return token
+        }
+        // No refresh config available -- return the stored access token as-is
+        return oauthRow.accessToken
+      }
+      adapterRegistry.register(createSpotifyPlaylistAdapter({ getToken }))
+      adapterRegistry.register(createSpotifyChartsAdapter({ getToken }))
+    }
+  }
 
   const adapter = adapterRegistry.get(sub.sourceType)
   if (!adapter) {
