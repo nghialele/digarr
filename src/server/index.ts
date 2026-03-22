@@ -51,6 +51,8 @@ import { pipelineRoutes } from './routes/pipeline'
 import type { PlaylistDeps } from './routes/playlists'
 import { playlistRoutes } from './routes/playlists'
 import { recommendationRoutes } from './routes/recommendations'
+import type { SearchDeps } from './routes/search'
+import { searchRoutes } from './routes/search'
 import { settingsRoutes } from './routes/settings'
 import { setupRoutes } from './routes/setup'
 import { subscriptionRoutes } from './routes/subscriptions'
@@ -152,6 +154,8 @@ export type AppDependencies = {
   }
   // Playlist deps (optional -- omit in test environments without a DB)
   playlistDeps?: PlaylistDeps
+  // Search deps (optional -- absent when no search sources are configured)
+  search?: SearchDeps
 }
 
 export function createApp(deps: AppDependencies) {
@@ -255,6 +259,9 @@ export function createApp(deps: AppDependencies) {
     '/',
     libraryRoutes({ libraryHealth: deps.libraryHealth, skyhookWarmer: deps.skyhookWarmer }),
   )
+  if (deps.search) {
+    app.route('/', searchRoutes(deps.search))
+  }
 
   // Serve built SPA in production (dev uses Vite's dev server with proxy)
   // Absolute path required: @hono/node-server serveStatic resolves relative

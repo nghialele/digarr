@@ -1,0 +1,33 @@
+import { Hono } from 'hono'
+import type { MergedSearchResult } from '@/core/search/multi-source'
+import type { HonoEnv } from '@/server/types'
+
+export type SearchDeps = {
+  search: (
+    query: string,
+    opts?: { limit?: number; sources?: string[] },
+  ) => Promise<MergedSearchResult[]>
+}
+
+export function searchRoutes(deps: SearchDeps) {
+  const router = new Hono<HonoEnv>()
+
+  router.get('/api/search', async (c) => {
+    const query = c.req.query('q')
+    if (!query || query.trim() === '') {
+      return c.json({ error: 'q parameter is required' }, 400)
+    }
+    const limit = Math.min(Number(c.req.query('limit') ?? 20), 50)
+    const sourcesParam = c.req.query('sources')?.split(',').filter(Boolean)
+
+    try {
+      const results = await deps.search(query, { limit, sources: sourcesParam })
+      return c.json({ results })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return c.json({ error: msg }, 500)
+    }
+  })
+
+  return router
+}
