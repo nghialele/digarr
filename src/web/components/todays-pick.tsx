@@ -28,27 +28,8 @@ type TodaysPickProps = {
   onRunScan: () => void
 }
 
-function AlbumList({ albums }: { albums: ReleaseGroup[] }) {
-  if (albums.length === 0) return null
-  const shown = albums.filter((a) => a.type === 'Album').slice(0, 5)
-  if (shown.length === 0) return null
-
-  return (
-    <div className="mt-3">
-      <p className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Discography</p>
-      <div className="space-y-1">
-        {shown.map((album) => (
-          <div key={album.id} className="flex items-center gap-2 text-xs">
-            <span className="text-muted shrink-0 w-8 text-right tabular-nums">
-              {album.firstReleaseDate?.slice(0, 4) ?? '----'}
-            </span>
-            <span className="text-text truncate">{album.title}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+// AlbumList removed from dashboard card to reduce height --
+// discography is available on the full Discover page
 
 export function TodaysPick({
   rec,
@@ -71,7 +52,7 @@ export function TodaysPick({
   if (loading) {
     return (
       <div className="bg-surface border border-border rounded-lg overflow-hidden h-full">
-        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-28 w-full" />
         <div className="p-4 space-y-3">
           <Skeleton className="h-5 w-2/3" />
           <Skeleton className="h-3 w-full" />
@@ -118,9 +99,9 @@ export function TodaysPick({
     : { background: `hsl(${hue}, 40%, 35%)` }
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden flex flex-col h-full">
+    <div className="bg-surface border border-border rounded-lg overflow-hidden flex flex-col">
       {/* Banner */}
-      <div className="relative h-32 shrink-0" style={bannerStyle}>
+      <div className="relative h-28 shrink-0" style={bannerStyle}>
         {hasImage && (
           <img
             src={bannerUrl}
@@ -147,7 +128,7 @@ export function TodaysPick({
         </span>
       </div>
 
-      {/* Content -- flex-1 fills available space */}
+      {/* Content */}
       <div className="p-4 flex-1">
         {artist.genres && artist.genres.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
@@ -162,13 +143,11 @@ export function TodaysPick({
           </div>
         )}
 
-        {rec.aiReasoning && <p className="text-xs text-muted mt-2">{rec.aiReasoning}</p>}
+        {rec.aiReasoning && <p className="text-xs text-muted mt-2 line-clamp-2">{rec.aiReasoning}</p>}
 
         <div className="mt-3">
           <StreamingLinks streamingUrls={artist.streamingUrls ?? null} artistName={artist.name} />
         </div>
-
-        {albumData && <AlbumList albums={albumData} />}
       </div>
 
       {/* Action bar -- pinned to bottom */}
