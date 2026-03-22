@@ -35,18 +35,6 @@ export type PlaylistItem = {
   trackMbid?: string
 }
 
-export type PlaylistPushData = {
-  name: string
-  description?: string
-  tracks: {
-    artistName: string
-    trackName: string
-    spotifyUri?: string
-    deezerId?: string
-    localPath?: string
-  }[]
-}
-
 export type PlaylistResult = {
   success: boolean
   targetType: string

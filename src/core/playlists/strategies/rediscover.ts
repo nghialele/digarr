@@ -1,6 +1,6 @@
 import type { PlaylistStrategyImpl, StrategyArtist, StrategyDeps } from './types'
+import { TRACKS_PER_ARTIST } from './types'
 
-const TRACKS_PER_ARTIST = 3
 const OLDER_THAN_DAYS = 30
 
 export const rediscoverStrategy: PlaylistStrategyImpl = {

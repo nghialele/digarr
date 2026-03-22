@@ -35,7 +35,8 @@ async function resolveFromLocal(
       localPath: t.path,
       source: 'local' as const,
     }))
-  } catch {
+  } catch (error) {
+    console.warn('[track-resolver]', error)
     return []
   }
 }
@@ -58,7 +59,8 @@ async function resolveFromSpotify(
         spotifyUri: t.uri,
         source: 'spotify' as const,
       }))
-  } catch {
+  } catch (error) {
+    console.warn('[track-resolver]', error)
     return []
   }
 }
@@ -79,7 +81,8 @@ async function resolveFromMusicBrainz(
       mbid: r.id,
       source: 'musicbrainz' as const,
     }))
-  } catch {
+  } catch (error) {
+    console.warn('[track-resolver]', error)
     return []
   }
 }
@@ -112,14 +115,8 @@ export async function resolveTracksForArtist(
     if (mbTracks.length > 0) return mbTracks
   }
 
-  // Artist-level fallback -- nothing resolved at all
-  return [
-    {
-      artistName,
-      trackName: '',
-      source: 'musicbrainz',
-    },
-  ]
+  // Nothing resolved -- let the caller handle the empty case
+  return []
 }
 
 export async function resolvePlaylistTracks(

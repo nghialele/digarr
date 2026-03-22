@@ -1,7 +1,5 @@
 import type { PlaylistStrategyImpl, StrategyArtist, StrategyDeps } from './types'
-
-// Assume ~3 tracks per artist to figure out how many artists we need.
-const TRACKS_PER_ARTIST = 3
+import { TRACKS_PER_ARTIST } from './types'
 
 export const weeklyDigestStrategy: PlaylistStrategyImpl = {
   async selectArtists(

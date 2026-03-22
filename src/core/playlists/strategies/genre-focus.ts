@@ -1,6 +1,5 @@
 import type { PlaylistStrategyImpl, StrategyArtist, StrategyDeps } from './types'
-
-const TRACKS_PER_ARTIST = 3
+import { TRACKS_PER_ARTIST } from './types'
 
 export const genreFocusStrategy: PlaylistStrategyImpl = {
   async selectArtists(

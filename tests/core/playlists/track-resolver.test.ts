@@ -179,26 +179,20 @@ describe('resolveTracksForArtist()', () => {
       const tracks = await resolveTracksForArtist('Radiohead', undefined, deps, DEFAULT_CONFIG)
 
       expect(musicbrainzRecordings).not.toHaveBeenCalled()
-      // Should hit artist-level fallback
-      expect(tracks).toHaveLength(1)
-      expect(tracks[0]).toMatchObject({ artistName: 'Radiohead', source: 'musicbrainz' })
+      // No sources available -- empty result
+      expect(tracks).toHaveLength(0)
     })
   })
 
-  describe('artist-level fallback', () => {
-    it('returns artist-level fallback when nothing resolves', async () => {
+  describe('empty result when nothing resolves', () => {
+    it('returns [] when no sources are configured', async () => {
       const deps: TrackResolverDeps = {}
       const tracks = await resolveTracksForArtist('Unknown Artist', undefined, deps, DEFAULT_CONFIG)
 
-      expect(tracks).toHaveLength(1)
-      expect(tracks[0]).toMatchObject({
-        artistName: 'Unknown Artist',
-        trackName: '',
-        source: 'musicbrainz',
-      })
+      expect(tracks).toHaveLength(0)
     })
 
-    it('returns artist-level fallback when all sources return empty', async () => {
+    it('returns [] when all sources return empty', async () => {
       const deps: TrackResolverDeps = {
         jellyfinSearch: vi.fn().mockResolvedValue([]),
         spotifySearch: vi.fn().mockResolvedValue([]),
@@ -206,8 +200,7 @@ describe('resolveTracksForArtist()', () => {
       }
       const tracks = await resolveTracksForArtist('Radiohead', ARTIST_MBID, deps, DEFAULT_CONFIG)
 
-      expect(tracks).toHaveLength(1)
-      expect(tracks[0]).toMatchObject({ artistName: 'Radiohead', source: 'musicbrainz' })
+      expect(tracks).toHaveLength(0)
     })
   })
 
@@ -286,7 +279,7 @@ describe('resolveTracksForArtist()', () => {
       expect(tracks.every((t) => t.source === 'musicbrainz')).toBe(true)
     })
 
-    it('returns artist-level fallback when all sources throw', async () => {
+    it('returns [] when all sources throw', async () => {
       const deps: TrackResolverDeps = {
         jellyfinSearch: vi.fn().mockRejectedValue(new Error('timeout')),
         spotifySearch: vi.fn().mockRejectedValue(new Error('rate limited')),
@@ -294,17 +287,16 @@ describe('resolveTracksForArtist()', () => {
       }
       const tracks = await resolveTracksForArtist('Radiohead', ARTIST_MBID, deps, DEFAULT_CONFIG)
 
-      expect(tracks).toHaveLength(1)
-      expect(tracks[0]).toMatchObject({ artistName: 'Radiohead', source: 'musicbrainz' })
+      expect(tracks).toHaveLength(0)
     })
 
-    it('never throws -- always returns at least one entry', async () => {
+    it('never throws -- always returns an array', async () => {
       const deps: TrackResolverDeps = {
         jellyfinSearch: vi.fn().mockRejectedValue(new Error('kaboom')),
       }
       await expect(
         resolveTracksForArtist('Radiohead', ARTIST_MBID, deps, DEFAULT_CONFIG),
-      ).resolves.toBeDefined()
+      ).resolves.toEqual([])
     })
   })
 })
@@ -355,15 +347,13 @@ describe('resolvePlaylistTracks()', () => {
     expect(tracks).toEqual([])
   })
 
-  it('includes artist-level fallback entries for artists that fail to resolve', async () => {
+  it('returns [] for artists that fail to resolve (no fallback entries)', async () => {
     const deps: TrackResolverDeps = {}
     const artists = [{ name: 'Radiohead' }, { name: 'Portishead' }]
 
     const tracks = await resolvePlaylistTracks(artists, deps, DEFAULT_CONFIG)
 
-    expect(tracks).toHaveLength(2)
-    expect(tracks[0]).toMatchObject({ artistName: 'Radiohead', source: 'musicbrainz' })
-    expect(tracks[1]).toMatchObject({ artistName: 'Portishead', source: 'musicbrainz' })
+    expect(tracks).toHaveLength(0)
   })
 
   it('rate-limits concurrent calls via p-queue (concurrency=2)', async () => {

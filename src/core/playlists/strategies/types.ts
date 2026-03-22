@@ -1,3 +1,5 @@
+export const TRACKS_PER_ARTIST = 3
+
 export type StrategyArtist = {
   name: string
   mbid?: string

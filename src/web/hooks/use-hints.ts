@@ -1,33 +1,37 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { getUserPreferences, updateUserPreferences } from '@/web/lib/api'
 
 export function useHints() {
-  const [dismissedHints, setDismissedHints] = useState<string[]>([])
-  const [loaded, setLoaded] = useState(false)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    getUserPreferences()
-      .then((prefs) => {
-        setDismissedHints((prefs?.dismissedHints as string[] | undefined) ?? [])
-        setLoaded(true)
-      })
-      .catch(() => setLoaded(true))
-  }, [])
+  const { data: prefs, isSuccess } = useQuery({
+    queryKey: ['user-preferences'],
+    queryFn: getUserPreferences,
+  })
+
+  const dismissedHints: string[] = (prefs?.dismissedHints as string[] | undefined) ?? []
 
   const isHintDismissed = useCallback((id: string) => dismissedHints.includes(id), [dismissedHints])
 
   const dismissHint = useCallback(
     async (id: string) => {
       const updated = [...dismissedHints, id]
-      setDismissedHints(updated)
+      queryClient.setQueryData(
+        ['user-preferences'],
+        (old: Record<string, unknown> | undefined) => ({
+          ...(old ?? {}),
+          dismissedHints: updated,
+        }),
+      )
       try {
         await updateUserPreferences({ dismissedHints: updated })
       } catch {
         // best-effort
       }
     },
-    [dismissedHints],
+    [dismissedHints, queryClient],
   )
 
-  return { isHintDismissed, dismissHint, loaded }
+  return { isHintDismissed, dismissHint, loaded: isSuccess }
 }

@@ -1,6 +1,5 @@
 import type { PlaylistStrategyImpl, StrategyArtist, StrategyDeps } from './types'
-
-const TRACKS_PER_ARTIST = 3
+import { TRACKS_PER_ARTIST } from './types'
 
 // Simple keyword match: does any genre tag on the artist contain the mood word?
 function artistMatchesMood(artist: StrategyArtist, mood: string): boolean {
@@ -21,12 +20,13 @@ export const moodMixStrategy: PlaylistStrategyImpl = {
 
     const artistLimit = Math.ceil(config.size / TRACKS_PER_ARTIST)
 
-    if (!config.mood) {
+    const mood = config.mood
+    if (!mood) {
       return artists.sort((a, b) => b.score - a.score).slice(0, artistLimit)
     }
 
     return artists
-      .filter((a) => artistMatchesMood(a, config.mood as string))
+      .filter((a) => artistMatchesMood(a, mood))
       .sort((a, b) => b.score - a.score)
       .slice(0, artistLimit)
   },

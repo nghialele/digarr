@@ -1,5 +1,5 @@
 import { serve } from '@hono/node-server'
-import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
@@ -15,7 +15,9 @@ import { getValidToken } from './core/oauth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
+import { generatePlaylist } from './core/playlists/generator'
 import { PlaylistScheduler } from './core/playlists/scheduler'
+import { buildStrategyDeps } from './core/playlists/strategy-deps'
 import { createDiscogsSource } from './core/plugins/discogs'
 import { createLastFmSource } from './core/plugins/lastfm'
 import { createListenBrainzSource } from './core/plugins/listenbrainz'
@@ -28,8 +30,6 @@ import { createNavidromePlaylistTarget } from './core/targets/navidrome-playlist
 import { createPlexPlaylistTarget } from './core/targets/plex-playlist'
 import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
 import { db, pool } from './db'
-import { getPlaylistsDueForGeneration, replacePlaylistTracks, updatePlaylist as updatePlaylistRow } from './db/queries/playlists'
-import { generatePlaylist } from './core/playlists/generator'
 import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
@@ -42,6 +42,11 @@ import {
   upsertGenre,
 } from './db/queries/genres'
 import { getOAuthToken } from './db/queries/oauth-tokens'
+import {
+  getPlaylistsDueForGeneration,
+  replacePlaylistTracks,
+  updatePlaylist as updatePlaylistRow,
+} from './db/queries/playlists'
 import {
   bulkUpdateStatus,
   getGenreFeedbackHistory,
@@ -307,75 +312,6 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   })
 }
 
-const PLAYLIST_APPROVED_STATUSES = ['approved', 'added_to_lidarr']
-
-function makePlaylistStrategyDeps(userId: number | null) {
-  return {
-    async getApprovedArtists(opts: { since?: Date; genre?: string; limit?: number }) {
-      const rows = await db
-        .select({
-          name: artists.name,
-          mbid: artists.mbid,
-          score: recommendations.score,
-          genres: artists.genres,
-        })
-        .from(recommendations)
-        .innerJoin(artists, eq(artists.id, recommendations.artistId))
-        .where(
-          and(
-            inArray(recommendations.status, PLAYLIST_APPROVED_STATUSES),
-            opts.since ? gte(recommendations.actedOnAt, opts.since) : undefined,
-            userId != null ? eq(recommendations.userId, userId) : undefined,
-          ),
-        )
-        .orderBy(desc(recommendations.score))
-        .limit(opts.limit ?? 200)
-
-      let result = rows.map((r) => ({
-        name: r.name,
-        mbid: r.mbid,
-        score: r.score,
-        genres: r.genres ?? ([] as string[]),
-      }))
-
-      if (opts.genre) {
-        const g = opts.genre.toLowerCase()
-        result = result.filter((a) => a.genres.some((genre: string) => genre.toLowerCase().includes(g)))
-      }
-
-      return result
-    },
-
-    async getOlderApprovedArtists(opts: { olderThan: Date; limit: number }) {
-      const rows = await db
-        .select({
-          name: artists.name,
-          mbid: artists.mbid,
-          score: recommendations.score,
-          genres: artists.genres,
-        })
-        .from(recommendations)
-        .innerJoin(artists, eq(artists.id, recommendations.artistId))
-        .where(
-          and(
-            inArray(recommendations.status, PLAYLIST_APPROVED_STATUSES),
-            lt(recommendations.actedOnAt, opts.olderThan),
-            userId != null ? eq(recommendations.userId, userId) : undefined,
-          ),
-        )
-        .orderBy(desc(recommendations.score))
-        .limit(opts.limit)
-
-      return rows.map((r) => ({
-        name: r.name,
-        mbid: r.mbid,
-        score: r.score,
-        genres: r.genres ?? ([] as string[]),
-      }))
-    },
-  }
-}
-
 // Run generation for all playlists that are due (called by the playlist scheduler)
 async function runAllPlaylists(): Promise<void> {
   const due = await getPlaylistsDueForGeneration(db)
@@ -384,7 +320,7 @@ async function runAllPlaylists(): Promise<void> {
 
   for (const playlist of due) {
     try {
-      const strategyDeps = makePlaylistStrategyDeps(playlist.userId ?? null)
+      const strategyDeps = buildStrategyDeps(db, playlist.userId ?? null)
       const cfg = playlist.config ?? { size: 25, trackSourcePriority: ['spotify' as const] }
       const result = await generatePlaylist(
         playlist.strategy as import('./db/schema').PlaylistStrategy,

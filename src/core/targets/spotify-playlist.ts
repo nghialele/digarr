@@ -1,8 +1,8 @@
 import type { ServiceTestResult } from '@/core/types'
+import { TRACKS_PER_ARTIST } from '../playlists/strategies/types'
 import type { DestinationTarget, PlaylistItem, PlaylistResult } from './types'
 
 const SPOTIFY_API = 'https://api.spotify.com'
-const TRACKS_PER_ARTIST = 3
 const TRACKS_PER_BATCH = 100
 
 export type SpotifyPlaylistConfig = {

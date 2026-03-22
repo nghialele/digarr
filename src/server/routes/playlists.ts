@@ -1,9 +1,8 @@
-import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
 import type { GenerationResult } from '@/core/playlists/generator'
 import { generatePlaylist } from '@/core/playlists/generator'
 import type { PlaylistScheduler } from '@/core/playlists/scheduler'
-import type { StrategyArtist, StrategyDeps } from '@/core/playlists/strategies/types'
+import { buildStrategyDeps } from '@/core/playlists/strategy-deps'
 import type { PlaylistItem } from '@/core/targets/types'
 import type { Database } from '@/db'
 import type {
@@ -21,7 +20,6 @@ import {
   updatePlaylist,
 } from '@/db/queries/playlists'
 import type { TargetRow } from '@/db/queries/targets'
-import { artists, recommendations } from '@/db/schema'
 import type { PlaylistConfig, PlaylistStrategy } from '@/db/schema'
 import type { HonoEnv } from '@/server/types'
 
@@ -40,75 +38,6 @@ const ALLOWED_UPDATE_FIELDS = new Set<string>([
   'config',
   'enabled',
 ])
-
-const APPROVED_STATUSES = ['approved', 'added_to_lidarr']
-
-function buildStrategyDeps(db: Database, userId: number | null): StrategyDeps {
-  return {
-    async getApprovedArtists(opts): Promise<StrategyArtist[]> {
-      const rows = await db
-        .select({
-          name: artists.name,
-          mbid: artists.mbid,
-          score: recommendations.score,
-          genres: artists.genres,
-        })
-        .from(recommendations)
-        .innerJoin(artists, eq(artists.id, recommendations.artistId))
-        .where(
-          and(
-            inArray(recommendations.status, APPROVED_STATUSES),
-            opts.since ? gte(recommendations.actedOnAt, opts.since) : undefined,
-            userId != null ? eq(recommendations.userId, userId) : undefined,
-          ),
-        )
-        .orderBy(desc(recommendations.score))
-        .limit(opts.limit ?? 200)
-
-      let result: StrategyArtist[] = rows.map((r) => ({
-        name: r.name,
-        mbid: r.mbid,
-        score: r.score,
-        genres: r.genres ?? [],
-      }))
-
-      if (opts.genre) {
-        const g = opts.genre.toLowerCase()
-        result = result.filter((a) => a.genres?.some((genre) => genre.toLowerCase().includes(g)))
-      }
-
-      return result
-    },
-
-    async getOlderApprovedArtists(opts): Promise<StrategyArtist[]> {
-      const rows = await db
-        .select({
-          name: artists.name,
-          mbid: artists.mbid,
-          score: recommendations.score,
-          genres: artists.genres,
-        })
-        .from(recommendations)
-        .innerJoin(artists, eq(artists.id, recommendations.artistId))
-        .where(
-          and(
-            inArray(recommendations.status, APPROVED_STATUSES),
-            lt(recommendations.actedOnAt, opts.olderThan),
-            userId != null ? eq(recommendations.userId, userId) : undefined,
-          ),
-        )
-        .orderBy(desc(recommendations.score))
-        .limit(opts.limit)
-
-      return rows.map((r) => ({
-        name: r.name,
-        mbid: r.mbid,
-        score: r.score,
-        genres: r.genres ?? [],
-      }))
-    },
-  }
-}
 
 async function runGeneration(
   db: Database,
@@ -210,8 +139,8 @@ export function playlistRoutes(deps: PlaylistDeps) {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
-    const body = await c.req.json()
-    const { name, strategy } = body as Record<string, unknown>
+    const body: Record<string, unknown> = await c.req.json()
+    const { name, strategy } = body
 
     if (!name || typeof name !== 'string') {
       return c.json({ error: 'name is required' }, 400)
@@ -229,22 +158,10 @@ export function playlistRoutes(deps: PlaylistDeps) {
       name,
       userId,
       strategy: strategy as PlaylistStrategy,
-      targetIds:
-        Array.isArray((body as Record<string, unknown>).targetIds)
-          ? ((body as Record<string, unknown>).targetIds as number[])
-          : [],
-      schedule:
-        typeof (body as Record<string, unknown>).schedule === 'string'
-          ? ((body as Record<string, unknown>).schedule as string)
-          : null,
-      config:
-        (body as Record<string, unknown>).config != null
-          ? ((body as Record<string, unknown>).config as PlaylistConfig)
-          : null,
-      enabled:
-        typeof (body as Record<string, unknown>).enabled === 'boolean'
-          ? ((body as Record<string, unknown>).enabled as boolean)
-          : true,
+      targetIds: Array.isArray(body.targetIds) ? (body.targetIds as number[]) : [],
+      schedule: typeof body.schedule === 'string' ? body.schedule : null,
+      config: body.config != null ? (body.config as PlaylistConfig) : null,
+      enabled: typeof body.enabled === 'boolean' ? body.enabled : true,
     }
 
     const row = await createPlaylist(db, data)
@@ -278,11 +195,11 @@ export function playlistRoutes(deps: PlaylistDeps) {
     if (!existing) return c.json({ error: 'Not found' }, 404)
     if (existing.playlist.userId !== userId) return c.json({ error: 'Forbidden' }, 403)
 
-    const body = await c.req.json()
+    const body: Record<string, unknown> = await c.req.json()
     const update: Record<string, unknown> = {}
     for (const key of ALLOWED_UPDATE_FIELDS) {
-      if (Object.hasOwn(body as object, key)) {
-        update[key] = (body as Record<string, unknown>)[key]
+      if (Object.hasOwn(body, key)) {
+        update[key] = body[key]
       }
     }
 
