@@ -11,6 +11,7 @@ import {
   Moon,
   Music,
   RefreshCw,
+  Search,
   Settings,
   Sun,
   User,
@@ -64,6 +65,7 @@ import { GenresPage } from './pages/genres'
 import { LibraryHealthPage } from './pages/library-health'
 import { PlaylistDetailPage } from './pages/playlist-detail'
 import { PlaylistsPage } from './pages/playlists'
+import { SearchPage } from './pages/search'
 import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
 import SubscriptionsPage from './pages/subscriptions'
@@ -370,6 +372,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     Dashboard
                   </span>
                 </NavLink>
+                <NavLink to="/search" className={navLinkClass}>
+                  <span className="flex items-center gap-1">
+                    <Search size={14} aria-hidden="true" />
+                    Search
+                  </span>
+                </NavLink>
                 <NavDropdown
                   label="Discover"
                   icon={<Compass size={14} aria-hidden="true" />}
@@ -450,6 +458,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="flex items-center gap-1.5">
                   <LayoutDashboard size={14} aria-hidden="true" />
                   Dashboard
+                </span>
+              </NavLink>
+              <NavLink
+                to="/search"
+                className={mobileNavLinkClass}
+                onClick={() => setMenuOpen(false)}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Search size={14} aria-hidden="true" />
+                  Search
                 </span>
               </NavLink>
               <NavLink
@@ -587,6 +605,7 @@ function InnerApp() {
         <AppShell>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/discover" element={<DiscoverPage />} />
             <Route path="/genres" element={<GenresPage />} />
             <Route path="/genres/:slug" element={<GenreDetailPage />} />

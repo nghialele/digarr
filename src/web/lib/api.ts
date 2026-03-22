@@ -421,6 +421,30 @@ export async function exportRecommendations(
   URL.revokeObjectURL(url)
 }
 
+// Search
+export type SearchResult = {
+  name: string
+  mbid?: string
+  images: { url: string; source: string }[]
+  genres: string[]
+  popularity?: number
+  listeners?: number
+  sources: { id: string; url?: string; externalId?: string }[]
+  inLibrary: boolean
+  inRecommendations: boolean
+}
+
+export async function searchArtists(
+  query: string,
+  sources?: string[],
+  limit?: number,
+): Promise<{ results: SearchResult[] }> {
+  const params = new URLSearchParams({ q: query })
+  if (sources?.length) params.set('sources', sources.join(','))
+  if (limit) params.set('limit', String(limit))
+  return fetchApi(`/search?${params}`)
+}
+
 // Mood discovery
 export const moodDiscover = (query: string) =>
   fetchApi<{

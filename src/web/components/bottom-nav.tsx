@@ -65,7 +65,7 @@ function GenresIcon({ className }: { className?: string }) {
   )
 }
 
-function PlaylistsIcon({ className }: { className?: string }) {
+function SearchIcon({ className }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -78,11 +78,8 @@ function PlaylistsIcon({ className }: { className?: string }) {
       className={cn('w-5 h-5', className)}
       aria-hidden="true"
     >
-      <path d="M21 15V6" />
-      <path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-      <path d="M12 12H3" />
-      <path d="M16 6H3" />
-      <path d="M12 18H3" />
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   )
 }
@@ -113,8 +110,8 @@ function SettingsIcon({ className }: { className?: string }) {
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon, exact: true },
   { to: '/discover', label: 'Discover', Icon: DiscoverIcon, exact: false },
+  { to: '/search', label: 'Search', Icon: SearchIcon, exact: false },
   { to: '/genres', label: 'Genres', Icon: GenresIcon, exact: false },
-  { to: '/playlists', label: 'Playlists', Icon: PlaylistsIcon, exact: false },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon, exact: false },
 ] as const
 
