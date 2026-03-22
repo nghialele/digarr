@@ -62,6 +62,43 @@ const SOURCE_COLORS: Record<string, { label: string; color: string }> = {
   ai: { label: 'AI', color: '#9b7ab8' },
 }
 
+const SUBSCRIPTION_COLORS: Record<string, string> = {
+  'genre-subscription': 'bg-indigo-500/20 text-indigo-400',
+  'similar-subscription': 'bg-violet-500/20 text-violet-400',
+  'spotify-playlist': 'bg-green-500/20 text-green-400',
+  'spotify-charts': 'bg-green-500/20 text-green-400',
+  'lastfm-tag': 'bg-red-500/20 text-red-400',
+  'lastfm-charts': 'bg-red-500/20 text-red-400',
+  listenbrainz: 'bg-orange-500/20 text-orange-400',
+}
+
+function getSourceBadgeClass(sourceKey: string): string {
+  const prefix = sourceKey.split(':')[0] ?? sourceKey
+  return SUBSCRIPTION_COLORS[prefix] ?? 'bg-zinc-500/20 text-zinc-400'
+}
+
+function formatSourceLabel(sourceKey: string): string {
+  const [type, detail] = sourceKey.split(':')
+  switch (type) {
+    case 'genre-subscription':
+      return `Genre: ${detail}`
+    case 'similar-subscription':
+      return `Similar: ${detail}`
+    case 'spotify-playlist':
+      return 'Spotify Playlist'
+    case 'spotify-charts':
+      return 'Spotify Charts'
+    case 'lastfm-tag':
+      return `Last.fm: ${detail}`
+    case 'lastfm-charts':
+      return 'Last.fm Charts'
+    case 'listenbrainz':
+      return 'ListenBrainz'
+    default:
+      return sourceKey
+  }
+}
+
 const GENRE_COLORS = [
   'bg-accent/10 text-accent',
   'bg-info/10 text-info',
@@ -638,17 +675,31 @@ export function RecommendationCard({
                 <p className="text-xs text-muted uppercase tracking-wide mb-2">Source Scores</p>
                 <div className="flex flex-wrap gap-3">
                   {Object.entries(rec.sources).map(([key, score]) => {
-                    const cfg = SOURCE_COLORS[key] ?? {
-                      label: key.toUpperCase(),
-                      color: '#6b7084',
+                    const classic = SOURCE_COLORS[key]
+                    if (classic) {
+                      return (
+                        <div key={key} className="flex items-center gap-1.5">
+                          <span
+                            style={{ backgroundColor: classic.color }}
+                            className="w-2 h-2 rounded-full inline-block"
+                          />
+                          <span className="text-xs text-muted">{classic.label}</span>
+                          <span className="text-xs text-text font-medium">
+                            {(score * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )
                     }
                     return (
                       <div key={key} className="flex items-center gap-1.5">
                         <span
-                          style={{ backgroundColor: cfg.color }}
-                          className="w-2 h-2 rounded-full inline-block"
-                        />
-                        <span className="text-xs text-muted">{cfg.label}</span>
+                          className={cn(
+                            'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
+                            getSourceBadgeClass(key),
+                          )}
+                        >
+                          {formatSourceLabel(key)}
+                        </span>
                         <span className="text-xs text-text font-medium">
                           {(score * 100).toFixed(0)}%
                         </span>
