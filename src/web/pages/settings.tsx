@@ -5,7 +5,9 @@ import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { Field } from '../components/field'
+import { Hint } from '../components/hint'
 import { ServiceCard } from '../components/service-card'
+import { useHints } from '../hooks/use-hints'
 import {
   AiProviderIcon,
   DiscogsIcon,
@@ -167,6 +169,7 @@ type ServiceTestState = 'idle' | 'testing' | 'ok' | 'error'
 function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: () => void }) {
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const isAdmin = currentUser?.isAdmin ?? false
+  const { isHintDismissed, dismissHint } = useHints()
   const prefs = settings.preferences ?? {}
   const [lidarrUrl, setLidarrUrl] = useState(settings.lidarrUrl ?? '')
   const [lidarrPublicUrl, setLidarrPublicUrl] = useState(prefs.lidarrPublicUrl ?? '')
@@ -586,6 +589,14 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           </div>
 
           {/* AI Provider */}
+          <Hint
+            id="settings-ai-tip"
+            type="inline"
+            dismissed={isHintDismissed('settings-ai-tip')}
+            onDismiss={() => dismissHint('settings-ai-tip')}
+          >
+            Choose an AI provider to power recommendations. Ollama runs locally for free. Cloud providers (Claude, GPT, Gemini) need API keys.
+          </Hint>
           <div className={isAiConfigured ? '' : 'opacity-60'}>
             <ServiceCard
               name="AI Provider"
@@ -762,6 +773,15 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
           Personal listening sources linked to your account.
         </p>
       </div>
+
+      <Hint
+        id="settings-connections-tip"
+        type="inline"
+        dismissed={isHintDismissed('settings-connections-tip')}
+        onDismiss={() => dismissHint('settings-connections-tip')}
+      >
+        Connect your listening sources first -- ListenBrainz, Last.fm, Spotify, or Plex. The pipeline uses your listening history to find similar artists.
+      </Hint>
 
       {/* ListenBrainz */}
       <div className={isLbConfigured ? '' : 'opacity-60'}>

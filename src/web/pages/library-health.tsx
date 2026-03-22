@@ -3,8 +3,10 @@ import { RefreshCw } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { HealthCheckCard } from '../components/health-check-card'
+import { Hint } from '../components/hint'
 import { LibraryStatsDisplay } from '../components/library-stats'
 import { Skeleton } from '../components/ui/skeleton'
+import { useHints } from '../hooks/use-hints'
 import {
   fixHealthCheck,
   getLibraryHealth,
@@ -69,6 +71,7 @@ export function LibraryHealthPage() {
   const queryClient = useQueryClient()
   const [fixingIds, setFixingIds] = useState<Set<string>>(new Set())
   const rescanTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { isHintDismissed, dismissHint } = useHints()
 
   const healthQuery = useQuery({
     queryKey: ['library', 'health'],
@@ -158,6 +161,15 @@ export function LibraryHealthPage() {
           {scanning ? 'Scanning...' : 'Re-scan'}
         </button>
       </div>
+
+      <Hint
+        id="library-health-intro-tip"
+        type="inline"
+        dismissed={isHintDismissed('library-health-intro-tip')}
+        onDismiss={() => dismissHint('library-health-intro-tip')}
+      >
+        Library health checks your Lidarr library for common issues like missing metadata, unmonitored artists, or genre gaps. Run a scan to see what needs attention.
+      </Hint>
 
       {/* Scanning indicator */}
       {scanning && (

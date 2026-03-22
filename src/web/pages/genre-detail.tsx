@@ -3,8 +3,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { GenreInfo } from '../../core/genre/types'
 import { ArtistThumb } from '../components/artist-thumb'
+import { Hint } from '../components/hint'
 import { Skeleton } from '../components/ui/skeleton'
 import type { GenreArtist, LibraryArtist } from '../lib/api'
+import { useHints } from '../hooks/use-hints'
 import { usePreviewContext } from '../lib/preview-context'
 import { getGenre, getGenreArtists, quickDiscover, warmArtists } from '../lib/api'
 
@@ -168,6 +170,7 @@ export function GenreDetailPage() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<DetailTab>('library')
+  const { isHintDismissed, dismissHint } = useHints()
 
   const { data, isLoading, error } = useQuery<GenreDetail>({
     queryKey: ['genres', 'detail', slug],
@@ -275,6 +278,17 @@ export function GenreDetailPage() {
         <p className="text-xs text-muted -mt-2">
           {TABS.find((t) => t.id === activeTab)?.description}
         </p>
+
+        {isNonLibraryTab && (
+          <Hint
+            id="genre-detail-queue-tip"
+            type="inline"
+            dismissed={isHintDismissed('genre-detail-queue-tip')}
+            onDismiss={() => dismissHint('genre-detail-queue-tip')}
+          >
+            Use the + Queue button to add artists to your recommendation queue for review on the Discover page.
+          </Hint>
+        )}
 
         {/* Tab content */}
         {activeTab === 'library' ? (

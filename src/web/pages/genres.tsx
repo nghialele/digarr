@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { GenreInfo } from '../../core/genre/types'
 import { GenreGrid } from '../components/genre-grid'
+import { Hint } from '../components/hint'
 import { Input } from '../components/ui/input'
+import { useHints } from '../hooks/use-hints'
 import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import { getGenres, searchGenres, seedGenres } from '../lib/api'
 
@@ -12,6 +14,7 @@ export function GenresPage() {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [seeding, setSeeding] = useState(false)
+  const { isHintDismissed, dismissHint } = useHints()
 
   const {
     pullY,
@@ -87,6 +90,15 @@ export function GenresPage() {
           className="sm:w-64"
         />
       </div>
+
+      <Hint
+        id="genres-browse-tip"
+        type="inline"
+        dismissed={isHintDismissed('genres-browse-tip')}
+        onDismiss={() => dismissHint('genres-browse-tip')}
+      >
+        Browse genres from your library and recommendation history. Click a genre to see recommended artists, trending discoveries, and hidden gems.
+      </Hint>
 
       {/* Empty state with seed button */}
       {isEmpty ? (

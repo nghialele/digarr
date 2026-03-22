@@ -48,6 +48,8 @@ vi.mock('@/web/lib/api', () => ({
   quickDiscover: vi.fn(),
   getPipelineStatus: vi.fn(),
   getStoredToken: vi.fn(() => null),
+  getUserPreferences: vi.fn().mockResolvedValue({ dismissedHints: [] }),
+  updateUserPreferences: vi.fn().mockResolvedValue({}),
 }))
 
 // Mock useSSE to avoid EventSource in jsdom

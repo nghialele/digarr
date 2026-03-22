@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArtistThumb } from '../components/artist-thumb'
+import { Hint } from '../components/hint'
 import { MoodPromptBar } from '../components/mood-prompt-bar'
 import { PipelineProgress } from '../components/pipeline-progress'
 import { RecentlyApproved } from '../components/recently-approved'
 import { type Recommendation, TodaysPick } from '../components/todays-pick'
 import { Skeleton } from '../components/ui/skeleton'
+import { useHints } from '../hooks/use-hints'
 import {
   type ActivityEntry,
   getDashboardActivity,
@@ -363,6 +365,8 @@ export function Dashboard() {
     }
   }, [pickData, approvedData, queryClient])
 
+  const { isHintDismissed, dismissHint } = useHints()
+
   const allPending = (pickData?.items ?? []) as Recommendation[]
   const currentPick = allPending.find((r) => !skippedIds.has(r.id) && !actedIds.has(r.id)) ?? null
 
@@ -436,6 +440,15 @@ export function Dashboard() {
         </div>
       </div>
 
+      <Hint
+        id="dashboard-feedback-tip"
+        type="spotlight"
+        dismissed={isHintDismissed('dashboard-feedback-tip')}
+        onDismiss={() => dismissHint('dashboard-feedback-tip')}
+      >
+        Approve or reject recommendations to teach Digarr your taste. The more feedback you give, the better your future recommendations get.
+      </Hint>
+
       {/* Subscription Pulse + Listening Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SubscriptionPulse subs={subsData} scheduler={schedulerData} />
@@ -444,7 +457,17 @@ export function Dashboard() {
 
       {/* Taste Profile + Activity Feed */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <TasteProfile genres={tasteData} loading={tasteLoading} />
+        <div className="space-y-3">
+          <TasteProfile genres={tasteData} loading={tasteLoading} />
+          <Hint
+            id="dashboard-taste-tip"
+            type="inline"
+            dismissed={isHintDismissed('dashboard-taste-tip')}
+            onDismiss={() => dismissHint('dashboard-taste-tip')}
+          >
+            Your taste profile is built from your listening history and approved recommendations. Connect more sources in Settings for richer taste analysis.
+          </Hint>
+        </div>
         <ActivityFeed entries={activityData} loading={activityLoading} />
       </div>
     </div>
