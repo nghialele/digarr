@@ -317,6 +317,7 @@ export type GenreArtist = {
   score: number
   genres: string[] | null
   aiReasoning: string | null
+  streamingUrls: Record<string, string> | null
 }
 
 export const getGenreArtists = (slug: string, view: string, limit = 20) =>

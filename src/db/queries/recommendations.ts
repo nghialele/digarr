@@ -162,6 +162,7 @@ export type GenreArtistResult = {
   score: number
   genres: string[] | null
   aiReasoning: string | null
+  streamingUrls: Record<string, string> | null
 }
 
 export type GenreArtistView = 'recommended' | 'trending' | 'deep_cuts'
@@ -193,6 +194,7 @@ export async function getGenreArtists(
         score: recommendations.score,
         genres: artists.genres,
         aiReasoning: recommendations.aiReasoning,
+        streamingUrls: artists.streamingUrls,
       })
       .from(recommendations)
       .innerJoin(artists, eq(recommendations.artistId, artists.id))
@@ -218,6 +220,7 @@ export async function getGenreArtists(
         score: recommendations.score,
         genres: artists.genres,
         aiReasoning: recommendations.aiReasoning,
+        streamingUrls: artists.streamingUrls,
       })
       .from(recommendations)
       .innerJoin(artists, eq(recommendations.artistId, artists.id))
@@ -237,6 +240,7 @@ export async function getGenreArtists(
       score: recommendations.score,
       genres: artists.genres,
       aiReasoning: recommendations.aiReasoning,
+      streamingUrls: artists.streamingUrls,
       spotifyPopularity: artistMetadata.spotifyPopularity,
     })
     .from(recommendations)

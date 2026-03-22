@@ -5,6 +5,7 @@ import type { GenreInfo } from '../../core/genre/types'
 import { ArtistThumb } from '../components/artist-thumb'
 import { Skeleton } from '../components/ui/skeleton'
 import type { GenreArtist, LibraryArtist } from '../lib/api'
+import { usePreviewContext } from '../lib/preview-context'
 import { getGenre, getGenreArtists, quickDiscover, warmArtists } from '../lib/api'
 
 // ---------------------------------------------------------------------------
@@ -59,6 +60,9 @@ function GenreArtistCard({ artist }: { artist: GenreArtist }) {
   const [discovering, setDiscovering] = useState(false)
   const [queued, setQueued] = useState(false)
   const genres = artist.genres ?? []
+  const preview = usePreviewContext()
+  const isPlaying = preview.currentMbid === artist.mbid && preview.playing
+  const canPreview = preview.hasPreview(artist.streamingUrls ?? null)
 
   async function handleQuickDiscover() {
     setDiscovering(true)
@@ -89,14 +93,34 @@ function GenreArtistCard({ artist }: { artist: GenreArtist }) {
           <p className="text-[10px] text-muted truncate mt-0.5">{genres.slice(0, 3).join(', ')}</p>
         )}
       </div>
-      <button
-        type="button"
-        disabled={discovering || queued}
-        onClick={handleQuickDiscover}
-        className="shrink-0 px-2 py-1 text-xs rounded border border-border text-muted hover:text-text hover:border-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {queued ? 'In Queue' : discovering ? '...' : '+ Queue'}
-      </button>
+      <div className="shrink-0 flex items-center gap-1.5">
+        {canPreview && (
+          <button
+            type="button"
+            onClick={() =>
+              isPlaying
+                ? preview.stop()
+                : preview.play(artist.mbid, artist.name, artist.streamingUrls ?? null)
+            }
+            className="w-7 h-7 flex items-center justify-center rounded-full border border-border text-muted hover:text-accent hover:border-accent/60 transition-colors"
+            aria-label={isPlaying ? 'Stop preview' : 'Play preview'}
+          >
+            {isPlaying ? (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1" y="1" width="3" height="8" /><rect x="6" y="1" width="3" height="8" /></svg>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 1l7 4-7 4V1z" /></svg>
+            )}
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={discovering || queued}
+          onClick={handleQuickDiscover}
+          className="px-2 py-1 text-xs rounded border border-border text-muted hover:text-text hover:border-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {queued ? 'In Queue' : discovering ? '...' : '+ Queue'}
+        </button>
+      </div>
     </div>
   )
 }
