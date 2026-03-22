@@ -597,7 +597,7 @@ export function RecommendationCard({
             {rec.artist.imageUrl && (
               <div
                 className="relative h-40 w-full bg-cover bg-center"
-                style={{ backgroundImage: `url(${rec.artist.imageUrl})` }}
+                style={{ backgroundImage: `url(${rec.artist.imageUrl.replace(/[()'"]/g, '')})` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 {rec.artist.logoUrl ? (
@@ -611,11 +611,11 @@ export function RecommendationCard({
                     {rec.artist.name}
                   </span>
                 )}
-                <div
-                  className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5"
-                >
+                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5">
                   <span className="text-accent text-lg font-bold leading-none">{pct}</span>
-                  <span className="text-white/50 text-[9px] ml-1 uppercase tracking-wider">match</span>
+                  <span className="text-white/50 text-[9px] ml-1 uppercase tracking-wider">
+                    match
+                  </span>
                 </div>
               </div>
             )}
