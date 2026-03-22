@@ -4,7 +4,8 @@ export function setupGuard(isSetupComplete: () => Promise<boolean>) {
   return async (c: Context, next: Next) => {
     const path = c.req.path
     if (
-      path.startsWith('/api/setup') ||
+      path.startsWith('/api/setup/') ||
+      path === '/api/setup' ||
       path.startsWith('/api/settings/test') ||
       path.startsWith('/api/auth/') ||
       path === '/health'

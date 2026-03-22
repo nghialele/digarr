@@ -161,15 +161,22 @@ export function pipelineRoutes(deps: AppDependencies) {
     // Fire-and-forget a focused pipeline run with just this artist as seed
     ;(async () => {
       try {
-        const lidarr = createLidarrClient(
-          settings.lidarrUrl as string,
-          settings.lidarrApiKey as string,
-          (settings.skipTlsVerify as boolean) ?? false,
-        )
+        const lidarrUrl = settings.lidarrUrl as string | null
+        const lidarrApiKey = settings.lidarrApiKey as string | null
+        const lidarr =
+          lidarrUrl && lidarrApiKey
+            ? createLidarrClient(
+                lidarrUrl,
+                lidarrApiKey,
+                (settings.skipTlsVerify as boolean) ?? false,
+              )
+            : null
         const mb = createMusicBrainzClient()
 
         // Get library MBIDs -- intermediate array is immediately GC-eligible
-        const libraryMbids = new Set((await lidarr.getArtists()).map((a) => a.foreignArtistId))
+        const libraryMbids = lidarr
+          ? new Set((await lidarr.getArtists()).map((a) => a.foreignArtistId))
+          : new Set<string>()
 
         // Get similar from Last.fm
         const discovered = []
@@ -224,7 +231,7 @@ export function pipelineRoutes(deps: AppDependencies) {
         }
         const prefs = mergePreferences(qdPreferences)
 
-        const resolved = await resolve(discovered, mb, undefined, lidarr)
+        const resolved = await resolve(discovered, mb, undefined, lidarr ?? undefined)
         const rejectedMbids = await deps.storeDb.getRejectedMbids(prefs.rejectionCooldownDays)
         const feedbackHistory = await deps.storeDb.getFeedbackHistory()
         const scored = score(resolved, [], prefs.scoringWeights, feedbackHistory)

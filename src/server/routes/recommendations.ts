@@ -50,7 +50,8 @@ async function approveToTargets(
 }
 
 function isOwned(rec: { userId?: number | null }, callerId?: number): boolean {
-  return !rec.userId || !callerId || rec.userId === callerId
+  if (!rec.userId) return true // legacy recs (null userId) are visible to everyone
+  return rec.userId === callerId
 }
 
 export function recommendationRoutes(deps: AppDependencies) {

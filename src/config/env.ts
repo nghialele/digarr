@@ -58,6 +58,9 @@ export const envConfig = {
   // Webhook (injected into preferences during auto-setup only)
   webhookUrl: env('WEBHOOK_URL'),
 
+  // Registration control
+  disableRegistration: envBool('DIGARR_DISABLE_REGISTRATION'),
+
   // Proxy auth
   proxyAuthEnabled: envBool('PROXY_AUTH_ENABLED'),
   proxyAuthTrustedProxies: env('PROXY_AUTH_TRUSTED_PROXIES'), // comma-separated CIDRs

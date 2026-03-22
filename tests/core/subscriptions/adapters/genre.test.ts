@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
-import { createGenreAdapter } from '@/core/subscriptions/adapters/genre'
 import type { DiscoverySource, GenreArtistEntry } from '@/core/plugins/types'
+import { createGenreAdapter } from '@/core/subscriptions/adapters/genre'
 
 function makeSource(
   id: string,
@@ -15,9 +15,7 @@ function makeSource(
     getTopArtists: vi.fn().mockResolvedValue([]),
     getSimilarArtists: vi.fn().mockResolvedValue([]),
     testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
-    getGenreArtists: hasGenreArtists
-      ? vi.fn().mockResolvedValue(entries)
-      : undefined,
+    getGenreArtists: hasGenreArtists ? vi.fn().mockResolvedValue(entries) : undefined,
   }
 }
 
@@ -54,9 +52,7 @@ describe('createGenreAdapter', () => {
   })
 
   it('uses 0.5 default similarityScore when listeners is 0', async () => {
-    const entries: GenreArtistEntry[] = [
-      { name: 'Artist B', listeners: 0, source: 'lastfm' },
-    ]
+    const entries: GenreArtistEntry[] = [{ name: 'Artist B', listeners: 0, source: 'lastfm' }]
     const source = makeSource('lastfm', true, entries)
     const adapter = createGenreAdapter([source])
 

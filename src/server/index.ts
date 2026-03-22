@@ -19,7 +19,7 @@ import type {
   RecommendationWithArtist,
   StatusUpdateExtra,
 } from '@/db/queries/recommendations'
-import type { SetupConfig } from '@/db/queries/settings'
+import type { SettingsRow, SetupConfig } from '@/db/queries/settings'
 import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
 import type { subscriptionRuns, subscriptions } from '@/db/schema'
 
@@ -69,7 +69,7 @@ export type AppDependencies = {
   scheduler: SubscriptionScheduler
   providerRegistry: AiProviderRegistry
   isSetupComplete: () => Promise<boolean>
-  getSettings: () => Promise<Record<string, unknown> | null>
+  getSettings: () => Promise<SettingsRow | null>
   updateSettings: (partial: Record<string, unknown>) => Promise<void>
   completeSetup: (config: SetupConfig) => Promise<unknown>
   // Pipeline status
@@ -172,12 +172,15 @@ export function createApp(deps: AppDependencies) {
       origin: envConfig.allowedOrigin ?? '*',
     }),
   )
-  app.use('*', secureHeaders({
-    xFrameOptions: 'DENY',
-    xContentTypeOptions: 'nosniff',
-    referrerPolicy: 'strict-origin-when-cross-origin',
-    crossOriginOpenerPolicy: 'same-origin',
-  }))
+  app.use(
+    '*',
+    secureHeaders({
+      xFrameOptions: 'DENY',
+      xContentTypeOptions: 'nosniff',
+      referrerPolicy: 'strict-origin-when-cross-origin',
+      crossOriginOpenerPolicy: 'same-origin',
+    }),
+  )
   app.use(
     '*',
     proxyAuthMiddleware({

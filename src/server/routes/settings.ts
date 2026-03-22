@@ -71,7 +71,7 @@ async function buildSettingsResponse(
   const row = await deps.getSettings()
   if (!row) return null
 
-  let response: Record<string, unknown> = { ...(row as Record<string, unknown>) }
+  let response: Record<string, unknown> = { ...row }
 
   // Non-admins get a stripped view of global settings
   if (!isAdmin) {
@@ -249,7 +249,7 @@ export function settingsRoutes(deps: AppDependencies) {
     }
 
     // Fall back to stored credentials when the request sends empty keys
-    const stored = (await deps.getSettings()) as Record<string, unknown> | null
+    const stored = await deps.getSettings()
     const testUserId = c.get('userId')
     const userConns = testUserId ? await getUserConnections(deps.db, testUserId) : null
 
@@ -411,9 +411,7 @@ export function settingsRoutes(deps: AppDependencies) {
     }
 
     const stored = await deps.getSettings()
-    const prefs = (stored as Record<string, unknown> | null)?.preferences as
-      | Record<string, unknown>
-      | undefined
+    const prefs = stored?.preferences as Record<string, unknown> | undefined
     const url = prefs?.webhookUrl as string | undefined
     if (!url) {
       return c.json({ success: false, message: 'No webhook URL configured' })

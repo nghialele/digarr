@@ -12,7 +12,14 @@ const fixtureResponse = {
   tracks: {
     items: [
       { track: { artists: [{ name: 'Chart Artist One', id: 'c1' }] } },
-      { track: { artists: [{ name: 'Chart Artist Two', id: 'c2' }, { name: 'Chart Artist Three', id: 'c3' }] } },
+      {
+        track: {
+          artists: [
+            { name: 'Chart Artist Two', id: 'c2' },
+            { name: 'Chart Artist Three', id: 'c3' },
+          ],
+        },
+      },
       { track: { artists: [{ name: 'chart artist one', id: 'c1' }] } }, // duplicate
     ],
   },

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearAllSessions, createSession } from '@/core/sessions'
+import type { SettingsRow } from '@/db/queries/settings'
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'
 
@@ -39,7 +40,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     scheduler: {} as AppDependencies['scheduler'],
     providerRegistry: {} as unknown as AppDependencies['providerRegistry'],
     isSetupComplete: async () => true,
-    getSettings: vi.fn(async () => mockSettings as Record<string, unknown>),
+    getSettings: vi.fn(async () => mockSettings as unknown as SettingsRow),
     updateSettings: vi.fn(async () => {}),
     completeSetup: vi.fn(async () => ({ id: 1, setupComplete: true })),
     getLastBatch: vi.fn(async () => null),
@@ -173,7 +174,7 @@ describe('PATCH /api/settings', () => {
   it('calls updateSettings and returns updated settings', async () => {
     const updateSettings = vi.fn(async () => {})
     const updatedSettings = { ...mockSettings, lidarrUrl: 'http://new:8686' }
-    const getSettings = vi.fn(async () => updatedSettings as Record<string, unknown>)
+    const getSettings = vi.fn(async () => updatedSettings as unknown as SettingsRow)
     const app = createApp(makeDeps({ updateSettings, getSettings }))
 
     const res = await app.request('/api/settings', {

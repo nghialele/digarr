@@ -82,6 +82,9 @@ export function targetRoutes(deps: TargetDeps) {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
+    if (!(await resolveAdmin(userId, deps.getUserById)))
+      return c.json({ error: 'Admin access required' }, 403)
+
     const id = Number(c.req.param('id'))
     const target = await deps.targetQueries.getTarget(id)
     if (!target || target.userId !== userId) {
@@ -101,6 +104,9 @@ export function targetRoutes(deps: TargetDeps) {
   router.delete('/api/targets/:id', async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+
+    if (!(await resolveAdmin(userId, deps.getUserById)))
+      return c.json({ error: 'Admin access required' }, 403)
 
     const id = Number(c.req.param('id'))
     const target = await deps.targetQueries.getTarget(id)

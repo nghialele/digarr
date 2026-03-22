@@ -10,6 +10,7 @@ import { createPlexSource } from '@/core/plugins/plex'
 import { SourceRegistry } from '@/core/plugins/registry'
 import { createSpotifySource } from '@/core/plugins/spotify'
 import type { AiProviderRegistry } from '@/core/providers/registry'
+import type { UserConnections } from '@/db/queries/users'
 import { mergePreferences, type Preferences } from '@/db/schema'
 import { analyze } from './analyze'
 import { type AutoApproveDeps, autoApprove } from './auto-approve'
@@ -36,20 +37,6 @@ export interface PipelineSettings {
   preferences: Preferences | null
   skipTlsVerify?: boolean
   spotifyAccessToken?: string | null
-}
-
-export interface UserConnections {
-  listenbrainzUsername: string | null
-  listenbrainzToken: string | null
-  lastfmUsername: string | null
-  lastfmApiKey: string | null
-  plexUrl: string | null
-  plexToken: string | null
-  jellyfinUrl: string | null
-  jellyfinApiKey: string | null
-  jellyfinUserId: string | null
-  discogsToken: string | null
-  discogsUsername: string | null
 }
 
 export interface PipelineDeps {

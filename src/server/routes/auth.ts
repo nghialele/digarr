@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { envConfig } from '@/config/env'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
 import { updateUserPreferences } from '@/db/queries/users'
@@ -14,7 +15,6 @@ const ALLOWED_PREF_KEYS = new Set([
   'librarySeedRatio',
   'scheduleCron',
   'webhookUrl',
-  'webhookEvents',
   'autoApproveEnabled',
   'autoApproveThreshold',
   'autoApproveMonitorOption',
@@ -32,6 +32,12 @@ export function authRoutes(deps: AppDependencies) {
 
   // Register a new user. First user becomes admin.
   router.post('/api/auth/register', async (c) => {
+    // Allow disabling registration after first user via env var
+    const userCount = await deps.getUserCount()
+    if (userCount > 0 && envConfig.disableRegistration) {
+      return c.json({ error: 'Registration is disabled' }, 403)
+    }
+
     const body = await c.req.json()
     const { username, password } = body as { username?: string; password?: string }
 
@@ -50,7 +56,6 @@ export function authRoutes(deps: AppDependencies) {
       return c.json({ error: 'Username already taken' }, 409)
     }
 
-    const userCount = await deps.getUserCount()
     const isAdmin = userCount === 0
 
     const passwordHash = hashPassword(password)

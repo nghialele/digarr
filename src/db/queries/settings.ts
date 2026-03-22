@@ -4,7 +4,7 @@ import type { Database } from '@/db'
 import type { Preferences } from '@/db/schema'
 import { settings } from '@/db/schema'
 
-type SettingsRow = typeof settings.$inferSelect
+export type SettingsRow = typeof settings.$inferSelect
 type SettingsPartial = Partial<Omit<SettingsRow, 'id' | 'createdAt' | 'updatedAt'>>
 
 export type SetupConfig = {

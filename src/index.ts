@@ -107,6 +107,7 @@ import {
   getUserById,
   getUserByOidcSubject,
   getUserByUsername,
+  getUserConnections,
   getUserCount,
   listUsers,
   updatePassword,
@@ -305,26 +306,25 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   const feedbackHistory = await storeDb.getFeedbackHistory()
 
   // Source connections are per-user only (no global fallback)
-  const userRow = sub.userId ? await getUserById(db, sub.userId) : null
-  const u = userRow as Record<string, unknown> | null
+  const userConns = sub.userId ? await getUserConnections(db, sub.userId) : null
 
-  const lbUsername = u?.listenbrainzUsername as string | null
-  const lbToken = u?.listenbrainzToken as string | null
-  const lfUsername = u?.lastfmUsername as string | null
-  const lfApiKey = u?.lastfmApiKey as string | null
-  const dcToken = u?.discogsToken as string | null
-  const dcUsername = u?.discogsUsername as string | null
+  const lbUsername = userConns?.listenbrainzUsername ?? null
+  const lbToken = userConns?.listenbrainzToken ?? null
+  const lfUsername = userConns?.lastfmUsername ?? null
+  const lfApiKey = userConns?.lastfmApiKey ?? null
+  const dcToken = userConns?.discogsToken ?? null
+  const dcUsername = userConns?.discogsUsername ?? null
 
   // Build source registry fresh per run (same pattern as orchestrator)
   const sourceRegistry = new SourceRegistry()
   if (lbUsername && lbToken) {
-    sourceRegistry.register(createListenBrainzSource(lbUsername as string, lbToken as string))
+    sourceRegistry.register(createListenBrainzSource(lbUsername, lbToken))
   }
   if (lfUsername && lfApiKey) {
-    sourceRegistry.register(createLastFmSource(lfUsername as string, lfApiKey as string))
+    sourceRegistry.register(createLastFmSource(lfUsername, lfApiKey))
   }
   if (dcToken && dcUsername) {
-    sourceRegistry.register(createDiscogsSource(dcToken as string, dcUsername as string))
+    sourceRegistry.register(createDiscogsSource(dcToken, dcUsername))
   }
 
   // Build adapter registry from available sources, or reuse a cached one.
@@ -406,7 +406,11 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
     mbClient: createMusicBrainzClient() as SubMBClient,
     lidarr: lidarrClient ?? undefined,
     userId: sub.userId ?? undefined,
-    libraryMbids: new Set<string>(),
+    // Populate library MBIDs from Lidarr so subscriptions don't recommend
+    // artists already in the library (same dedup the main pipeline does)
+    libraryMbids: lidarrClient
+      ? new Set((await lidarrClient.getArtists()).map((a) => a.foreignArtistId))
+      : new Set<string>(),
     libraryGenres: [],
     rejectedMbids,
     feedbackHistory,

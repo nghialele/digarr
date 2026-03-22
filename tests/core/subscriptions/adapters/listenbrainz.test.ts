@@ -206,16 +206,18 @@ describe('createListenBrainzAdapter', () => {
   it('returns empty when no Weekly Jams playlist found', async () => {
     const noJamsServer = http.createServer((_req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({
-        playlists: [
-          {
-            playlist: {
-              title: 'Some Other Playlist',
-              track: [{ creator: 'Some Artist', title: 'Track' }],
+      res.end(
+        JSON.stringify({
+          playlists: [
+            {
+              playlist: {
+                title: 'Some Other Playlist',
+                track: [{ creator: 'Some Artist', title: 'Track' }],
+              },
             },
-          },
-        ],
-      }))
+          ],
+        }),
+      )
     })
     await new Promise<void>((r) => noJamsServer.listen(0, '127.0.0.1', r))
     const noJamsAddr = noJamsServer.address() as AddressInfo

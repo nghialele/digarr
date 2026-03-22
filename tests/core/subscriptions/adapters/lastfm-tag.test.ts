@@ -98,7 +98,9 @@ describe('createLastfmTagAdapter', () => {
     // 2_000_000 / 1_000_000 = 2.0 capped at 1.0
     expect(result.artists.find((a) => a.name === 'Metal Artist A')!.similarityScore).toBe(1.0)
     // 500_000 / 1_000_000 = 0.5
-    expect(result.artists.find((a) => a.name === 'Metal Artist B')!.similarityScore).toBeCloseTo(0.5)
+    expect(result.artists.find((a) => a.name === 'Metal Artist B')!.similarityScore).toBeCloseTo(
+      0.5,
+    )
     // 0 listeners -> 0.5 default
     expect(result.artists.find((a) => a.name === 'Metal Artist C')!.similarityScore).toBe(0.5)
   })

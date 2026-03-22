@@ -1,16 +1,20 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { runSubscription } from '@/core/subscriptions/runner'
-import type { SubscriptionAdapter, SubscriptionConfig, SubscriptionRunDeps } from '@/core/subscriptions/types'
+import type {
+  SubscriptionAdapter,
+  SubscriptionConfig,
+  SubscriptionRunDeps,
+} from '@/core/subscriptions/types'
 
 vi.mock('@/core/pipeline/resolve', () => ({ resolve: vi.fn() }))
 vi.mock('@/core/pipeline/score', () => ({ score: vi.fn() }))
 vi.mock('@/core/pipeline/filter', () => ({ filter: vi.fn() }))
 vi.mock('@/core/pipeline/store', () => ({ store: vi.fn() }))
 
+import { filter } from '@/core/pipeline/filter'
 import { resolve } from '@/core/pipeline/resolve'
 import { score } from '@/core/pipeline/score'
-import { filter } from '@/core/pipeline/filter'
 import { store } from '@/core/pipeline/store'
 
 const resolveMock = vi.mocked(resolve)
@@ -125,10 +129,19 @@ describe('runSubscription', () => {
   })
 
   it('runs pipeline stages when adapter returns artists', async () => {
-    const artists = [
-      { name: 'Artist A', mbid: 'mbid-a', similarityScore: 0.8, source: 'test' },
+    const artists = [{ name: 'Artist A', mbid: 'mbid-a', similarityScore: 0.8, source: 'test' }]
+    const resolved = [
+      {
+        mbid: 'mbid-a',
+        name: 'Artist A',
+        tags: [],
+        genres: [],
+        discoveries: [{ source: 'test', similarityScore: 0.8 }],
+        streamingUrls: {},
+        imageUrl: undefined,
+        disambiguation: undefined,
+      },
     ]
-    const resolved = [{ mbid: 'mbid-a', name: 'Artist A', tags: [], genres: [], discoveries: [{ source: 'test', similarityScore: 0.8 }], streamingUrls: {}, imageUrl: undefined, disambiguation: undefined }]
     const scored = [{ ...resolved[0], score: 0.75 }]
     const filtered = [{ ...scored[0] }]
 
@@ -154,10 +167,19 @@ describe('runSubscription', () => {
   })
 
   it('passes subscriptionId to store options', async () => {
-    const artists = [
-      { name: 'Artist B', mbid: 'mbid-b', similarityScore: 0.7, source: 'test' },
+    const artists = [{ name: 'Artist B', mbid: 'mbid-b', similarityScore: 0.7, source: 'test' }]
+    const resolved = [
+      {
+        mbid: 'mbid-b',
+        name: 'Artist B',
+        tags: [],
+        genres: [],
+        discoveries: [{ source: 'test', similarityScore: 0.7 }],
+        streamingUrls: {},
+        imageUrl: undefined,
+        disambiguation: undefined,
+      },
     ]
-    const resolved = [{ mbid: 'mbid-b', name: 'Artist B', tags: [], genres: [], discoveries: [{ source: 'test', similarityScore: 0.7 }], streamingUrls: {}, imageUrl: undefined, disambiguation: undefined }]
     const scored = [{ ...resolved[0], score: 0.8 }]
     const filtered = [{ ...scored[0] }]
 

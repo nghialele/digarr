@@ -2,6 +2,7 @@
 
 import { EventEmitter } from 'node:events'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SettingsRow } from '@/db/queries/settings'
 import type { AppDependencies } from '@/server'
 
 function makeMockOrchestrator() {
@@ -73,12 +74,15 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     scheduler: mockScheduler as unknown as AppDependencies['scheduler'],
     providerRegistry: {} as unknown as AppDependencies['providerRegistry'],
     isSetupComplete: async () => true,
-    getSettings: vi.fn(async () => ({
-      id: 1,
-      lidarrUrl: 'http://lidarr:8686',
-      lidarrApiKey: 'key',
-      preferences: {},
-    })),
+    getSettings: vi.fn(
+      async () =>
+        ({
+          id: 1,
+          lidarrUrl: 'http://lidarr:8686',
+          lidarrApiKey: 'key',
+          preferences: {},
+        }) as SettingsRow,
+    ),
     updateSettings: vi.fn(async () => {}),
     completeSetup: vi.fn(async () => ({ id: 1, setupComplete: true })),
     getLastBatch: vi.fn(async () => null),

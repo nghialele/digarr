@@ -3,6 +3,17 @@ import type { HonoEnv } from '@/server/types'
 
 type RateLimitBucket = { count: number; resetAt: number }
 
+/** Extract socket-level IP (not forgeable headers). Mirrors proxy-auth.ts. */
+function getSocketIp(c: { env?: unknown }): string | null {
+  const env = c.env as Record<string, unknown> | undefined
+  const bunAddr = env?.remoteAddress
+  if (typeof bunAddr === 'string') return bunAddr
+  const incoming = env?.incoming as { socket?: { remoteAddress?: string } } | undefined
+  const nodeAddr = incoming?.socket?.remoteAddress
+  if (typeof nodeAddr === 'string') return nodeAddr
+  return null
+}
+
 /**
  * Simple in-memory rate limiter keyed by client IP.
  * Not shared across processes -- sufficient for single-process deployments.
@@ -19,10 +30,9 @@ export function rateLimiter(opts: { windowMs: number; max: number; keyPrefix?: s
   }, 60_000).unref()
 
   return createMiddleware<HonoEnv>(async (c, next) => {
-    const ip =
-      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
-      c.req.header('x-real-ip') ??
-      'unknown'
+    // Use socket IP to prevent bypass via forged X-Forwarded-For headers.
+    // Same approach as proxy-auth.ts getSocketIp().
+    const ip = getSocketIp(c) ?? 'unknown'
     const key = `${opts.keyPrefix ?? 'rl'}:${ip}`
     const now = Date.now()
 

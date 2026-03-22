@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
-import { createSimilarAdapter } from '@/core/subscriptions/adapters/similar'
 import type { DiscoverySource, SimilarArtistEntry } from '@/core/plugins/types'
+import { createSimilarAdapter } from '@/core/subscriptions/adapters/similar'
 
 function makeSource(id: string, entries: SimilarArtistEntry[] = []): DiscoverySource {
   return {

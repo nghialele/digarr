@@ -13,7 +13,14 @@ const fixtureResponse = {
   tracks: {
     items: [
       { track: { artists: [{ name: 'Artist Alpha', id: 'sp1' }] } },
-      { track: { artists: [{ name: 'Artist Beta', id: 'sp2' }, { name: 'Artist Gamma', id: 'sp3' }] } },
+      {
+        track: {
+          artists: [
+            { name: 'Artist Beta', id: 'sp2' },
+            { name: 'Artist Gamma', id: 'sp3' },
+          ],
+        },
+      },
       { track: { artists: [{ name: 'artist alpha', id: 'sp1' }] } }, // duplicate (different case)
       { track: null }, // null track
     ],
@@ -111,7 +118,10 @@ describe('createSpotifyPlaylistAdapter', () => {
     const emptyAddr = emptyServer.address() as AddressInfo
     const emptyBase = `http://127.0.0.1:${emptyAddr.port}`
 
-    const adapter = createSpotifyPlaylistAdapter({ getToken: async () => 'tok', baseUrl: emptyBase })
+    const adapter = createSpotifyPlaylistAdapter({
+      getToken: async () => 'tok',
+      baseUrl: emptyBase,
+    })
     const result = await adapter.fetch({ playlistId: 'anyid' })
     expect(result.artists).toHaveLength(0)
 

@@ -50,12 +50,16 @@ export async function findPendingOAuthByState(
   provider: string,
   state: string,
 ): Promise<OAuthTokenRow | null> {
+  // Use SQL suffix match to avoid loading all pending tokens into memory.
+  // The accessToken format is `pending:{userId}:{state}`.
   const rows = await db
     .select()
     .from(oauthTokens)
-    .where(and(eq(oauthTokens.provider, provider), like(oauthTokens.accessToken, 'pending:%')))
-  // Match the row whose accessToken ends with `:${state}`
-  const match = rows.find((r) => r.accessToken === `pending:${r.userId}:${state}`)
+    .where(and(eq(oauthTokens.provider, provider), like(oauthTokens.accessToken, `%:${state}`)))
+  // Verify the match is actually a pending token (not a coincidental suffix)
+  const match = rows.find(
+    (r) => r.accessToken.startsWith('pending:') && r.accessToken.endsWith(`:${state}`),
+  )
   return match ?? null
 }
 
