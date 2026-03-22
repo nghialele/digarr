@@ -18,17 +18,25 @@ Think of it as Jellyseerr/Overseerr, but for music discovery.
 
 ---
 
-## What Makes Digarr Different
+## Highlights
 
-Most music discovery tools do one thing: pull similar artists from Last.fm and list them. Digarr goes further with a **7-stage AI-powered pipeline** that actually learns from your feedback:
+### 7-Stage AI Pipeline
+Not just "here are similar artists." Digarr collects your taste from up to 6 sources, asks an AI to reason about what you'd like and why, scores candidates with a configurable weighted formula, deduplicates across batches, and learns from your approve/reject feedback over time.
 
-- **Multi-source taste analysis** -- not just one listening source, but up to 6 (ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, Discogs) combined into a single taste profile
-- **AI reasoning** -- every recommendation comes with a written explanation of why the artist matches your taste, powered by your choice of Claude, GPT, Gemini, Ollama, or any OpenAI-compatible provider
-- **Weighted scoring** -- recommendations are ranked by a configurable formula (consensus, similarity, genre overlap, AI confidence, feedback learning, popularity), not just a single similarity score
-- **Feedback loop** -- approve and reject to teach the pipeline your taste. The more feedback, the better future recommendations get
-- **Auto-playlists** -- generate weekly "Digarr Digest" playlists and push them to Navidrome, Jellyfin, Plex, or Spotify automatically
-- **15 color themes** -- including streaming-service-inspired themes (Spotarr, Youtarr, Deezarr, Applarr, Tidarr, Amazarr, Qobuzarr) alongside editor classics (Tokyo Night, Catppuccin, Dracula, One Dark, Nord, Gruvbox, Solarized, Rose Pine)
-- **Lidarr-optional** -- works without Lidarr in pure discovery mode. Export as JSON, CSV, M3U, or XSPF
+### Mood Discovery
+Type "something like Boards of Canada but darker" or "upbeat 90s pop for a road trip" and get instant AI-powered results. No menus, no filters -- just plain English.
+
+### Auto-Playlists ("Digarr Digest")
+Generate curated playlists from your approved recommendations and push them to Navidrome, Jellyfin, Plex, or Spotify automatically. Four strategies: Weekly Digest, Genre Focus, Mood Mix, and Rediscover (forgotten gems from weeks ago).
+
+### Genre Deep Dive
+Browse your library by genre, then explore three discovery tabs: **Recommended** (approved artists in that genre), **Trending** (recent discoveries), and **Deep Cuts** (hidden gems with low popularity). Preview tracks and queue artists directly from genre pages.
+
+### Your AI, Your Choice
+Anthropic (Claude), OpenAI, Google Gemini, Ollama (local, free), or any OpenAI-compatible endpoint. Every recommendation includes a written explanation of why the artist matches your taste.
+
+### 15 Color Themes
+Editor classics (Tokyo Night, Catppuccin, Dracula, One Dark, Nord, Gruvbox, Solarized, Rose Pine) alongside streaming-service-inspired *arr themes (Spotarr, Youtarr, Deezarr, Applarr, Tidarr, Amazarr, Qobuzarr). All with dark and light variants.
 
 ---
 
@@ -36,17 +44,16 @@ Most music discovery tools do one thing: pull similar artists from Last.fm and l
 
 ### Discovery & Recommendations
 - **6 data sources** -- ListenBrainz, Last.fm, Spotify (OAuth), Plex, Jellyfin, and Discogs. Each feeds into the taste profile with listening history, play counts, or collection data
-- **AI-powered recommendations** -- Anthropic (Claude), OpenAI, Google Gemini, Ollama, or any OpenAI-compatible provider; includes written explanations per artist
 - **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity; configurable weights, thresholds, and cooldowns
-- **Mood discovery** -- free-text prompt ("find me something like Boards of Canada but darker") with instant AI results right from the Discover page
 - **Auto-approve** -- automatically add high-scoring recommendations to your targets after each scan
-- **Artist logos** -- fanart.tv clearlogo support via Lidarr, displayed on the dashboard hero card
-- **Genre discovery** -- browse genres from your library, view recommended/trending/deep-cuts artists per genre with preview playback, subscribe to genres for automatic discovery
+- **Artist logos** -- fanart.tv clearlogo support via Lidarr, displayed on the dashboard hero and expanded recommendation cards
+- **Subscriptions** -- schedule genre-based or similar-artist discovery runs that feed directly into the pipeline
 
 ### Playlists & Targets
-- **Auto-playlists ("Digarr Digest")** -- 4 strategies: Weekly Digest, Genre Focus, Mood Mix, and Rediscover (forgotten gems). Push to Navidrome, Jellyfin, Plex, or Spotify on a separate schedule
-- **Target registry** -- pluggable approval targets: Lidarr (download + monitor), Spotify Playlist (OAuth push), Navidrome/Jellyfin/Plex (playlist API). Configure and test from Settings
+- **Auto-playlists** -- 4 strategies (Weekly Digest, Genre Focus, Mood Mix, Rediscover) pushed to Navidrome, Jellyfin, Plex, or Spotify on their own schedule
+- **Target registry** -- pluggable approval targets: Lidarr (download + monitor with per-user quality/metadata/root folder preferences), Spotify Playlist (OAuth push), Navidrome/Jellyfin/Plex (playlist API)
 - **Export** -- JSON, CSV, M3U, XSPF (with artist images, AI reasoning, streaming links, and MusicBrainz metadata)
+- **Lidarr-optional** -- works without Lidarr in pure discovery mode
 
 ### Library & Analytics
 - **Library health dashboard** -- 6 automated checks (missing metadata, unmonitored artists, missing albums, duplicates, genre gaps, image gaps) with one-click batch fixes
@@ -54,50 +61,42 @@ Most music discovery tools do one thing: pull similar artists from Last.fm and l
 - **Feedback insights** -- see how your approval patterns shape future recommendations
 
 ### UX & Auth
-- **OIDC/SSO authentication** -- Authentik, Authelia, Keycloak, Google, or any OIDC provider. Reverse proxy header auth also supported
-- **Multi-user** -- per-user recommendation queues, listening sources, scoring weights, and target configurations
-- **Music previews** -- Spotify embeds, Deezer 30-sec clips, or YouTube previews directly from recommendation and genre cards
+- **OIDC/SSO** -- Authentik, Authelia, Keycloak, Google, or any OIDC provider. Reverse proxy header auth also supported
+- **Multi-user** -- per-user recommendation queues, listening sources, scoring weights, Lidarr profiles, and target configurations
+- **Music previews** -- Spotify embeds, Deezer 30-sec clips, or YouTube previews on recommendation cards and genre pages
 - **Swipe-to-approve** -- swipe right to approve, left to reject on mobile; desktop gets hover buttons and card-stack mode
-- **Contextual hints** -- 24 dismissable tips throughout the app guide new users without cluttering the experience for veterans
-- **Progressive disclosure** -- settings organized into Essential/Tuning/Advanced tiers
-- **15 themes** with dark and light variants, grouped into Editor and Streaming categories
+- **Contextual hints** -- dismissable tips throughout the app guide new users without getting in the way
 - **Webhook notifications** -- Discord, Slack, ntfy, Gotify, or any HTTP endpoint
 - **Self-hosted** -- single container, runs alongside your existing *arr stack
 
 ---
 
-## The Self-Hosted Music Discovery Landscape
+## Friends of the Project
 
-Digarr exists in a growing ecosystem of self-hosted music discovery tools. Here's how they compare:
+Digarr wouldn't exist without the self-hosted music discovery community. These projects inspired us, and we recommend checking them out -- each takes a different approach to the same problem, and they're all worth your time:
 
-### Direct Competitors
+### Discovery & Recommendations
+- [**Aurral**](https://github.com/lklynet/aurral) -- artist discovery and request manager for Lidarr with Last.fm tag similarity and Weekly Flow playlists via Soulseek/Navidrome. Clean UI, fast-growing community.
+- [**MixArr**](https://github.com/aquantumofdonuts/mixarr) -- the widest net in the space with 56 subscription types across 12 services. If you want to pull from Spotify, TIDAL, Bandcamp, Discogs, and more all at once, MixArr is your tool.
+- [**Sonobarr**](https://github.com/Dodelidoo-Labs/sonobarr) -- Last.fm discovery in batch queues with an optional AI assistant. Real-time Socket.IO UI. Growing fast.
+- [**Brainarr**](https://github.com/RicherTunes/Brainarr) -- the only tool that runs as a native Lidarr plugin. Privacy-first with local AI via Ollama/LM Studio.
+- [**Lidify**](https://github.com/TheWicklowWolf/Lidify) -- the OG in this space. Simple, focused: Lidarr library -> Last.fm similar artists -> one-click add. Does one thing well.
+- [**DiscoveryLastFM**](https://github.com/MrRobotoGit/DiscoveryLastFM) -- fully automated Last.fm -> Lidarr pipeline with zero UI. Set it and forget it.
 
-| App | Stars | Approach | AI? | Lidarr? |
-|-----|-------|----------|-----|---------|
-| **Digarr** | -- | 7-stage AI pipeline with scoring + feedback | 5 providers | Optional |
-| [**Aurral**](https://github.com/lklynet/aurral) | 880+ | Last.fm similar artists + Weekly Flow playlists | No | Required |
-| [**Sonobarr**](https://github.com/Dodelidoo-Labs/sonobarr) | 350+ | Last.fm + optional AI assistant | Optional | Required |
-| [**MixArr**](https://github.com/aquantumofdonuts/mixarr) | 90+ | 56 subscription types across 12 services | 1 of 56 | Required |
-| [**Brainarr**](https://github.com/RicherTunes/Brainarr) | 30+ | Native Lidarr plugin with local AI | Local-first | Plugin |
+### Streaming & Players
+- [**Kima Hub**](https://github.com/Chevron7Locked/kima-hub) -- a self-hosted Spotify replacement with an audio ML "Vibe System" (mood mapping, 2D/3D music visualization, drift playlists). Genuinely novel.
+- [**Explo**](https://github.com/LumePart/Explo) -- "Discover Weekly for self-hosted." Pulls ListenBrainz recommendations, downloads tracks, and creates playlists on your media server. Written in Go, lightweight.
+- [**LMS**](https://github.com/epoupon/lms) -- mature C++ music server with built-in tag-based recommendations. Runs on a Raspberry Pi.
 
-### Adjacent Tools
+### Acquisition & Management
+- [**SoulSync**](https://github.com/Nezreka/SoulSync) -- full music collection manager: Soulseek/Tidal/YouTube/Qobuz downloads with AcoustID fingerprinting and auto playlists.
+- [**Yoink**](https://github.com/FlyinPancake/yoink) -- self-hosted music library manager with cross-provider album matching (same album across Tidal, Deezer, MusicBrainz). Written in Rust.
+- [**Resonance**](https://github.com/jordojordo/deepcrate) -- preview-first discovery with Soulseek downloads. You listen before it downloads.
+- [**re-command**](https://github.com/Snapyou2/re-command) -- ListenBrainz weekly recs downloaded, tagged, and organized for Navidrome. Single-purpose and reliable.
 
-| App | Stars | What It Does |
-|-----|-------|-------------|
-| [**Kima Hub**](https://github.com/Chevron7Locked/kima-hub) | 1,070+ | Self-hosted Spotify replacement with audio ML (Vibe System, mood mapping) |
-| [**SoulSync**](https://github.com/Nezreka/SoulSync) | 1,260+ | Full music collection manager: Soulseek/Tidal/YouTube downloads, auto playlists |
-| [**Explo**](https://github.com/LumePart/Explo) | 1,000+ | "Discover Weekly for self-hosted" -- ListenBrainz recs to media server playlists |
-| [**Lidify**](https://github.com/TheWicklowWolf/Lidify) | 530+ | Simple: Lidarr library -> Last.fm similar -> one-click add |
-| [**Yoink**](https://github.com/FlyinPancake/yoink) | 95+ | Music acquisition tool with cross-provider album matching (Rust) |
-| [**Resonance**](https://github.com/jordojordo/deepcrate) | 35+ | Preview-first discovery with Soulseek downloads |
-| [**re-command**](https://github.com/Snapyou2/re-command) | 80+ | ListenBrainz weekly recs downloaded and tagged for Navidrome |
-| [**DiscoveryLastFM**](https://github.com/MrRobotoGit/DiscoveryLastFM) | 170+ | Fully automated Last.fm -> Lidarr pipeline (no UI) |
-| [**LMS**](https://github.com/epoupon/lms) | 1,560+ | C++ music server with built-in tag-based recommendations |
-
-### Data Sources
-
-- [**MusicMoveArr Datasets**](https://github.com/MusicMoveArr/Datasets) -- MusicBrainz/Spotify/Deezer/Tidal datasets used by Digarr for genre gap filling and popularity scoring
-- [**troi-recommendation-playground**](https://github.com/metabrainz/troi-recommendation-playground) -- the engine behind ListenBrainz's recommendation algorithms
+### Data & Infrastructure
+- [**MusicMoveArr Datasets**](https://github.com/MusicMoveArr/Datasets) -- MusicBrainz/Spotify/Deezer/Tidal datasets used by Digarr for genre enrichment and popularity scoring.
+- [**troi-recommendation-playground**](https://github.com/metabrainz/troi-recommendation-playground) -- the official MetaBrainz recommendation engine behind ListenBrainz's algorithms.
 
 ---
 
