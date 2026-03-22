@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
@@ -176,9 +176,6 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   const [lidarrApiKey, setLidarrApiKey] = useState(
     settings.lidarrApiKey === '***' ? '' : (settings.lidarrApiKey ?? ''),
   )
-  const [qualityProfileId, setQualityProfileId] = useState(String(prefs.qualityProfileId ?? 1))
-  const [metadataProfileId, setMetadataProfileId] = useState(String(prefs.metadataProfileId ?? 1))
-  const [rootFolderId, setRootFolderId] = useState(String(prefs.rootFolderId ?? 1))
   const [lbUsername, setLbUsername] = useState(settings.listenbrainzUsername ?? '')
   const [lbToken, setLbToken] = useState(
     settings.listenbrainzToken === '***' ? '' : (settings.listenbrainzToken ?? ''),
@@ -222,20 +219,6 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
     queryFn: () => getOAuthStatus('spotify'),
   })
   const spotifyConnected = spotifyStatus?.connected ?? false
-
-  // Fetch Lidarr profiles
-  const { data: qualityProfiles } = useQuery({
-    queryKey: ['lidarrProfiles'],
-    queryFn: getLidarrProfiles,
-  })
-  const { data: metadataProfiles } = useQuery({
-    queryKey: ['lidarrMetadataProfiles'],
-    queryFn: getLidarrMetadataProfiles,
-  })
-  const { data: rootFolders } = useQuery({
-    queryKey: ['lidarrRootFolders'],
-    queryFn: getLidarrRootFolders,
-  })
 
   function setTest(key: string, val: ServiceTestState) {
     setTests((prev) => ({ ...prev, [key]: val }))
@@ -336,9 +319,6 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
       lidarrApiKey: lidarrApiKey || undefined,
       preferences: {
         ...prefs,
-        qualityProfileId: parseInt(qualityProfileId, 10) || prefs.qualityProfileId,
-        metadataProfileId: parseInt(metadataProfileId, 10) || prefs.metadataProfileId,
-        rootFolderId: parseInt(rootFolderId, 10) || prefs.rootFolderId,
         lidarrPublicUrl: lidarrPublicUrl || undefined,
       },
     }),
@@ -519,59 +499,6 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
                   URL is already reachable from your browser.
                 </p>
               </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Field label="Quality Profile" id="quality-profile">
-                  <Select
-                    id="quality-profile"
-                    value={qualityProfileId}
-                    onChange={(e) => setQualityProfileId(e.target.value)}
-                  >
-                    {qualityProfiles ? (
-                      qualityProfiles.map((p) => (
-                        <option key={p.id} value={String(p.id)}>
-                          {p.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value={qualityProfileId}>Loading...</option>
-                    )}
-                  </Select>
-                </Field>
-                <Field label="Metadata Profile" id="metadata-profile">
-                  <Select
-                    id="metadata-profile"
-                    value={metadataProfileId}
-                    onChange={(e) => setMetadataProfileId(e.target.value)}
-                  >
-                    {metadataProfiles ? (
-                      metadataProfiles.map((p) => (
-                        <option key={p.id} value={String(p.id)}>
-                          {p.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value={metadataProfileId}>Loading...</option>
-                    )}
-                  </Select>
-                </Field>
-                <Field label="Root Folder" id="root-folder">
-                  <Select
-                    id="root-folder"
-                    value={rootFolderId}
-                    onChange={(e) => setRootFolderId(e.target.value)}
-                  >
-                    {rootFolders ? (
-                      rootFolders.map((f) => (
-                        <option key={f.id} value={String(f.id)}>
-                          {f.path}
-                        </option>
-                      ))
-                    ) : (
-                      <option value={rootFolderId}>Loading...</option>
-                    )}
-                  </Select>
-                </Field>
-              </div>
               <div className="flex justify-end gap-2 pt-1">
                 <Button
                   size="sm"
@@ -1107,6 +1034,133 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
             </Button>
           </div>
         </ServiceCard>
+      </div>
+
+      {/* Lidarr Preferences -- per-user, visible to all */}
+      {settings.lidarrUrl && <LidarrPreferencesSection />}
+    </div>
+  )
+}
+
+function LidarrPreferencesSection() {
+  const queryClient = useQueryClient()
+  const { data: userPrefs } = useQuery({
+    queryKey: ['userPreferences'],
+    queryFn: getUserPreferences,
+  })
+  const { data: qualityProfiles } = useQuery({
+    queryKey: ['lidarrProfiles'],
+    queryFn: getLidarrProfiles,
+  })
+  const { data: metadataProfiles } = useQuery({
+    queryKey: ['lidarrMetadataProfiles'],
+    queryFn: getLidarrMetadataProfiles,
+  })
+  const { data: rootFolders } = useQuery({
+    queryKey: ['lidarrRootFolders'],
+    queryFn: getLidarrRootFolders,
+  })
+
+  const [qualityProfileId, setQualityProfileId] = useState('1')
+  const [metadataProfileId, setMetadataProfileId] = useState('1')
+  const [rootFolderId, setRootFolderId] = useState('1')
+  const [saving, setSaving] = useState(false)
+
+  // Sync local state from user prefs when they load
+  useEffect(() => {
+    if (!userPrefs) return
+    const p = userPrefs as Record<string, unknown>
+    setQualityProfileId(String(p.qualityProfileId ?? 1))
+    setMetadataProfileId(String(p.metadataProfileId ?? 1))
+    setRootFolderId(String(p.rootFolderId ?? 1))
+  }, [userPrefs])
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await updateUserPreferences({
+        qualityProfileId: parseInt(qualityProfileId, 10) || 1,
+        metadataProfileId: parseInt(metadataProfileId, 10) || 1,
+        rootFolderId: parseInt(rootFolderId, 10) || 1,
+      })
+      queryClient.invalidateQueries({ queryKey: ['userPreferences'] })
+      toast.success('Lidarr preferences saved')
+    } catch {
+      toast.error('Failed to save Lidarr preferences')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div>
+      <div className="pt-2 mb-4">
+        <h3 className="text-sm font-semibold text-text uppercase tracking-wide">
+          Your Lidarr Preferences
+        </h3>
+        <p className="text-xs text-muted mt-1">
+          Defaults used when you approve recommendations into Lidarr. Each user can set their own.
+        </p>
+      </div>
+      <div className="rounded-lg border border-border bg-surface p-4 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="Quality Profile" id="user-quality-profile">
+            <Select
+              id="user-quality-profile"
+              value={qualityProfileId}
+              onChange={(e) => setQualityProfileId(e.target.value)}
+            >
+              {qualityProfiles ? (
+                qualityProfiles.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))
+              ) : (
+                <option value={qualityProfileId}>Loading...</option>
+              )}
+            </Select>
+          </Field>
+          <Field label="Metadata Profile" id="user-metadata-profile">
+            <Select
+              id="user-metadata-profile"
+              value={metadataProfileId}
+              onChange={(e) => setMetadataProfileId(e.target.value)}
+            >
+              {metadataProfiles ? (
+                metadataProfiles.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))
+              ) : (
+                <option value={metadataProfileId}>Loading...</option>
+              )}
+            </Select>
+          </Field>
+          <Field label="Root Folder" id="user-root-folder">
+            <Select
+              id="user-root-folder"
+              value={rootFolderId}
+              onChange={(e) => setRootFolderId(e.target.value)}
+            >
+              {rootFolders ? (
+                rootFolders.map((f) => (
+                  <option key={f.id} value={String(f.id)}>
+                    {f.path}
+                  </option>
+                ))
+              ) : (
+                <option value={rootFolderId}>Loading...</option>
+              )}
+            </Select>
+          </Field>
+        </div>
+        <div className="flex justify-end pt-1">
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
       </div>
     </div>
   )

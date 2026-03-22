@@ -22,6 +22,9 @@ const ALLOWED_PREF_KEYS = new Set([
   'playlistSize',
   'playlistSchedule',
   'playlistEnabled',
+  'qualityProfileId',
+  'metadataProfileId',
+  'rootFolderId',
 ])
 
 export function authRoutes(deps: AppDependencies) {
