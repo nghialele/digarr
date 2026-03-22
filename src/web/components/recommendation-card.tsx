@@ -618,9 +618,36 @@ export function RecommendationCard({
 
         {/* Expanded-only section */}
         {expanded && (
-          <div className="border-t border-border px-4 pb-4 space-y-4">
+          <div className="border-t border-border pb-4 space-y-4">
+            {/* Hero banner with artist image + logo */}
+            {rec.artist.imageUrl && (
+              <div
+                className="relative h-40 w-full bg-cover bg-center"
+                style={{ backgroundImage: `url(${rec.artist.imageUrl})` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                {rec.artist.logoUrl ? (
+                  <img
+                    src={rec.artist.logoUrl}
+                    alt={rec.artist.name}
+                    className="absolute bottom-3 left-4 h-10 max-w-[60%] object-contain object-left drop-shadow-lg"
+                  />
+                ) : (
+                  <span className="absolute bottom-3 left-4 text-white font-bold text-xl drop-shadow-lg">
+                    {rec.artist.name}
+                  </span>
+                )}
+                <div
+                  className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5"
+                >
+                  <span className="text-accent text-lg font-bold leading-none">{pct}</span>
+                  <span className="text-white/50 text-[9px] ml-1 uppercase tracking-wider">match</span>
+                </div>
+              </div>
+            )}
+
             {/* MusicBrainz link */}
-            <div className="mt-4 flex items-center gap-2">
+            <div className="px-4 flex items-center gap-2">
               <a
                 href={`https://musicbrainz.org/artist/${rec.artist.mbid}`}
                 target="_blank"
@@ -634,7 +661,7 @@ export function RecommendationCard({
 
             {/* AI reasoning */}
             {rec.aiReasoning && (
-              <div className="border-l-2 border-accent bg-surface/50 px-3 py-2 rounded-r">
+              <div className="mx-4 border-l-2 border-accent bg-surface/50 px-3 py-2 rounded-r">
                 <p className="text-xs text-muted uppercase tracking-wide mb-1">AI Reasoning</p>
                 <p className="text-sm text-text italic">{rec.aiReasoning}</p>
               </div>
@@ -642,7 +669,7 @@ export function RecommendationCard({
 
             {/* Per-source scores */}
             {rec.sources && Object.keys(rec.sources).length > 0 && (
-              <div>
+              <div className="px-4">
                 <p className="text-xs text-muted uppercase tracking-wide mb-2">Source Scores</p>
                 <div className="flex flex-wrap gap-3">
                   {Object.entries(rec.sources).map(([key, score]) => {
@@ -668,7 +695,7 @@ export function RecommendationCard({
             )}
 
             {/* Full streaming links with optional Spotify embed */}
-            <div>
+            <div className="px-4">
               <p className="text-xs text-muted uppercase tracking-wide mb-2">Streaming</p>
               <StreamingLinks
                 streamingUrls={rec.artist.streamingUrls}
