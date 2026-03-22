@@ -73,6 +73,7 @@ export function PlaylistForm({ playlist, onSave, onCancel }: PlaylistFormProps) 
       })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save')
+    } finally {
       setSubmitting(false)
     }
   }

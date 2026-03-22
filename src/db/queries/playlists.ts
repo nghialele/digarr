@@ -114,21 +114,23 @@ export async function replacePlaylistTracks(
   playlistId: number,
   tracks: PlaylistTrackInsert[],
 ): Promise<void> {
-  await db.delete(playlistTracks).where(eq(playlistTracks.playlistId, playlistId))
-  if (tracks.length > 0) {
-    await db.insert(playlistTracks).values(
-      tracks.map((t) => ({
-        playlistId: t.playlistId,
-        artistName: t.artistName,
-        trackName: t.trackName ?? null,
-        mbid: t.mbid ?? null,
-        spotifyUri: t.spotifyUri ?? null,
-        deezerId: t.deezerId ?? null,
-        localPath: t.localPath ?? null,
-        position: t.position,
-      })),
-    )
-  }
+  await db.transaction(async (tx) => {
+    await tx.delete(playlistTracks).where(eq(playlistTracks.playlistId, playlistId))
+    if (tracks.length > 0) {
+      await tx.insert(playlistTracks).values(
+        tracks.map((t, i) => ({
+          playlistId,
+          artistName: t.artistName,
+          trackName: t.trackName ?? null,
+          mbid: t.mbid ?? null,
+          spotifyUri: t.spotifyUri ?? null,
+          deezerId: t.deezerId ?? null,
+          localPath: t.localPath ?? null,
+          position: i,
+        })),
+      )
+    }
+  })
 }
 
 // Returns enabled playlists that have never been generated or whose last

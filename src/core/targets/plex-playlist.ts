@@ -120,17 +120,14 @@ export function createPlexPlaylistTarget(
           (key) => `server://${machineId}/com.plexapp.plugins.library/library/metadata/${key}`,
         )
 
-        const params = new URLSearchParams({
-          type: 'audio',
-          title: name,
-          smart: '0',
-          uri: uris.join(','),
-        })
+        const baseParams = new URLSearchParams({ type: 'audio', title: name, smart: '0' })
+        const uriParam = uris.map((u) => `uri=${encodeURIComponent(u)}`).join('&')
+        const qs = uris.length > 0 ? `${baseParams.toString()}&${uriParam}` : baseParams.toString()
 
         const created = await plexFetch<PlexPlaylistCreateResponse>(
           url,
           token,
-          `/playlists?${params.toString()}`,
+          `/playlists?${qs}`,
           { method: 'POST' },
         )
 

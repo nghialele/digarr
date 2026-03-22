@@ -90,7 +90,7 @@ export function ConnectionSuggestions({ service, onClose }: ConnectionSuggestion
           onClick={onClose}
           className="px-3 py-1.5 bg-accent text-accent-fg rounded text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          Enable
+          Got it
         </button>
         <button
           type="button"

@@ -64,7 +64,9 @@ describe('createNavidromePlaylistTarget()', () => {
 
       const calledUrl = String(mockFetch.mock.calls[0]?.[0])
       expect(calledUrl).toContain('u=admin')
-      expect(calledUrl).toContain('p=secret')
+      expect(calledUrl).not.toContain('p=secret')
+      expect(calledUrl).toMatch(/[?&]t=[0-9a-f]{32}/)
+      expect(calledUrl).toMatch(/[?&]s=[0-9a-f]{16}/)
       expect(calledUrl).toContain('f=json')
       expect(calledUrl).toContain('c=digarr')
     })

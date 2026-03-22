@@ -309,7 +309,7 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
 
 const PLAYLIST_APPROVED_STATUSES = ['approved', 'added_to_lidarr']
 
-function makePlaylistStrategyDeps() {
+function makePlaylistStrategyDeps(userId: number | null) {
   return {
     async getApprovedArtists(opts: { since?: Date; genre?: string; limit?: number }) {
       const rows = await db
@@ -325,6 +325,7 @@ function makePlaylistStrategyDeps() {
           and(
             inArray(recommendations.status, PLAYLIST_APPROVED_STATUSES),
             opts.since ? gte(recommendations.actedOnAt, opts.since) : undefined,
+            userId != null ? eq(recommendations.userId, userId) : undefined,
           ),
         )
         .orderBy(desc(recommendations.score))
@@ -359,6 +360,7 @@ function makePlaylistStrategyDeps() {
           and(
             inArray(recommendations.status, PLAYLIST_APPROVED_STATUSES),
             lt(recommendations.actedOnAt, opts.olderThan),
+            userId != null ? eq(recommendations.userId, userId) : undefined,
           ),
         )
         .orderBy(desc(recommendations.score))
@@ -380,10 +382,9 @@ async function runAllPlaylists(): Promise<void> {
   if (due.length === 0) return
   console.log(`[playlist-scheduler] ${due.length} playlist(s) due for generation`)
 
-  const strategyDeps = makePlaylistStrategyDeps()
-
   for (const playlist of due) {
     try {
+      const strategyDeps = makePlaylistStrategyDeps(playlist.userId ?? null)
       const cfg = playlist.config ?? { size: 25, trackSourcePriority: ['spotify' as const] }
       const result = await generatePlaylist(
         playlist.strategy as import('./db/schema').PlaylistStrategy,
@@ -743,6 +744,7 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, async () => {
     console.log(`${signal} received, shutting down...`)
     scheduler.stopAll()
+    playlistScheduler.stop()
     server.close()
     await new Promise((resolve) => setTimeout(resolve, 5000))
     await pool.end()

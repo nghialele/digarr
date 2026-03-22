@@ -43,7 +43,7 @@ const ALLOWED_UPDATE_FIELDS = new Set<string>([
 
 const APPROVED_STATUSES = ['approved', 'added_to_lidarr']
 
-function buildStrategyDeps(db: Database, _userId: number): StrategyDeps {
+function buildStrategyDeps(db: Database, userId: number | null): StrategyDeps {
   return {
     async getApprovedArtists(opts): Promise<StrategyArtist[]> {
       const rows = await db
@@ -59,6 +59,7 @@ function buildStrategyDeps(db: Database, _userId: number): StrategyDeps {
           and(
             inArray(recommendations.status, APPROVED_STATUSES),
             opts.since ? gte(recommendations.actedOnAt, opts.since) : undefined,
+            userId != null ? eq(recommendations.userId, userId) : undefined,
           ),
         )
         .orderBy(desc(recommendations.score))
@@ -93,6 +94,7 @@ function buildStrategyDeps(db: Database, _userId: number): StrategyDeps {
           and(
             inArray(recommendations.status, APPROVED_STATUSES),
             lt(recommendations.actedOnAt, opts.olderThan),
+            userId != null ? eq(recommendations.userId, userId) : undefined,
           ),
         )
         .orderBy(desc(recommendations.score))
@@ -114,7 +116,7 @@ async function runGeneration(
   deps: PlaylistDeps,
 ): Promise<void> {
   const userId = playlist.userId
-  const strategyDeps = buildStrategyDeps(db, userId ?? 0)
+  const strategyDeps = buildStrategyDeps(db, userId ?? null)
 
   const cfg = playlist.config ?? {
     size: 25,

@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto'
 import type { ServiceTestResult } from '@/core/types'
 import type { DestinationTarget, PlaylistItem, PlaylistResult } from './types'
 
@@ -18,9 +19,14 @@ function buildSubsonicUrl(
   extra?: Record<string, string>,
 ): string {
   const base = baseUrl.replace(/\/+$/, '')
+  const salt = randomBytes(8).toString('hex')
+  const token = createHash('md5')
+    .update(password + salt)
+    .digest('hex')
   const params = new URLSearchParams({
     u: username,
-    p: password,
+    t: token,
+    s: salt,
     v: SUBSONIC_API_VERSION,
     c: SUBSONIC_CLIENT,
     f: 'json',

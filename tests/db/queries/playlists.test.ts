@@ -186,9 +186,12 @@ describe('replacePlaylistTracks', () => {
     const insertChain = {
       values: vi.fn().mockResolvedValue(undefined),
     }
-    const db = {
+    const txMock = {
       delete: vi.fn().mockReturnValue(deleteChain),
       insert: vi.fn().mockReturnValue(insertChain),
+    }
+    const db = {
+      transaction: vi.fn().mockImplementation((fn: (tx: typeof txMock) => Promise<void>) => fn(txMock)),
     } as unknown as Database
 
     const tracks: PlaylistTrackInsert[] = [
@@ -197,9 +200,9 @@ describe('replacePlaylistTracks', () => {
     ]
     await replacePlaylistTracks(db, 1, tracks)
 
-    expect(db.delete).toHaveBeenCalledOnce()
+    expect(txMock.delete).toHaveBeenCalledOnce()
     expect(deleteChain.where).toHaveBeenCalledOnce()
-    expect(db.insert).toHaveBeenCalledOnce()
+    expect(txMock.insert).toHaveBeenCalledOnce()
     expect(insertChain.values).toHaveBeenCalledOnce()
     // biome-ignore lint/style/noNonNullAssertion: mock call args
     const insertedRows = insertChain.values.mock.calls[0]![0] as unknown[]
@@ -210,15 +213,18 @@ describe('replacePlaylistTracks', () => {
     const deleteChain = {
       where: vi.fn().mockResolvedValue(undefined),
     }
-    const db = {
+    const txMock = {
       delete: vi.fn().mockReturnValue(deleteChain),
       insert: vi.fn(),
+    }
+    const db = {
+      transaction: vi.fn().mockImplementation((fn: (tx: typeof txMock) => Promise<void>) => fn(txMock)),
     } as unknown as Database
 
     await replacePlaylistTracks(db, 1, [])
 
-    expect(db.delete).toHaveBeenCalledOnce()
-    expect(db.insert).not.toHaveBeenCalled()
+    expect(txMock.delete).toHaveBeenCalledOnce()
+    expect(txMock.insert).not.toHaveBeenCalled()
   })
 })
 
