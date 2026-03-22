@@ -2,6 +2,7 @@ import { resolve } from 'node:path'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { secureHeaders } from 'hono/secure-headers'
 import { envConfig } from '@/config/env'
 import type { OidcService } from '@/core/auth/oidc'
 import type { GenreService } from '@/core/genre/service'
@@ -32,6 +33,7 @@ import { adminGuard } from './middleware/admin-guard'
 import { authGuard } from './middleware/auth'
 import { requestLogger } from './middleware/logger'
 import { proxyAuthMiddleware } from './middleware/proxy-auth'
+import { rateLimiter } from './middleware/rate-limit'
 import { setupGuard } from './middleware/setup-guard'
 import { analyticsRoutes } from './routes/analytics'
 import { artistRoutes } from './routes/artists'
@@ -170,6 +172,12 @@ export function createApp(deps: AppDependencies) {
       origin: envConfig.allowedOrigin ?? '*',
     }),
   )
+  app.use('*', secureHeaders({
+    xFrameOptions: 'DENY',
+    xContentTypeOptions: 'nosniff',
+    referrerPolicy: 'strict-origin-when-cross-origin',
+    crossOriginOpenerPolicy: 'same-origin',
+  }))
   app.use(
     '*',
     proxyAuthMiddleware({
@@ -227,6 +235,9 @@ export function createApp(deps: AppDependencies) {
       updateUser: deps.updateUser,
     }),
   )
+  // Rate limit auth endpoints: 10 attempts per minute for login/register
+  app.use('/api/auth/login', rateLimiter({ windowMs: 60_000, max: 10, keyPrefix: 'auth' }))
+  app.use('/api/auth/register', rateLimiter({ windowMs: 60_000, max: 5, keyPrefix: 'reg' }))
   app.route('/', authRoutes(deps))
   app.route('/', oauthRoutes(deps))
   app.route('/', healthRoutes({ db: deps.db }))

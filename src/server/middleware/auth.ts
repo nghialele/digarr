@@ -1,14 +1,16 @@
-import { timingSafeEqual } from 'node:crypto'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createMiddleware } from 'hono/factory'
 import { envConfig } from '@/config/env'
 import { getSession } from '@/core/sessions'
 import type { HonoEnv } from '@/server/types'
 
+/** Constant-time comparison that does not leak length via early return. */
 function safeCompare(a: string, b: string): boolean {
-  const ab = Buffer.from(a)
-  const bb = Buffer.from(b)
-  if (ab.byteLength !== bb.byteLength) return false
-  return timingSafeEqual(ab, bb)
+  // HMAC both values to normalize length before comparing
+  const key = 'digarr-safe-compare'
+  const ha = createHmac('sha256', key).update(a).digest()
+  const hb = createHmac('sha256', key).update(b).digest()
+  return timingSafeEqual(ha, hb)
 }
 
 // Paths that never require authentication
@@ -56,9 +58,10 @@ export function authGuard(hasUsers: () => Promise<boolean>) {
       }
     }
 
-    // Fall back to legacy DIGARR_AUTH_TOKEN
+    // Fall back to legacy DIGARR_AUTH_TOKEN (no userId -- grants implicit admin)
     const legacyToken = envConfig.authToken
     if (legacyToken && provided && safeCompare(provided, legacyToken)) {
+      console.warn(`[auth] Legacy token auth used from ${c.req.header('x-forwarded-for') ?? 'direct'} -- consider migrating to user sessions`)
       return next()
     }
 

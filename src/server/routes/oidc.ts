@@ -83,10 +83,12 @@ export function oidcRoutes(deps: OidcRouteDeps) {
 
       const sessionToken = generateSessionToken()
       await createSession(user.id, sessionToken)
-      return c.redirect(`/?oidc_token=${encodeURIComponent(sessionToken)}`)
+      // Use fragment (#) not query param (?) -- fragments are never sent to
+      // the server in Referer headers or logged by reverse proxies
+      return c.redirect(`/#oidc_token=${encodeURIComponent(sessionToken)}`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'OIDC authentication failed'
-      return c.redirect(`/?oidc_error=${encodeURIComponent(message)}`)
+      return c.redirect(`/#oidc_error=${encodeURIComponent(message)}`)
     }
   })
 

@@ -6,9 +6,11 @@ import type { HonoEnv } from '@/server/types'
 export function userRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
 
-  async function isLastAdmin(_targetId: number): Promise<boolean> {
+  /** Check if removing admin from targetId would leave zero admins. */
+  async function isLastAdmin(targetId: number): Promise<boolean> {
     const all = await deps.listUsers()
-    return all.filter((u) => u.isAdmin).length <= 1
+    const otherAdmins = all.filter((u) => u.isAdmin && u.id !== targetId)
+    return otherAdmins.length === 0
   }
 
   // GET /api/users -- list all users (admin only)

@@ -716,8 +716,9 @@ const port = envConfig.port
 const server = serve({ fetch: app.fetch, port })
 
 // Auto-complete setup from env vars, then bootstrap user, then start scheduler
-isSetupComplete(db)
-  .then(async (done) => {
+;(async () => {
+  try {
+    const done = await isSetupComplete(db)
     if (!done && canAutoSetup()) {
       const config: SetupConfig = {
         lidarrUrl: envConfig.lidarrUrl ?? '',
@@ -732,15 +733,13 @@ isSetupComplete(db)
         aiModel: envConfig.aiModel,
         aiBaseUrl: envConfig.aiBaseUrl,
       }
-      // Include webhook URL in initial preferences with full defaults
       if (envConfig.webhookUrl) {
         config.preferences = { ...DEFAULT_PREFERENCES, webhookUrl: envConfig.webhookUrl }
       }
       await completeSetup(db, config)
       console.log('Setup auto-completed from environment variables')
     }
-  })
-  .then(async () => {
+
     // Bootstrap initial admin user from env vars if no users exist
     const { initialUsername, initialPassword } = envConfig
     if (initialUsername && initialPassword) {
@@ -757,12 +756,10 @@ isSetupComplete(db)
         }
       }
     }
-  })
-  .then(async () => {
-    // Backfill: create Lidarr target for existing installations that have
-    // Lidarr configured in settings but no targets row yet
-    const existingSettings = await getSettings(db)
-    if (existingSettings?.lidarrUrl && existingSettings?.lidarrApiKey) {
+
+    // Backfill: create Lidarr target for existing installations
+    const settings = await getSettings(db)
+    if (settings?.lidarrUrl && settings?.lidarrApiKey) {
       const existingTargets = await getTargetsByType(db, 'lidarr')
       if (existingTargets.length === 0) {
         const allUsers = await listUsers(db)
@@ -772,9 +769,9 @@ isSetupComplete(db)
             type: 'lidarr',
             name: 'Lidarr',
             config: {
-              url: existingSettings.lidarrUrl as string,
-              apiKey: existingSettings.lidarrApiKey as string,
-              skipTlsVerify: (existingSettings.skipTlsVerify as boolean) ?? false,
+              url: settings.lidarrUrl as string,
+              apiKey: settings.lidarrApiKey as string,
+              skipTlsVerify: (settings.skipTlsVerify as boolean) ?? false,
             },
             userId: admin.id,
           })
@@ -782,33 +779,28 @@ isSetupComplete(db)
         }
       }
     }
-  })
-  .then(() => getSettings(db))
-  .then((settings) => {
-    const cron = settings?.preferences?.scheduleCron
+
+    // Start schedulers -- single getSettings() call shared across all
+    const prefs = mergePreferences(settings?.preferences)
+    const cron = prefs.scheduleCron
     if (cron) {
       scheduler.schedule('main-pipeline', cron, runPipeline)
       console.log(`Scheduler started with cron: ${cron}`)
     }
-  })
-  .then(() => getEnabledSubscriptions(db))
-  .then((subs) => {
+
+    const subs = await getEnabledSubscriptions(db)
     for (const sub of subs) {
       scheduler.schedule(`subscription-${sub.id}`, sub.cron, () => executeSubscription(sub.id))
       console.log(`Subscription '${sub.name}' (id=${sub.id}) scheduled with cron: ${sub.cron}`)
     }
-  })
-  .then(() => getSettings(db))
-  .then((settings) => {
-    const prefs = mergePreferences(settings?.preferences)
-    const cron = prefs.playlistSchedule
-    if (cron && prefs.playlistEnabled) {
-      playlistScheduler.start(cron, runAllPlaylists)
+
+    if (prefs.playlistSchedule && prefs.playlistEnabled) {
+      playlistScheduler.start(prefs.playlistSchedule, runAllPlaylists)
     }
-  })
-  .catch((err: unknown) => {
+  } catch (err: unknown) {
     console.error('Failed to initialize:', err)
-  })
+  }
+})()
 
 // Clean up expired sessions every 6 hours
 setInterval(
@@ -826,6 +818,21 @@ console.log(`Digarr running on http://localhost:${port}`)
 if (!envConfig.allowedOrigin && process.env.NODE_ENV === 'production') {
   console.warn(
     'ALLOWED_ORIGIN not set -- CORS allows all origins. Set ALLOWED_ORIGIN for production security.',
+  )
+}
+if (envConfig.authToken && envConfig.authToken.length < 16) {
+  console.warn(
+    'DIGARR_AUTH_TOKEN is shorter than 16 characters -- this is trivially brute-forceable. Use a longer token.',
+  )
+}
+if (envConfig.authToken) {
+  console.warn(
+    'Legacy DIGARR_AUTH_TOKEN is set -- this grants implicit admin access without audit trail. Consider migrating to user sessions.',
+  )
+}
+if (!envConfig.authToken && !envConfig.initialUsername) {
+  console.warn(
+    'No DIGARR_AUTH_TOKEN or DIGARR_INITIAL_USERNAME set -- the API is unauthenticated until the first user registers. Set one for production security.',
   )
 }
 

@@ -23,10 +23,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function checkAuth() {
       try {
-        // Handle OIDC callback -- token or error passed as query params
-        const params = new URLSearchParams(window.location.search)
-        const oidcToken = params.get('oidc_token')
-        const oidcError = params.get('oidc_error')
+        // Handle OIDC callback -- token or error passed in URL fragment (#)
+        // Fragments never leak to server logs or Referer headers
+        const hash = window.location.hash.slice(1) // strip leading #
+        const hashParams = new URLSearchParams(hash)
+        const oidcToken = hashParams.get('oidc_token')
+        const oidcError = hashParams.get('oidc_error')
 
         if (oidcToken) {
           window.history.replaceState({}, '', window.location.pathname)

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, like } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { oauthTokens } from '@/db/schema'
 
@@ -42,6 +42,21 @@ export async function upsertOAuthToken(
     .returning()
   if (!row) throw new Error('upsertOAuthToken: no row returned')
   return row
+}
+
+/** Find a pending OAuth token by provider and opaque state (stored as `pending:{userId}:{state}`). */
+export async function findPendingOAuthByState(
+  db: Database,
+  provider: string,
+  state: string,
+): Promise<OAuthTokenRow | null> {
+  const rows = await db
+    .select()
+    .from(oauthTokens)
+    .where(and(eq(oauthTokens.provider, provider), like(oauthTokens.accessToken, 'pending:%')))
+  // Match the row whose accessToken ends with `:${state}`
+  const match = rows.find((r) => r.accessToken === `pending:${r.userId}:${state}`)
+  return match ?? null
 }
 
 export async function deleteOAuthToken(

@@ -389,7 +389,6 @@ export async function approveToTarget(
 ): Promise<{ status: string; targetActions?: Record<string, unknown> }> {
   return fetchApi(`/recommendations/${recId}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       status: 'approved',
       targetId,
@@ -646,14 +645,12 @@ export const createPlaylistApi = (data: PlaylistInsert) =>
   fetchApi<{ id: number }>('/playlists', {
     method: 'POST',
     body: JSON.stringify(data),
-    headers: { 'Content-Type': 'application/json' },
   })
 
 export const updatePlaylistApi = (id: number, data: Partial<PlaylistInsert>) =>
   fetchApi<{ updated: boolean }>(`/playlists/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
-    headers: { 'Content-Type': 'application/json' },
   })
 
 export const deletePlaylistApi = (id: number) =>

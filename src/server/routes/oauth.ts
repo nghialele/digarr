@@ -1,5 +1,10 @@
 import { Hono } from 'hono'
-import { deleteOAuthToken, getOAuthToken, upsertOAuthToken } from '@/db/queries/oauth-tokens'
+import {
+  deleteOAuthToken,
+  findPendingOAuthByState,
+  getOAuthToken,
+  upsertOAuthToken,
+} from '@/db/queries/oauth-tokens'
 import type { AppDependencies } from '@/server'
 import type { HonoEnv } from '@/server/types'
 
@@ -30,12 +35,13 @@ export function oauthRoutes(deps: AppDependencies) {
 
     switch (provider) {
       case 'spotify': {
-        const state = `${userId}:${crypto.randomUUID()}`
+        // Use opaque state token -- userId is stored server-side, not in the URL
+        const state = crypto.randomUUID()
         // Store client credentials temporarily so the callback can use them
         await upsertOAuthToken(deps.db, {
           userId,
           provider: 'spotify',
-          accessToken: `pending:${state}`,
+          accessToken: `pending:${userId}:${state}`,
           refreshToken: redirectUri, // stash redirect URI for callback
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
           scopes: SPOTIFY_SCOPES,
@@ -73,21 +79,20 @@ export function oauthRoutes(deps: AppDependencies) {
       return c.redirect('/settings?oauth_error=missing_code_or_state')
     }
 
-    const [userIdStr] = state.split(':')
-    const userId = Number.parseInt(userIdStr ?? '', 10)
-    if (!userId || Number.isNaN(userId)) {
-      return c.redirect('/settings?oauth_error=invalid_state')
+    // Resolve userId from server-side pending token, not from the URL state param.
+    // The pending token stores `pending:{userId}:{opaqueState}` and state is just the opaque part.
+    const pendingToken = await findPendingOAuthByState(deps.db, 'spotify', state)
+    if (!pendingToken || !pendingToken.accessToken.startsWith('pending:')) {
+      return c.redirect('/settings?oauth_error=no_pending_auth')
     }
+    const userId = pendingToken.userId
 
     switch (provider) {
       case 'spotify': {
-        const pending = await getOAuthToken(deps.db, userId, 'spotify')
-        if (!pending || !pending.accessToken.startsWith('pending:')) {
-          return c.redirect('/settings?oauth_error=no_pending_auth')
-        }
+        const pending = pendingToken
 
-        // CSRF: verify the state matches
-        if (pending.accessToken !== `pending:${state}`) {
+        // CSRF: verify the state matches the stored opaque state
+        if (pending.accessToken !== `pending:${userId}:${state}`) {
           return c.redirect('/settings?oauth_error=state_mismatch')
         }
 
