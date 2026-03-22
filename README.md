@@ -12,6 +12,10 @@
 
 Think of it as Jellyseerr/Overseerr, but for music discovery.
 
+> **Beta software -- working toward v1.0 with the help of testers and community.** Digarr is usable and actively developed, but expect rough edges. We'd love your help: set it up, break things, [report issues](https://github.com/iuliandita/digarr/issues), and share your feature ideas. Every bug report and suggestion makes the project better for everyone.
+>
+> Free and open source, forever. No tracking, no telemetry, no data collection -- your music taste stays on your server.
+
 ![Dashboard](docs/screenshots/dashboard-dark.png)
 
 [More screenshots](docs/SCREENSHOTS.md)
