@@ -277,6 +277,9 @@ export function settingsRoutes(deps: AppDependencies) {
       case 'lidarr': {
         const url = body.url || (stored?.lidarrUrl as string) || ''
         const apiKey = body.apiKey || (stored?.lidarrApiKey as string) || ''
+        if (!url || !apiKey) {
+          return c.json({ success: false, message: `Missing ${!url ? 'URL' : 'API key'}` })
+        }
         const client = createLidarrClient(url, apiKey, body.skipTlsVerify)
         const result = await client.testConnection()
         return c.json(result)
@@ -289,6 +292,9 @@ export function settingsRoutes(deps: AppDependencies) {
           ''
         const token =
           body.token || userConns?.listenbrainzToken || (stored?.listenbrainzToken as string) || ''
+        if (!username) {
+          return c.json({ success: false, message: 'Missing username' })
+        }
         const client = createListenBrainzClient(username, token)
         const result = await client.testConnection()
         if (result.success && !token) {
@@ -302,6 +308,12 @@ export function settingsRoutes(deps: AppDependencies) {
           body.username || userConns?.lastfmUsername || (stored?.lastfmUsername as string) || ''
         const apiKey =
           body.apiKey || userConns?.lastfmApiKey || (stored?.lastfmApiKey as string) || ''
+        if (!username || !apiKey) {
+          return c.json({
+            success: false,
+            message: `Missing ${!username ? 'username' : 'API key'}`,
+          })
+        }
         const client = createLastFmClient(username, apiKey)
         const result = await client.testConnection()
         return c.json(result)
@@ -326,6 +338,9 @@ export function settingsRoutes(deps: AppDependencies) {
       case 'plex': {
         const url = body.url || userConns?.plexUrl || ''
         const token = body.token || userConns?.plexToken || ''
+        if (!url || !token) {
+          return c.json({ success: false, message: `Missing ${!url ? 'URL' : 'token'}` })
+        }
         const { createPlexClient } = await import('@/core/clients/plex')
         const client = createPlexClient(url, token)
         const result = await client.testConnection()
@@ -335,15 +350,27 @@ export function settingsRoutes(deps: AppDependencies) {
         const url = body.url || userConns?.jellyfinUrl || ''
         const apiKey = body.apiKey || userConns?.jellyfinApiKey || ''
         const jfUserId = body.userId || userConns?.jellyfinUserId || ''
+        if (!url || !apiKey) {
+          return c.json({ success: false, message: `Missing ${!url ? 'URL' : 'API key'}` })
+        }
         const { createJellyfinClient } = await import('@/core/clients/jellyfin')
         const skipTls = body.skipTlsVerify ?? (stored?.skipTlsVerify as boolean) ?? false
         const client = createJellyfinClient(url, apiKey, jfUserId, { skipTlsVerify: skipTls })
         const result = await client.testConnection()
+        if (result.success && !jfUserId) {
+          result.message += ' (warning: no user ID set -- listening data will not work without it)'
+        }
         return c.json(result)
       }
       case 'discogs': {
         const token = body.token || userConns?.discogsToken || ''
         const username = body.username || userConns?.discogsUsername || ''
+        if (!token || !username) {
+          return c.json({
+            success: false,
+            message: `Missing ${!username ? 'username' : 'personal access token'}`,
+          })
+        }
         const { createDiscogsClient } = await import('@/core/clients/discogs')
         const client = createDiscogsClient(token, username)
         const result = await client.testConnection()
