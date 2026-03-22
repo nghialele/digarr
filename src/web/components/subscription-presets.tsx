@@ -63,10 +63,10 @@ export function SubscriptionPresets({ connectedServices, onComplete, onCustom }:
       if (connectedServices.includes('spotify')) {
         subs.push(
           createSubscriptionApi({
-            name: 'Spotify Discover Weekly',
-            sourceType: 'spotify-playlist',
+            name: 'Spotify Top 50 Global',
+            sourceType: 'spotify-charts',
             sourceProvider: 'spotify',
-            sourceConfig: { playlistId: '37i9dQZEVXcQ9COmYvLiGZ' },
+            sourceConfig: { region: 'global', chartType: 'top50' },
             cron: '0 6 * * 1',
             maxArtistsPerRun: 20,
             action: 'add_to_recommendations',
@@ -80,7 +80,7 @@ export function SubscriptionPresets({ connectedServices, onComplete, onCustom }:
             name: 'Last.fm Top Genre',
             sourceType: 'lastfm-tag',
             sourceProvider: 'lastfm',
-            sourceConfig: { useTopTag: true },
+            sourceConfig: { tag: 'electronic' },
             cron: '0 6 * * 1',
             maxArtistsPerRun: 20,
             action: 'add_to_recommendations',
@@ -92,10 +92,10 @@ export function SubscriptionPresets({ connectedServices, onComplete, onCustom }:
         // Fallback: create a listenbrainz-based sub if connected
         if (connectedServices.includes('listenbrainz')) {
           await createSubscriptionApi({
-            name: 'ListenBrainz Weekly',
-            sourceType: 'listenbrainz-similar',
+            name: 'ListenBrainz Weekly Jams',
+            sourceType: 'listenbrainz',
             sourceProvider: 'listenbrainz',
-            sourceConfig: {},
+            sourceConfig: { feedType: 'weekly-jams' },
             cron: '0 6 * * 1',
             maxArtistsPerRun: 20,
             action: 'add_to_recommendations',
@@ -122,10 +122,10 @@ export function SubscriptionPresets({ connectedServices, onComplete, onCustom }:
       if (connectedServices.includes('spotify')) {
         subs.push(
           createSubscriptionApi({
-            name: 'Spotify Discover Weekly',
-            sourceType: 'spotify-playlist',
+            name: 'Spotify Top 50 Global',
+            sourceType: 'spotify-charts',
             sourceProvider: 'spotify',
-            sourceConfig: { playlistId: '37i9dQZEVXcQ9COmYvLiGZ' },
+            sourceConfig: { region: 'global', chartType: 'top50' },
             cron: '0 6 * * *',
             maxArtistsPerRun: 30,
             action: 'add_to_recommendations',
@@ -136,8 +136,8 @@ export function SubscriptionPresets({ connectedServices, onComplete, onCustom }:
       if (connectedServices.includes('lastfm')) {
         subs.push(
           createSubscriptionApi({
-            name: 'Last.fm Top Artists',
-            sourceType: 'lastfm-similar',
+            name: 'Last.fm Charts',
+            sourceType: 'lastfm-charts',
             sourceProvider: 'lastfm',
             sourceConfig: {},
             cron: '0 6 * * *',
@@ -150,24 +150,10 @@ export function SubscriptionPresets({ connectedServices, onComplete, onCustom }:
       if (connectedServices.includes('listenbrainz')) {
         subs.push(
           createSubscriptionApi({
-            name: 'ListenBrainz Similar',
-            sourceType: 'listenbrainz-similar',
+            name: 'ListenBrainz Fresh Releases',
+            sourceType: 'listenbrainz',
             sourceProvider: 'listenbrainz',
-            sourceConfig: {},
-            cron: '0 6 * * *',
-            maxArtistsPerRun: 30,
-            action: 'add_to_recommendations',
-          }),
-        )
-      }
-
-      if (connectedServices.includes('discogs')) {
-        subs.push(
-          createSubscriptionApi({
-            name: 'Discogs Collection',
-            sourceType: 'discogs-collection',
-            sourceProvider: 'discogs',
-            sourceConfig: {},
+            sourceConfig: { feedType: 'fresh-releases' },
             cron: '0 6 * * *',
             maxArtistsPerRun: 30,
             action: 'add_to_recommendations',

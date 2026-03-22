@@ -4,9 +4,16 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
 import { OidcService } from './core/auth/oidc'
+import { createBandcampClient } from './core/clients/bandcamp'
+import { createDeezerClient } from './core/clients/deezer'
 import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
+import type { SearchSource } from './core/search/multi-source'
+import { multiSourceSearch } from './core/search/multi-source'
+import { createBandcampSearchSource } from './core/search/sources/bandcamp'
+import { createDeezerSearchSource } from './core/search/sources/deezer'
+import { createMusicBrainzSearchSource } from './core/search/sources/musicbrainz'
 import { GenreService } from './core/genre/service'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
@@ -459,6 +466,17 @@ async function getOidcService(): Promise<OidcService | null> {
   return service
 }
 
+// Build search sources -- MusicBrainz and Deezer are always available (no auth),
+// Bandcamp is also public. Sources that need per-user OAuth (Spotify, TIDAL) are
+// skipped for now since the search endpoint has no user context.
+function buildSearchSources(): SearchSource[] {
+  const sources: SearchSource[] = []
+  sources.push(createMusicBrainzSearchSource(createMusicBrainzClient()))
+  sources.push(createDeezerSearchSource(createDeezerClient()))
+  sources.push(createBandcampSearchSource(createBandcampClient()))
+  return sources
+}
+
 const app = createApp({
   db,
   storeDb,
@@ -622,6 +640,15 @@ const app = createApp({
         })
       }
       return null
+    },
+  },
+  search: {
+    search: async (query, opts) => {
+      const sources = buildSearchSources()
+      const filtered = opts?.sources
+        ? sources.filter((s) => opts.sources!.includes(s.id))
+        : sources
+      return multiSourceSearch(query, filtered, { limit: opts?.limit })
     },
   },
 })
