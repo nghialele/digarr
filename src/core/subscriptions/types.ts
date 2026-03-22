@@ -1,5 +1,6 @@
-import type { DiscoveredArtist } from '@/core/types'
+import type { MBArtist, MBSearchResult } from '@/core/clients/musicbrainz'
 import type { StoreDb } from '@/core/pipeline/store'
+import type { DiscoveredArtist } from '@/core/types'
 
 // ---------------------------------------------------------------------------
 // Adapter contract
@@ -83,10 +84,16 @@ export type SubscriptionUpdate = {
   lastError?: string | null
 }
 
-/** Minimal MusicBrainz client interface used by the runner. */
+/** MusicBrainz client interface used by the runner (must satisfy resolve.ts requirements). */
 export interface MusicBrainzClient {
-  searchArtist(name: string): Promise<Array<{ id: string; name: string; disambiguation?: string; tags?: Array<{ name: string }> }>>
-  getArtist(mbid: string): Promise<{ id: string; name: string; disambiguation?: string; tags?: Array<{ name: string }> } | null>
+  lookupArtist(mbid: string): Promise<MBArtist>
+  searchArtist(query: string): Promise<MBSearchResult>
+  extractStreamingUrls(
+    relations: Array<{ type: string; url?: { resource: string } }>,
+  ): Record<string, string>
+  getReleaseGroups?: (
+    artistMbid: string,
+  ) => Promise<Array<{ id: string; title: string; type: string; firstReleaseDate?: string }>>
 }
 
 /** Minimal Lidarr lookup interface used by the runner. */
@@ -101,6 +108,13 @@ export type SubscriptionRunDeps = {
   mbClient: MusicBrainzClient
   lidarr?: LidarrLookupClient
   userId?: number
+  // Pipeline context
+  libraryMbids: Set<string>
+  libraryGenres: string[]
+  rejectedMbids: Set<string>
+  feedbackHistory: Map<string, { approved: number; total: number }>
+  cooldownDays: number
+  defaultScoreThreshold: number
 }
 
 /** DB query interface for the subscription runner. */
