@@ -56,9 +56,23 @@ export async function generatePlaylist(
     sourcePriority: config.trackSourcePriority,
   }
 
-  const allTracks = await resolvePlaylistTracks(artists, resolverDeps, resolverConfig)
+  const hasResolverDeps = Object.keys(resolverDeps).length > 0
 
-  const tracks = allTracks.slice(0, config.size)
+  let tracks: ResolvedTrack[]
+
+  if (hasResolverDeps) {
+    const allTracks = await resolvePlaylistTracks(artists, resolverDeps, resolverConfig)
+    tracks = allTracks.slice(0, config.size)
+  } else {
+    // No track resolver deps configured -- create artist-level entries
+    // so playlists still show the selected artists
+    tracks = artists.slice(0, config.size).map((a) => ({
+      artistName: a.name,
+      trackName: `Top tracks by ${a.name}`,
+      mbid: a.mbid,
+      source: 'musicbrainz' as const,
+    }))
+  }
 
   return {
     tracks,
