@@ -1,6 +1,8 @@
 import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
 import { extractArtistsFromPlaylist } from './spotify-shared'
 
+// Viral 50 playlists only have a reliable global ID -- regional viral playlists
+// are not publicly stable, so we only offer viral50 for the global region.
 const CHART_PLAYLIST_IDS: Record<string, Record<string, string>> = {
   global: {
     top50: '37i9dQZEVXbMDoHDwVN2tF',
@@ -8,27 +10,21 @@ const CHART_PLAYLIST_IDS: Record<string, Record<string, string>> = {
   },
   us: {
     top50: '37i9dQZEVXbLRQDuF5jeBp',
-    viral50: '37i9dQZEVXbLiRSasKsNU9',
   },
   gb: {
     top50: '37i9dQZEVXbLnolsZ8PSNw',
-    viral50: '37i9dQZEVXbLiRSasKsNU9',
   },
   de: {
     top50: '37i9dQZEVXbJiZcmkrIHGU',
-    viral50: '37i9dQZEVXbLiRSasKsNU9',
   },
   fr: {
     top50: '37i9dQZEVXbIPWwFssbupI',
-    viral50: '37i9dQZEVXbLiRSasKsNU9',
   },
   au: {
     top50: '37i9dQZEVXbJPcfkRz0wJ0',
-    viral50: '37i9dQZEVXbLiRSasKsNU9',
   },
   br: {
     top50: '37i9dQZEVXbMXbN3EUUhlg',
-    viral50: '37i9dQZEVXbLiRSasKsNU9',
   },
 }
 
@@ -55,8 +51,9 @@ const CONFIG_FIELDS: AdapterConfigField[] = [
     required: true,
     options: [
       { value: 'top50', label: 'Top 50' },
-      { value: 'viral50', label: 'Viral 50' },
+      { value: 'viral50', label: 'Viral 50 (Global only)' },
     ],
+    helpText: 'Viral 50 is only available for the Global region. Other regions fall back to Top 50.',
   },
 ]
 
@@ -78,8 +75,9 @@ export function createSpotifyChartsAdapter(deps: {
       const region = String(config.region ?? 'global').toLowerCase()
       const chartType = String(config.chartType ?? 'top50').toLowerCase()
 
-      const regionCharts = CHART_PLAYLIST_IDS[region] ?? CHART_PLAYLIST_IDS.global!
-      const playlistId = regionCharts[chartType] ?? regionCharts.top50!
+      const globalCharts = CHART_PLAYLIST_IDS.global ?? {}
+      const regionCharts = CHART_PLAYLIST_IDS[region] ?? globalCharts
+      const playlistId = regionCharts[chartType] ?? regionCharts.top50 ?? globalCharts.top50 ?? ''
 
       const token = await deps.getToken()
       const url = `${baseUrl}/playlists/${playlistId}?fields=tracks.items(track(artists(name,id)))`

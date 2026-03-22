@@ -24,19 +24,25 @@ export function subscriptionRoutes(deps: AppDependencies) {
       types: [
         {
           type: 'genre',
-          label: 'Genre Discovery',
-          configFields: [{ key: 'genre', label: 'Genre', type: 'text', required: true }],
+          label: 'Genre / Tag',
+          configFields: [
+            { key: 'genre', label: 'Genre / Tag', type: 'text', required: true, placeholder: 'e.g. post-rock' },
+            { key: 'providers', label: 'Providers', type: 'text', required: false, placeholder: 'e.g. lastfm,musicbrainz (leave blank for all)' },
+          ],
         },
         {
           type: 'similar',
           label: 'Similar Artists',
-          configFields: [{ key: 'seedArtists', label: 'Seed Artists', type: 'text', required: true }],
+          configFields: [
+            { key: 'seedArtists', label: 'Seed Artists', type: 'text', required: true, placeholder: 'e.g. Radiohead, Portishead' },
+            { key: 'providers', label: 'Providers', type: 'text', required: false, placeholder: 'e.g. lastfm,listenbrainz (leave blank for all)' },
+          ],
         },
         {
           type: 'spotify-playlist',
           label: 'Spotify Playlist',
           configFields: [
-            { key: 'playlistId', label: 'Playlist ID or URL', type: 'text', required: true },
+            { key: 'playlistId', label: 'Playlist ID or URL', type: 'text', required: true, placeholder: 'e.g. 37i9dQZEVXbMDoHDwVN2tF or open.spotify.com/playlist/...' },
           ],
           requiredService: 'spotify',
         },
@@ -44,28 +50,53 @@ export function subscriptionRoutes(deps: AppDependencies) {
           type: 'spotify-charts',
           label: 'Spotify Charts',
           configFields: [
-            { key: 'region', label: 'Region', type: 'select' },
-            { key: 'chartType', label: 'Chart Type', type: 'select' },
+            {
+              key: 'region', label: 'Region', type: 'select', required: true,
+              options: [
+                { value: 'global', label: 'Global' },
+                { value: 'us', label: 'United States' },
+                { value: 'gb', label: 'United Kingdom' },
+                { value: 'de', label: 'Germany' },
+                { value: 'fr', label: 'France' },
+                { value: 'au', label: 'Australia' },
+                { value: 'br', label: 'Brazil' },
+              ],
+            },
+            {
+              key: 'chartType', label: 'Chart Type', type: 'select', required: true,
+              options: [
+                { value: 'top50', label: 'Top 50' },
+                { value: 'viral50', label: 'Viral 50 (Global only)' },
+              ],
+            },
           ],
           requiredService: 'spotify',
         },
         {
           type: 'lastfm-tag',
           label: 'Last.fm Tag',
-          configFields: [{ key: 'tag', label: 'Tag', type: 'text', required: true }],
+          configFields: [
+            { key: 'tag', label: 'Tag', type: 'text', required: true, placeholder: 'e.g. metal' },
+          ],
           requiredService: 'lastfm',
         },
         {
           type: 'lastfm-charts',
           label: 'Last.fm Charts',
-          configFields: [{ key: 'period', label: 'Period', type: 'select' }],
+          configFields: [],
           requiredService: 'lastfm',
         },
         {
           type: 'listenbrainz',
-          label: 'ListenBrainz Feeds',
+          label: 'ListenBrainz',
           configFields: [
-            { key: 'feedType', label: 'Feed Type', type: 'select', required: true },
+            {
+              key: 'feedType', label: 'Feed Type', type: 'select', required: true,
+              options: [
+                { value: 'fresh-releases', label: 'Fresh Releases' },
+                { value: 'weekly-jams', label: 'Weekly Jams' },
+              ],
+            },
           ],
           requiredService: 'listenbrainz',
         },
