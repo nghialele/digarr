@@ -28,8 +28,26 @@ type TodaysPickProps = {
   onRunScan: () => void
 }
 
-// AlbumList removed from dashboard card to reduce height --
-// discography is available on the full Discover page
+function AlbumList({ albums }: { albums: ReleaseGroup[] }) {
+  const shown = albums.filter((a) => a.type === 'Album').slice(0, 4)
+  if (shown.length === 0) return null
+
+  return (
+    <div className="mt-3">
+      <p className="text-[10px] uppercase tracking-wider text-muted mb-1">Discography</p>
+      <div className="space-y-0.5">
+        {shown.map((album) => (
+          <div key={album.id} className="flex items-center gap-2 text-xs">
+            <span className="text-muted shrink-0 w-8 text-right tabular-nums">
+              {album.firstReleaseDate?.slice(0, 4) ?? '----'}
+            </span>
+            <span className="text-text truncate">{album.title}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function TodaysPick({
   rec,
@@ -44,6 +62,7 @@ export function TodaysPick({
 
   const { data: albumData } = useQuery({
     queryKey: ['todays-pick-albums', rec?.artist.mbid],
+    // biome-ignore lint/style/noNonNullAssertion: guarded by enabled
     queryFn: () => getAlbums(rec!.artist.mbid!),
     enabled: !!rec?.artist.mbid,
     staleTime: 60_000,
@@ -52,13 +71,12 @@ export function TodaysPick({
   if (loading) {
     return (
       <div className="bg-surface border border-border rounded-lg overflow-hidden h-full">
-        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-1/3 w-full" />
         <div className="p-4 space-y-3">
           <Skeleton className="h-5 w-2/3" />
           <Skeleton className="h-3 w-full" />
           <Skeleton className="h-3 w-4/5" />
           <Skeleton className="h-3 w-3/5" />
-          <Skeleton className="h-3 w-2/3" />
         </div>
       </div>
     )
@@ -66,7 +84,7 @@ export function TodaysPick({
 
   if (!rec) {
     return (
-      <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center text-center min-h-[300px] h-full">
+      <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center text-center h-full">
         <p className="text-muted text-sm mb-3">No pending recommendations</p>
         <button
           type="button"
@@ -81,6 +99,7 @@ export function TodaysPick({
 
   const { artist } = rec
   const hue = Math.abs([...artist.name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
+  const scorePercent = Math.round(rec.score * 100)
 
   // Fallback chain: artist image -> first album cover (Cover Art Archive) -> gradient
   const firstAlbumId = albumData?.find((a) => a.type === 'Album')?.id
@@ -99,9 +118,9 @@ export function TodaysPick({
     : { background: `hsl(${hue}, 40%, 35%)` }
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden flex flex-col">
-      {/* Banner */}
-      <div className="relative h-28 shrink-0" style={bannerStyle}>
+    <div className="bg-surface border border-border rounded-lg overflow-hidden flex flex-col h-full">
+      {/* Banner -- fills ~40% of card height */}
+      <div className="relative shrink-0 basis-2/5 min-h-[120px]" style={bannerStyle}>
         {hasImage && (
           <img
             src={bannerUrl}
@@ -113,26 +132,32 @@ export function TodaysPick({
             }}
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-        <span
+        {/* Score badge */}
+        <div
+          className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5"
           role="img"
-          className="absolute top-3 right-3 bg-accent text-accent-fg text-xs font-bold px-2 py-1 rounded"
-          aria-label={`Match score: ${Math.round(rec.score * 100)}%`}
+          aria-label={`Match score: ${scorePercent}%`}
         >
-          {Math.round(rec.score * 100)}
-        </span>
+          <span className="text-accent text-xl font-bold leading-none">{scorePercent}</span>
+          <span className="text-accent/70 text-xs font-semibold">%</span>
+          <span className="text-white/50 text-[9px] ml-1 uppercase tracking-wider">match</span>
+        </div>
 
-        <span className="absolute bottom-3 left-4 text-white font-semibold text-lg leading-tight drop-shadow">
-          {artist.name}
-        </span>
+        {/* Artist name */}
+        <div className="absolute bottom-3 left-4 right-4">
+          <h3 className="text-white font-bold text-xl leading-tight drop-shadow-lg truncate">
+            {artist.name}
+          </h3>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="p-4 flex-1">
+      {/* Content -- scrollable middle section */}
+      <div className="p-4 flex-1 overflow-y-auto min-h-0">
         {artist.genres && artist.genres.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
-            {artist.genres.slice(0, 5).map((genre) => (
+            {artist.genres.slice(0, 6).map((genre) => (
               <span
                 key={genre}
                 className="text-[10px] px-1.5 py-0.5 bg-bg border border-border rounded text-muted"
@@ -143,15 +168,19 @@ export function TodaysPick({
           </div>
         )}
 
-        {rec.aiReasoning && <p className="text-xs text-muted mt-2 line-clamp-2">{rec.aiReasoning}</p>}
+        {rec.aiReasoning && (
+          <p className="text-xs text-muted mt-2 line-clamp-3">{rec.aiReasoning}</p>
+        )}
 
         <div className="mt-3">
           <StreamingLinks streamingUrls={artist.streamingUrls ?? null} artistName={artist.name} />
         </div>
+
+        {albumData && <AlbumList albums={albumData} />}
       </div>
 
       {/* Action bar -- pinned to bottom */}
-      <div className="border-t border-border flex mt-auto shrink-0">
+      <div className="border-t border-border flex shrink-0">
         <button
           type="button"
           onClick={() => onReject(rec.id)}
