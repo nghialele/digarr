@@ -56,7 +56,6 @@ export async function store(
   db: StoreDb,
   options: StoreOptions = {},
 ): Promise<number> {
-  // Create the batch row in running state
   const batch = await db.insertBatch({
     status: 'running',
     stats: {
@@ -65,9 +64,6 @@ export async function store(
     },
   })
 
-  const batchId = batch.id
-
-  // Upsert each artist and create a recommendation row
   let added = 0
   let failed = 0
 
@@ -87,7 +83,7 @@ export async function store(
 
       await db.insertRecommendation({
         artistId: upserted.id,
-        batchId,
+        batchId: batch.id,
         score: artist.score,
         sources: artist.sourceScores,
         aiReasoning: artist.aiReasoning,
@@ -104,12 +100,11 @@ export async function store(
     }
   }
 
-  // Mark batch as completed with real stats
-  await db.completeBatch(batchId, {
+  await db.completeBatch(batch.id, {
     discovered: artists.length,
     added,
     failed,
   })
 
-  return batchId
+  return batch.id
 }

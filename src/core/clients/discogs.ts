@@ -1,5 +1,6 @@
 import PQueue from 'p-queue'
 import type { ServiceTestResult } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import { createHttpClient } from './http'
 
 const DEFAULT_BASE_URL = 'https://api.discogs.com'
@@ -157,8 +158,7 @@ export function createDiscogsClient(
         details: { username: identity.username, id: identity.id },
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { success: false, message }
+      return { success: false, message: errMsg(err) }
     }
   }
 

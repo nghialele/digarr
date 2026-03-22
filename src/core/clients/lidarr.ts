@@ -1,4 +1,5 @@
 import type { ServiceTestResult } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import { createHttpClient } from './http'
 
 export type LidarrArtist = {
@@ -75,7 +76,7 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
       rootFolderPath: a.rootFolderPath as string,
       monitored: a.monitored as boolean,
       status: a.status as string,
-      genres: (a.genres as string[] | undefined) ?? undefined,
+      genres: a.genres as string[] | undefined,
     }))
   }
 
@@ -172,8 +173,7 @@ export function createLidarrClient(url: string, apiKey: string, skipTlsVerify = 
         details: { profileCount: profiles.length },
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { success: false, message }
+      return { success: false, message: errMsg(err) }
     }
   }
 

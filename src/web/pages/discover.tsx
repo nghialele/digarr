@@ -186,16 +186,18 @@ function StackIcon() {
 // ---------------------------------------------------------------------------
 
 function FeedbackInsights() {
-  const [data, setData] = useState<Array<{ genre: string; rate: number; total: number }>>([])
+  const [genreRates, setGenreRates] = useState<
+    Array<{ genre: string; rate: number; total: number }>
+  >([])
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (open && data.length === 0) {
+    if (open && genreRates.length === 0) {
       getFeedbackSummary()
-        .then((r) => setData(r.summary))
+        .then((r) => setGenreRates(r.summary))
         .catch(() => {})
     }
-  }, [open, data.length])
+  }, [open, genreRates.length])
 
   return (
     <div className="mb-4">
@@ -206,9 +208,9 @@ function FeedbackInsights() {
       >
         {open ? 'Hide' : 'Show'} feedback insights
       </button>
-      {open && data.length > 0 && (
+      {open && genreRates.length > 0 && (
         <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {data.slice(0, 12).map((g) => (
+          {genreRates.slice(0, 12).map((g) => (
             <div key={g.genre} className="bg-surface border border-border rounded px-2 py-1.5">
               <div className="text-xs font-medium text-text truncate">{g.genre}</div>
               <div className="flex items-center gap-1 mt-0.5">
@@ -227,7 +229,7 @@ function FeedbackInsights() {
           ))}
         </div>
       )}
-      {open && data.length === 0 && (
+      {open && genreRates.length === 0 && (
         <p className="text-xs text-muted mt-2">
           Not enough feedback data yet. Approve or reject more recommendations.
         </p>

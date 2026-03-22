@@ -6,8 +6,8 @@ export { createPlexSource } from './plex'
 export { SourceRegistry } from './registry'
 export { createSpotifySource } from './spotify'
 export type {
+  DiscoverySource,
   ListeningActivityEntry,
-  ListeningSource,
   SimilarArtistEntry,
   TopArtistEntry,
 } from './types'

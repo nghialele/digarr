@@ -16,7 +16,7 @@ export type GenreInsert = {
 export async function upsertGenre(db: Database, data: GenreInsert): Promise<GenreRow> {
   const rows = await db
     .insert(genres)
-    .values({ ...data })
+    .values(data)
     .onConflictDoUpdate({
       target: genres.slug,
       set: {

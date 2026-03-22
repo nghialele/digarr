@@ -12,16 +12,7 @@ export type TargetInsert = {
 
 export type TargetUpdate = Partial<Pick<TargetInsert, 'name' | 'config' | 'enabled'>>
 
-export type TargetRow = {
-  id: number
-  type: string
-  name: string
-  config: Record<string, unknown>
-  userId: number | null
-  enabled: boolean
-  createdAt: Date
-  updatedAt: Date
-}
+export type TargetRow = typeof targets.$inferSelect
 
 export async function createTarget(db: Database, data: TargetInsert): Promise<{ id: number }> {
   const [row] = await db
@@ -40,22 +31,22 @@ export async function createTarget(db: Database, data: TargetInsert): Promise<{ 
 
 export async function getTarget(db: Database, id: number): Promise<TargetRow | null> {
   const [row] = await db.select().from(targets).where(eq(targets.id, id))
-  return (row as TargetRow) ?? null
+  return row ?? null
 }
 
 export async function getTargetsByUser(db: Database, userId: number): Promise<TargetRow[]> {
   const rows = await db.select().from(targets).where(eq(targets.userId, userId))
-  return rows as TargetRow[]
+  return rows
 }
 
 export async function getAllTargets(db: Database): Promise<TargetRow[]> {
   const rows = await db.select().from(targets)
-  return rows as TargetRow[]
+  return rows
 }
 
 export async function getTargetsByType(db: Database, type: string): Promise<TargetRow[]> {
   const rows = await db.select().from(targets).where(eq(targets.type, type))
-  return rows as TargetRow[]
+  return rows
 }
 
 export async function updateTarget(db: Database, id: number, data: TargetUpdate): Promise<void> {

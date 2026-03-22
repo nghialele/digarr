@@ -1,5 +1,6 @@
 import PQueue from 'p-queue'
 import type { ServiceTestResult } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import { createHttpClient } from './http'
 
 const BASE_URL = 'https://api.spotify.com/v1'
@@ -92,8 +93,7 @@ export function createSpotifyClient(accessToken: string, options?: { baseUrl?: s
         details: { userId: profile.id },
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { success: false, message }
+      return { success: false, message: errMsg(err) }
     }
   }
 

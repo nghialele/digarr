@@ -1,4 +1,5 @@
 import type { ServiceTestResult } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import type { DestinationTarget, PlaylistItem, PlaylistResult } from './types'
 
 export type JellyfinPlaylistConfig = {
@@ -120,7 +121,7 @@ export function createJellyfinPlaylistTarget(
           success: false,
           targetType: 'jellyfin-playlist',
           targetId,
-          error: err instanceof Error ? err.message : String(err),
+          error: errMsg(err),
         }
       }
     },
@@ -140,7 +141,7 @@ export function createJellyfinPlaylistTarget(
       } catch (err: unknown) {
         return {
           success: false,
-          message: err instanceof Error ? err.message : String(err),
+          message: errMsg(err),
         }
       }
     },

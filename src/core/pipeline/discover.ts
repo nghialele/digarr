@@ -1,4 +1,4 @@
-import type { ListeningSource } from '@/core/plugins/types'
+import type { DiscoverySource } from '@/core/plugins/types'
 import type { AiRecommendation, DiscoveredArtist, TasteProfile } from '@/core/types'
 
 interface MusicBrainzSimilarSource {
@@ -13,7 +13,7 @@ interface AiSource {
 
 export interface DiscoverSources {
   /** Listening source plugins (ListenBrainz, Last.fm, etc.) */
-  listeningSources?: ListeningSource[]
+  listeningSources?: DiscoverySource[]
   musicbrainz?: MusicBrainzSimilarSource | null
   ai?: AiSource | null
 }

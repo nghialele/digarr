@@ -1,5 +1,6 @@
 import type { Configuration } from 'openid-client'
 import * as oidcClient from 'openid-client'
+import { errMsg } from '@/core/validation'
 
 export interface OidcConfig {
   issuerUrl: string
@@ -65,8 +66,7 @@ export class OidcService {
       await this.getDiscovery()
       return { success: true, message: 'OIDC discovery successful' }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { success: false, message }
+      return { success: false, message: errMsg(err) }
     }
   }
 

@@ -28,6 +28,7 @@ type SubscriptionRunRow = typeof subscriptionRuns.$inferSelect
 import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
 import type { UserPublic } from '@/db/queries/users'
 import { VERSION } from '@/version'
+import { adminGuard } from './middleware/admin-guard'
 import { authGuard } from './middleware/auth'
 import { requestLogger } from './middleware/logger'
 import { proxyAuthMiddleware } from './middleware/proxy-auth'
@@ -191,11 +192,7 @@ export function createApp(deps: AppDependencies) {
     const proxyAuth = c.get('proxyAuth')
     const sessionToken = c.get('sessionToken')
     const settings = await deps.getSettings()
-    const oidcEnabled = !!(
-      settings &&
-      (settings as Record<string, unknown>).oidcIssuerUrl &&
-      (settings as Record<string, unknown>).oidcClientId
-    )
+    const oidcEnabled = !!(settings?.oidcIssuerUrl && settings.oidcClientId)
 
     const response: Record<string, unknown> = {
       required: userCount > 0 || !!envConfig.authToken,
@@ -234,23 +231,8 @@ export function createApp(deps: AppDependencies) {
   app.route('/', pipelineRoutes(deps))
   app.route('/', recommendationRoutes(deps))
   app.route('/', batchRoutes(deps))
-  // Admin-only guard for analytics and library health routes
-  app.use('/api/analytics/*', async (c, next) => {
-    const uid = c.get('userId')
-    if (uid) {
-      const u = await deps.getUserById(uid)
-      if (!u?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
-    }
-    await next()
-  })
-  app.use('/api/library/*', async (c, next) => {
-    const uid = c.get('userId')
-    if (uid) {
-      const u = await deps.getUserById(uid)
-      if (!u?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
-    }
-    await next()
-  })
+  app.use('/api/analytics/*', adminGuard(deps.getUserById))
+  app.use('/api/library/*', adminGuard(deps.getUserById))
 
   app.route('/', analyticsRoutes(deps))
   app.route('/', artistRoutes(deps))

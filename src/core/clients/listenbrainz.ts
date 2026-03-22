@@ -1,5 +1,6 @@
 import type { ListeningActivityEntry } from '@/core/plugins/types'
 import type { ServiceTestResult } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import { createHttpClient, HttpError } from './http'
 
 const BASE_URL = 'https://api.listenbrainz.org'
@@ -96,8 +97,7 @@ export function createListenBrainzClient(username: string, token: string) {
         details: { listenCount: count },
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { success: false, message }
+      return { success: false, message: errMsg(err) }
     }
   }
 

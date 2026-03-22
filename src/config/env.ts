@@ -89,24 +89,29 @@ export function buildDatabaseUrl(): string {
 }
 
 /** Settings fields that can be sourced from env vars (fallback for null DB values). */
+const ENV_OVERRIDE_KEYS = [
+  'lidarrUrl',
+  'lidarrApiKey',
+  // skipTlsVerify is NOT NULL in the DB (defaults false), so null-merge never applies
+  'listenbrainzUsername',
+  'listenbrainzToken',
+  'lastfmUsername',
+  'lastfmApiKey',
+  'aiProvider',
+  'aiApiKey',
+  'aiModel',
+  'aiBaseUrl',
+  'oidcIssuerUrl',
+  'oidcClientId',
+  'oidcClientSecret',
+  'oidcScopes',
+] as const satisfies ReadonlyArray<keyof EnvConfig>
+
 export function envSettingsOverrides(): Record<string, unknown> {
   const overrides: Record<string, unknown> = {}
-  if (envConfig.lidarrUrl) overrides.lidarrUrl = envConfig.lidarrUrl
-  if (envConfig.lidarrApiKey) overrides.lidarrApiKey = envConfig.lidarrApiKey
-  // skipTlsVerify is NOT NULL in the DB (defaults false), so null-merge never applies
-  if (envConfig.listenbrainzUsername)
-    overrides.listenbrainzUsername = envConfig.listenbrainzUsername
-  if (envConfig.listenbrainzToken) overrides.listenbrainzToken = envConfig.listenbrainzToken
-  if (envConfig.lastfmUsername) overrides.lastfmUsername = envConfig.lastfmUsername
-  if (envConfig.lastfmApiKey) overrides.lastfmApiKey = envConfig.lastfmApiKey
-  if (envConfig.aiProvider) overrides.aiProvider = envConfig.aiProvider
-  if (envConfig.aiApiKey) overrides.aiApiKey = envConfig.aiApiKey
-  if (envConfig.aiModel) overrides.aiModel = envConfig.aiModel
-  if (envConfig.aiBaseUrl) overrides.aiBaseUrl = envConfig.aiBaseUrl
-  if (envConfig.oidcIssuerUrl) overrides.oidcIssuerUrl = envConfig.oidcIssuerUrl
-  if (envConfig.oidcClientId) overrides.oidcClientId = envConfig.oidcClientId
-  if (envConfig.oidcClientSecret) overrides.oidcClientSecret = envConfig.oidcClientSecret
-  if (envConfig.oidcScopes) overrides.oidcScopes = envConfig.oidcScopes
+  for (const key of ENV_OVERRIDE_KEYS) {
+    if (envConfig[key]) overrides[key] = envConfig[key]
+  }
   return overrides
 }
 

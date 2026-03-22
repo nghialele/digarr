@@ -6,6 +6,7 @@ import { store } from '@/core/pipeline/store'
 import { resolveWeights } from '@/core/pipeline/weight-presets'
 import type { DiscoverySource } from '@/core/plugins/types'
 import type { DiscoveredArtist } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import type { RunComplete, RunInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
 
 type SubscriptionRunRow = {
@@ -67,61 +68,151 @@ export type SimilarSubscriptionDeps = GenreSubscriptionDeps
 const LISTENER_SCALE = 1_000_000
 const DEFAULT_SIMILARITY = 0.5
 
-export async function runGenreSubscription(
-  deps: GenreSubscriptionDeps,
-): Promise<{ artistsFound: number; artistsNew: number }> {
-  const {
-    subscription,
-    sources,
-    mbClient,
-    lidarrClient,
-    storeDb,
-    subscriptionQueries,
-    libraryMbids,
-    libraryGenres,
-    rejectedMbids,
-    feedbackHistory,
-    cooldownDays,
-    defaultScoreThreshold,
-  } = deps
+type RunResult = { artistsFound: number; artistsNew: number }
 
+// --- Shared pipeline + lifecycle helpers ---
+
+async function executePipeline(
+  deps: GenreSubscriptionDeps,
+  discovered: DiscoveredArtist[],
+  run: SubscriptionRunRow,
+  weightPreset: string,
+): Promise<RunResult> {
+  const { subscription, mbClient, lidarrClient, storeDb, subscriptionQueries } = deps
+  const artistsFound = discovered.length
+
+  if (artistsFound === 0) {
+    await completeEmpty(subscriptionQueries, subscription.id, run.id)
+    return { artistsFound: 0, artistsNew: 0 }
+  }
+
+  const resolved = await resolve(
+    discovered,
+    mbClient as Parameters<typeof resolve>[1],
+    undefined,
+    lidarrClient as Parameters<typeof resolve>[3],
+  )
+
+  const weights = resolveWeights(weightPreset, subscription.scoringWeightOverrides)
+  const scored = score(resolved, deps.libraryGenres, weights, deps.feedbackHistory)
+  const threshold = subscription.scoreThreshold ?? deps.defaultScoreThreshold
+  const filtered = filter(
+    scored,
+    deps.libraryMbids,
+    deps.rejectedMbids,
+    deps.cooldownDays,
+    threshold,
+  )
+
+  let batchId: number | undefined
+  if (filtered.length > 0) {
+    batchId = await store(filtered, storeDb, { userId: subscription.userId ?? undefined })
+  }
+
+  const artistsNew = filtered.length
+
+  await subscriptionQueries.completeRun(run.id, {
+    completedAt: new Date(),
+    artistsFound,
+    artistsNew,
+    batchId: batchId ?? null,
+  })
+
+  await subscriptionQueries.updateSubscription(subscription.id, {
+    lastRunAt: new Date(),
+    lastResultCount: artistsNew,
+    lastError: null,
+  })
+
+  return { artistsFound, artistsNew }
+}
+
+async function completeEmpty(
+  queries: SubscriptionQueries,
+  subscriptionId: number,
+  runId: number,
+  error?: string,
+): Promise<void> {
+  await queries.completeRun(runId, {
+    completedAt: new Date(),
+    artistsFound: 0,
+    artistsNew: 0,
+    error,
+  })
+  await queries.updateSubscription(subscriptionId, {
+    lastRunAt: new Date(),
+    lastResultCount: 0,
+    lastError: error ?? null,
+  })
+}
+
+async function handleRunError(
+  err: unknown,
+  queries: SubscriptionQueries,
+  subscriptionId: number,
+  runId: number,
+): Promise<never> {
+  const errorMessage = errMsg(err)
+  console.error(`[subscription-runner] Subscription ${subscriptionId} failed:`, err)
+
+  await queries
+    .completeRun(runId, {
+      completedAt: new Date(),
+      artistsFound: 0,
+      artistsNew: 0,
+      error: errorMessage,
+    })
+    .catch((e: unknown) => console.error('[subscription-runner] Failed to complete run record:', e))
+
+  await queries
+    .updateSubscription(subscriptionId, {
+      lastRunAt: new Date(),
+      lastError: errorMessage,
+    })
+    .catch((e: unknown) =>
+      console.error('[subscription-runner] Failed to update subscription error:', e),
+    )
+
+  throw err
+}
+
+function filterProviders(
+  sources: DiscoverySource[],
+  providers: string[] | null,
+): DiscoverySource[] {
+  return providers ? sources.filter((s) => providers.includes(s.id)) : sources
+}
+
+function parseProviders(sourceConfig: Record<string, unknown>): string[] | null {
+  return Array.isArray(sourceConfig.providers) ? (sourceConfig.providers as string[]) : null
+}
+
+// --- Public API ---
+
+export async function runGenreSubscription(deps: GenreSubscriptionDeps): Promise<RunResult> {
+  const { subscription, sources, subscriptionQueries } = deps
   const genre =
     typeof subscription.sourceConfig.genre === 'string' ? subscription.sourceConfig.genre : ''
 
-  // Log run start
   const run = await subscriptionQueries.insertRun({ subscriptionId: subscription.id })
 
   try {
-    // Fetch genre artists from all sources with genreArtists capability
     const capableSources = sources.filter(
       (s) => s.capabilities.includes('genreArtists') && typeof s.getGenreArtists === 'function',
     )
-
-    // If subscription specifies providers, filter to only those
-    const providers = Array.isArray(subscription.sourceConfig.providers)
-      ? (subscription.sourceConfig.providers as string[])
-      : null
-    const filteredSources = providers
-      ? capableSources.filter((s) => providers.includes(s.id))
-      : capableSources
+    const filteredSources = filterProviders(
+      capableSources,
+      parseProviders(subscription.sourceConfig),
+    )
 
     if (filteredSources.length === 0) {
+      const providers = parseProviders(subscription.sourceConfig)
       const reason =
         capableSources.length === 0
           ? `No sources with genreArtists capability (available sources: ${sources.map((s) => s.id).join(', ') || 'none'})`
           : `Provider filter [${providers?.join(', ')}] matched no capable sources (capable: ${capableSources.map((s) => s.id).join(', ')})`
       console.warn(`[subscription] id=${subscription.id}: ${reason}`)
-      await subscriptionQueries.completeRun(run.id, {
-        completedAt: new Date(),
-        artistsFound: 0,
-        artistsNew: 0,
-        error: reason,
-      })
-      await subscriptionQueries.updateSubscription(subscription.id, {
-        lastRunAt: new Date(),
-        lastResultCount: 0,
-        lastError: reason,
-      })
+      await completeEmpty(subscriptionQueries, subscription.id, run.id, reason)
       return { artistsFound: 0, artistsNew: 0 }
     }
 
@@ -151,108 +242,14 @@ export async function runGenreSubscription(
       }
     }
 
-    const artistsFound = discovered.length
-
-    if (artistsFound === 0) {
-      await subscriptionQueries.completeRun(run.id, {
-        completedAt: new Date(),
-        artistsFound: 0,
-        artistsNew: 0,
-      })
-      await subscriptionQueries.updateSubscription(subscription.id, {
-        lastRunAt: new Date(),
-        lastResultCount: 0,
-        lastError: null,
-      })
-      return { artistsFound: 0, artistsNew: 0 }
-    }
-
-    // Resolve -> score -> filter -> store
-    const resolved = await resolve(
-      discovered,
-      mbClient as Parameters<typeof resolve>[1],
-      undefined,
-      lidarrClient as Parameters<typeof resolve>[3],
-    )
-
-    const weights = resolveWeights(
-      subscription.scoringWeightPreset ?? 'genre',
-      subscription.scoringWeightOverrides,
-    )
-
-    const scored = score(resolved, libraryGenres, weights, feedbackHistory)
-
-    const threshold = subscription.scoreThreshold ?? defaultScoreThreshold
-
-    const filtered = filter(scored, libraryMbids, rejectedMbids, cooldownDays, threshold)
-
-    let batchId: number | undefined
-    if (filtered.length > 0) {
-      batchId = await store(filtered, storeDb, { userId: subscription.userId ?? undefined })
-    }
-
-    const artistsNew = filtered.length
-
-    await subscriptionQueries.completeRun(run.id, {
-      completedAt: new Date(),
-      artistsFound,
-      artistsNew,
-      batchId: batchId ?? null,
-    })
-
-    await subscriptionQueries.updateSubscription(subscription.id, {
-      lastRunAt: new Date(),
-      lastResultCount: artistsNew,
-      lastError: null,
-    })
-
-    return { artistsFound, artistsNew }
+    return executePipeline(deps, discovered, run, subscription.scoringWeightPreset ?? 'genre')
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    console.error(`[subscription-runner] Subscription ${subscription.id} failed:`, err)
-
-    await subscriptionQueries
-      .completeRun(run.id, {
-        completedAt: new Date(),
-        artistsFound: 0,
-        artistsNew: 0,
-        error: errorMessage,
-      })
-      .catch((e: unknown) =>
-        console.error('[subscription-runner] Failed to complete run record:', e),
-      )
-
-    await subscriptionQueries
-      .updateSubscription(subscription.id, {
-        lastRunAt: new Date(),
-        lastError: errorMessage,
-      })
-      .catch((e: unknown) =>
-        console.error('[subscription-runner] Failed to update subscription error:', e),
-      )
-
-    throw err
+    return handleRunError(err, subscriptionQueries, subscription.id, run.id)
   }
 }
 
-export async function runSimilarSubscription(
-  deps: SimilarSubscriptionDeps,
-): Promise<{ artistsFound: number; artistsNew: number }> {
-  const {
-    subscription,
-    sources,
-    mbClient,
-    lidarrClient,
-    storeDb,
-    subscriptionQueries,
-    libraryMbids,
-    libraryGenres,
-    rejectedMbids,
-    feedbackHistory,
-    cooldownDays,
-    defaultScoreThreshold,
-  } = deps
-
+export async function runSimilarSubscription(deps: SimilarSubscriptionDeps): Promise<RunResult> {
+  const { subscription, sources, subscriptionQueries } = deps
   const seedArtists = Array.isArray(subscription.sourceConfig.seedArtists)
     ? (subscription.sourceConfig.seedArtists as Array<{ name: string; mbid?: string }>)
     : []
@@ -261,32 +258,18 @@ export async function runSimilarSubscription(
 
   try {
     const capableSources = sources.filter((s) => s.capabilities.includes('similarArtists'))
-
-    // Filter by selected providers if specified
-    const providers = Array.isArray(subscription.sourceConfig.providers)
-      ? (subscription.sourceConfig.providers as string[])
-      : null
-    const filteredSources = providers
-      ? capableSources.filter((s) => providers.includes(s.id))
-      : capableSources
+    const filteredSources = filterProviders(
+      capableSources,
+      parseProviders(subscription.sourceConfig),
+    )
 
     if (filteredSources.length === 0 || seedArtists.length === 0) {
-      await subscriptionQueries.completeRun(run.id, {
-        completedAt: new Date(),
-        artistsFound: 0,
-        artistsNew: 0,
-      })
-      await subscriptionQueries.updateSubscription(subscription.id, {
-        lastRunAt: new Date(),
-        lastResultCount: 0,
-        lastError: null,
-      })
+      await completeEmpty(subscriptionQueries, subscription.id, run.id)
       return { artistsFound: 0, artistsNew: 0 }
     }
 
-    // Collect similar artists from all sources for all seed artists
     const discovered: DiscoveredArtist[] = []
-    const seen = new Set<string>() // dedup by lowercase name
+    const seen = new Set<string>()
 
     for (const seed of seedArtists) {
       for (const source of filteredSources) {
@@ -312,84 +295,8 @@ export async function runSimilarSubscription(
       }
     }
 
-    const artistsFound = discovered.length
-
-    if (artistsFound === 0) {
-      await subscriptionQueries.completeRun(run.id, {
-        completedAt: new Date(),
-        artistsFound: 0,
-        artistsNew: 0,
-      })
-      await subscriptionQueries.updateSubscription(subscription.id, {
-        lastRunAt: new Date(),
-        lastResultCount: 0,
-        lastError: null,
-      })
-      return { artistsFound: 0, artistsNew: 0 }
-    }
-
-    // Resolve -> score -> filter -> store (same as genre subscriptions)
-    const resolved = await resolve(
-      discovered,
-      mbClient as Parameters<typeof resolve>[1],
-      undefined,
-      lidarrClient as Parameters<typeof resolve>[3],
-    )
-
-    const weights = resolveWeights(
-      subscription.scoringWeightPreset ?? 'default',
-      subscription.scoringWeightOverrides,
-    )
-
-    const scored = score(resolved, libraryGenres, weights, feedbackHistory)
-    const threshold = subscription.scoreThreshold ?? defaultScoreThreshold
-    const filtered = filter(scored, libraryMbids, rejectedMbids, cooldownDays, threshold)
-
-    let batchId: number | undefined
-    if (filtered.length > 0) {
-      batchId = await store(filtered, storeDb, { userId: subscription.userId ?? undefined })
-    }
-
-    const artistsNew = filtered.length
-
-    await subscriptionQueries.completeRun(run.id, {
-      completedAt: new Date(),
-      artistsFound,
-      artistsNew,
-      batchId: batchId ?? null,
-    })
-
-    await subscriptionQueries.updateSubscription(subscription.id, {
-      lastRunAt: new Date(),
-      lastResultCount: artistsNew,
-      lastError: null,
-    })
-
-    return { artistsFound, artistsNew }
+    return executePipeline(deps, discovered, run, subscription.scoringWeightPreset ?? 'default')
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    console.error(`[subscription-runner] Similar subscription ${subscription.id} failed:`, err)
-
-    await subscriptionQueries
-      .completeRun(run.id, {
-        completedAt: new Date(),
-        artistsFound: 0,
-        artistsNew: 0,
-        error: errorMessage,
-      })
-      .catch((e: unknown) =>
-        console.error('[subscription-runner] Failed to complete run record:', e),
-      )
-
-    await subscriptionQueries
-      .updateSubscription(subscription.id, {
-        lastRunAt: new Date(),
-        lastError: errorMessage,
-      })
-      .catch((e: unknown) =>
-        console.error('[subscription-runner] Failed to update subscription error:', e),
-      )
-
-    throw err
+    return handleRunError(err, subscriptionQueries, subscription.id, run.id)
   }
 }

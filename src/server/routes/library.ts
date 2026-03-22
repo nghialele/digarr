@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { LibraryHealthService } from '@/core/library/health'
 import type { SkyHookWarmer } from '@/core/library/skyhook-warmer'
 import type { HealthCheckId } from '@/core/library/types'
+import { errMsg } from '@/core/validation'
 
 const VALID_CHECK_IDS: Set<string> = new Set([
   'missing-metadata',
@@ -42,8 +43,7 @@ export function libraryRoutes(deps: LibraryRouteDeps) {
       const progress = await deps.libraryHealth.fixCheck(checkId as HealthCheckId)
       return c.json(progress)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return c.json({ error: message }, 400)
+      return c.json({ error: errMsg(err) }, 400)
     }
   })
 

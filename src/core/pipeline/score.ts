@@ -72,7 +72,7 @@ export function score(
         feedbackBoost,
         popularity,
       },
-      aiReasoning: aiDiscovery?.aiReasoning ?? undefined,
+      aiReasoning: aiDiscovery?.aiReasoning,
     }
   })
 

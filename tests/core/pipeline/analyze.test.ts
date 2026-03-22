@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import { analyze } from '@/core/pipeline/analyze'
-import type { ListeningSource } from '@/core/plugins/types'
+import type { DiscoverySource } from '@/core/plugins/types'
 
 const lbArtists = [
   { name: 'Radiohead', mbid: 'mbid-rh', playCount: 500, source: 'listenbrainz' },
@@ -29,7 +29,7 @@ const activityStable = [
   { listen_count: 105, from_ts: 2000, to_ts: 3000 },
 ]
 
-function makeLb(artists = lbArtists, activity = activityStable): ListeningSource {
+function makeLb(artists = lbArtists, activity = activityStable): DiscoverySource {
   return {
     id: 'listenbrainz',
     name: 'ListenBrainz',
@@ -41,7 +41,7 @@ function makeLb(artists = lbArtists, activity = activityStable): ListeningSource
   }
 }
 
-function makeLfm(artists = lfmArtists): ListeningSource {
+function makeLfm(artists = lfmArtists): DiscoverySource {
   return {
     id: 'lastfm',
     name: 'Last.fm',

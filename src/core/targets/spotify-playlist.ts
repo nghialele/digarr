@@ -1,4 +1,5 @@
 import type { ServiceTestResult } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import { TRACKS_PER_ARTIST } from '../playlists/strategies/types'
 import type { DestinationTarget, PlaylistItem, PlaylistResult } from './types'
 
@@ -110,7 +111,7 @@ export function createSpotifyPlaylistTarget(
           success: false,
           targetType: 'spotify-playlist',
           targetId,
-          error: err instanceof Error ? err.message : String(err),
+          error: errMsg(err),
         }
       }
     },
@@ -126,7 +127,7 @@ export function createSpotifyPlaylistTarget(
       } catch (err: unknown) {
         return {
           success: false,
-          message: err instanceof Error ? err.message : String(err),
+          message: errMsg(err),
         }
       }
     },

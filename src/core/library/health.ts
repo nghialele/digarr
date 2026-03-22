@@ -7,6 +7,7 @@ import type {
   HealthFixProgress,
   LibraryStats,
 } from '@/core/library/types'
+import { errMsg } from '@/core/validation'
 
 // ---------------------------------------------------------------------------
 // Dependency types
@@ -180,8 +181,7 @@ export class LibraryHealthService {
           progress.completed++
         } catch (err: unknown) {
           progress.failed++
-          const msg = err instanceof Error ? err.message : String(err)
-          progress.errors.push(`${item.artistName}: ${msg}`)
+          progress.errors.push(`${item.artistName}: ${errMsg(err)}`)
         }
       })
     }

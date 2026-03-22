@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import { discover } from '@/core/pipeline/discover'
-import type { ListeningSource } from '@/core/plugins/types'
+import type { DiscoverySource } from '@/core/plugins/types'
 import type { TasteProfile } from '@/core/types'
 
 const profile: TasteProfile = {
@@ -13,7 +13,7 @@ const profile: TasteProfile = {
   listeningPatterns: { totalListens: 1000, recentTrend: 'stable' },
 }
 
-function makeLb(): ListeningSource {
+function makeLb(): DiscoverySource {
   return {
     id: 'listenbrainz',
     name: 'ListenBrainz',
@@ -27,7 +27,7 @@ function makeLb(): ListeningSource {
   }
 }
 
-function makeLfm(): ListeningSource {
+function makeLfm(): DiscoverySource {
   return {
     id: 'lastfm',
     name: 'Last.fm',
@@ -104,7 +104,7 @@ describe('discover()', () => {
   })
 
   it('isolates LB source failure -- other sources still return results', async () => {
-    const lb: ListeningSource = {
+    const lb: DiscoverySource = {
       id: 'listenbrainz',
       name: 'ListenBrainz',
       capabilities: ['topArtists', 'similarArtists', 'listeningActivity'],
@@ -150,7 +150,7 @@ describe('discover()', () => {
       topArtists: [{ name: 'Unknown Artist', playCount: 100, source: 'listenbrainz' }],
     }
     // LB source returns empty when no MBID is provided (the plugin handles this)
-    const lb: ListeningSource = {
+    const lb: DiscoverySource = {
       id: 'listenbrainz',
       name: 'ListenBrainz',
       capabilities: ['topArtists', 'similarArtists', 'listeningActivity'],

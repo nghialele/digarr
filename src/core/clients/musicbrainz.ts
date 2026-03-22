@@ -84,28 +84,27 @@ export function createMusicBrainzClient() {
     return request<MBSearchResult>(`/artist/?${params}`)
   }
 
-  function getReleaseGroups(artistMbid: string): Promise<MBReleaseGroup[]> {
+  async function getReleaseGroups(artistMbid: string): Promise<MBReleaseGroup[]> {
     const params = new URLSearchParams({
       artist: artistMbid,
       type: 'album|ep|single',
       fmt: 'json',
       limit: '100',
     })
-    return request<{
+    const data = await request<{
       'release-groups': Array<{
         id: string
         title: string
         'primary-type'?: string
         'first-release-date'?: string
       }>
-    }>(`/release-group?${params}`).then((data) =>
-      (data['release-groups'] ?? []).map((rg) => ({
-        id: rg.id,
-        title: rg.title,
-        type: rg['primary-type'] ?? 'Other',
-        firstReleaseDate: rg['first-release-date'],
-      })),
-    )
+    }>(`/release-group?${params}`)
+    return (data['release-groups'] ?? []).map((rg) => ({
+      id: rg.id,
+      title: rg.title,
+      type: rg['primary-type'] ?? 'Other',
+      firstReleaseDate: rg['first-release-date'],
+    }))
   }
 
   function extractStreamingUrls(relations: MBRelation[]): StreamingUrls {

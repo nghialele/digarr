@@ -1,4 +1,5 @@
 import type { AiRecommendation, TasteProfile } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import { buildRecommendationPrompt, parseRecommendationResponse } from './prompt'
 import type { RecommendationProvider } from './types'
 
@@ -81,7 +82,7 @@ export class OpenAICompatibleProvider implements RecommendationProvider {
     } catch (err: unknown) {
       return {
         success: false,
-        message: err instanceof Error ? err.message : String(err),
+        message: errMsg(err),
       }
     }
   }

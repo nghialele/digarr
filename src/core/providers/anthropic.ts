@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { AiRecommendation, TasteProfile } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import { buildRecommendationPrompt, parseRecommendationResponse } from './prompt'
 import type { RecommendationProvider } from './types'
 
@@ -41,8 +42,7 @@ export class AnthropicProvider implements RecommendationProvider {
 
       return { success: true, message: `Connected to Anthropic (${this.model})` }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { success: false, message }
+      return { success: false, message: errMsg(err) }
     }
   }
 }

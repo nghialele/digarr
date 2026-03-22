@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import type { AiRecommendation, TasteProfile } from '@/core/types'
+import { errMsg } from '@/core/validation'
 import { buildRecommendationPrompt, parseRecommendationResponse } from './prompt'
 import type { RecommendationProvider } from './types'
 
@@ -64,8 +65,7 @@ export class OpenAIProvider implements RecommendationProvider {
 
       return { success: true, message: `Connected to OpenAI (${this.model})` }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { success: false, message }
+      return { success: false, message: errMsg(err) }
     }
   }
 }

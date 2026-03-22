@@ -54,6 +54,3 @@ export interface DiscoverySource {
   /** Get recently listened tracks/artists (optional -- only sources with recentListening capability) */
   getRecentListening?(limit?: number): Promise<{ name: string; track?: string; playedAt: Date }[]>
 }
-
-/** @deprecated Use DiscoverySource instead */
-export type ListeningSource = DiscoverySource

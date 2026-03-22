@@ -221,9 +221,9 @@ async function fetchLidarrImage(
       if (img?.remoteUrl) return { url: img.remoteUrl, logoUrl, failed: false }
     }
     // Fall back to any non-clearlogo image with a remoteUrl
-    const any = artist.images.find((i) => i.coverType !== 'clearlogo' && i.remoteUrl)
-    return any?.remoteUrl
-      ? { url: any.remoteUrl, logoUrl, failed: false }
+    const fallback = artist.images.find((i) => i.coverType !== 'clearlogo' && i.remoteUrl)
+    return fallback?.remoteUrl
+      ? { url: fallback.remoteUrl, logoUrl, failed: false }
       : { logoUrl, failed: true }
   } catch {
     return { failed: true }

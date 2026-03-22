@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { TARGET_TYPES } from '@/core/targets/types'
 import type { ServiceTestResult } from '@/core/types'
 import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
+import { resolveAdmin } from '@/server/middleware/admin-guard'
 import type { HonoEnv } from '@/server/types'
 
 const VALID_TARGET_TYPES: ReadonlySet<string> = new Set(TARGET_TYPES)
@@ -44,8 +45,8 @@ export function targetRoutes(deps: TargetDeps) {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
-    const caller = await deps.getUserById(userId)
-    if (!caller?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
+    if (!(await resolveAdmin(userId, deps.getUserById)))
+      return c.json({ error: 'Admin access required' }, 403)
 
     const body = await c.req.json()
     const { type, name, config } = body as {

@@ -20,19 +20,7 @@ export type PlaylistUpdate = Partial<
   }
 >
 
-export type PlaylistRow = {
-  id: number
-  userId: number | null
-  name: string
-  strategy: string
-  targetIds: number[]
-  schedule: string | null
-  config: PlaylistConfig | null
-  lastGeneratedAt: Date | null
-  trackCount: number | null
-  enabled: boolean
-  createdAt: Date
-}
+export type PlaylistRow = typeof playlists.$inferSelect
 
 export type PlaylistTrackInsert = {
   playlistId: number
@@ -45,17 +33,7 @@ export type PlaylistTrackInsert = {
   position: number
 }
 
-export type PlaylistTrackRow = {
-  id: number
-  playlistId: number
-  artistName: string
-  trackName: string | null
-  mbid: string | null
-  spotifyUri: string | null
-  deezerId: string | null
-  localPath: string | null
-  position: number
-}
+export type PlaylistTrackRow = typeof playlistTracks.$inferSelect
 
 export async function createPlaylist(db: Database, data: PlaylistInsert): Promise<{ id: number }> {
   const [row] = await db
@@ -76,7 +54,7 @@ export async function createPlaylist(db: Database, data: PlaylistInsert): Promis
 
 export async function getPlaylistsByUser(db: Database, userId: number): Promise<PlaylistRow[]> {
   const rows = await db.select().from(playlists).where(eq(playlists.userId, userId))
-  return rows as PlaylistRow[]
+  return rows
 }
 
 export async function getPlaylistWithTracks(
@@ -92,8 +70,8 @@ export async function getPlaylistWithTracks(
     .where(eq(playlistTracks.playlistId, playlistId))
 
   return {
-    playlist: playlist as PlaylistRow,
-    tracks: tracks as PlaylistTrackRow[],
+    playlist,
+    tracks,
   }
 }
 
@@ -147,5 +125,5 @@ export async function getPlaylistsDueForGeneration(db: Database): Promise<Playli
         or(isNull(playlists.lastGeneratedAt), lt(playlists.lastGeneratedAt, sevenDaysAgo)),
       ),
     )
-  return rows as PlaylistRow[]
+  return rows
 }

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { errMsg } from '@/core/validation'
 import type { Database } from '@/db'
 
 type HealthDeps = {
@@ -14,8 +15,7 @@ export function healthRoutes(deps: HealthDeps) {
       await deps.db.execute(sql`SELECT 1`)
       return c.json({ status: 'ok' })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return c.json({ status: 'error', db: message }, 503)
+      return c.json({ status: 'error', db: errMsg(err) }, 503)
     }
   })
 

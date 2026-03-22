@@ -1,47 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '../lib/utils'
+import { ArtistThumb } from './artist-thumb'
 import type { Recommendation } from './recommendation-card'
 import { StreamingLinks } from './streaming-links'
 import { SwipeCard } from './swipe-card'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 type CardStackProps = {
   recommendations: Recommendation[]
   onApprove: (id: number, prevStatus?: string) => void
   onReject: (id: number, prevStatus?: string) => void
   onDetail: (id: number) => void
-}
-
-// ---------------------------------------------------------------------------
-// Artist thumbnail (duplicated from rec card to keep component self-contained)
-// ---------------------------------------------------------------------------
-
-function ArtistThumb({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
-  const [imgError, setImgError] = useState(false)
-  const hue = Math.abs([...name].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360)
-
-  if (imageUrl && !imgError) {
-    return (
-      <img
-        src={imageUrl}
-        alt={name}
-        className="w-full h-full object-cover"
-        onError={() => setImgError(true)}
-      />
-    )
-  }
-
-  return (
-    <div
-      className="w-full h-full flex items-center justify-center font-bold text-bg text-4xl"
-      style={{ background: `hsl(${hue}, 40%, 45%)` }}
-    >
-      {name.slice(0, 2).toUpperCase()}
-    </div>
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +77,12 @@ function StackCard({
     <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-lg flex flex-col h-full">
       {/* Artist image area */}
       <div className="relative h-48 sm:h-56 bg-bg overflow-hidden shrink-0">
-        <ArtistThumb name={rec.artist.name} imageUrl={rec.artist.imageUrl} />
+        <ArtistThumb
+          name={rec.artist.name}
+          imageUrl={rec.artist.imageUrl}
+          fill
+          className="text-4xl"
+        />
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/20 to-transparent" />
         {/* Score ring top-right */}

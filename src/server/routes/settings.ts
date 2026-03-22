@@ -3,9 +3,10 @@ import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
 import { sendWebhook } from '@/core/notifications'
-import { isHttpUrl } from '@/core/validation'
+import { errMsg, isHttpUrl } from '@/core/validation'
 import { getUserConnections, updateUserConnections } from '@/db/queries/users'
 import type { AppDependencies } from '@/server'
+import { resolveAdmin } from '@/server/middleware/admin-guard'
 import type { HonoEnv } from '@/server/types'
 
 const SECRET_FIELDS = [
@@ -139,9 +140,7 @@ export function settingsRoutes(deps: AppDependencies) {
 
   router.get('/api/settings', async (c) => {
     const userId = c.get('userId')
-    const caller = userId ? await deps.getUserById(userId) : null
-    // No userId = legacy token auth or no auth required -- treat as admin
-    const isAdmin = !userId || (caller?.isAdmin ?? false)
+    const isAdmin = await resolveAdmin(userId, deps.getUserById)
     const response = await buildSettingsResponse(deps, userId, isAdmin)
     if (!response) {
       return c.json({ error: 'Settings not found' }, 404)
@@ -190,44 +189,33 @@ export function settingsRoutes(deps: AppDependencies) {
     }
 
     const userId = c.get('userId')
-    const caller = userId ? await deps.getUserById(userId) : null
-    const isAdmin = !userId || (caller?.isAdmin ?? false)
+    const isAdmin = await resolveAdmin(userId, deps.getUserById)
 
-    if (userId) {
-      const userUpdate: Record<string, string | null> = {}
-      const globalSanitized: Record<string, unknown> = {}
+    // Split fields into user-connection vs global
+    const userUpdate: Record<string, string | null> = {}
+    const globalFields: Record<string, unknown> = {}
 
-      for (const [key, val] of Object.entries(sanitized)) {
-        if (USER_CONNECTION_FIELDS.has(key)) {
-          userUpdate[key] = (val as string | null | undefined) ?? null
-        } else {
-          globalSanitized[key] = val
-        }
-      }
-
-      if (Object.keys(userUpdate).length > 0) {
-        await updateUserConnections(deps.db, userId, userUpdate)
-      }
-
-      // Non-admins cannot modify global settings
-      if (!isAdmin && Object.keys(globalSanitized).length > 0) {
-        return c.json({ error: 'Admin access required to modify global settings' }, 403)
-      }
-
-      // Replace sanitized with only global fields for the global update
-      for (const key of Object.keys(sanitized)) {
-        delete sanitized[key]
-      }
-      for (const [key, val] of Object.entries(globalSanitized)) {
-        sanitized[key] = val
+    for (const [key, val] of Object.entries(sanitized)) {
+      if (userId && USER_CONNECTION_FIELDS.has(key)) {
+        userUpdate[key] = (val as string | null | undefined) ?? null
+      } else {
+        globalFields[key] = val
       }
     }
 
-    if (Object.keys(sanitized).length > 0) {
-      await deps.updateSettings(sanitized)
+    if (userId && Object.keys(userUpdate).length > 0) {
+      await updateUserConnections(deps.db, userId, userUpdate)
     }
 
-    const prefs = sanitized.preferences as Record<string, unknown> | undefined
+    if (!isAdmin && Object.keys(globalFields).length > 0) {
+      return c.json({ error: 'Admin access required to modify global settings' }, 403)
+    }
+
+    if (Object.keys(globalFields).length > 0) {
+      await deps.updateSettings(globalFields)
+    }
+
+    const prefs = globalFields.preferences as Record<string, unknown> | undefined
     if (prefs?.scheduleCron !== undefined && typeof prefs.scheduleCron === 'string') {
       try {
         deps.restartScheduler(prefs.scheduleCron || null)
@@ -331,8 +319,7 @@ export function settingsRoutes(deps: AppDependencies) {
           const result = await provider.testConnection()
           return c.json(result)
         } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : String(err)
-          return c.json({ success: false, message })
+          return c.json({ success: false, message: errMsg(err) })
         }
       }
       case 'plex': {
@@ -419,9 +406,7 @@ export function settingsRoutes(deps: AppDependencies) {
   // Test webhook by sending a test payload to the configured URL
   router.post('/api/settings/test-webhook', async (c) => {
     const userId = c.get('userId')
-    const caller = userId ? await deps.getUserById(userId) : null
-    const isAdmin = !userId || (caller?.isAdmin ?? false)
-    if (!isAdmin) {
+    if (!(await resolveAdmin(userId, deps.getUserById))) {
       return c.json({ success: false, message: 'Admin access required' }, 403)
     }
 
@@ -443,8 +428,7 @@ export function settingsRoutes(deps: AppDependencies) {
       })
       return c.json({ success: true, message: 'Test webhook sent' })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      return c.json({ success: false, message })
+      return c.json({ success: false, message: errMsg(err) })
     }
   })
 

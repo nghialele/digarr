@@ -2,6 +2,57 @@ import { Hono } from 'hono'
 import type { AppDependencies } from '@/server'
 import type { HonoEnv } from '@/server/types'
 
+type TargetWithCapabilities = Awaited<
+  ReturnType<AppDependencies['getEnabledTargetsForUser']>
+>[number]
+
+type ApproveResult = {
+  status: string
+  targetActions: Record<string, unknown>
+  lidarrArtistId?: number | string
+  lidarrError?: string
+}
+
+/** Shared approve-to-target logic used by both single and bulk approve. */
+async function approveToTargets(
+  artist: { mbid: string; name: string },
+  targets: TargetWithCapabilities[],
+  addOptions: Record<string, unknown>,
+): Promise<ApproveResult> {
+  if (targets.length === 0) {
+    return { status: 'approved', targetActions: {} }
+  }
+
+  const targetActions: Record<string, unknown> = {}
+  let anySuccess = false
+  let lidarrArtistId: number | string | undefined
+  let lidarrError: string | undefined
+
+  for (const target of targets) {
+    if (!target.capabilities?.includes('addArtist')) continue
+    const result = await target.addArtist?.(artist, addOptions)
+    if (!result) continue
+    targetActions[target.id] = {
+      status: result.success ? 'added' : 'failed',
+      externalId: result.externalId,
+      error: result.error,
+    }
+    if (result.success) anySuccess = true
+    if (target.type === 'lidarr') {
+      if (result.success && result.externalId) lidarrArtistId = result.externalId
+      if (result.error) lidarrError = result.error
+    }
+  }
+
+  const hasLidarr = targets.some((t) => t.type === 'lidarr')
+  const status = anySuccess ? (hasLidarr ? 'added_to_lidarr' : 'approved') : 'add_failed'
+  return { status, targetActions, lidarrArtistId, lidarrError }
+}
+
+function isOwned(rec: { userId?: number | null }, callerId?: number): boolean {
+  return !rec.userId || !callerId || rec.userId === callerId
+}
+
 export function recommendationRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
 
@@ -43,14 +94,9 @@ export function recommendationRoutes(deps: AppDependencies) {
   router.get('/api/recommendations/:id', async (c) => {
     const id = Number(c.req.param('id'))
     const rec = await deps.getRecommendation(id)
-    if (!rec) {
-      return c.json({ error: 'Recommendation not found' }, 404)
-    }
-    // Ownership check: legacy recs (userId=null) are accessible to all
+    if (!rec) return c.json({ error: 'Recommendation not found' }, 404)
     const userId = c.get('userId')
-    if (rec.userId && userId && rec.userId !== userId) {
-      return c.json({ error: 'Recommendation not found' }, 404)
-    }
+    if (!isOwned(rec, userId)) return c.json({ error: 'Recommendation not found' }, 404)
     return c.json(rec)
   })
 
@@ -75,27 +121,17 @@ export function recommendationRoutes(deps: AppDependencies) {
       rootFolderId?: number
     }
 
-    if (!status) {
-      return c.json({ error: 'status is required' }, 400)
-    }
+    if (!status) return c.json({ error: 'status is required' }, 400)
 
     if (status === 'approved') {
       const rec = await deps.getRecommendation(id)
-      if (!rec) {
-        return c.json({ error: 'Recommendation not found' }, 404)
-      }
-
-      // Ownership check: legacy recs (userId=null) are accessible to all
+      if (!rec) return c.json({ error: 'Recommendation not found' }, 404)
       const userId = c.get('userId')
-      if (rec.userId && userId && rec.userId !== userId) {
-        return c.json({ error: 'Recommendation not found' }, 404)
-      }
+      if (!isOwned(rec, userId)) return c.json({ error: 'Recommendation not found' }, 404)
 
       const settings = await deps.getSettings()
       const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
       const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
-
-      // Filter to specific target if targetId specified
       const effectiveTargets = targetId ? targets.filter((t) => t.id === targetId) : targets
 
       // Pre-warm SkyHook if any Lidarr target exists
@@ -119,48 +155,21 @@ export function recommendationRoutes(deps: AppDependencies) {
         rootFolderId: rfOverride ?? Number(prefs.rootFolderId ?? 1),
       }
 
-      // No targets configured -- just mark as approved (discovery-only mode)
-      if (effectiveTargets.length === 0) {
-        await deps.updateRecommendationStatus(id, 'approved', { targetActions: {} })
-        return c.json({ status: 'approved' })
-      }
+      const result = await approveToTargets(
+        { mbid: rec.artist.mbid, name: rec.artist.name },
+        effectiveTargets,
+        addOptions,
+      )
 
-      // Run through all enabled targets with addArtist capability
-      const targetActions: Record<string, unknown> = {}
-      let anySuccess = false
-      let lidarrResult: { externalId?: number | string; error?: string } | null = null
+      const extra: Record<string, unknown> = { targetActions: result.targetActions }
+      if (result.lidarrArtistId) extra.lidarrArtistId = result.lidarrArtistId
+      if (result.lidarrError) extra.lidarrError = result.lidarrError
 
-      for (const target of effectiveTargets) {
-        if (!target.capabilities?.includes('addArtist')) continue
-        const result = await target.addArtist?.(
-          { mbid: rec.artist.mbid, name: rec.artist.name },
-          addOptions,
-        )
-        if (!result) continue
-        targetActions[target.id] = {
-          status: result.success ? 'added' : 'failed',
-          externalId: result.externalId,
-          error: result.error,
-        }
-        if (result.success) anySuccess = true
-        if (target.type === 'lidarr') lidarrResult = result
-      }
-
-      // Backward compat: write Lidarr-specific columns
-      const extra: Record<string, unknown> = { targetActions }
-      if (lidarrResult) {
-        if (lidarrResult.externalId) extra.lidarrArtistId = lidarrResult.externalId
-        if (lidarrResult.error) extra.lidarrError = lidarrResult.error
-      }
-
-      // Use Lidarr-specific statuses for backward compat when Lidarr is involved
-      const hasLidarr = effectiveTargets.some((t) => t.type === 'lidarr')
-      const finalStatus = anySuccess ? (hasLidarr ? 'added_to_lidarr' : 'approved') : 'add_failed'
-      await deps.updateRecommendationStatus(id, finalStatus, extra)
+      await deps.updateRecommendationStatus(id, result.status, extra)
       return c.json({
-        status: finalStatus,
-        targetActions,
-        ...(lidarrResult?.error ? { lidarrError: lidarrResult.error } : {}),
+        status: result.status,
+        targetActions: result.targetActions,
+        ...(result.lidarrError ? { lidarrError: result.lidarrError } : {}),
       })
     }
 
@@ -169,15 +178,10 @@ export function recommendationRoutes(deps: AppDependencies) {
       return c.json({ error: `Invalid status: ${status}` }, 400)
     }
 
-    // Ownership check for non-approve status changes
     const rec = await deps.getRecommendation(id)
-    if (!rec) {
-      return c.json({ error: 'Recommendation not found' }, 404)
-    }
+    if (!rec) return c.json({ error: 'Recommendation not found' }, 404)
     const userId = c.get('userId')
-    if (rec.userId && userId && rec.userId !== userId) {
-      return c.json({ error: 'Recommendation not found' }, 404)
-    }
+    if (!isOwned(rec, userId)) return c.json({ error: 'Recommendation not found' }, 404)
 
     await deps.updateRecommendationStatus(id, status)
     return c.json({ status })
@@ -211,12 +215,11 @@ export function recommendationRoutes(deps: AppDependencies) {
     const userId = c.get('userId')
 
     if (action === 'reject') {
-      // Filter to only recs owned by (or accessible to) this user
       const ownedIds: number[] = []
       for (const id of ids) {
         const rec = await deps.getRecommendation(id)
         if (!rec) continue
-        if (rec.userId && userId && rec.userId !== userId) continue
+        if (!isOwned(rec, userId)) continue
         ownedIds.push(id)
       }
       if (ownedIds.length > 0) {
@@ -227,8 +230,6 @@ export function recommendationRoutes(deps: AppDependencies) {
 
     // Approve: route through targets
     const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
-
-    // Filter to specific target if targetId specified
     const effectiveTargets = targetId ? targets.filter((t) => t.id === targetId) : targets
 
     const settings = await deps.getSettings()
@@ -247,50 +248,22 @@ export function recommendationRoutes(deps: AppDependencies) {
         results.push({ id, status: 'not_found' })
         continue
       }
-      // Ownership check: skip recs that don't belong to this user
-      if (rec.userId && userId && rec.userId !== userId) {
+      if (!isOwned(rec, userId)) {
         results.push({ id, status: 'not_found' })
         continue
       }
 
-      if (effectiveTargets.length === 0) {
-        await deps.updateRecommendationStatus(id, 'approved', { targetActions: {} })
-        results.push({ id, status: 'approved' })
-        continue
-      }
+      const result = await approveToTargets(
+        { mbid: rec.artist.mbid, name: rec.artist.name },
+        effectiveTargets,
+        addOptions,
+      )
 
-      const targetActions: Record<string, unknown> = {}
-      let anySuccess = false
-      let lidarrArtistId: number | string | undefined
-      let lidarrError: string | undefined
-
-      for (const target of effectiveTargets) {
-        if (!target.capabilities?.includes('addArtist')) continue
-        const result = await target.addArtist?.(
-          { mbid: rec.artist.mbid, name: rec.artist.name },
-          addOptions,
-        )
-        if (!result) continue
-        targetActions[target.id] = {
-          status: result.success ? 'added' : 'failed',
-          externalId: result.externalId,
-          error: result.error,
-        }
-        if (result.success) anySuccess = true
-
-        if (target.type === 'lidarr') {
-          if (result.success && result.externalId) lidarrArtistId = result.externalId
-          if (result.error) lidarrError = result.error
-        }
-      }
-
-      const hasLidarr = effectiveTargets.some((t) => t.type === 'lidarr')
-      const status = anySuccess ? (hasLidarr ? 'added_to_lidarr' : 'approved') : 'add_failed'
-      const extra: Record<string, unknown> = { targetActions }
-      if (lidarrArtistId) extra.lidarrArtistId = lidarrArtistId
-      if (lidarrError) extra.lidarrError = lidarrError
-      await deps.updateRecommendationStatus(id, status, extra)
-      results.push({ id, status })
+      const extra: Record<string, unknown> = { targetActions: result.targetActions }
+      if (result.lidarrArtistId) extra.lidarrArtistId = result.lidarrArtistId
+      if (result.lidarrError) extra.lidarrError = result.lidarrError
+      await deps.updateRecommendationStatus(id, result.status, extra)
+      results.push({ id, status: result.status })
     }
 
     return c.json({ results })

@@ -116,7 +116,6 @@ export async function getArtistsByGenre(
   genreName: string,
   limit = 100,
 ): Promise<ArtistRow[]> {
-  // Case-insensitive match: check whether any element in the genres array matches
   return db
     .select()
     .from(artists)

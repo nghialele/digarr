@@ -1,4 +1,5 @@
 import { createLidarrClient } from '@/core/clients/lidarr'
+import { errMsg } from '@/core/validation'
 import type { DestinationTarget, TargetAddOptions, TargetResult } from './types'
 
 export type LidarrTargetConfig = {
@@ -68,7 +69,7 @@ export function createLidarrTarget(
           success: false,
           targetType: 'lidarr',
           targetId,
-          error: err instanceof Error ? err.message : String(err),
+          error: errMsg(err),
         }
       }
     },

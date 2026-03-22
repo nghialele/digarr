@@ -1,4 +1,5 @@
 import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
+import { errMsg } from '@/core/validation'
 
 export function createPipelineSSEStream(orchestrator: PipelineOrchestrator): ReadableStream {
   let progressHandler: ((progress: unknown) => void) | null = null
@@ -47,9 +48,8 @@ export function createPipelineSSEStream(orchestrator: PipelineOrchestrator): Rea
 
       errorHandler = (err: unknown) => {
         try {
-          const message = err instanceof Error ? err.message : String(err)
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ stage: 'error', message })}\n\n`),
+            encoder.encode(`data: ${JSON.stringify({ stage: 'error', message: errMsg(err) })}\n\n`),
           )
           cleanup()
           controller.close()
