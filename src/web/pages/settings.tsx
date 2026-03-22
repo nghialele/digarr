@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { Field } from '../components/field'
@@ -1959,7 +1960,9 @@ function SettingsSkeleton() {
 
 export function SettingsPage() {
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState<Tab>('connections')
+  const [searchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab') as Tab | null
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'connections')
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const isAdmin = currentUser?.isAdmin ?? false
   const {

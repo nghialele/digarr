@@ -20,8 +20,17 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatNextRun(nextRun: string | null): string {
-  if (!nextRun) return 'No schedule configured'
+const CRON_LABELS: Record<string, string> = {
+  '0 0 * * *': 'Daily',
+  '0 6 * * 1': 'Every Monday',
+  '0 8 * * 1': 'Every Monday',
+  '0 8 * * 0': 'Every Sunday',
+  '0 8 * * 1,4': 'Mon + Thu',
+  '0 8 1,15 * *': '1st + 15th',
+  '0 8 1 * *': 'Monthly',
+}
+
+function formatNextRun(nextRun: string): string {
   const date = new Date(nextRun)
   const now = new Date()
   const diffMs = date.getTime() - now.getTime()
@@ -30,10 +39,28 @@ function formatNextRun(nextRun: string | null): string {
   const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
   if (hours > 24) {
     const days = Math.floor(hours / 24)
-    return `Next run in ${days}d`
+    return `Next generation in ${days}d`
   }
-  if (hours > 0) return `Next run in ${hours}h ${minutes}m`
-  return `Next run in ${minutes}m`
+  if (hours > 0) return `Next generation in ${hours}h ${minutes}m`
+  return `Next generation in ${minutes}m`
+}
+
+function formatSchedulerSubtitle(info: {
+  nextRun: string | null
+  cron: string | null
+  enabled: boolean
+}): string {
+  if (info.enabled && info.nextRun) {
+    return formatNextRun(info.nextRun)
+  }
+  if (info.enabled && info.cron) {
+    const label = CRON_LABELS[info.cron] ?? info.cron
+    return `Scheduled: ${label}`
+  }
+  if (!info.enabled && info.cron) {
+    return 'Schedule paused'
+  }
+  return 'No schedule configured'
 }
 
 // ---------------------------------------------------------------------------
@@ -77,7 +104,11 @@ export function PlaylistsPage() {
     queryFn: getPlaylists,
   })
 
-  const { data: schedulerInfo } = useQuery<{ nextRun: string | null }>({
+  const { data: schedulerInfo } = useQuery<{
+    nextRun: string | null
+    cron: string | null
+    enabled: boolean
+  }>({
     queryKey: ['playlists', 'scheduler'],
     queryFn: getPlaylistScheduler,
   })
@@ -129,7 +160,7 @@ export function PlaylistsPage() {
           <h1 className="text-lg font-semibold text-text">Playlists</h1>
           <p className="text-xs text-muted mt-0.5">
             {schedulerInfo
-              ? formatNextRun(schedulerInfo.nextRun)
+              ? formatSchedulerSubtitle(schedulerInfo)
               : 'Automatic music digest generation'}
           </p>
         </div>

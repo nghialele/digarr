@@ -19,8 +19,9 @@ import {
   replacePlaylistTracks,
   updatePlaylist,
 } from '@/db/queries/playlists'
+import { getSettings } from '@/db/queries/settings'
 import type { TargetRow } from '@/db/queries/targets'
-import type { PlaylistConfig, PlaylistStrategy } from '@/db/schema'
+import { mergePreferences, type PlaylistConfig, type PlaylistStrategy } from '@/db/schema'
 import type { HonoEnv } from '@/server/types'
 
 export type PlaylistDeps = {
@@ -122,7 +123,13 @@ export function playlistRoutes(deps: PlaylistDeps) {
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
     const next = deps.playlistScheduler.nextRun()
-    return c.json({ nextRun: next ? next.toISOString() : null })
+    const settings = await getSettings(db)
+    const prefs = mergePreferences(settings?.preferences as Record<string, unknown> | null)
+    return c.json({
+      nextRun: next ? next.toISOString() : null,
+      cron: prefs.playlistSchedule ?? null,
+      enabled: prefs.playlistEnabled ?? false,
+    })
   })
 
   // GET /api/playlists

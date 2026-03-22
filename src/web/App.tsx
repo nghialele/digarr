@@ -52,6 +52,7 @@ import { DiscoverPage } from './pages/discover'
 import { GenreDetailPage } from './pages/genre-detail'
 import { GenresPage } from './pages/genres'
 import { LibraryHealthPage } from './pages/library-health'
+import { PlaylistDetailPage } from './pages/playlist-detail'
 import { PlaylistsPage } from './pages/playlists'
 import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
@@ -222,7 +223,7 @@ function UserMenu({ username }: { username: string }) {
           <button
             type="button"
             onClick={() => {
-              navigate('/settings')
+              navigate('/settings?tab=account')
               setOpen(false)
             }}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-bg transition-colors"
@@ -538,6 +539,7 @@ function InnerApp() {
             <Route path="/genres" element={<GenresPage />} />
             <Route path="/genres/:slug" element={<GenreDetailPage />} />
             <Route path="/playlists" element={<PlaylistsPage />} />
+            <Route path="/playlists/:id" element={<PlaylistDetailPage />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/library/health" element={<LibraryHealthPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />

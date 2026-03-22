@@ -1,5 +1,6 @@
 import { Pencil, Play, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   deletePlaylistApi,
@@ -92,6 +93,7 @@ type PlaylistCardProps = {
 
 export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps) {
   const [generating, setGenerating] = useState(false)
+  const navigate = useNavigate()
 
   const badge = STRATEGY_BADGES[playlist.strategy] ?? {
     label: playlist.strategy,
@@ -132,7 +134,16 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-4 hover:border-accent/40 transition-colors space-y-3">
+    // biome-ignore lint/a11y/useSemanticElements: intentional div[role=button] -- action buttons nested inside prevent using <button>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate(`/playlists/${playlist.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') navigate(`/playlists/${playlist.id}`)
+      }}
+      className="bg-surface border border-border rounded-lg p-4 hover:border-accent/40 transition-colors space-y-3 cursor-pointer"
+    >
       {/* Header: name + badge */}
       <div className="flex items-start justify-between gap-2">
         <p className="font-semibold text-text text-sm leading-snug truncate" title={playlist.name}>
@@ -164,7 +175,12 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
       </div>
 
       {/* Actions footer */}
-      <div className="flex items-center justify-between gap-2 pt-1 border-t border-border">
+      <div
+        className="flex items-center justify-between gap-2 pt-1 border-t border-border"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="none"
+      >
         {/* Left: generate + edit + delete */}
         <div className="flex items-center gap-1">
           <button
