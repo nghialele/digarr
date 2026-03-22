@@ -4,6 +4,7 @@ import {
   Compass,
   HeartPulse,
   LayoutDashboard,
+  ListMusic,
   LogOut,
   Monitor,
   Moon,
@@ -51,6 +52,7 @@ import { DiscoverPage } from './pages/discover'
 import { GenreDetailPage } from './pages/genre-detail'
 import { GenresPage } from './pages/genres'
 import { LibraryHealthPage } from './pages/library-health'
+import { PlaylistsPage } from './pages/playlists'
 import { SettingsPage } from './pages/settings'
 import { SetupWizard } from './pages/setup'
 import SubscriptionsPage from './pages/subscriptions'
@@ -319,6 +321,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     Genres
                   </span>
                 </NavLink>
+                <NavLink to="/playlists" className={navLinkClass}>
+                  <span className="flex items-center gap-1">
+                    <ListMusic size={14} aria-hidden="true" />
+                    Playlists
+                  </span>
+                </NavLink>
                 <NavLink to="/subscriptions" className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <Monitor size={14} aria-hidden="true" />
@@ -423,6 +431,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   Genres
                 </span>
               </NavLink>
+              <NavLink to="/playlists" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+                <span className="flex items-center gap-1.5">
+                  <ListMusic size={14} aria-hidden="true" />
+                  Playlists
+                </span>
+              </NavLink>
               <NavLink
                 to="/subscriptions"
                 className={navLinkClass}
@@ -523,6 +537,7 @@ function InnerApp() {
             <Route path="/discover" element={<DiscoverPage />} />
             <Route path="/genres" element={<GenresPage />} />
             <Route path="/genres/:slug" element={<GenreDetailPage />} />
+            <Route path="/playlists" element={<PlaylistsPage />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/library/health" element={<LibraryHealthPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
