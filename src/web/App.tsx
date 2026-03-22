@@ -390,21 +390,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     ]}
                   />
                 )}
-                <NavDropdown
-                  label="Settings"
-                  icon={<Settings size={14} aria-hidden="true" />}
-                  items={[
-                    {
-                      to: '/settings?tab=connections',
-                      label: 'Connections',
-                      icon: <Settings size={14} />,
-                    },
-                    { to: '/settings?tab=account', label: 'Account', icon: <Users size={14} /> },
-                    ...(currentUser?.isAdmin
-                      ? [{ to: '/users', label: 'User Management', icon: <Users size={14} /> }]
-                      : []),
-                  ]}
-                />
+                <NavLink to="/settings" className={navLinkClass}>
+                  <span className="flex items-center gap-1">
+                    <Settings size={14} aria-hidden="true" />
+                    Settings
+                  </span>
+                </NavLink>
               </div>
             </div>
             <div className="flex items-center gap-2">
