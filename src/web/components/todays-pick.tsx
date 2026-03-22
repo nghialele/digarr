@@ -204,7 +204,7 @@ export function TodaysPick({
         <button
           type="button"
           onClick={() => onSkip(rec.id)}
-          className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-accent/30 text-accent bg-accent/5 hover:bg-accent/15 transition-colors"
+          className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500/15 transition-colors"
           title="Skip for now -- this artist will come back later"
         >
           Skip
