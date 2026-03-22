@@ -8,15 +8,33 @@ export type ColorTheme =
   | 'gruvbox'
   | 'solarized'
   | 'rosepine'
+  | 'onedark'
+  | 'spotarr'
+  | 'youtarr'
+  | 'deezarr'
+  | 'amazarr'
+  | 'qobuzarr'
+  | 'applarr'
+  | 'tidarr'
 
-export const COLOR_THEMES: { id: ColorTheme; name: string }[] = [
-  { id: 'tokyonight', name: 'Tokyo Night' },
-  { id: 'catppuccin', name: 'Catppuccin' },
-  { id: 'dracula', name: 'Dracula' },
-  { id: 'nord', name: 'Nord' },
-  { id: 'gruvbox', name: 'Gruvbox' },
-  { id: 'solarized', name: 'Solarized' },
-  { id: 'rosepine', name: 'Rose Pine' },
+export const COLOR_THEMES: { id: ColorTheme; name: string; group?: string }[] = [
+  // Editor themes
+  { id: 'tokyonight', name: 'Tokyo Night', group: 'Editor' },
+  { id: 'catppuccin', name: 'Catppuccin', group: 'Editor' },
+  { id: 'dracula', name: 'Dracula', group: 'Editor' },
+  { id: 'nord', name: 'Nord', group: 'Editor' },
+  { id: 'gruvbox', name: 'Gruvbox', group: 'Editor' },
+  { id: 'solarized', name: 'Solarized', group: 'Editor' },
+  { id: 'rosepine', name: 'Rose Pine', group: 'Editor' },
+  { id: 'onedark', name: 'One Dark', group: 'Editor' },
+  // *arr streaming themes
+  { id: 'spotarr', name: 'Spotarr', group: 'Streaming' },
+  { id: 'youtarr', name: 'Youtarr', group: 'Streaming' },
+  { id: 'deezarr', name: 'Deezarr', group: 'Streaming' },
+  { id: 'amazarr', name: 'Amazarr', group: 'Streaming' },
+  { id: 'qobuzarr', name: 'Qobuzarr', group: 'Streaming' },
+  { id: 'applarr', name: 'Applarr', group: 'Streaming' },
+  { id: 'tidarr', name: 'Tidarr', group: 'Streaming' },
 ]
 
 const MODE_KEY = 'digarr-theme'

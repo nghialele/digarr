@@ -209,6 +209,222 @@
   --color-muted: #9893a5;
 }
 
+/* One Dark */
+[data-theme="onedark-dark"] {
+  --color-bg: #282c34;
+  --color-surface: #21252b;
+  --color-border: #3e4451;
+  --color-accent: #61afef;
+  --color-accent-fg: #282c34;
+  --color-approve: #98c379;
+  --color-reject: #e06c75;
+  --color-info: #56b6c2;
+  --color-text: #abb2bf;
+  --color-muted: #5c6370;
+}
+
+[data-theme="onedark-light"] {
+  --color-bg: #fafafa;
+  --color-surface: #f0f0f0;
+  --color-border: #d3d3d3;
+  --color-accent: #4078f2;
+  --color-accent-fg: #ffffff;
+  --color-approve: #50a14f;
+  --color-reject: #e45649;
+  --color-info: #0184bc;
+  --color-text: #383a42;
+  --color-muted: #a0a1a7;
+}
+
+/* Spotarr - inspired by Spotify */
+[data-theme="spotarr-dark"] {
+  --color-bg: #121212;
+  --color-surface: #1e1e1e;
+  --color-border: #2a2a2a;
+  --color-accent: #1db954;
+  --color-accent-fg: #ffffff;
+  --color-approve: #1db954;
+  --color-reject: #e22134;
+  --color-info: #1ed760;
+  --color-text: #ffffff;
+  --color-muted: #727272;
+}
+
+[data-theme="spotarr-light"] {
+  --color-bg: #f6f6f6;
+  --color-surface: #ffffff;
+  --color-border: #e0e0e0;
+  --color-accent: #1db954;
+  --color-accent-fg: #ffffff;
+  --color-approve: #1db954;
+  --color-reject: #e22134;
+  --color-info: #1db954;
+  --color-text: #191414;
+  --color-muted: #727272;
+}
+
+/* Youtarr - inspired by YouTube Music */
+[data-theme="youtarr-dark"] {
+  --color-bg: #0f0f0f;
+  --color-surface: #1a1a1a;
+  --color-border: #2c2c2c;
+  --color-accent: #ff0000;
+  --color-accent-fg: #ffffff;
+  --color-approve: #2ba640;
+  --color-reject: #ff0000;
+  --color-info: #3ea6ff;
+  --color-text: #f1f1f1;
+  --color-muted: #717171;
+}
+
+[data-theme="youtarr-light"] {
+  --color-bg: #f9f9f9;
+  --color-surface: #ffffff;
+  --color-border: #e5e5e5;
+  --color-accent: #cc0000;
+  --color-accent-fg: #ffffff;
+  --color-approve: #2e7d32;
+  --color-reject: #cc0000;
+  --color-info: #065fd4;
+  --color-text: #0f0f0f;
+  --color-muted: #606060;
+}
+
+/* Deezarr - inspired by Deezer */
+[data-theme="deezarr-dark"] {
+  --color-bg: #121216;
+  --color-surface: #1c1c22;
+  --color-border: #2a2a32;
+  --color-accent: #a238ff;
+  --color-accent-fg: #ffffff;
+  --color-approve: #56e15c;
+  --color-reject: #ff4f6e;
+  --color-info: #38b6ff;
+  --color-text: #f5f5f5;
+  --color-muted: #72727d;
+}
+
+[data-theme="deezarr-light"] {
+  --color-bg: #f5f5f9;
+  --color-surface: #ffffff;
+  --color-border: #e0e0e6;
+  --color-accent: #a238ff;
+  --color-accent-fg: #ffffff;
+  --color-approve: #00b84d;
+  --color-reject: #ef3340;
+  --color-info: #3892ff;
+  --color-text: #1a1a2e;
+  --color-muted: #72727d;
+}
+
+/* Amazarr - inspired by Amazon Music */
+[data-theme="amazarr-dark"] {
+  --color-bg: #0d1117;
+  --color-surface: #161b22;
+  --color-border: #21262d;
+  --color-accent: #25d1da;
+  --color-accent-fg: #0d1117;
+  --color-approve: #25d1da;
+  --color-reject: #f85149;
+  --color-info: #58a6ff;
+  --color-text: #e6edf3;
+  --color-muted: #7d8590;
+}
+
+[data-theme="amazarr-light"] {
+  --color-bg: #f6f6f6;
+  --color-surface: #ffffff;
+  --color-border: #d8dee4;
+  --color-accent: #00a0a0;
+  --color-accent-fg: #ffffff;
+  --color-approve: #00a0a0;
+  --color-reject: #cf222e;
+  --color-info: #0969da;
+  --color-text: #1f2328;
+  --color-muted: #656d76;
+}
+
+/* Qobuzarr - inspired by Qobuz */
+[data-theme="qobuzarr-dark"] {
+  --color-bg: #0a0a14;
+  --color-surface: #141420;
+  --color-border: #22223a;
+  --color-accent: #4285f4;
+  --color-accent-fg: #ffffff;
+  --color-approve: #34a853;
+  --color-reject: #ea4335;
+  --color-info: #4285f4;
+  --color-text: #e8eaed;
+  --color-muted: #6b6b80;
+}
+
+[data-theme="qobuzarr-light"] {
+  --color-bg: #f8f8fc;
+  --color-surface: #ffffff;
+  --color-border: #dcdce6;
+  --color-accent: #2962ff;
+  --color-accent-fg: #ffffff;
+  --color-approve: #0d904f;
+  --color-reject: #d32f2f;
+  --color-info: #2962ff;
+  --color-text: #1a1a2e;
+  --color-muted: #6b6b80;
+}
+
+/* Applarr - inspired by Apple Music */
+[data-theme="applarr-dark"] {
+  --color-bg: #1c1c1e;
+  --color-surface: #2c2c2e;
+  --color-border: #3a3a3c;
+  --color-accent: #fa2d48;
+  --color-accent-fg: #ffffff;
+  --color-approve: #30d158;
+  --color-reject: #ff453a;
+  --color-info: #64d2ff;
+  --color-text: #f5f5f7;
+  --color-muted: #8e8e93;
+}
+
+[data-theme="applarr-light"] {
+  --color-bg: #f2f2f7;
+  --color-surface: #ffffff;
+  --color-border: #d1d1d6;
+  --color-accent: #fc3c44;
+  --color-accent-fg: #ffffff;
+  --color-approve: #34c759;
+  --color-reject: #ff3b30;
+  --color-info: #007aff;
+  --color-text: #1d1d1f;
+  --color-muted: #8e8e93;
+}
+
+/* Tidarr - inspired by TIDAL */
+[data-theme="tidarr-dark"] {
+  --color-bg: #0d0d0d;
+  --color-surface: #1a1a1a;
+  --color-border: #2d2d2d;
+  --color-accent: #00ffff;
+  --color-accent-fg: #0d0d0d;
+  --color-approve: #00e676;
+  --color-reject: #ff1744;
+  --color-info: #00ffff;
+  --color-text: #f5f5f5;
+  --color-muted: #6e6e6e;
+}
+
+[data-theme="tidarr-light"] {
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-border: #e0e0e0;
+  --color-accent: #00b4b4;
+  --color-accent-fg: #ffffff;
+  --color-approve: #00c853;
+  --color-reject: #d50000;
+  --color-info: #00b4b4;
+  --color-text: #0d0d0d;
+  --color-muted: #757575;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
