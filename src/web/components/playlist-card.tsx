@@ -196,16 +196,18 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
           <button
             type="button"
             onClick={onEdit}
-            className="p-1.5 text-muted hover:text-text transition-colors"
+            className="p-2 text-muted hover:text-text transition-colors"
             title="Edit playlist"
+            aria-label="Edit playlist"
           >
             <Pencil size={14} aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={handleDelete}
-            className="p-1.5 text-muted hover:text-reject transition-colors"
+            className="p-2 text-muted hover:text-reject transition-colors"
             title="Delete playlist"
+            aria-label="Delete playlist"
           >
             <Trash2 size={14} aria-hidden="true" />
           </button>

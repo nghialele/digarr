@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PlaylistInsert, PlaylistRow } from '../lib/api'
 import { CronPicker } from './cron-picker'
 
@@ -41,6 +41,14 @@ export function PlaylistForm({ playlist, onSave, onCancel }: PlaylistFormProps) 
 
   const isEdit = !!playlist
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) {
@@ -79,10 +87,10 @@ export function PlaylistForm({ playlist, onSave, onCancel }: PlaylistFormProps) 
   }
 
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handled via document useEffect above
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onCancel}
-      onKeyDown={(e) => e.key === 'Escape' && onCancel()}
       role="dialog"
       aria-modal="true"
       aria-label={isEdit ? 'Edit playlist' : 'Create playlist'}

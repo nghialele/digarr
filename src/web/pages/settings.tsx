@@ -1336,6 +1336,7 @@ function CollapsibleSection({
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         className="w-full flex items-center justify-between p-4 text-text font-medium text-sm hover:bg-surface transition-colors rounded-lg"
       >
         {title}
@@ -1799,6 +1800,7 @@ function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => voi
   const [oidcClientSecret, setOidcClientSecret] = useState(
     settings.oidcClientSecret === '***' ? '' : (settings.oidcClientSecret ?? ''),
   )
+  const [secretDirty, setSecretDirty] = useState(false)
   const [oidcScopes, setOidcScopes] = useState(settings.oidcScopes ?? '')
   const [saving, setSaving] = useState(false)
   const [testingOidc, setTestingOidc] = useState(false)
@@ -1811,12 +1813,15 @@ function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => voi
   async function handleSave() {
     setSaving(true)
     try {
-      await updateSettings({
+      const updates: Record<string, unknown> = {
         oidcIssuerUrl: oidcIssuerUrl || undefined,
         oidcClientId: oidcClientId || undefined,
-        oidcClientSecret: oidcClientSecret || undefined,
         oidcScopes: oidcScopes || undefined,
-      })
+      }
+      if (secretDirty) {
+        updates.oidcClientSecret = oidcClientSecret || undefined
+      }
+      await updateSettings(updates)
       toast.success('Authentication settings saved')
       onSaved()
     } catch {
@@ -1876,7 +1881,10 @@ function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => voi
             type="password"
             placeholder={settings.oidcClientSecret === '***' ? '(saved)' : 'your-client-secret'}
             value={oidcClientSecret}
-            onChange={(e) => setOidcClientSecret(e.target.value)}
+            onChange={(e) => {
+              setOidcClientSecret(e.target.value)
+              setSecretDirty(true)
+            }}
           />
         </Field>
         <Field label="Scopes" id="oidc-scopes">

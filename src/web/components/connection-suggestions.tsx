@@ -1,5 +1,4 @@
 import { X } from 'lucide-react'
-import { useState } from 'react'
 
 type Suggestion = {
   id: string
@@ -38,21 +37,8 @@ type ConnectionSuggestionsProps = {
 export function ConnectionSuggestions({ service, onClose }: ConnectionSuggestionsProps) {
   const suggestions = SERVICE_SUGGESTIONS[service] ?? []
   const displayName = SERVICE_DISPLAY[service] ?? service
-  const [enabled, setEnabled] = useState<Set<string>>(new Set(suggestions.map((s) => s.id)))
 
   if (suggestions.length === 0) return null
-
-  function toggleSuggestion(id: string) {
-    setEnabled((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
 
   return (
     <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 space-y-3">
@@ -68,18 +54,10 @@ export function ConnectionSuggestions({ service, onClose }: ConnectionSuggestion
         </button>
       </div>
 
-      <ul className="space-y-2">
+      <ul className="list-disc list-inside space-y-1.5">
         {suggestions.map((s) => (
-          <li key={s.id} className="flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer flex-1">
-              <input
-                type="checkbox"
-                checked={enabled.has(s.id)}
-                onChange={() => toggleSuggestion(s.id)}
-                className="rounded border-border accent-[var(--color-accent)]"
-              />
-              <span className="text-sm text-text">{s.label}</span>
-            </label>
+          <li key={s.id} className="text-sm text-text">
+            {s.label}
           </li>
         ))}
       </ul>
