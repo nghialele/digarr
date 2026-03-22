@@ -99,7 +99,7 @@ export function TodaysPick({
     : { background: `hsl(${hue}, 40%, 35%)` }
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden flex flex-col h-full">
+    <div className="bg-surface border border-border rounded-lg overflow-hidden flex flex-col">
       {/* Banner -- fills ~40% of card height */}
       <div className="relative shrink-0 basis-2/5 min-h-[120px]" style={bannerStyle}>
         {hasImage && (
@@ -148,8 +148,8 @@ export function TodaysPick({
         </div>
       </div>
 
-      {/* Content -- scrollable middle section */}
-      <div className="p-4 flex-1 overflow-y-auto min-h-0">
+      {/* Content */}
+      <div className="p-4 overflow-y-auto min-h-0">
         {artist.genres && artist.genres.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
             {artist.genres.slice(0, 6).map((genre) => (
