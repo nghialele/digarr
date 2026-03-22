@@ -18,6 +18,10 @@ const ALLOWED_PREF_KEYS = new Set([
   'autoApproveEnabled',
   'autoApproveThreshold',
   'autoApproveMonitorOption',
+  'dismissedHints',
+  'playlistSize',
+  'playlistSchedule',
+  'playlistEnabled',
 ])
 
 export function authRoutes(deps: AppDependencies) {

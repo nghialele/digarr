@@ -8,6 +8,7 @@ export function useHints() {
   const { data: prefs, isSuccess } = useQuery({
     queryKey: ['user-preferences'],
     queryFn: getUserPreferences,
+    staleTime: 60_000,
   })
 
   const dismissedHints: string[] = (prefs?.dismissedHints as string[] | undefined) ?? []
@@ -19,6 +20,7 @@ export function useHints() {
 
   const dismissHint = useCallback(
     async (id: string) => {
+      if (dismissedHints.includes(id)) return
       const updated = [...dismissedHints, id]
       queryClient.setQueryData(
         ['user-preferences'],
