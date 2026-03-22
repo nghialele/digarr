@@ -310,6 +310,20 @@ export const getGenre = (slug: string) =>
   )
 export const seedGenres = () => fetchApi<{ message: string }>('/genres/seed', { method: 'POST' })
 
+export type GenreArtist = {
+  name: string
+  mbid: string
+  imageUrl: string | null
+  score: number
+  genres: string[] | null
+  aiReasoning: string | null
+}
+
+export const getGenreArtists = (slug: string, view: string, limit = 20) =>
+  fetchApi<{ artists: GenreArtist[] }>(
+    `/genres/${encodeURIComponent(slug)}/artists?view=${encodeURIComponent(view)}&limit=${limit}`,
+  )
+
 // Library warm status
 export const getWarmStatuses = (mbids: string) =>
   fetchApi<{ statuses: Record<string, string> }>(`/library/warm/status?mbids=${mbids}`)
@@ -624,4 +638,6 @@ export const generatePlaylistApi = (id: number) =>
   fetchApi<{ status: string }>(`/playlists/${id}/generate`, { method: 'POST' })
 
 export const getPlaylistScheduler = () =>
-  fetchApi<{ nextRun: string | null }>('/playlists/scheduler')
+  fetchApi<{ nextRun: string | null; cron: string | null; enabled: boolean }>(
+    '/playlists/scheduler',
+  )

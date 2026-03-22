@@ -1,6 +1,6 @@
 import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { artists, recommendations } from '@/db/schema'
+import { artistMetadata, artists, recommendationBatches, recommendations } from '@/db/schema'
 
 type RecommendationRow = typeof recommendations.$inferSelect
 type ArtistRow = typeof artists.$inferSelect
@@ -153,6 +153,110 @@ export async function getRejectedArtistMbids(
     .where(and(eq(recommendations.status, 'rejected'), gte(recommendations.actedOnAt, cutoff)))
 
   return new Set(rows.map((r) => r.mbid))
+}
+
+export type GenreArtistResult = {
+  name: string
+  mbid: string
+  imageUrl: string | null
+  score: number
+  genres: string[] | null
+  aiReasoning: string | null
+}
+
+export type GenreArtistView = 'recommended' | 'trending' | 'deep_cuts'
+
+/**
+ * Returns artists from the recommendations table for a given genre, scoped by view:
+ *  - recommended: approved/added artists sorted by score desc
+ *  - trending: any status, batches from last 30 days, sorted by score desc
+ *  - deep_cuts: pending artists with low spotify popularity or few genre tags
+ */
+export async function getGenreArtists(
+  db: Database,
+  genreName: string,
+  view: GenreArtistView,
+  limit = 20,
+  userId?: number,
+): Promise<GenreArtistResult[]> {
+  const genreCondition = sql`EXISTS (
+    SELECT 1 FROM unnest(${artists.genres}) g WHERE lower(g) = lower(${genreName})
+  )`
+
+  if (view === 'recommended') {
+    const userCondition = userId ? eq(recommendations.userId, userId) : sql`TRUE`
+    const rows = await db
+      .select({
+        name: artists.name,
+        mbid: artists.mbid,
+        imageUrl: artists.imageUrl,
+        score: recommendations.score,
+        genres: artists.genres,
+        aiReasoning: recommendations.aiReasoning,
+      })
+      .from(recommendations)
+      .innerJoin(artists, eq(recommendations.artistId, artists.id))
+      .where(
+        and(
+          genreCondition,
+          inArray(recommendations.status, ['approved', 'added_to_lidarr']),
+          userCondition,
+        ),
+      )
+      .orderBy(desc(recommendations.score))
+      .limit(limit)
+    return rows
+  }
+
+  if (view === 'trending') {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const rows = await db
+      .select({
+        name: artists.name,
+        mbid: artists.mbid,
+        imageUrl: artists.imageUrl,
+        score: recommendations.score,
+        genres: artists.genres,
+        aiReasoning: recommendations.aiReasoning,
+      })
+      .from(recommendations)
+      .innerJoin(artists, eq(recommendations.artistId, artists.id))
+      .innerJoin(recommendationBatches, eq(recommendations.batchId, recommendationBatches.id))
+      .where(and(genreCondition, gte(recommendationBatches.createdAt, cutoff)))
+      .orderBy(desc(recommendations.score))
+      .limit(limit)
+    return rows
+  }
+
+  // deep_cuts: pending recs with either low spotify popularity or few genre tags
+  const rows = await db
+    .select({
+      name: artists.name,
+      mbid: artists.mbid,
+      imageUrl: artists.imageUrl,
+      score: recommendations.score,
+      genres: artists.genres,
+      aiReasoning: recommendations.aiReasoning,
+      spotifyPopularity: artistMetadata.spotifyPopularity,
+    })
+    .from(recommendations)
+    .innerJoin(artists, eq(recommendations.artistId, artists.id))
+    .leftJoin(artistMetadata, sql`lower(${artistMetadata.nameNormalized}) = lower(${artists.name})`)
+    .where(
+      and(
+        genreCondition,
+        eq(recommendations.status, 'pending'),
+        sql`(
+          ${artistMetadata.spotifyPopularity} IS NULL
+          OR ${artistMetadata.spotifyPopularity} < 30
+          OR array_length(${artists.genres}, 1) <= 3
+        )`,
+      ),
+    )
+    .orderBy(desc(recommendations.score))
+    .limit(limit)
+
+  return rows.map(({ spotifyPopularity: _sp, ...r }) => r)
 }
 
 export async function insertRecommendation(

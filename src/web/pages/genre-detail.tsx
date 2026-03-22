@@ -4,8 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { GenreInfo } from '../../core/genre/types'
 import { ArtistThumb } from '../components/artist-thumb'
 import { Skeleton } from '../components/ui/skeleton'
-import type { LibraryArtist } from '../lib/api'
-import { getGenre, warmArtists } from '../lib/api'
+import type { GenreArtist, LibraryArtist } from '../lib/api'
+import { getGenre, getGenreArtists, quickDiscover, warmArtists } from '../lib/api'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,6 +21,13 @@ const TABS: { id: DetailTab; label: string }[] = [
   { id: 'trending', label: 'Trending' },
   { id: 'deep_cuts', label: 'Deep Cuts' },
 ]
+
+const TAB_EMPTY_LABELS: Record<DetailTab, string> = {
+  library: 'No artists in your library for this genre.',
+  recommended: 'No recommended artists found for this genre.',
+  trending: 'No trending artists found for this genre.',
+  deep_cuts: 'No deep cuts found for this genre.',
+}
 
 // ---------------------------------------------------------------------------
 // Library artist card
@@ -40,6 +47,70 @@ function LibraryArtistCard({ artist }: { artist: LibraryArtist }) {
           <p className="text-[10px] text-muted truncate mt-0.5">{genres.slice(0, 3).join(', ')}</p>
         )}
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Genre artist card (for recommendation-backed tabs)
+// ---------------------------------------------------------------------------
+
+function GenreArtistCard({ artist }: { artist: GenreArtist }) {
+  const [discovering, setDiscovering] = useState(false)
+  const [queued, setQueued] = useState(false)
+  const genres = artist.genres ?? []
+
+  async function handleQuickDiscover() {
+    setDiscovering(true)
+    try {
+      await quickDiscover(artist.name)
+      setQueued(true)
+    } catch {
+      // ignore
+    } finally {
+      setDiscovering(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 p-3 bg-surface border border-border rounded-lg">
+      <ArtistThumb name={artist.name} imageUrl={artist.imageUrl} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-text truncate">{artist.name}</p>
+          <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-accent/20 text-accent">
+            {(artist.score * 100).toFixed(0)}
+          </span>
+        </div>
+        {artist.aiReasoning && (
+          <p className="text-xs text-muted truncate mt-0.5">{artist.aiReasoning}</p>
+        )}
+        {genres.length > 0 && (
+          <p className="text-[10px] text-muted truncate mt-0.5">{genres.slice(0, 3).join(', ')}</p>
+        )}
+      </div>
+      <button
+        type="button"
+        disabled={discovering || queued}
+        onClick={handleQuickDiscover}
+        className="shrink-0 px-2 py-1 text-xs rounded border border-border text-muted hover:text-text hover:border-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {queued ? 'Queued' : discovering ? '...' : 'Discover'}
+      </button>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Tab content grid skeleton
+// ---------------------------------------------------------------------------
+
+function TabSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {(['a', 'b', 'c', 'd', 'e', 'f'] as const).map((k) => (
+        <Skeleton key={k} className="h-16 rounded-lg" />
+      ))}
     </div>
   )
 }
@@ -80,16 +151,24 @@ export function GenreDetailPage() {
     enabled: Boolean(slug),
   })
 
-  const artists = data?.libraryArtists
+  const isNonLibraryTab = activeTab !== 'library'
+
+  const { data: genreArtistsData, isLoading: isGenreArtistsLoading } = useQuery({
+    queryKey: ['genres', 'artists', slug, activeTab],
+    queryFn: () => getGenreArtists(slug ?? '', activeTab),
+    enabled: Boolean(slug) && isNonLibraryTab,
+  })
+
+  const libraryArtists = data?.libraryArtists
 
   useEffect(() => {
-    if (artists && artists.length > 0) {
-      const mbids = artists.filter((a) => a.mbid).map((a) => a.mbid)
+    if (libraryArtists && libraryArtists.length > 0) {
+      const mbids = libraryArtists.filter((a) => a.mbid).map((a) => a.mbid)
       if (mbids.length > 0) {
         warmArtists(mbids).catch(() => {}) // Fire-and-forget
       }
     }
-  }, [artists])
+  }, [libraryArtists])
 
   if (isLoading) return <DetailSkeleton />
 
@@ -173,7 +252,7 @@ export function GenreDetailPage() {
         {activeTab === 'library' ? (
           data.libraryArtists.length === 0 ? (
             <div className="py-12 text-center bg-surface border border-border rounded-lg">
-              <p className="text-muted text-sm">No artists in your library for this genre.</p>
+              <p className="text-muted text-sm">{TAB_EMPTY_LABELS.library}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -188,9 +267,20 @@ export function GenreDetailPage() {
               </div>
             </div>
           )
-        ) : (
+        ) : isGenreArtistsLoading ? (
+          <TabSkeleton />
+        ) : !genreArtistsData?.artists || genreArtistsData.artists.length === 0 ? (
           <div className="py-12 text-center bg-surface border border-border rounded-lg">
-            <p className="text-muted text-sm">Coming soon</p>
+            <p className="text-muted text-sm">{TAB_EMPTY_LABELS[activeTab]}</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-muted">{genreArtistsData.artists.length} artists</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {genreArtistsData.artists.map((artist) => (
+                <GenreArtistCard key={artist.mbid} artist={artist} />
+              ))}
+            </div>
           </div>
         )}
       </div>
