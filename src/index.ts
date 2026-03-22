@@ -1,5 +1,5 @@
 import { serve } from '@hono/node-server'
-import { eq } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
@@ -15,15 +15,21 @@ import { getValidToken } from './core/oauth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
+import { PlaylistScheduler } from './core/playlists/scheduler'
 import { createDiscogsSource } from './core/plugins/discogs'
 import { createLastFmSource } from './core/plugins/lastfm'
 import { createListenBrainzSource } from './core/plugins/listenbrainz'
 import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
 import { setSessionStore } from './core/sessions'
+import { createJellyfinPlaylistTarget } from './core/targets/jellyfin-playlist'
 import { createLidarrTarget } from './core/targets/lidarr'
+import { createNavidromePlaylistTarget } from './core/targets/navidrome-playlist'
+import { createPlexPlaylistTarget } from './core/targets/plex-playlist'
 import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
 import { db, pool } from './db'
+import { getPlaylistsDueForGeneration, replacePlaylistTracks, updatePlaylist as updatePlaylistRow } from './db/queries/playlists'
+import { generatePlaylist } from './core/playlists/generator'
 import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
@@ -131,6 +137,7 @@ const storeDb: StoreDb = {
 
 const orchestrator = new PipelineOrchestrator()
 const scheduler = new SubscriptionScheduler()
+const playlistScheduler = new PlaylistScheduler()
 const providerRegistry = createDefaultRegistry()
 
 // Map DB genre rows (artistCount: number | null) to GenreInfo (artistCount: number)
@@ -300,6 +307,125 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   })
 }
 
+const PLAYLIST_APPROVED_STATUSES = ['approved', 'added_to_lidarr']
+
+function makePlaylistStrategyDeps() {
+  return {
+    async getApprovedArtists(opts: { since?: Date; genre?: string; limit?: number }) {
+      const rows = await db
+        .select({
+          name: artists.name,
+          mbid: artists.mbid,
+          score: recommendations.score,
+          genres: artists.genres,
+        })
+        .from(recommendations)
+        .innerJoin(artists, eq(artists.id, recommendations.artistId))
+        .where(
+          and(
+            inArray(recommendations.status, PLAYLIST_APPROVED_STATUSES),
+            opts.since ? gte(recommendations.actedOnAt, opts.since) : undefined,
+          ),
+        )
+        .orderBy(desc(recommendations.score))
+        .limit(opts.limit ?? 200)
+
+      let result = rows.map((r) => ({
+        name: r.name,
+        mbid: r.mbid,
+        score: r.score,
+        genres: r.genres ?? ([] as string[]),
+      }))
+
+      if (opts.genre) {
+        const g = opts.genre.toLowerCase()
+        result = result.filter((a) => a.genres.some((genre: string) => genre.toLowerCase().includes(g)))
+      }
+
+      return result
+    },
+
+    async getOlderApprovedArtists(opts: { olderThan: Date; limit: number }) {
+      const rows = await db
+        .select({
+          name: artists.name,
+          mbid: artists.mbid,
+          score: recommendations.score,
+          genres: artists.genres,
+        })
+        .from(recommendations)
+        .innerJoin(artists, eq(artists.id, recommendations.artistId))
+        .where(
+          and(
+            inArray(recommendations.status, PLAYLIST_APPROVED_STATUSES),
+            lt(recommendations.actedOnAt, opts.olderThan),
+          ),
+        )
+        .orderBy(desc(recommendations.score))
+        .limit(opts.limit)
+
+      return rows.map((r) => ({
+        name: r.name,
+        mbid: r.mbid,
+        score: r.score,
+        genres: r.genres ?? ([] as string[]),
+      }))
+    },
+  }
+}
+
+// Run generation for all playlists that are due (called by the playlist scheduler)
+async function runAllPlaylists(): Promise<void> {
+  const due = await getPlaylistsDueForGeneration(db)
+  if (due.length === 0) return
+  console.log(`[playlist-scheduler] ${due.length} playlist(s) due for generation`)
+
+  const strategyDeps = makePlaylistStrategyDeps()
+
+  for (const playlist of due) {
+    try {
+      const cfg = playlist.config ?? { size: 25, trackSourcePriority: ['spotify' as const] }
+      const result = await generatePlaylist(
+        playlist.strategy as import('./db/schema').PlaylistStrategy,
+        {
+          size: cfg.size,
+          genre: cfg.genre,
+          mood: cfg.mood,
+          trackSourcePriority: cfg.trackSourcePriority,
+        },
+        strategyDeps,
+        {},
+      )
+
+      const trackInserts = result.tracks.map((t, i) => ({
+        playlistId: playlist.id,
+        artistName: t.artistName,
+        trackName: t.trackName ?? null,
+        mbid: t.mbid ?? null,
+        spotifyUri: t.spotifyUri ?? null,
+        deezerId: t.deezerId ?? null,
+        localPath: t.localPath ?? null,
+        position: i,
+      }))
+
+      await replacePlaylistTracks(db, playlist.id, trackInserts)
+      await updatePlaylistRow(db, playlist.id, {
+        lastGeneratedAt: new Date(),
+        trackCount: result.tracks.length,
+      })
+
+      console.log(
+        `[playlist-scheduler] Playlist '${playlist.name}' (id=${playlist.id}): ${result.tracks.length} tracks`,
+      )
+    } catch (err: unknown) {
+      console.error(
+        `[playlist-scheduler] Failed to generate playlist '${playlist.name}' (id=${playlist.id}):`,
+        err,
+      )
+    }
+  }
+}
+
 // Lazy OIDC service getter -- reads current settings from DB on each call,
 // reconstructs the service only when the config (issuer/client/secret/scopes) changes.
 // This ensures settings-UI changes to OIDC config take effect without a restart.
@@ -465,6 +591,34 @@ const app = createApp({
     }
     return targets
   },
+  playlistDeps: {
+    db,
+    playlistScheduler,
+    getTargetsByUser: (userId) => getTargetsByUser(db, userId),
+    buildPlaylistTarget: (row) => {
+      if (row.type === 'navidrome-playlist') {
+        return createNavidromePlaylistTarget(row.id, {
+          url: row.config.url as string,
+          username: row.config.username as string,
+          password: row.config.password as string,
+        })
+      }
+      if (row.type === 'jellyfin-playlist') {
+        return createJellyfinPlaylistTarget(row.id, {
+          url: row.config.url as string,
+          apiKey: row.config.apiKey as string,
+          userId: row.config.userId as string,
+        })
+      }
+      if (row.type === 'plex-playlist') {
+        return createPlexPlaylistTarget(row.id, {
+          url: row.config.url as string,
+          token: row.config.token as string,
+        })
+      }
+      return null
+    },
+  },
 })
 
 const port = envConfig.port
@@ -551,6 +705,14 @@ isSetupComplete(db)
     for (const sub of subs) {
       scheduler.schedule(`subscription-${sub.id}`, sub.cron, () => executeSubscription(sub.id))
       console.log(`Subscription '${sub.name}' (id=${sub.id}) scheduled with cron: ${sub.cron}`)
+    }
+  })
+  .then(() => getSettings(db))
+  .then((settings) => {
+    const prefs = mergePreferences(settings?.preferences)
+    const cron = prefs.playlistSchedule
+    if (cron && prefs.playlistEnabled) {
+      playlistScheduler.start(cron, runAllPlaylists)
     }
   })
   .catch((err: unknown) => {

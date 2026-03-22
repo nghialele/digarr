@@ -554,3 +554,74 @@ export const getDashboardTaste = () => fetchApi<TasteGenre[]>('/dashboard/taste'
 
 export const getDashboardActivity = (limit = 5) =>
   fetchApi<ActivityEntry[]>(`/dashboard/activity?limit=${limit}`)
+
+// Playlists
+export type PlaylistConfig = {
+  size: number
+  genre?: string
+  mood?: string
+  trackSourcePriority: ('local' | 'spotify' | 'deezer')[]
+}
+
+export type PlaylistRow = {
+  id: number
+  userId: number | null
+  name: string
+  strategy: string
+  targetIds: number[]
+  schedule: string | null
+  config: PlaylistConfig | null
+  lastGeneratedAt: string | null
+  trackCount: number | null
+  enabled: boolean
+  createdAt: string
+}
+
+export type PlaylistTrackRow = {
+  id: number
+  playlistId: number
+  artistName: string
+  trackName: string | null
+  mbid: string | null
+  spotifyUri: string | null
+  deezerId: string | null
+  localPath: string | null
+  position: number
+}
+
+export type PlaylistInsert = {
+  name: string
+  strategy: string
+  targetIds?: number[]
+  schedule?: string | null
+  config?: PlaylistConfig | null
+  enabled?: boolean
+}
+
+export const getPlaylists = () => fetchApi<PlaylistRow[]>('/playlists')
+
+export const getPlaylist = (id: number) =>
+  fetchApi<{ playlist: PlaylistRow; tracks: PlaylistTrackRow[] }>(`/playlists/${id}`)
+
+export const createPlaylistApi = (data: PlaylistInsert) =>
+  fetchApi<{ id: number }>('/playlists', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+export const updatePlaylistApi = (id: number, data: Partial<PlaylistInsert>) =>
+  fetchApi<{ updated: boolean }>(`/playlists/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+export const deletePlaylistApi = (id: number) =>
+  fetchApi<{ deleted: boolean }>(`/playlists/${id}`, { method: 'DELETE' })
+
+export const generatePlaylistApi = (id: number) =>
+  fetchApi<{ status: string }>(`/playlists/${id}/generate`, { method: 'POST' })
+
+export const getPlaylistScheduler = () =>
+  fetchApi<{ nextRun: string | null }>('/playlists/scheduler')

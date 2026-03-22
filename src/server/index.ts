@@ -50,6 +50,8 @@ import { pipelineRoutes } from './routes/pipeline'
 import { recommendationRoutes } from './routes/recommendations'
 import { settingsRoutes } from './routes/settings'
 import { setupRoutes } from './routes/setup'
+import { playlistRoutes } from './routes/playlists'
+import type { PlaylistDeps } from './routes/playlists'
 import { subscriptionRoutes } from './routes/subscriptions'
 import { targetRoutes } from './routes/targets'
 import { userRoutes } from './routes/users'
@@ -147,6 +149,8 @@ export type AppDependencies = {
       limit?: number,
     ) => Promise<ActivityEntry[]>
   }
+  // Playlist deps (optional -- omit in test environments without a DB)
+  playlistDeps?: PlaylistDeps
 }
 
 export function createApp(deps: AppDependencies) {
@@ -258,6 +262,9 @@ export function createApp(deps: AppDependencies) {
   app.route('/', targetRoutes(deps))
   app.route('/', dashboardRoutes(deps))
   app.route('/', exportRoutes(deps))
+  if (deps.playlistDeps) {
+    app.route('/', playlistRoutes(deps.playlistDeps))
+  }
   app.route(
     '/',
     moodRoutes({ getSettings: deps.getSettings, providerRegistry: deps.providerRegistry }),
