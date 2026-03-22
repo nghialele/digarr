@@ -1,3 +1,4 @@
+import { deduplicateByName } from '@/core/subscriptions/dedup'
 import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
 
 const CONFIG_FIELDS: AdapterConfigField[] = [
@@ -84,23 +85,15 @@ async function fetchFreshReleases(token: string): Promise<AdapterResult> {
   }
 
   const data = (await res.json()) as FreshReleasesPayload
-  const releases = data.payload?.releases ?? []
+  const releases = (data.payload?.releases ?? []).flatMap((r) =>
+    r.artist_credit_name ? [{ name: r.artist_credit_name }] : [],
+  )
 
-  const seen = new Set<string>()
-  const artists = []
-
-  for (const release of releases) {
-    const name = release.artist_credit_name
-    if (!name) continue
-    const key = name.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    artists.push({
-      name,
-      similarityScore: 0.6,
-      source: 'listenbrainz:fresh-releases',
-    })
-  }
+  const artists = deduplicateByName(releases, (r) => ({
+    name: r.name,
+    similarityScore: 0.6,
+    source: 'listenbrainz:fresh-releases',
+  }))
 
   return { artists }
 }
@@ -118,30 +111,21 @@ async function fetchWeeklyJams(username: string, token: string): Promise<Adapter
   const data = (await res.json()) as UserPlaylistsResponse
   const playlists = data.playlists ?? []
 
-  // Find the Weekly Jams playlist
   const jamsEntry = playlists.find((p) =>
     p.playlist?.title?.toLowerCase().includes('weekly jams'),
   )
 
   if (!jamsEntry?.playlist) return { artists: [] }
 
-  const tracks = jamsEntry.playlist.track ?? []
+  const tracks = (jamsEntry.playlist.track ?? []).flatMap((t) =>
+    t.creator ? [{ name: t.creator }] : [],
+  )
 
-  const seen = new Set<string>()
-  const artists = []
-
-  for (const track of tracks) {
-    const name = track.creator
-    if (!name) continue
-    const key = name.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    artists.push({
-      name,
-      similarityScore: 0.6,
-      source: 'listenbrainz:weekly-jams',
-    })
-  }
+  const artists = deduplicateByName(tracks, (t) => ({
+    name: t.name,
+    similarityScore: 0.6,
+    source: 'listenbrainz:weekly-jams',
+  }))
 
   return { artists }
 }

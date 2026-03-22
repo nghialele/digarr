@@ -1,4 +1,5 @@
 import type { DiscoverySource } from '@/core/plugins/types'
+import { deduplicateByName } from '@/core/subscriptions/dedup'
 import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
 
 type SeedArtist = { name: string; mbid?: string }
@@ -89,15 +90,7 @@ export function createSimilarAdapter(sources: DiscoverySource[]): SubscriptionAd
       )
 
       const allResults = await Promise.all(calls)
-
-      // Deduplicate by lowercase name -- first occurrence wins
-      const seen = new Set<string>()
-      const artists = allResults.flat().filter((a) => {
-        const key = a.name.toLowerCase()
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
+      const artists = deduplicateByName(allResults.flat(), (a) => a)
 
       return { artists }
     },

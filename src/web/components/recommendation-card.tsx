@@ -1,6 +1,7 @@
 import { ChevronDown, Pause, Play } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useClickOutside } from '../hooks/use-click-outside'
+import { GENRE_COLORS } from '../lib/constants'
 import { usePreviewContext } from '../lib/preview-context'
 import { cn } from '../lib/utils'
 import { ArtistThumb } from './artist-thumb'
@@ -98,13 +99,6 @@ function formatSourceLabel(sourceKey: string): string {
       return sourceKey
   }
 }
-
-const GENRE_COLORS = [
-  'bg-accent/10 text-accent',
-  'bg-info/10 text-info',
-  'bg-approve/10 text-approve',
-  'bg-reject/10 text-reject',
-]
 
 // ---------------------------------------------------------------------------
 // Status display

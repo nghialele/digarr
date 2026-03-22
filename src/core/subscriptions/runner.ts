@@ -3,24 +3,15 @@ import { resolve } from '@/core/pipeline/resolve'
 import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
 import { resolveWeights } from '@/core/pipeline/weight-presets'
-import { errMsg } from '@/core/validation'
 import type {
+  RunResult,
   SubscriptionAdapter,
   SubscriptionConfig,
   SubscriptionQueries,
   SubscriptionRunDeps,
   SubscriptionRunRow,
 } from '@/core/subscriptions/types'
-
-type RunResult = {
-  runId: number
-  batchId: number | null
-  artistsFound: number
-  artistsNew: number
-  error?: string
-}
-
-// --- Lifecycle helpers ---
+import { errMsg } from '@/core/validation'
 
 async function completeEmpty(
   queries: SubscriptionQueries,
@@ -71,8 +62,6 @@ async function handleRunError(
   throw err
 }
 
-// --- Pipeline execution ---
-
 async function executePipeline(
   subscription: SubscriptionConfig,
   deps: SubscriptionRunDeps,
@@ -120,8 +109,6 @@ async function executePipeline(
 
   return { runId: run.id, batchId: batchId ?? null, artistsFound, artistsNew }
 }
-
-// --- Public API ---
 
 export async function runSubscription(
   subscription: SubscriptionConfig,

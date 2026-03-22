@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import type { SearchResult } from '../lib/api'
 import { quickDiscover } from '../lib/api'
+import { GENRE_COLORS } from '../lib/constants'
 import { usePreviewContext } from '../lib/preview-context'
 import { cn } from '../lib/utils'
 import { ArtistThumb } from './artist-thumb'
@@ -18,13 +19,6 @@ const SOURCE_STYLES: Record<string, { label: string; bg: string; text: string }>
   tidal: { label: 'TIDAL', bg: 'bg-blue-500/20', text: 'text-blue-400' },
   bandcamp: { label: 'Bandcamp', bg: 'bg-teal-500/20', text: 'text-teal-400' },
 }
-
-const GENRE_COLORS = [
-  'bg-accent/10 text-accent',
-  'bg-info/10 text-info',
-  'bg-approve/10 text-approve',
-  'bg-reject/10 text-reject',
-]
 
 // ---------------------------------------------------------------------------
 // SearchResultCard

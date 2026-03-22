@@ -65,25 +65,6 @@ function GenresIcon({ className }: { className?: string }) {
   )
 }
 
-function SearchIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={cn('w-5 h-5', className)}
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  )
-}
-
 function SettingsIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -110,7 +91,7 @@ function SettingsIcon({ className }: { className?: string }) {
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon, exact: true },
   { to: '/discover', label: 'Discover', Icon: DiscoverIcon, exact: false },
-  { to: '/search', label: 'Search', Icon: SearchIcon, exact: false },
+  { to: '/search', label: 'Search', Icon: DiscoverIcon, exact: false },
   { to: '/genres', label: 'Genres', Icon: GenresIcon, exact: false },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon, exact: false },
 ] as const

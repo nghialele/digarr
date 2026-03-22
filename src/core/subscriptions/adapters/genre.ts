@@ -1,5 +1,10 @@
 import type { DiscoverySource } from '@/core/plugins/types'
-import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
+import { normalizeListenerScore } from '@/core/subscriptions/dedup'
+import type {
+  AdapterConfigField,
+  AdapterResult,
+  SubscriptionAdapter,
+} from '@/core/subscriptions/types'
 
 const CONFIG_FIELDS: AdapterConfigField[] = [
   {
@@ -19,11 +24,6 @@ const CONFIG_FIELDS: AdapterConfigField[] = [
     helpText: 'Comma-separated source IDs to use. Leave blank to use all capable sources.',
   },
 ]
-
-function normalizeScore(listeners: number): number {
-  if (listeners <= 0) return 0.5
-  return Math.min(listeners / 1_000_000, 1.0)
-}
 
 export function createGenreAdapter(sources: DiscoverySource[]): SubscriptionAdapter {
   return {
@@ -63,7 +63,7 @@ export function createGenreAdapter(sources: DiscoverySource[]): SubscriptionAdap
       const artists = all.flat().map((entry) => ({
         name: entry.name,
         mbid: entry.mbid,
-        similarityScore: normalizeScore(entry.listeners),
+        similarityScore: normalizeListenerScore(entry.listeners),
         source: `genre-subscription:${entry.source}`,
       }))
 

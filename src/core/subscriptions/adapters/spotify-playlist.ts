@@ -1,4 +1,5 @@
 import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
+import { extractArtistsFromPlaylist } from './spotify-shared'
 
 const CONFIG_FIELDS: AdapterConfigField[] = [
   {
@@ -23,18 +24,6 @@ function extractPlaylistId(raw: string): string {
 
   // bare ID
   return raw.trim()
-}
-
-type SpotifyTrackItem = {
-  track?: {
-    artists?: Array<{ name: string; id: string }>
-  } | null
-}
-
-type SpotifyPlaylistResponse = {
-  tracks?: {
-    items?: SpotifyTrackItem[]
-  }
 }
 
 export function createSpotifyPlaylistAdapter(deps: {
@@ -67,26 +56,12 @@ export function createSpotifyPlaylistAdapter(deps: {
         throw new Error(`Spotify playlist fetch failed: ${res.status} ${res.statusText}`)
       }
 
-      const data = (await res.json()) as SpotifyPlaylistResponse
-      const items = data.tracks?.items ?? []
-
-      const seen = new Set<string>()
-      const artists = []
-
-      for (const item of items) {
-        const trackArtists = item.track?.artists ?? []
-        for (const artist of trackArtists) {
-          const key = artist.name.toLowerCase()
-          if (seen.has(key)) continue
-          seen.add(key)
-          artists.push({
-            name: artist.name,
-            similarityScore: 0.7,
-            source: `spotify-playlist:${playlistId}`,
-            sourceUrl: `https://open.spotify.com/playlist/${playlistId}`,
-          })
-        }
-      }
+      const data = await res.json()
+      const artists = extractArtistsFromPlaylist(
+        data,
+        `spotify-playlist:${playlistId}`,
+        `https://open.spotify.com/playlist/${playlistId}`,
+      )
 
       return { artists }
     },

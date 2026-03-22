@@ -2,10 +2,6 @@ import type { MBArtist, MBSearchResult } from '@/core/clients/musicbrainz'
 import type { StoreDb } from '@/core/pipeline/store'
 import type { DiscoveredArtist } from '@/core/types'
 
-// ---------------------------------------------------------------------------
-// Adapter contract
-// ---------------------------------------------------------------------------
-
 /** What an adapter returns from fetch(). */
 export type AdapterResult = {
   artists: DiscoveredArtist[]
@@ -33,10 +29,6 @@ export interface SubscriptionAdapter {
   /** Fetch artists based on the subscription config. */
   fetch(config: Record<string, unknown>, options?: { limit?: number }): Promise<AdapterResult>
 }
-
-// ---------------------------------------------------------------------------
-// Runner types
-// ---------------------------------------------------------------------------
 
 /** Subscription row data the runner needs -- a subset of the full DB row. */
 export type SubscriptionConfig = {

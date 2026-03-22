@@ -1,3 +1,4 @@
+import { deduplicateByName, normalizeListenerScore } from '@/core/subscriptions/dedup'
 import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
 
 const CONFIG_FIELDS: AdapterConfigField[] = [
@@ -21,13 +22,6 @@ type LastfmTagResponse = {
   topartists?: {
     artist?: LastfmArtistEntry[]
   }
-}
-
-function normalizeScore(listeners: string | undefined): number {
-  if (!listeners) return 0.5
-  const n = parseInt(listeners, 10)
-  if (Number.isNaN(n) || n <= 0) return 0.5
-  return Math.min(n / 1_000_000, 1.0)
 }
 
 export function createLastfmTagAdapter(deps: { apiKey: string }): SubscriptionAdapter {
@@ -54,20 +48,12 @@ export function createLastfmTagAdapter(deps: { apiKey: string }): SubscriptionAd
       const data = (await res.json()) as LastfmTagResponse
       const entries = data.topartists?.artist ?? []
 
-      const seen = new Set<string>()
-      const artists = []
-
-      for (const entry of entries) {
-        const key = entry.name.toLowerCase()
-        if (seen.has(key)) continue
-        seen.add(key)
-        artists.push({
-          name: entry.name,
-          mbid: entry.mbid || undefined,
-          similarityScore: normalizeScore(entry.listeners),
-          source: `lastfm-tag:${tag}`,
-        })
-      }
+      const artists = deduplicateByName(entries, (entry) => ({
+        name: entry.name,
+        mbid: entry.mbid || undefined,
+        similarityScore: normalizeListenerScore(entry.listeners),
+        source: `lastfm-tag:${tag}`,
+      }))
 
       return { artists }
     },

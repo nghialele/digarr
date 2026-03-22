@@ -58,17 +58,14 @@ describe('createLastfmChartsAdapter', () => {
     expect(adapter.label).toBeTruthy()
   })
 
-  it('has period configField as select', () => {
+  it('has no configFields (period param not supported by Last.fm chart API)', () => {
     const adapter = createLastfmChartsAdapter({ apiKey: 'testkey' })
-    const periodField = adapter.configFields.find((f) => f.key === 'period')!
-    expect(periodField).toBeTruthy()
-    expect(periodField.type).toBe('select')
-    expect(periodField.options?.length).toBeGreaterThan(0)
+    expect(adapter.configFields).toHaveLength(0)
   })
 
   it('fetches artists and deduplicates by lowercase name', async () => {
     const adapter = createLastfmChartsAdapter({ apiKey: 'testkey' })
-    const result = await adapter.fetch({ period: 'week' })
+    const result = await adapter.fetch({})
 
     // A, B, C -- lowercase dupe of A filtered
     expect(result.artists).toHaveLength(3)
@@ -78,25 +75,15 @@ describe('createLastfmChartsAdapter', () => {
     expect(names).toContain('Top Artist C')
   })
 
-  it('sets correct source tag with period', async () => {
-    const adapter = createLastfmChartsAdapter({ apiKey: 'testkey' })
-
-    const weekResult = await adapter.fetch({ period: 'week' })
-    expect(weekResult.artists[0]!.source).toBe('lastfm-charts:week')
-
-    const monthResult = await adapter.fetch({ period: 'month' })
-    expect(monthResult.artists[0]!.source).toBe('lastfm-charts:month')
-  })
-
-  it('defaults to week when period is not provided', async () => {
+  it('sets correct source tag', async () => {
     const adapter = createLastfmChartsAdapter({ apiKey: 'testkey' })
     const result = await adapter.fetch({})
-    expect(result.artists[0]!.source).toBe('lastfm-charts:week')
+    expect(result.artists[0]!.source).toBe('lastfm-charts')
   })
 
   it('normalizes listener count to similarityScore', async () => {
     const adapter = createLastfmChartsAdapter({ apiKey: 'testkey' })
-    const result = await adapter.fetch({ period: 'week' })
+    const result = await adapter.fetch({})
 
     // 5_000_000 / 1_000_000 = 5.0 capped at 1.0
     expect(result.artists.find((a) => a.name === 'Top Artist A')!.similarityScore).toBe(1.0)
@@ -108,7 +95,7 @@ describe('createLastfmChartsAdapter', () => {
 
   it('sets mbid when present', async () => {
     const adapter = createLastfmChartsAdapter({ apiKey: 'testkey' })
-    const result = await adapter.fetch({ period: 'week' })
+    const result = await adapter.fetch({})
 
     const artistA = result.artists.find((a) => a.name === 'Top Artist A')!
     expect(artistA.mbid).toBe('mbid-a')
@@ -137,7 +124,7 @@ describe('createLastfmChartsAdapter', () => {
     }) as typeof fetch
 
     const adapter = createLastfmChartsAdapter({ apiKey: 'testkey' })
-    const result = await adapter.fetch({ period: 'week' })
+    const result = await adapter.fetch({})
     expect(result.artists).toHaveLength(0)
 
     global.fetch = savedFetch

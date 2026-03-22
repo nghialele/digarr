@@ -1,4 +1,5 @@
 import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
+import { extractArtistsFromPlaylist } from './spotify-shared'
 
 const CHART_PLAYLIST_IDS: Record<string, Record<string, string>> = {
   global: {
@@ -59,18 +60,6 @@ const CONFIG_FIELDS: AdapterConfigField[] = [
   },
 ]
 
-type SpotifyTrackItem = {
-  track?: {
-    artists?: Array<{ name: string; id: string }>
-  } | null
-}
-
-type SpotifyPlaylistResponse = {
-  tracks?: {
-    items?: SpotifyTrackItem[]
-  }
-}
-
 export function createSpotifyChartsAdapter(deps: {
   getToken: () => Promise<string>
   baseUrl?: string
@@ -102,26 +91,12 @@ export function createSpotifyChartsAdapter(deps: {
         throw new Error(`Spotify charts fetch failed: ${res.status} ${res.statusText}`)
       }
 
-      const data = (await res.json()) as SpotifyPlaylistResponse
-      const items = data.tracks?.items ?? []
-
-      const seen = new Set<string>()
-      const artists = []
-
-      for (const item of items) {
-        const trackArtists = item.track?.artists ?? []
-        for (const artist of trackArtists) {
-          const key = artist.name.toLowerCase()
-          if (seen.has(key)) continue
-          seen.add(key)
-          artists.push({
-            name: artist.name,
-            similarityScore: 0.7,
-            source: `spotify-charts:${region}/${chartType}`,
-            sourceUrl: `https://open.spotify.com/playlist/${playlistId}`,
-          })
-        }
-      }
+      const data = await res.json()
+      const artists = extractArtistsFromPlaylist(
+        data,
+        `spotify-charts:${region}/${chartType}`,
+        `https://open.spotify.com/playlist/${playlistId}`,
+      )
 
       return { artists }
     },
