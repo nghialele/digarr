@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePreviewContext } from '../lib/preview-context'
 import { cn } from '../lib/utils'
 import { ArtistThumb } from './artist-thumb'
+import { Hint } from './hint'
 import { StreamingLinks } from './streaming-links'
 import { Button } from './ui/button'
 
@@ -595,17 +596,23 @@ export function RecommendationCard({
 
           {/* Action buttons -- compact mode only, hidden in bulk mode */}
           {!expanded && (
-            <ActionButtons
-              rec={rec}
-              bulkMode={bulkMode}
-              isPending={isPending}
-              isApproved={isApproved}
-              onApprove={onApprove}
-              onReject={onReject}
-              approveNode={approveNode}
-              targets={targets}
-              onApproveToTarget={onApproveToTarget}
-            />
+            <>
+              <ActionButtons
+                rec={rec}
+                bulkMode={bulkMode}
+                isPending={isPending}
+                isApproved={isApproved}
+                onApprove={onApprove}
+                onReject={onReject}
+                approveNode={approveNode}
+                targets={targets}
+                onApproveToTarget={onApproveToTarget}
+              />
+              <Hint id="rec-card-click-tip" type="inline">
+                Click on a recommendation to see albums, streaming links, and AI reasoning. Swipe
+                right to approve on mobile.
+              </Hint>
+            </>
           )}
         </div>
 

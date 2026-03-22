@@ -1271,6 +1271,11 @@ function TargetsTab() {
 
   return (
     <div className="space-y-4">
+      <Hint id="settings-targets-tip" type="inline">
+        Targets define where approved recommendations go -- Lidarr for downloads, Spotify for
+        playlists, or media servers for direct playback.
+      </Hint>
+
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-text">Targets</h3>
         {isAdmin && (
@@ -1450,6 +1455,11 @@ function RecommendationsTabInner({
 
   return (
     <div className="space-y-4 max-w-lg">
+      <Hint id="settings-recommendations-tip" type="inline">
+        Scoring weights control how recommendations are ranked. Tweak these to emphasize genre
+        overlap, AI confidence, or similarity.
+      </Hint>
+
       {/* Essential -- always visible */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Score Threshold</h2>
@@ -1666,6 +1676,11 @@ function ScheduleTab({ settings }: { settings: Settings }) {
 
   return (
     <div className="space-y-6 max-w-lg">
+      <Hint id="settings-schedule-tip" type="inline">
+        Set a cron schedule to run the discovery pipeline automatically. Weekly on Monday is a
+        popular choice.
+      </Hint>
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Presets</h2>
         <div className="flex flex-wrap gap-2">
@@ -1863,6 +1878,11 @@ function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => voi
 
   return (
     <div className="space-y-6 max-w-lg">
+      <Hint id="settings-auth-tip" type="inline">
+        Configure OIDC/SSO to let users sign in with Authentik, Authelia, or any OpenID Connect
+        provider.
+      </Hint>
+
       <section className="space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">OIDC / SSO</h2>

@@ -874,6 +874,9 @@ export function DiscoverPage() {
                   Refresh Data
                 </button>
                 <ExportDropdown filter={statusParam} />
+                <Hint id="discover-export-tip" type="inline">
+                  Export your curated list as JSON, CSV, or M3U to use in other apps.
+                </Hint>
                 <button
                   type="button"
                   onClick={handleToggleBulkMode}
@@ -886,13 +889,19 @@ export function DiscoverPage() {
                   {bulkMode ? 'Cancel' : 'Select'}
                 </button>
                 {filter === 'pending' && (
-                  <button
-                    type="button"
-                    onClick={handleClearAll}
-                    className="px-2 py-1 text-xs text-muted hover:text-red-400 transition-colors"
-                  >
-                    Clear All
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleClearAll}
+                      className="px-2 py-1 text-xs text-muted hover:text-red-400 transition-colors"
+                    >
+                      Clear All
+                    </button>
+                    <Hint id="discover-clear-all-tip" type="inline">
+                      Clear All rejects all pending recommendations at once -- useful after
+                      reviewing a batch.
+                    </Hint>
+                  </>
                 )}
               </>
             )}
@@ -917,6 +926,10 @@ export function DiscoverPage() {
             </p>
           </>
         )}
+
+        <Hint id="discover-filter-tabs-tip" type="inline" className="mb-4">
+          Filter your recommendations by status. Pending artists are waiting for your decision.
+        </Hint>
 
         <MoodPromptBar existingArtistNames={existingArtistNames} onQueued={refetch} />
 

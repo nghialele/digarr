@@ -3,6 +3,7 @@ import { Pencil, Play } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { Hint } from '../components/hint'
 import { Skeleton } from '../components/ui/skeleton'
 import {
   generatePlaylistApi,
@@ -268,6 +269,11 @@ export function PlaylistDetailPage() {
           {!playlist.enabled && <span className="text-muted/60 italic">Disabled</span>}
         </div>
       </div>
+
+      <Hint id="playlist-detail-intro-tip" type="inline">
+        This playlist was generated from your approved recommendations. Click Generate Now to
+        refresh it with new picks.
+      </Hint>
 
       {/* Actions */}
       <PlaylistActions playlist={playlist} onEdit={handleEdit} onRefetch={() => refetch()} />

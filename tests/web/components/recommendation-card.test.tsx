@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -19,7 +20,12 @@ const noopPreview = {
 }
 
 function withPreview(ui: ReactElement) {
-  return render(<PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>)
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>
+    </QueryClientProvider>,
+  )
 }
 
 // ---------------------------------------------------------------------------

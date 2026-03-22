@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Hint } from '../components/hint'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import {
@@ -119,6 +120,11 @@ export function UserManagementPage() {
           </div>
         </form>
       )}
+
+      <Hint id="user-management-intro-tip" type="inline">
+        Each user has their own recommendations, preferences, and listening sources. Admins can
+        manage global settings.
+      </Hint>
 
       <div className="space-y-2">
         {usersQuery.data?.length === 0 && <p className="text-sm text-muted">No users found.</p>}

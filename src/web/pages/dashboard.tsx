@@ -444,8 +444,20 @@ export function Dashboard() {
 
       {/* Subscription Pulse + Listening Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <SubscriptionPulse subs={subsData} scheduler={schedulerData} />
-        <ListeningActivity data={listensData} range={listenRange} onRangeChange={setListenRange} />
+        <div className="space-y-3">
+          <SubscriptionPulse subs={subsData} scheduler={schedulerData} />
+          <Hint id="dashboard-subscriptions-tip" type="inline">
+            Subscriptions automatically find new artists on a schedule. Check the Subscriptions
+            page to set one up.
+          </Hint>
+        </div>
+        <div className="space-y-3">
+          <ListeningActivity data={listensData} range={listenRange} onRangeChange={setListenRange} />
+          <Hint id="dashboard-listening-tip" type="inline">
+            Your listening data comes from ListenBrainz or Last.fm. Make sure your token is set in
+            Settings for accurate results.
+          </Hint>
+        </div>
       </div>
 
       {/* Taste Profile + Activity Feed */}
