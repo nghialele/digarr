@@ -37,6 +37,9 @@ vi.mock('sonner', () => ({
 vi.mock('@/web/lib/api', () => ({
   getRecommendations: vi.fn(),
   updateRecommendation: vi.fn(),
+  approveRecommendation: vi.fn().mockResolvedValue({}),
+  approveToTarget: vi.fn().mockResolvedValue({}),
+  listTargets: vi.fn().mockResolvedValue([]),
   getRecentListens: vi.fn(),
   getSubscriptions: vi.fn(),
   getSchedulerInfo: vi.fn(),

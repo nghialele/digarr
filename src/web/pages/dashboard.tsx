@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ApproveDialog } from '../components/approve-dialog'
 import { ArtistThumb } from '../components/artist-thumb'
 import { Hint } from '../components/hint'
 import { MoodPromptBar } from '../components/mood-prompt-bar'
@@ -10,6 +11,8 @@ import { RecentlyApproved } from '../components/recently-approved'
 import { type Recommendation, TodaysPick } from '../components/todays-pick'
 import { Skeleton } from '../components/ui/skeleton'
 import {
+  approveRecommendation,
+  approveToTarget,
   type ActivityEntry,
   getDashboardActivity,
   getDashboardTaste,
@@ -17,6 +20,8 @@ import {
   getRecommendations,
   getSchedulerInfo,
   getSubscriptions,
+  getUserPreferences,
+  listTargets,
   rescanArtists,
   type SchedulerJob,
   type Subscription,
@@ -24,6 +29,7 @@ import {
   triggerPipeline,
   updateRecommendation,
 } from '../lib/api'
+import type { MonitorOption } from '../components/monitoring-options'
 
 // Helpers
 
@@ -344,6 +350,31 @@ export function Dashboard() {
     staleTime: 30_000,
   })
 
+  // Targets (for multi-target approve dropdown)
+  const { data: targetsData } = useQuery({
+    queryKey: ['targets'],
+    queryFn: listTargets,
+    staleTime: 60_000,
+  })
+
+  const targets = targetsData ?? []
+
+  // User preferences (for ApproveDialog defaults)
+  const { data: prefsData } = useQuery({
+    queryKey: ['user-preferences'],
+    queryFn: getUserPreferences,
+    staleTime: 60_000,
+  })
+
+  const prefs = (prefsData ?? {}) as Record<string, unknown>
+
+  // ApproveDialog state (Lidarr profile picker)
+  const [approveDialogState, setApproveDialogState] = useState<{
+    recId: number
+    monitorOption: MonitorOption
+    targetId?: string
+  } | null>(null)
+
   // Auto-rescan images for artists that are missing them (once per mount)
   const rescannedRef = useRef(false)
   useEffect(() => {
@@ -376,7 +407,11 @@ export function Dashboard() {
   async function handleAction(id: number, status: 'approved' | 'rejected') {
     setActedIds((prev) => new Set([...prev, id]))
     try {
-      await updateRecommendation(id, { status })
+      if (status === 'approved') {
+        await approveRecommendation(id)
+      } else {
+        await updateRecommendation(id, { status })
+      }
       toast.success(status === 'approved' ? 'Approved' : 'Rejected')
       queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
       if (status === 'approved') {
@@ -387,6 +422,32 @@ export function Dashboard() {
       setActedIds((prev) => {
         const next = new Set(prev)
         next.delete(id)
+        return next
+      })
+    }
+  }
+
+  async function handleApproveToTarget(recId: number, targetId: string) {
+    const target = targets.find(
+      (t) => `${t.type}-${t.id}` === targetId || String(t.id) === targetId,
+    )
+    if (target?.type === 'lidarr') {
+      setApproveDialogState({ recId, monitorOption: 'all', targetId })
+      return
+    }
+
+    setActedIds((prev) => new Set([...prev, recId]))
+    try {
+      await approveToTarget(recId, targetId)
+      toast.success('Sent to target')
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
+    } catch {
+      toast.error('Failed to approve')
+    } finally {
+      setActedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(recId)
         return next
       })
     }
@@ -429,6 +490,8 @@ export function Dashboard() {
               triggerPipeline()
               toast.success('Scan started')
             }}
+            targets={targets}
+            onApproveToTarget={handleApproveToTarget}
           />
         </div>
         <div>
@@ -471,6 +534,42 @@ export function Dashboard() {
         </div>
         <ActivityFeed entries={activityData} loading={activityLoading} />
       </div>
+
+      {/* Lidarr profile picker dialog (Today's Pick target approve) */}
+      {approveDialogState && (
+        <ApproveDialog
+          defaults={{
+            qualityProfileId: Number(prefs.qualityProfileId ?? 1),
+            metadataProfileId: Number(prefs.metadataProfileId ?? 1),
+            rootFolderId: Number(prefs.rootFolderId ?? 1),
+          }}
+          monitorOption={approveDialogState.monitorOption}
+          onCancel={() => setApproveDialogState(null)}
+          onConfirm={async (overrides) => {
+            const { recId, targetId } = approveDialogState
+            setApproveDialogState(null)
+            setActedIds((prev) => new Set([...prev, recId]))
+            try {
+              if (targetId) {
+                await approveToTarget(recId, targetId, overrides)
+              } else {
+                await approveRecommendation(recId, overrides)
+              }
+              toast.success('Added to Lidarr')
+              queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
+              queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
+            } catch {
+              toast.error('Failed to add to Lidarr')
+            } finally {
+              setActedIds((prev) => {
+                const next = new Set(prev)
+                next.delete(recId)
+                return next
+              })
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

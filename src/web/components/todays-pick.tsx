@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { getAlbums } from '../lib/api'
+import { useClickOutside } from '../hooks/use-click-outside'
+import { ChevronDown } from 'lucide-react'
 import { Hint } from './hint'
 import { StreamingLinks } from './streaming-links'
 import { Skeleton } from './ui/skeleton'
@@ -21,6 +23,34 @@ export type Recommendation = {
   }
 }
 
+function TargetIcon({ type }: { type: string }) {
+  switch (type) {
+    case 'lidarr':
+      return <img src="/icons/lidarr.png" alt="" className="w-4 h-4" />
+    case 'navidrome':
+      return <img src="/icons/navidrome.svg" alt="" className="w-4 h-4" />
+    case 'jellyfin':
+      return <img src="/icons/jellyfin.svg" alt="" className="w-4 h-4" />
+    default:
+      return <div className="w-4 h-4" />
+  }
+}
+
+function targetActionLabel(type: string, name: string): string {
+  switch (type) {
+    case 'lidarr':
+      return `Add to ${name}`
+    case 'navidrome':
+      return `Favorite in ${name}`
+    case 'jellyfin':
+      return `Favorite in ${name}`
+    case 'spotify-playlist':
+      return 'Add to Spotify playlist'
+    default:
+      return `Send to ${name}`
+  }
+}
+
 type TodaysPickProps = {
   rec: Recommendation | null
   loading: boolean
@@ -28,6 +58,8 @@ type TodaysPickProps = {
   onReject: (id: number) => void
   onSkip: (id: number) => void
   onRunScan: () => void
+  targets?: Array<{ id: number; type: string; name: string }>
+  onApproveToTarget?: (recId: number, targetId: string) => void
 }
 
 export function TodaysPick({
@@ -37,9 +69,15 @@ export function TodaysPick({
   onReject,
   onSkip,
   onRunScan,
+  targets,
+  onApproveToTarget,
 }: TodaysPickProps) {
   const [imgError, setImgError] = useState(false)
   const [coverError, setCoverError] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useClickOutside(dropdownRef, () => setDropdownOpen(false), dropdownOpen)
 
   const { data: albumData } = useQuery({
     queryKey: ['todays-pick-albums', rec?.artist.mbid],
@@ -209,13 +247,53 @@ export function TodaysPick({
         >
           Skip
         </button>
-        <button
-          type="button"
-          onClick={() => onApprove(rec.id)}
-          className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
-        >
-          Approve
-        </button>
+        {targets && targets.length > 1 ? (
+          <div ref={dropdownRef} className="relative flex-1">
+            <div className="flex">
+              <button
+                type="button"
+                onClick={() => onApprove(rec.id)}
+                className="flex-1 py-2 text-sm font-medium text-center rounded-l-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                onClick={() => setDropdownOpen((v) => !v)}
+                className="px-2 py-2 text-sm font-medium rounded-r-lg border border-l-0 border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
+                aria-label="Approve to specific target"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
+            {dropdownOpen && (
+              <div className="absolute right-0 bottom-full mb-1 z-20 rounded-lg border border-border bg-surface shadow-lg py-1 min-w-[180px]">
+                {targets.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      onApproveToTarget?.(rec.id, `${t.type}-${t.id}`)
+                      setDropdownOpen(false)
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-accent/10 flex items-center gap-2"
+                  >
+                    <TargetIcon type={t.type} />
+                    {targetActionLabel(t.type, t.name)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onApprove(rec.id)}
+            className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
+          >
+            Approve
+          </button>
+        )}
       </div>
     </div>
   )
