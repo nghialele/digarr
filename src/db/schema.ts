@@ -277,6 +277,7 @@ export type Preferences = {
   playlistSchedule?: string // cron, default '0 6 * * 1' (Monday 6am)
   playlistEnabled?: boolean // default false
   dismissedHints?: string[] // for UX hints system
+  subscriptionMode?: 'active' | 'ai-only' | null
 }
 
 export type ScoringWeights = Preferences['scoringWeights']
@@ -305,6 +306,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   playlistSchedule: '0 6 * * 1',
   playlistEnabled: false,
   dismissedHints: [],
+  subscriptionMode: null,
 }
 
 /**

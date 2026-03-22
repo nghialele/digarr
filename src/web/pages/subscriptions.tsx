@@ -1,15 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, LayoutGrid, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Hint } from '../components/hint'
 import { SubscriptionForm, type SubscriptionFormData } from '../components/subscription-form'
+import { SubscriptionPresets } from '../components/subscription-presets'
 import { Skeleton } from '../components/ui/skeleton'
 import {
   bulkToggleSubscriptions,
   createSubscriptionApi,
   deleteSubscriptionApi,
+  getOAuthStatus,
   getSchedulerInfo,
   getSettings,
   getSubscriptionRuns,
@@ -295,6 +297,7 @@ export default function SubscriptionsPage() {
     | { mode: 'edit'; sub: Subscription }
     | null
   >(null)
+  const [showPresets, setShowPresets] = useState(false)
 
   // Auto-open create form when ?genre= is present
   useEffect(() => {
@@ -316,6 +319,11 @@ export default function SubscriptionsPage() {
     queryFn: getSettings,
   })
 
+  const { data: spotifyStatus } = useQuery({
+    queryKey: ['spotify-oauth-status'],
+    queryFn: () => getOAuthStatus('spotify'),
+  })
+
   const configuredSources = (() => {
     if (!settings) return []
     const sources: string[] = []
@@ -324,8 +332,12 @@ export default function SubscriptionsPage() {
     if (settings._lastfmScope && settings.lastfmUsername) sources.push('lastfm')
     if (settings._listenbrainzScope && settings.listenbrainzUsername) sources.push('listenbrainz')
     if (settings._discogsScope && settings.discogsUsername) sources.push('discogs')
+    if (spotifyStatus?.connected) sources.push('spotify')
     return sources
   })()
+
+  const subscriptionMode = (settings?.preferences as Record<string, unknown> | undefined)
+    ?.subscriptionMode as 'active' | 'ai-only' | null | undefined
 
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ['subscriptions'],
@@ -342,6 +354,7 @@ export default function SubscriptionsPage() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
     queryClient.invalidateQueries({ queryKey: ['scheduler-info'] })
+    queryClient.invalidateQueries({ queryKey: ['settings'] })
   }
 
   // Mutations
@@ -412,15 +425,25 @@ export default function SubscriptionsPage() {
         <h1 className="text-xl font-bold text-text">Subscriptions</h1>
         <div className="flex items-center gap-2">
           {subscriptions && subscriptions.length > 0 && (
-            <button
-              type="button"
-              onClick={() => bulkMutation.mutate(!anyEnabled)}
-              disabled={bulkMutation.isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted border border-border rounded-md hover:text-text hover:border-accent/40 disabled:opacity-60 transition-colors"
-            >
-              {anyEnabled ? <Pause size={14} /> : <Play size={14} />}
-              {anyEnabled ? 'Pause All' : 'Resume All'}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowPresets((v) => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted border border-border rounded-md hover:text-text hover:border-accent/40 transition-colors"
+              >
+                <LayoutGrid size={14} />
+                Presets
+              </button>
+              <button
+                type="button"
+                onClick={() => bulkMutation.mutate(!anyEnabled)}
+                disabled={bulkMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted border border-border rounded-md hover:text-text hover:border-accent/40 disabled:opacity-60 transition-colors"
+              >
+                {anyEnabled ? <Pause size={14} /> : <Play size={14} />}
+                {anyEnabled ? 'Pause All' : 'Resume All'}
+              </button>
+            </>
           )}
           <button
             type="button"
@@ -459,19 +482,61 @@ export default function SubscriptionsPage() {
 
       {/* Empty state */}
       {!isLoading && subscriptions && subscriptions.length === 0 && (
-        <div className="bg-surface border border-border rounded-lg px-4 py-12 text-center space-y-3">
-          <p className="text-sm text-muted">No subscriptions yet.</p>
-          <p className="text-xs text-muted">
-            Create a subscription to automatically discover new artists on a schedule.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowForm({ mode: 'create' })}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            <Plus size={14} />
-            Create your first subscription
-          </button>
+        <>
+          {subscriptionMode === 'ai-only' ? (
+            <div className="bg-surface border border-border rounded-lg px-4 py-12 text-center space-y-3">
+              <p className="text-sm font-medium text-text">AI-only mode</p>
+              <p className="text-xs text-muted">
+                Discovery runs on the pipeline schedule with no external feed subscriptions.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowPresets(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted border border-border rounded-md hover:text-text hover:border-accent/40 transition-colors"
+              >
+                <LayoutGrid size={14} />
+                Switch to a preset
+              </button>
+            </div>
+          ) : (
+            <div className="bg-surface border border-border rounded-lg p-6 space-y-6">
+              <SubscriptionPresets
+                connectedServices={configuredSources}
+                onComplete={() => {
+                  invalidate()
+                  setShowPresets(false)
+                }}
+                onCustom={() => setShowForm({ mode: 'create' })}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Inline presets panel (shown when list is non-empty and user clicked Presets) */}
+      {!isLoading && subscriptions && subscriptions.length > 0 && showPresets && (
+        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-text">Add from presets</p>
+            <button
+              type="button"
+              onClick={() => setShowPresets(false)}
+              className="text-xs text-muted hover:text-text transition-colors"
+            >
+              Close
+            </button>
+          </div>
+          <SubscriptionPresets
+            connectedServices={configuredSources}
+            onComplete={() => {
+              invalidate()
+              setShowPresets(false)
+            }}
+            onCustom={() => {
+              setShowPresets(false)
+              setShowForm({ mode: 'create' })
+            }}
+          />
         </div>
       )}
 
