@@ -85,6 +85,13 @@ vi.mock('@/core/playlists/generator', () => ({
   getStrategy: vi.fn(),
 }))
 
+// Mock settings queries for scheduler endpoint
+vi.mock('@/db/queries/settings', () => ({
+  getSettings: vi.fn().mockResolvedValue({
+    preferences: { playlistSchedule: '0 6 * * 1', playlistEnabled: true },
+  }),
+}))
+
 beforeEach(async () => {
   vi.clearAllMocks()
   mockPlaylistScheduler.nextRun.mockReturnValue(null)

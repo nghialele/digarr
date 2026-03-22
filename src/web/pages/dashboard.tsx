@@ -416,7 +416,9 @@ export function Dashboard() {
 
       {/* Today's Pick + Recently Approved */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <TodaysPick
+        <div>
+          <SectionHeader title="Today's Pick" linkText="Discover" linkTo="/discover" />
+          <TodaysPick
           rec={currentPick}
           loading={pickLoading}
           onApprove={(id) => handleAction(id, 'approved')}
@@ -426,7 +428,8 @@ export function Dashboard() {
             triggerPipeline()
             toast.success('Scan started')
           }}
-        />
+          />
+        </div>
         <div>
           <SectionHeader title="Recently Approved" linkText="View all" linkTo="/discover" />
           <RecentlyApproved recs={approvedRecs} loading={approvedLoading} />
