@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
@@ -1320,6 +1321,34 @@ function TargetsTab() {
   )
 }
 
+function CollapsibleSection({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="border border-border rounded-lg">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-4 text-text font-medium text-sm hover:bg-surface transition-colors rounded-lg"
+      >
+        {title}
+        <ChevronDown
+          className={`h-4 w-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  )
+}
+
 function RecommendationsTab() {
   const queryClient = useQueryClient()
   const { data: prefs, isLoading: prefsLoading } = useQuery({
@@ -1406,7 +1435,8 @@ function RecommendationsTabInner({
   }
 
   return (
-    <div className="space-y-6 max-w-lg">
+    <div className="space-y-4 max-w-lg">
+      {/* Essential -- always visible */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Score Threshold</h2>
         <SliderField
@@ -1420,164 +1450,172 @@ function RecommendationsTabInner({
         />
       </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-            Scoring Weights
-          </h2>
-          <span className={`text-xs tabular-nums ${weightsOk ? 'text-muted' : 'text-yellow-400'}`}>
-            total: {weightSum.toFixed(2)}
-            {weightsOk ? '' : ' (should sum to 1.0)'}
-          </span>
-        </div>
-        <SliderField
-          label="Consensus"
-          id="w-consensus"
-          value={consensus}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={setConsensus}
-        />
-        <SliderField
-          label="Similarity"
-          id="w-similarity"
-          value={similarity}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={setSimilarity}
-        />
-        <SliderField
-          label="Genre Overlap"
-          id="w-genre"
-          value={genreOverlap}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={setGenreOverlap}
-        />
-        <SliderField
-          label="AI Confidence"
-          id="w-ai"
-          value={aiConfidence}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={setAiConfidence}
-        />
-        <SliderField
-          label="Feedback Boost"
-          id="w-feedback"
-          value={feedbackBoost}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={setFeedbackBoost}
-        />
-        <SliderField
-          label="Popularity"
-          id="w-popularity"
-          value={popularity}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={setPopularity}
-        />
-        <p className="text-xs text-muted">
-          0 = ignore popularity, higher = prefer popular artists. Requires artist metadata import.
-        </p>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Limits</h2>
-        <Field label="Rejection cooldown (days)" id="rejection-cooldown">
-          <Input
-            id="rejection-cooldown"
-            type="number"
-            min={1}
-            value={rejectionCooldown}
-            onChange={(e) => setRejectionCooldown(e.target.value)}
-            className="max-w-[120px]"
-          />
-        </Field>
-        <Field label="Top artists limit" id="top-artists-limit">
-          <Input
-            id="top-artists-limit"
-            type="number"
-            min={1}
-            value={topArtistsLimit}
-            onChange={(e) => setTopArtistsLimit(e.target.value)}
-            className="max-w-[120px]"
-          />
-        </Field>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-          Library Discovery
-        </h2>
-        <p className="text-xs text-muted">
-          How much of the discovery should be seeded from your existing Lidarr library vs listening
-          history. Higher values find artists similar to what you already own. Lower values rely
-          more on ListenBrainz/Last.fm listening data.
-        </p>
-        <SliderField
-          label="Library seed ratio"
-          id="library-seed-ratio"
-          value={librarySeedRatio}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={setLibrarySeedRatio}
-        />
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Auto-Approve</h2>
-        <p className="text-xs text-muted">
-          Automatically add high-scoring recommendations to your targets after each scan. Only runs
-          when targets are configured.
-        </p>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={autoApproveEnabled}
-            onChange={(e) => setAutoApproveEnabled(e.target.checked)}
-            className="rounded border-border"
-          />
-          <span className="text-sm text-text">Enable auto-approve</span>
-        </label>
-        {autoApproveEnabled && (
-          <div className="space-y-3 pl-6">
-            <SliderField
-              label="Minimum score"
-              id="auto-approve-threshold"
-              value={autoApproveThreshold}
-              min={0.5}
-              max={1.0}
-              step={0.05}
-              onChange={setAutoApproveThreshold}
-              displayValue={`${Math.round(autoApproveThreshold * 100)}%`}
-            />
-            <div className="space-y-1.5">
-              <label htmlFor="auto-approve-monitor" className="text-sm text-muted">
-                Monitor mode
-              </label>
-              <select
-                id="auto-approve-monitor"
-                value={autoApproveMonitorOption}
-                onChange={(e) => setAutoApproveMonitorOption(e.target.value)}
-                className="mt-1 w-full bg-bg border border-border rounded text-sm text-text px-2 py-1.5"
-              >
-                <option value="all">All albums</option>
-                <option value="new">Future releases only</option>
-                <option value="none">None (tracking only)</option>
-              </select>
-            </div>
+      {/* Tuning -- collapsed by default */}
+      <CollapsibleSection title="Scoring Weights">
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-xs tabular-nums ${weightsOk ? 'text-muted' : 'text-yellow-400'}`}
+            >
+              total: {weightSum.toFixed(2)}
+              {weightsOk ? '' : ' (should sum to 1.0)'}
+            </span>
           </div>
-        )}
-      </section>
+          <SliderField
+            label="Consensus"
+            id="w-consensus"
+            value={consensus}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={setConsensus}
+          />
+          <SliderField
+            label="Similarity"
+            id="w-similarity"
+            value={similarity}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={setSimilarity}
+          />
+          <SliderField
+            label="Genre Overlap"
+            id="w-genre"
+            value={genreOverlap}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={setGenreOverlap}
+          />
+          <SliderField
+            label="AI Confidence"
+            id="w-ai"
+            value={aiConfidence}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={setAiConfidence}
+          />
+          <SliderField
+            label="Feedback Boost"
+            id="w-feedback"
+            value={feedbackBoost}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={setFeedbackBoost}
+          />
+          <SliderField
+            label="Popularity"
+            id="w-popularity"
+            value={popularity}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={setPopularity}
+          />
+          <p className="text-xs text-muted">
+            0 = ignore popularity, higher = prefer popular artists. Requires artist metadata import.
+          </p>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Auto-Approve">
+        <div className="space-y-4 pt-2">
+          <p className="text-xs text-muted">
+            Automatically add high-scoring recommendations to your targets after each scan. Only
+            runs when targets are configured.
+          </p>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={autoApproveEnabled}
+              onChange={(e) => setAutoApproveEnabled(e.target.checked)}
+              className="rounded border-border"
+            />
+            <span className="text-sm text-text">Enable auto-approve</span>
+          </label>
+          {autoApproveEnabled && (
+            <div className="space-y-3 pl-6">
+              <SliderField
+                label="Minimum score"
+                id="auto-approve-threshold"
+                value={autoApproveThreshold}
+                min={0.5}
+                max={1.0}
+                step={0.05}
+                onChange={setAutoApproveThreshold}
+                displayValue={`${Math.round(autoApproveThreshold * 100)}%`}
+              />
+              <div className="space-y-1.5">
+                <label htmlFor="auto-approve-monitor" className="text-sm text-muted">
+                  Monitor mode
+                </label>
+                <select
+                  id="auto-approve-monitor"
+                  value={autoApproveMonitorOption}
+                  onChange={(e) => setAutoApproveMonitorOption(e.target.value)}
+                  className="mt-1 w-full bg-bg border border-border rounded text-sm text-text px-2 py-1.5"
+                >
+                  <option value="all">All albums</option>
+                  <option value="new">Future releases only</option>
+                  <option value="none">None (tracking only)</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
+
+      {/* Advanced -- collapsed by default */}
+      <CollapsibleSection title="Advanced">
+        <div className="space-y-6 pt-2">
+          <section className="space-y-4">
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">Limits</h3>
+            <Field label="Rejection cooldown (days)" id="rejection-cooldown">
+              <Input
+                id="rejection-cooldown"
+                type="number"
+                min={1}
+                value={rejectionCooldown}
+                onChange={(e) => setRejectionCooldown(e.target.value)}
+                className="max-w-[120px]"
+              />
+            </Field>
+            <Field label="Top artists limit" id="top-artists-limit">
+              <Input
+                id="top-artists-limit"
+                type="number"
+                min={1}
+                value={topArtistsLimit}
+                onChange={(e) => setTopArtistsLimit(e.target.value)}
+                className="max-w-[120px]"
+              />
+            </Field>
+          </section>
+
+          <section className="space-y-4">
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
+              Library Discovery
+            </h3>
+            <p className="text-xs text-muted">
+              How much of the discovery should be seeded from your existing Lidarr library vs
+              listening history. Higher values find artists similar to what you already own. Lower
+              values rely more on ListenBrainz/Last.fm listening data.
+            </p>
+            <SliderField
+              label="Library seed ratio"
+              id="library-seed-ratio"
+              value={librarySeedRatio}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={setLibrarySeedRatio}
+            />
+          </section>
+        </div>
+      </CollapsibleSection>
 
       <Button onClick={handleSave} disabled={saving}>
         {saving ? 'Saving...' : 'Save'}
