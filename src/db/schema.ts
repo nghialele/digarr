@@ -212,7 +212,44 @@ export const oauthTokens = pgTable(
   (t) => [unique('oauth_tokens_user_provider').on(t.userId, t.provider)],
 )
 
+export const playlists = pgTable('playlists', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  strategy: text('strategy').notNull(),
+  targetIds: jsonb('target_ids').$type<number[]>().default([]).notNull(),
+  schedule: text('schedule'),
+  config: jsonb('config').$type<PlaylistConfig>(),
+  lastGeneratedAt: timestamp('last_generated_at', { withTimezone: true }),
+  trackCount: integer('track_count').default(0),
+  enabled: boolean('enabled').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+export const playlistTracks = pgTable('playlist_tracks', {
+  id: serial('id').primaryKey(),
+  playlistId: integer('playlist_id')
+    .references(() => playlists.id, { onDelete: 'cascade' })
+    .notNull(),
+  artistName: text('artist_name').notNull(),
+  trackName: text('track_name'),
+  mbid: text('mbid'),
+  spotifyUri: text('spotify_uri'),
+  deezerId: text('deezer_id'),
+  localPath: text('local_path'),
+  position: integer('position').notNull(),
+})
+
 // Types
+export type PlaylistConfig = {
+  size: number // default 25
+  genre?: string // for genre_focus strategy
+  mood?: string // for mood_mix strategy
+  trackSourcePriority: ('local' | 'spotify' | 'deezer')[]
+}
+
+export type PlaylistStrategy = 'weekly_digest' | 'genre_focus' | 'mood_mix' | 'rediscover'
+
 export type Preferences = {
   qualityProfileId: number
   metadataProfileId: number
@@ -235,6 +272,10 @@ export type Preferences = {
   autoApproveEnabled?: boolean
   autoApproveThreshold?: number // 0-1: minimum score to auto-approve
   autoApproveMonitorOption?: 'all' | 'new' | 'none'
+  playlistSize?: number // default 25
+  playlistSchedule?: string // cron, default '0 6 * * 1' (Monday 6am)
+  playlistEnabled?: boolean // default false
+  dismissedHints?: string[] // for UX hints system
 }
 
 export type ScoringWeights = Preferences['scoringWeights']
@@ -259,6 +300,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   autoApproveEnabled: false,
   autoApproveThreshold: 0.8,
   autoApproveMonitorOption: 'all',
+  playlistSize: 25,
+  playlistSchedule: '0 6 * * 1',
+  playlistEnabled: false,
+  dismissedHints: [],
 }
 
 /**
