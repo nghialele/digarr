@@ -4,11 +4,13 @@ import { toast } from 'sonner'
 import { AlbumPicker } from '../components/album-picker'
 import { ApproveDialog } from '../components/approve-dialog'
 import { CardStack } from '../components/card-stack'
+import { Hint } from '../components/hint'
 import { MonitoringOptions, type MonitorOption } from '../components/monitoring-options'
 import { MoodPromptBar } from '../components/mood-prompt-bar'
 import { type Recommendation, RecommendationCard } from '../components/recommendation-card'
 import { SwipeCard } from '../components/swipe-card'
 import { Skeleton } from '../components/ui/skeleton'
+import { useHints } from '../hooks/use-hints'
 import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import {
@@ -323,6 +325,8 @@ export function DiscoverPage() {
     staleTime: 60_000,
   })
   const prefs = prefsData ?? {}
+
+  const { isHintDismissed, dismissHint } = useHints()
 
   const refetch = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['recommendations'] })
@@ -918,6 +922,17 @@ export function DiscoverPage() {
         )}
 
         <MoodPromptBar existingArtistNames={existingArtistNames} onQueued={refetch} />
+
+        <Hint
+          id="mood-bar-intro"
+          type="inline"
+          dismissed={isHintDismissed('mood-bar-intro')}
+          onDismiss={dismissHint}
+          className="mb-2"
+        >
+          Tip: describe what you are in the mood for in plain English -- like "rainy day jazz" or
+          "upbeat 90s pop"
+        </Hint>
 
         <FeedbackInsights />
 
