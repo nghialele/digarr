@@ -7,7 +7,6 @@ import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { Field } from '../components/field'
 import { Hint } from '../components/hint'
 import { ServiceCard } from '../components/service-card'
-import { UserManagementPage } from './user-management'
 import {
   AiProviderIcon,
   DiscogsIcon,
@@ -48,6 +47,7 @@ import {
   updateSettings,
   updateUserPreferences,
 } from '../lib/api'
+import { UserManagementPage } from './user-management'
 
 type Settings = {
   lidarrUrl?: string
@@ -1045,7 +1045,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
 function LidarrPreferencesSection() {
   const queryClient = useQueryClient()
   const { data: userPrefs } = useQuery({
-    queryKey: ['userPreferences'],
+    queryKey: ['user-preferences'],
     queryFn: getUserPreferences,
   })
   const { data: qualityProfiles } = useQuery({
@@ -1083,7 +1083,7 @@ function LidarrPreferencesSection() {
         metadataProfileId: parseInt(metadataProfileId, 10) || 1,
         rootFolderId: parseInt(rootFolderId, 10) || 1,
       })
-      queryClient.invalidateQueries({ queryKey: ['userPreferences'] })
+      queryClient.invalidateQueries({ queryKey: ['user-preferences'] })
       toast.success('Lidarr preferences saved')
     } catch {
       toast.error('Failed to save Lidarr preferences')
@@ -1425,7 +1425,7 @@ function CollapsibleSection({
 function RecommendationsTab() {
   const queryClient = useQueryClient()
   const { data: prefs, isLoading: prefsLoading } = useQuery({
-    queryKey: ['userPreferences'],
+    queryKey: ['user-preferences'],
     queryFn: getUserPreferences,
   })
 
@@ -1498,7 +1498,7 @@ function RecommendationsTabInner({
         autoApproveThreshold,
         autoApproveMonitorOption: autoApproveMonitorOption as 'all' | 'new' | 'none',
       })
-      queryClient.invalidateQueries({ queryKey: ['userPreferences'] })
+      queryClient.invalidateQueries({ queryKey: ['user-preferences'] })
       toast.success('Recommendation settings saved')
     } catch {
       toast.error('Failed to save settings')
