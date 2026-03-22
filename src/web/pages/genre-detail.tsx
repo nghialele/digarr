@@ -6,9 +6,8 @@ import { ArtistThumb } from '../components/artist-thumb'
 import { Hint } from '../components/hint'
 import { Skeleton } from '../components/ui/skeleton'
 import type { GenreArtist, LibraryArtist } from '../lib/api'
-import { useHints } from '../hooks/use-hints'
-import { usePreviewContext } from '../lib/preview-context'
 import { getGenre, getGenreArtists, quickDiscover, warmArtists } from '../lib/api'
+import { usePreviewContext } from '../lib/preview-context'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,16 +19,29 @@ type DetailTab = 'library' | 'recommended' | 'trending' | 'deep_cuts'
 
 const TABS: { id: DetailTab; label: string; description: string }[] = [
   { id: 'library', label: 'In Your Library', description: 'Artists already in your music library' },
-  { id: 'recommended', label: 'Recommended', description: 'Artists you approved that match this genre' },
-  { id: 'trending', label: 'Trending', description: 'Recently discovered artists in this genre (last 30 days)' },
-  { id: 'deep_cuts', label: 'Deep Cuts', description: 'Hidden gems -- niche artists with low popularity' },
+  {
+    id: 'recommended',
+    label: 'Recommended',
+    description: 'Artists you approved that match this genre',
+  },
+  {
+    id: 'trending',
+    label: 'Trending',
+    description: 'Recently discovered artists in this genre (last 30 days)',
+  },
+  {
+    id: 'deep_cuts',
+    label: 'Deep Cuts',
+    description: 'Hidden gems -- niche artists with low popularity',
+  },
 ]
 
 const TAB_EMPTY_LABELS: Record<DetailTab, string> = {
   library: 'No artists in your library for this genre.',
   recommended: 'No recommended artists yet. Run a scan and approve some recommendations first.',
   trending: 'No recent discoveries in this genre. Run a scan to find new artists.',
-  deep_cuts: 'No deep cuts found. These appear after scanning -- artists with low popularity or few genre tags.',
+  deep_cuts:
+    'No deep cuts found. These appear after scanning -- artists with low popularity or few genre tags.',
 }
 
 // ---------------------------------------------------------------------------
@@ -108,9 +120,14 @@ function GenreArtistCard({ artist }: { artist: GenreArtist }) {
             aria-label={isPlaying ? 'Stop preview' : 'Play preview'}
           >
             {isPlaying ? (
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1" y="1" width="3" height="8" /><rect x="6" y="1" width="3" height="8" /></svg>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                <rect x="1" y="1" width="3" height="8" />
+                <rect x="6" y="1" width="3" height="8" />
+              </svg>
             ) : (
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 1l7 4-7 4V1z" /></svg>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                <path d="M2 1l7 4-7 4V1z" />
+              </svg>
             )}
           </button>
         )}
@@ -170,8 +187,6 @@ export function GenreDetailPage() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<DetailTab>('library')
-  const { isHintDismissed, dismissHint } = useHints()
-
   const { data, isLoading, error } = useQuery<GenreDetail>({
     queryKey: ['genres', 'detail', slug],
     queryFn: () => getGenre(slug ?? ''),
@@ -280,13 +295,9 @@ export function GenreDetailPage() {
         </p>
 
         {isNonLibraryTab && (
-          <Hint
-            id="genre-detail-queue-tip"
-            type="inline"
-            dismissed={isHintDismissed('genre-detail-queue-tip')}
-            onDismiss={() => dismissHint('genre-detail-queue-tip')}
-          >
-            Use the + Queue button to add artists to your recommendation queue for review on the Discover page.
+          <Hint id="genre-detail-queue-tip" type="inline">
+            Use the + Queue button to add artists to your recommendation queue for review on the
+            Discover page.
           </Hint>
         )}
 

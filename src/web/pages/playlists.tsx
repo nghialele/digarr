@@ -6,7 +6,6 @@ import { Hint } from '../components/hint'
 import { PlaylistCard } from '../components/playlist-card'
 import { PlaylistForm } from '../components/playlist-form'
 import { Skeleton } from '../components/ui/skeleton'
-import { useHints } from '../hooks/use-hints'
 import {
   createPlaylistApi,
   getPlaylistScheduler,
@@ -150,8 +149,6 @@ export function PlaylistsPage() {
 
   const isEmpty = !isLoading && playlists.length === 0
 
-  const { isHintDismissed, dismissHint } = useHints()
-
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto pb-24 md:pb-6">
       {/* Header */}
@@ -191,13 +188,7 @@ export function PlaylistsPage() {
             <Plus size={15} aria-hidden="true" />
             Create Playlist
           </button>
-          <Hint
-            id="playlists-empty-state"
-            type="empty-state"
-            dismissed={isHintDismissed('playlists-empty-state')}
-            onDismiss={dismissHint}
-            className="max-w-sm mx-auto"
-          >
+          <Hint id="playlists-empty-state" type="empty-state" className="max-w-sm mx-auto">
             Playlists let Digarr automatically push curated digests to Jellyfin, Navidrome, or Plex
             on a schedule. Connect a media server in Settings first.
           </Hint>

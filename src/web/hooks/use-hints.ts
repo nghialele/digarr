@@ -12,7 +12,10 @@ export function useHints() {
 
   const dismissedHints: string[] = (prefs?.dismissedHints as string[] | undefined) ?? []
 
-  const isHintDismissed = useCallback((id: string) => dismissedHints.includes(id), [dismissedHints])
+  const isHintDismissed = useCallback(
+    (id: string) => !isSuccess || dismissedHints.includes(id),
+    [dismissedHints, isSuccess],
+  )
 
   const dismissHint = useCallback(
     async (id: string) => {

@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { Hint } from '../components/hint'
 import { StatCard } from '../components/stat-card'
 import { Skeleton } from '../components/ui/skeleton'
-import { useHints } from '../hooks/use-hints'
 import {
   type AnalyticsBatch,
   type AnalyticsGenre,
@@ -373,7 +372,6 @@ function TimeToActCards({ data }: { data: TimeToAct[] }) {
 }
 
 export function AnalyticsPage() {
-  const { isHintDismissed, dismissHint } = useHints()
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: getAnalyticsOverview,
@@ -405,12 +403,7 @@ export function AnalyticsPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <Hint
-        id="analytics-intro-tip"
-        type="inline"
-        dismissed={isHintDismissed('analytics-intro-tip')}
-        onDismiss={() => dismissHint('analytics-intro-tip')}
-      >
+      <Hint id="analytics-intro-tip" type="inline">
         Track how your discovery pipeline performs over time. Higher approval rates mean Digarr is
         learning your taste well.
       </Hint>

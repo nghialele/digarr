@@ -9,7 +9,6 @@ import { PipelineProgress } from '../components/pipeline-progress'
 import { RecentlyApproved } from '../components/recently-approved'
 import { type Recommendation, TodaysPick } from '../components/todays-pick'
 import { Skeleton } from '../components/ui/skeleton'
-import { useHints } from '../hooks/use-hints'
 import {
   type ActivityEntry,
   getDashboardActivity,
@@ -365,8 +364,6 @@ export function Dashboard() {
     }
   }, [pickData, approvedData, queryClient])
 
-  const { isHintDismissed, dismissHint } = useHints()
-
   const allPending = (pickData?.items ?? []) as Recommendation[]
   const currentPick = allPending.find((r) => !skippedIds.has(r.id) && !actedIds.has(r.id)) ?? null
 
@@ -423,15 +420,15 @@ export function Dashboard() {
         <div>
           <SectionHeader title="Today's Pick" linkText="Discover" linkTo="/discover" />
           <TodaysPick
-          rec={currentPick}
-          loading={pickLoading}
-          onApprove={(id) => handleAction(id, 'approved')}
-          onReject={(id) => handleAction(id, 'rejected')}
-          onSkip={handleSkip}
-          onRunScan={() => {
-            triggerPipeline()
-            toast.success('Scan started')
-          }}
+            rec={currentPick}
+            loading={pickLoading}
+            onApprove={(id) => handleAction(id, 'approved')}
+            onReject={(id) => handleAction(id, 'rejected')}
+            onSkip={handleSkip}
+            onRunScan={() => {
+              triggerPipeline()
+              toast.success('Scan started')
+            }}
           />
         </div>
         <div>
@@ -440,13 +437,9 @@ export function Dashboard() {
         </div>
       </div>
 
-      <Hint
-        id="dashboard-feedback-tip"
-        type="spotlight"
-        dismissed={isHintDismissed('dashboard-feedback-tip')}
-        onDismiss={() => dismissHint('dashboard-feedback-tip')}
-      >
-        Approve or reject recommendations to teach Digarr your taste. The more feedback you give, the better your future recommendations get.
+      <Hint id="dashboard-feedback-tip" type="spotlight">
+        Approve or reject recommendations to teach Digarr your taste. The more feedback you give,
+        the better your future recommendations get.
       </Hint>
 
       {/* Subscription Pulse + Listening Activity */}
@@ -459,13 +452,9 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-3">
           <TasteProfile genres={tasteData} loading={tasteLoading} />
-          <Hint
-            id="dashboard-taste-tip"
-            type="inline"
-            dismissed={isHintDismissed('dashboard-taste-tip')}
-            onDismiss={() => dismissHint('dashboard-taste-tip')}
-          >
-            Your taste profile is built from your listening history and approved recommendations. Connect more sources in Settings for richer taste analysis.
+          <Hint id="dashboard-taste-tip" type="inline">
+            Your taste profile is built from your listening history and approved recommendations.
+            Connect more sources in Settings for richer taste analysis.
           </Hint>
         </div>
         <ActivityFeed entries={activityData} loading={activityLoading} />

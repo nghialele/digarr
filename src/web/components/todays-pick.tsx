@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { getAlbums, type ReleaseGroup } from '../lib/api'
-import { useHints } from '../hooks/use-hints'
+import { getAlbums } from '../lib/api'
 import { Hint } from './hint'
 import { StreamingLinks } from './streaming-links'
 import { Skeleton } from './ui/skeleton'
@@ -31,7 +30,6 @@ type TodaysPickProps = {
   onRunScan: () => void
 }
 
-
 export function TodaysPick({
   rec,
   loading,
@@ -42,7 +40,6 @@ export function TodaysPick({
 }: TodaysPickProps) {
   const [imgError, setImgError] = useState(false)
   const [coverError, setCoverError] = useState(false)
-  const { isHintDismissed, dismissHint } = useHints()
 
   const { data: albumData } = useQuery({
     queryKey: ['todays-pick-albums', rec?.artist.mbid],
@@ -168,17 +165,31 @@ export function TodaysPick({
 
         {rec.aiReasoning && (
           <p className="text-xs text-muted mt-2 line-clamp-5">
-            {rec.aiReasoning.split(new RegExp(`(${artist.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')).map((part, i) =>
-              part.toLowerCase() === artist.name.toLowerCase()
-                ? <span key={i} className="text-text font-semibold">{part}</span>
-                : part
-            )}
+            {rec.aiReasoning
+              .split(new RegExp(`(${artist.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
+              .map((part, i) =>
+                part.toLowerCase() === artist.name.toLowerCase() ? (
+                  <span key={i} className="text-text font-semibold">
+                    {part}
+                  </span>
+                ) : (
+                  part
+                ),
+              )}
           </p>
         )}
 
         <div className="mt-3">
           <StreamingLinks streamingUrls={artist.streamingUrls ?? null} artistName={artist.name} />
         </div>
+      </div>
+
+      {/* Hint above action buttons */}
+      <div className="px-4 pt-2">
+        <Hint id="todays-pick-skip-tip" type="inline">
+          Skip shows you the next artist without rejecting -- skipped artists will come back in
+          future scans.
+        </Hint>
       </div>
 
       {/* Action buttons */}
@@ -205,11 +216,6 @@ export function TodaysPick({
         >
           Approve
         </button>
-      </div>
-      <div className="px-4 pb-3">
-        <Hint id="todays-pick-skip-tip" type="inline" dismissed={isHintDismissed('todays-pick-skip-tip')} onDismiss={() => dismissHint('todays-pick-skip-tip')}>
-          Skip shows you the next artist without rejecting -- skipped artists will come back in future scans.
-        </Hint>
       </div>
     </div>
   )

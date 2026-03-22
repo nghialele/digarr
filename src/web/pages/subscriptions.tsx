@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Hint } from '../components/hint'
 import { SubscriptionForm, type SubscriptionFormData } from '../components/subscription-form'
 import { Skeleton } from '../components/ui/skeleton'
-import { useHints } from '../hooks/use-hints'
 import {
   bulkToggleSubscriptions,
   createSubscriptionApi,
@@ -291,8 +290,6 @@ export default function SubscriptionsPage() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const prefillGenre = searchParams.get('genre')
-  const { isHintDismissed, dismissHint } = useHints()
-
   const [showForm, setShowForm] = useState<
     | { mode: 'create'; initial?: Partial<SubscriptionFormData> }
     | { mode: 'edit'; sub: Subscription }
@@ -436,13 +433,9 @@ export default function SubscriptionsPage() {
         </div>
       </div>
 
-      <Hint
-        id="subscriptions-intro-tip"
-        type="spotlight"
-        dismissed={isHintDismissed('subscriptions-intro-tip')}
-        onDismiss={() => dismissHint('subscriptions-intro-tip')}
-      >
-        Subscriptions automatically discover new artists on a schedule. Create a genre or similar-artist subscription to grow your library while you sleep.
+      <Hint id="subscriptions-intro-tip" type="spotlight">
+        Subscriptions automatically discover new artists on a schedule. Create a genre or
+        similar-artist subscription to grow your library while you sleep.
       </Hint>
 
       {/* Loading state */}

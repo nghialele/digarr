@@ -1,25 +1,17 @@
 import { Info, Lightbulb, X } from 'lucide-react'
-
-type HintType = 'inline' | 'spotlight' | 'empty-state' | 'post-action'
+import { useHints } from '../hooks/use-hints'
 
 type HintProps = {
   id: string
-  type?: HintType
+  type?: 'inline' | 'spotlight' | 'empty-state' | 'post-action'
   children: React.ReactNode
   className?: string
-  dismissed: boolean
-  onDismiss: (id: string) => void
 }
 
-export function Hint({
-  id,
-  type = 'inline',
-  children,
-  className = '',
-  dismissed,
-  onDismiss,
-}: HintProps) {
-  if (dismissed) return null
+export function Hint({ id, type = 'inline', children, className = '' }: HintProps) {
+  const { isHintDismissed, dismissHint } = useHints()
+
+  if (isHintDismissed(id)) return null
 
   if (type === 'inline') {
     return (
@@ -30,7 +22,7 @@ export function Hint({
         <span className="flex-1">{children}</span>
         <button
           type="button"
-          onClick={() => onDismiss(id)}
+          onClick={() => dismissHint(id)}
           aria-label="Dismiss hint"
           className="shrink-0 text-muted hover:text-text transition-colors"
         >
@@ -49,7 +41,7 @@ export function Hint({
         <span className="flex-1 text-text">{children}</span>
         <button
           type="button"
-          onClick={() => onDismiss(id)}
+          onClick={() => dismissHint(id)}
           aria-label="Dismiss hint"
           className="shrink-0 text-muted hover:text-text transition-colors"
         >
@@ -66,7 +58,7 @@ export function Hint({
         <div className="text-sm text-muted max-w-sm mx-auto">{children}</div>
         <button
           type="button"
-          onClick={() => onDismiss(id)}
+          onClick={() => dismissHint(id)}
           className="text-xs text-muted hover:text-text transition-colors underline underline-offset-2"
         >
           Dismiss
@@ -84,7 +76,7 @@ export function Hint({
       <span className="flex-1 text-text">{children}</span>
       <button
         type="button"
-        onClick={() => onDismiss(id)}
+        onClick={() => dismissHint(id)}
         aria-label="Dismiss hint"
         className="shrink-0 text-muted hover:text-text transition-colors"
       >

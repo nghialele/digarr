@@ -17,13 +17,22 @@ import {
   Users,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import {
+  BrowserRouter,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { VERSION } from '@/version'
 import { AuthGate } from './components/auth-gate'
 import { BottomNav } from './components/bottom-nav'
 import { KeyboardShortcuts } from './components/keyboard-shortcuts'
 import { PreviewPlayer } from './components/preview-player'
+import { useClickOutside } from './hooks/use-click-outside'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
 import { usePreview } from './hooks/use-preview'
 import {
@@ -96,7 +105,11 @@ function MobileMenuIcon({ open }: { open: boolean }) {
 // Nav dropdown
 // ---------------------------------------------------------------------------
 
-function NavDropdown({ label, icon, items }: {
+function NavDropdown({
+  label,
+  icon,
+  items,
+}: {
   label: string
   icon: React.ReactNode
   items: { to: string; label: string; icon: React.ReactNode }[]
@@ -105,25 +118,11 @@ function NavDropdown({ label, icon, items }: {
   const ref = useRef<HTMLDivElement>(null)
   const location = useLocation()
 
-  useEffect(() => {
-    if (!open) return
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('mousedown', handleClick)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [open])
+  useClickOutside(ref, () => setOpen(false), open)
 
   const isActive = items.some((item) => {
     const path = item.to.split('?')[0]
-    return location.pathname === path || location.pathname.startsWith(path + '/')
+    return location.pathname === path || location.pathname.startsWith(`${path}/`)
   })
 
   return (
@@ -131,17 +130,23 @@ function NavDropdown({ label, icon, items }: {
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="menu"
         className={`flex items-center gap-1 text-sm transition-colors ${isActive ? 'text-accent' : 'text-muted hover:text-text'}`}
       >
         {icon} {label}
         <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-2 w-48 bg-surface border border-border rounded-lg shadow-lg py-1 z-50">
+        <div
+          role="menu"
+          className="absolute top-full left-0 mt-2 w-48 bg-surface border border-border rounded-lg shadow-lg py-1 z-50"
+        >
           {items.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
+              role="menuitem"
               onClick={() => setOpen(false)}
               className={({ isActive: active }) =>
                 `flex items-center gap-2 px-3 py-2 text-sm transition-colors ${active ? 'text-accent bg-accent/5' : 'text-text hover:bg-bg'}`
@@ -174,21 +179,7 @@ function ThemePicker({
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!open) return
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('mousedown', handleClick)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [open])
+  useClickOutside(ref, () => setOpen(false), open)
 
   const ModeIcon = mode === 'dark' ? Moon : mode === 'light' ? Sun : Monitor
 
@@ -230,7 +221,9 @@ function ThemePicker({
           <div className="max-h-[320px] overflow-y-auto">
             {(['Editor', 'Streaming'] as const).map((group) => (
               <div key={group}>
-                <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted sticky top-0 bg-surface">{group}</div>
+                <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted sticky top-0 bg-surface">
+                  {group}
+                </div>
                 {COLOR_THEMES.filter((t) => t.group === group).map((t) => (
                   <button
                     key={t.id}
@@ -257,14 +250,7 @@ function UserMenu({ username }: { username: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!open) return
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  useClickOutside(ref, () => setOpen(false), open)
 
   async function handleLogout() {
     try {
@@ -356,6 +342,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'text-text' : 'text-muted hover:text-text'
 
+  const mobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `py-2 ${isActive ? 'text-text' : 'text-muted hover:text-text'}`
+
   return (
     <PreviewContext.Provider
       value={{
@@ -381,23 +370,41 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     Dashboard
                   </span>
                 </NavLink>
-                <NavDropdown label="Discover" icon={<Compass size={14} aria-hidden="true" />} items={[
-                  { to: '/discover', label: 'Recommendations', icon: <Compass size={14} /> },
-                  { to: '/genres', label: 'Genres', icon: <Music size={14} /> },
-                  { to: '/subscriptions', label: 'Subscriptions', icon: <Monitor size={14} /> },
-                  { to: '/playlists', label: 'Playlists', icon: <ListMusic size={14} /> },
-                ]} />
+                <NavDropdown
+                  label="Discover"
+                  icon={<Compass size={14} aria-hidden="true" />}
+                  items={[
+                    { to: '/discover', label: 'Recommendations', icon: <Compass size={14} /> },
+                    { to: '/genres', label: 'Genres', icon: <Music size={14} /> },
+                    { to: '/subscriptions', label: 'Subscriptions', icon: <Monitor size={14} /> },
+                    { to: '/playlists', label: 'Playlists', icon: <ListMusic size={14} /> },
+                  ]}
+                />
                 {currentUser?.isAdmin && (
-                  <NavDropdown label="Library" icon={<HeartPulse size={14} aria-hidden="true" />} items={[
-                    { to: '/library/health', label: 'Health', icon: <HeartPulse size={14} /> },
-                    { to: '/analytics', label: 'Analytics', icon: <BarChart3 size={14} /> },
-                  ]} />
+                  <NavDropdown
+                    label="Library"
+                    icon={<HeartPulse size={14} aria-hidden="true" />}
+                    items={[
+                      { to: '/library/health', label: 'Health', icon: <HeartPulse size={14} /> },
+                      { to: '/analytics', label: 'Analytics', icon: <BarChart3 size={14} /> },
+                    ]}
+                  />
                 )}
-                <NavDropdown label="Settings" icon={<Settings size={14} aria-hidden="true" />} items={[
-                  { to: '/settings?tab=connections', label: 'Connections', icon: <Settings size={14} /> },
-                  { to: '/settings?tab=account', label: 'Account', icon: <Users size={14} /> },
-                  ...(currentUser?.isAdmin ? [{ to: '/users', label: 'User Management', icon: <Users size={14} /> }] : []),
-                ]} />
+                <NavDropdown
+                  label="Settings"
+                  icon={<Settings size={14} aria-hidden="true" />}
+                  items={[
+                    {
+                      to: '/settings?tab=connections',
+                      label: 'Connections',
+                      icon: <Settings size={14} />,
+                    },
+                    { to: '/settings?tab=account', label: 'Account', icon: <Users size={14} /> },
+                    ...(currentUser?.isAdmin
+                      ? [{ to: '/users', label: 'User Management', icon: <Users size={14} /> }]
+                      : []),
+                  ]}
+                />
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -447,26 +454,38 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           {/* Mobile nav dropdown */}
           {menuOpen && (
-            <div className="sm:hidden flex flex-col gap-3 pt-3 pb-1">
-              <NavLink to="/" end className={navLinkClass} onClick={() => setMenuOpen(false)}>
+            <div className="sm:hidden flex flex-col gap-1 pt-3 pb-1">
+              <NavLink to="/" end className={mobileNavLinkClass} onClick={() => setMenuOpen(false)}>
                 <span className="flex items-center gap-1.5">
                   <LayoutDashboard size={14} aria-hidden="true" />
                   Dashboard
                 </span>
               </NavLink>
-              <NavLink to="/discover" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+              <NavLink
+                to="/discover"
+                className={mobileNavLinkClass}
+                onClick={() => setMenuOpen(false)}
+              >
                 <span className="flex items-center gap-1.5">
                   <Compass size={14} aria-hidden="true" />
                   Discover
                 </span>
               </NavLink>
-              <NavLink to="/genres" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+              <NavLink
+                to="/genres"
+                className={mobileNavLinkClass}
+                onClick={() => setMenuOpen(false)}
+              >
                 <span className="flex items-center gap-1.5">
                   <Music size={14} aria-hidden="true" />
                   Genres
                 </span>
               </NavLink>
-              <NavLink to="/playlists" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+              <NavLink
+                to="/playlists"
+                className={mobileNavLinkClass}
+                onClick={() => setMenuOpen(false)}
+              >
                 <span className="flex items-center gap-1.5">
                   <ListMusic size={14} aria-hidden="true" />
                   Playlists
@@ -474,7 +493,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </NavLink>
               <NavLink
                 to="/subscriptions"
-                className={navLinkClass}
+                className={mobileNavLinkClass}
                 onClick={() => setMenuOpen(false)}
               >
                 <span className="flex items-center gap-1.5">
@@ -485,7 +504,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               {currentUser?.isAdmin && (
                 <NavLink
                   to="/library/health"
-                  className={navLinkClass}
+                  className={mobileNavLinkClass}
                   onClick={() => setMenuOpen(false)}
                 >
                   <span className="flex items-center gap-1.5">
@@ -497,7 +516,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               {currentUser?.isAdmin && (
                 <NavLink
                   to="/analytics"
-                  className={navLinkClass}
+                  className={mobileNavLinkClass}
                   onClick={() => setMenuOpen(false)}
                 >
                   <span className="flex items-center gap-1.5">
@@ -506,14 +525,22 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   </span>
                 </NavLink>
               )}
-              <NavLink to="/settings" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+              <NavLink
+                to="/settings"
+                className={mobileNavLinkClass}
+                onClick={() => setMenuOpen(false)}
+              >
                 <span className="flex items-center gap-1.5">
                   <Settings size={14} aria-hidden="true" />
                   Settings
                 </span>
               </NavLink>
               {currentUser?.isAdmin && (
-                <NavLink to="/users" className={navLinkClass} onClick={() => setMenuOpen(false)}>
+                <NavLink
+                  to="/users"
+                  className={mobileNavLinkClass}
+                  onClick={() => setMenuOpen(false)}
+                >
                   <span className="flex items-center gap-1.5">
                     <Users size={14} aria-hidden="true" />
                     Users
