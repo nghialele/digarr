@@ -291,6 +291,10 @@ export function settingsRoutes(deps: AppDependencies) {
           body.token || userConns?.listenbrainzToken || (stored?.listenbrainzToken as string) || ''
         const client = createListenBrainzClient(username, token)
         const result = await client.testConnection()
+        if (result.success && !token) {
+          result.message +=
+            ' (warning: no API token set -- listening data, subscriptions, and recommendations will not work without it)'
+        }
         return c.json(result)
       }
       case 'lastfm': {
