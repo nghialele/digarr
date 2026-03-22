@@ -15,18 +15,18 @@ type GenreDetail = GenreInfo & { subGenres: GenreInfo[]; libraryArtists: Library
 
 type DetailTab = 'library' | 'recommended' | 'trending' | 'deep_cuts'
 
-const TABS: { id: DetailTab; label: string }[] = [
-  { id: 'library', label: 'In Your Library' },
-  { id: 'recommended', label: 'Recommended' },
-  { id: 'trending', label: 'Trending' },
-  { id: 'deep_cuts', label: 'Deep Cuts' },
+const TABS: { id: DetailTab; label: string; description: string }[] = [
+  { id: 'library', label: 'In Your Library', description: 'Artists already in your music library' },
+  { id: 'recommended', label: 'Recommended', description: 'Artists you approved that match this genre' },
+  { id: 'trending', label: 'Trending', description: 'Recently discovered artists in this genre (last 30 days)' },
+  { id: 'deep_cuts', label: 'Deep Cuts', description: 'Hidden gems -- niche artists with low popularity' },
 ]
 
 const TAB_EMPTY_LABELS: Record<DetailTab, string> = {
   library: 'No artists in your library for this genre.',
-  recommended: 'No recommended artists found for this genre.',
-  trending: 'No trending artists found for this genre.',
-  deep_cuts: 'No deep cuts found for this genre.',
+  recommended: 'No recommended artists yet. Run a scan and approve some recommendations first.',
+  trending: 'No recent discoveries in this genre. Run a scan to find new artists.',
+  deep_cuts: 'No deep cuts found. These appear after scanning -- artists with low popularity or few genre tags.',
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ function GenreArtistCard({ artist }: { artist: GenreArtist }) {
         onClick={handleQuickDiscover}
         className="shrink-0 px-2 py-1 text-xs rounded border border-border text-muted hover:text-text hover:border-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {queued ? 'Queued' : discovering ? '...' : 'Discover'}
+        {queued ? 'In Queue' : discovering ? '...' : '+ Queue'}
       </button>
     </div>
   )
@@ -247,6 +247,10 @@ export function GenreDetailPage() {
             </button>
           ))}
         </div>
+
+        <p className="text-xs text-muted -mt-2">
+          {TABS.find((t) => t.id === activeTab)?.description}
+        </p>
 
         {/* Tab content */}
         {activeTab === 'library' ? (
