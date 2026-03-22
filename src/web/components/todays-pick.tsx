@@ -29,26 +29,6 @@ type TodaysPickProps = {
   onRunScan: () => void
 }
 
-function AlbumList({ albums }: { albums: ReleaseGroup[] }) {
-  const shown = albums.filter((a) => a.type === 'Album').slice(0, 4)
-  if (shown.length === 0) return null
-
-  return (
-    <div className="mt-3">
-      <p className="text-[10px] uppercase tracking-wider text-muted mb-1">Discography</p>
-      <div className="space-y-0.5">
-        {shown.map((album) => (
-          <div key={album.id} className="flex items-center gap-2 text-xs">
-            <span className="text-muted shrink-0 w-8 text-right tabular-nums">
-              {album.firstReleaseDate?.slice(0, 4) ?? '----'}
-            </span>
-            <span className="text-text truncate">{album.title}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export function TodaysPick({
   rec,
@@ -184,14 +164,18 @@ export function TodaysPick({
         )}
 
         {rec.aiReasoning && (
-          <p className="text-xs text-muted mt-2 line-clamp-3">{rec.aiReasoning}</p>
+          <p className="text-xs text-muted mt-2 line-clamp-3">
+            {rec.aiReasoning.split(new RegExp(`(${artist.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')).map((part, i) =>
+              part.toLowerCase() === artist.name.toLowerCase()
+                ? <span key={i} className="text-text font-semibold">{part}</span>
+                : part
+            )}
+          </p>
         )}
 
         <div className="mt-3">
           <StreamingLinks streamingUrls={artist.streamingUrls ?? null} artistName={artist.name} />
         </div>
-
-        {albumData && <AlbumList albums={albumData} />}
       </div>
 
       {/* Action bar -- pinned to bottom */}
