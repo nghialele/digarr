@@ -2,7 +2,14 @@ import type { ServiceTestResult } from '@/core/types'
 
 export type TargetCapability = 'addArtist' | 'addAlbum' | 'createPlaylist'
 
-export const TARGET_TYPES = ['lidarr', 'spotify-playlist', 'export'] as const
+export const TARGET_TYPES = [
+  'lidarr',
+  'spotify-playlist',
+  'navidrome-playlist',
+  'jellyfin-playlist',
+  'plex-playlist',
+  'export',
+] as const
 export type TargetType = (typeof TARGET_TYPES)[number]
 
 export type TargetAddOptions = {
@@ -26,6 +33,18 @@ export type PlaylistItem = {
   artistMbid: string
   trackName?: string
   trackMbid?: string
+}
+
+export type PlaylistPushData = {
+  name: string
+  description?: string
+  tracks: {
+    artistName: string
+    trackName: string
+    spotifyUri?: string
+    deezerId?: string
+    localPath?: string
+  }[]
 }
 
 export type PlaylistResult = {
