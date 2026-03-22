@@ -29,6 +29,7 @@ export type DiscoveredArtist = {
   suggestedAlbum?: string
   genres?: string[]
   source: string
+  sourceUrl?: string
 }
 
 export type ResolvedArtist = {

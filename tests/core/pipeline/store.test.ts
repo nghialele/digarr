@@ -153,6 +153,22 @@ describe('store()', () => {
     })
   })
 
+  it('passes subscriptionId to insertBatch', async () => {
+    const db = makeDb()
+    await store([makeArtist('mbid-sub')], db, { subscriptionId: 42 })
+    expect(db.insertBatch).toHaveBeenCalledWith(
+      expect.objectContaining({ subscriptionId: 42 }),
+    )
+  })
+
+  it('passes undefined subscriptionId when not provided', async () => {
+    const db = makeDb()
+    await store([makeArtist('mbid-nosub')], db)
+    expect(db.insertBatch).toHaveBeenCalledWith(
+      expect.objectContaining({ subscriptionId: undefined }),
+    )
+  })
+
   it('passes all artist fields to upsertArtist', async () => {
     const artist: ScoredArtist = {
       mbid: 'mbid-full',

@@ -4,7 +4,7 @@ import type { ScoredArtist } from '@/core/types'
 export interface StoreDb {
   getExistingRecommendationMbids: () => Promise<Set<string>>
 
-  insertBatch: (data: { status: string; stats: Record<string, unknown> }) => Promise<{ id: number }>
+  insertBatch: (data: { status: string; stats: Record<string, unknown>; subscriptionId?: number }) => Promise<{ id: number }>
 
   completeBatch: (
     id: number,
@@ -49,6 +49,7 @@ export interface StoreDb {
 
 export type StoreOptions = {
   userId?: number
+  subscriptionId?: number
 }
 
 export async function store(
@@ -62,6 +63,7 @@ export async function store(
       total: artists.length,
       createdAt: new Date().toISOString(),
     },
+    subscriptionId: options.subscriptionId,
   })
 
   let added = 0

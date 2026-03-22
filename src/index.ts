@@ -120,7 +120,7 @@ const storeDb: StoreDb = {
   insertBatch: async (data) => {
     const rows = await db
       .insert(recommendationBatches)
-      .values({ status: data.status, stats: data.stats })
+      .values({ status: data.status, stats: data.stats, subscriptionId: data.subscriptionId ?? null })
       .returning({ id: recommendationBatches.id })
     const row = rows[0]
     if (!row) throw new Error('insertBatch: no row returned')
