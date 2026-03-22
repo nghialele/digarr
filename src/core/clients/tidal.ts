@@ -2,6 +2,7 @@
 // against undocumented/semi-public endpoints that may change without notice.
 // All errors are caught and return empty results or failure -- do NOT throw here.
 
+import { createHttpClient } from '@/core/clients/http'
 import type { ServiceTestResult } from '@/core/types'
 import { errMsg } from '@/core/validation'
 
@@ -102,20 +103,23 @@ export function createTidalClient(config: {
   async function searchArtists(query: string, limit = 25): Promise<TidalSearchResult[]> {
     try {
       const token = await getAccessToken()
-      const encodedQuery = encodeURIComponent(query)
-      const params = new URLSearchParams({ limit: String(limit) })
-      const url = `${searchBaseUrl}/searchresults/${encodedQuery}/relationships/artists?${params}`
-
-      const res = await fetch(url, {
+      // Create a fresh http client per search so the Authorization header reflects
+      // the current (possibly just-refreshed) token. The token fetch above uses raw
+      // fetch because it hits a different base URL (auth.tidal.com) with form-encoded
+      // body -- createHttpClient only handles JSON, so the auth endpoint stays as-is.
+      const http = createHttpClient({
+        baseUrl: searchBaseUrl,
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/vnd.api+json',
         },
       })
 
-      if (!res.ok) return []
-
-      const data = (await res.json()) as TidalSearchResponse
+      const encodedQuery = encodeURIComponent(query)
+      const params = new URLSearchParams({ limit: String(limit) })
+      const data = await http.get<TidalSearchResponse>(
+        `/searchresults/${encodedQuery}/relationships/artists?${params}`,
+      )
       const items = data.data ?? []
 
       return items.flatMap((entry) => {

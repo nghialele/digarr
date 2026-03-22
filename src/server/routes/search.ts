@@ -5,7 +5,7 @@ import type { HonoEnv } from '@/server/types'
 export type SearchDeps = {
   search: (
     query: string,
-    opts?: { limit?: number; sources?: string[] },
+    opts?: { limit?: number; sources?: string[]; userId?: number },
   ) => Promise<MergedSearchResult[]>
 }
 
@@ -19,9 +19,10 @@ export function searchRoutes(deps: SearchDeps) {
     }
     const limit = Math.min(Number(c.req.query('limit') ?? 20), 50)
     const sourcesParam = c.req.query('sources')?.split(',').filter(Boolean)
+    const userId = c.get('userId')
 
     try {
-      const results = await deps.search(query, { limit, sources: sourcesParam })
+      const results = await deps.search(query, { limit, sources: sourcesParam, userId })
       return c.json({ results })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

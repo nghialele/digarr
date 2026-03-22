@@ -1,6 +1,12 @@
 // FRAGILE: Bandcamp has no API. This scrapes HTML from bandcamp.com/search.
 // It WILL break when Bandcamp changes their markup. All errors return empty results.
 // Rate limited to 1 request per 2 seconds to avoid getting blocked.
+//
+// NOTE: This client intentionally uses raw fetch() instead of createHttpClient.
+// createHttpClient calls res.json() on every response, but Bandcamp returns HTML.
+// Parsing HTML requires res.text(), which is incompatible with the shared client's
+// response handling. The auth-free, text/html nature of this scraper makes it a
+// poor fit for the JSON-oriented http abstraction.
 
 import PQueue from 'p-queue'
 import type { ServiceTestResult } from '@/core/types'

@@ -9,11 +9,6 @@ import { createDeezerClient } from './core/clients/deezer'
 import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
-import type { SearchSource } from './core/search/multi-source'
-import { multiSourceSearch } from './core/search/multi-source'
-import { createBandcampSearchSource } from './core/search/sources/bandcamp'
-import { createDeezerSearchSource } from './core/search/sources/deezer'
-import { createMusicBrainzSearchSource } from './core/search/sources/musicbrainz'
 import { GenreService } from './core/genre/service'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
@@ -29,6 +24,12 @@ import { createLastFmSource } from './core/plugins/lastfm'
 import { createListenBrainzSource } from './core/plugins/listenbrainz'
 import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
+import type { SearchSource } from './core/search/multi-source'
+import { multiSourceSearch } from './core/search/multi-source'
+import { createBandcampSearchSource } from './core/search/sources/bandcamp'
+import { createDeezerSearchSource } from './core/search/sources/deezer'
+import { createMusicBrainzSearchSource } from './core/search/sources/musicbrainz'
+import { createSpotifySearchSource } from './core/search/sources/spotify'
 import { setSessionStore } from './core/sessions'
 import { createGenreAdapter } from './core/subscriptions/adapters/genre'
 import { createLastfmChartsAdapter } from './core/subscriptions/adapters/lastfm-charts'
@@ -263,6 +264,24 @@ const subscriptionQueriesImpl = {
   completeRun: (id: number, data: Parameters<typeof completeRun>[2]) => completeRun(db, id, data),
 }
 
+// Cache adapter registries per user -- building one per execution is redundant when
+// multiple subscriptions fire on the same schedule for the same user.
+// TTL is short (60s) so credential changes (e.g. new OAuth token) take effect quickly.
+const adapterRegistryCache = new Map<string, { registry: AdapterRegistry; builtAt: number }>()
+const ADAPTER_CACHE_TTL = 60_000
+
+function getCachedAdapterRegistry(userId: number | null): AdapterRegistry | null {
+  const key = String(userId ?? 'anon')
+  const cached = adapterRegistryCache.get(key)
+  if (cached && Date.now() - cached.builtAt < ADAPTER_CACHE_TTL) return cached.registry
+  return null
+}
+
+function setCachedAdapterRegistry(userId: number | null, registry: AdapterRegistry): void {
+  const key = String(userId ?? 'anon')
+  adapterRegistryCache.set(key, { registry, builtAt: Date.now() })
+}
+
 async function executeSubscription(subscriptionId: number): Promise<void> {
   const sub = await getSubscription(db, subscriptionId)
   if (!sub) {
@@ -308,45 +327,54 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
     sourceRegistry.register(createDiscogsSource(dcToken as string, dcUsername as string))
   }
 
-  // Build adapter registry from available sources
-  const adapterRegistry = new AdapterRegistry()
-  adapterRegistry.register(createGenreAdapter(sourceRegistry.withCapability('genreArtists')))
-  adapterRegistry.register(createSimilarAdapter(sourceRegistry.withCapability('similarArtists')))
-
-  // Last.fm adapters -- only if the user has a Last.fm API key
-  if (lfApiKey) {
-    adapterRegistry.register(createLastfmTagAdapter({ apiKey: lfApiKey }))
-    adapterRegistry.register(createLastfmChartsAdapter({ apiKey: lfApiKey }))
-  }
-
-  // ListenBrainz adapter -- only if the user has LB credentials
-  if (lbUsername && lbToken) {
-    adapterRegistry.register(createListenBrainzAdapter({ username: lbUsername, token: lbToken }))
-  }
-
-  // Spotify adapters -- only if the user has a stored OAuth token
+  // Build adapter registry from available sources, or reuse a cached one.
+  // Cache is keyed by userId with a 60s TTL -- short enough that credential
+  // changes take effect quickly, long enough to avoid rebuilding for every
+  // subscription when many fire on the same schedule for the same user.
   const userId = sub.userId
-  if (userId !== null && userId !== undefined) {
-    const spotifyOAuthRow = await getOAuthToken(db, userId, 'spotify')
-    if (spotifyOAuthRow) {
-      const getToken = async (): Promise<string> => {
-        const oauthRow = await getOAuthToken(db, userId, 'spotify')
-        if (!oauthRow) throw new Error('No Spotify OAuth token -- connect Spotify in Settings')
-        if (oauthRow.clientId && oauthRow.clientSecret) {
-          const token = await getValidToken(db, userId, 'spotify', {
-            tokenEndpoint: 'https://accounts.spotify.com/api/token',
-            clientId: oauthRow.clientId,
-            clientSecret: oauthRow.clientSecret,
-          })
-          if (!token) throw new Error('Spotify OAuth token expired and could not be refreshed')
-          return token
-        }
-        // No refresh config available -- return the stored access token as-is
-        return oauthRow.accessToken
-      }
-      adapterRegistry.register(createSpotifyPlaylistAdapter({ getToken }))
-      adapterRegistry.register(createSpotifyChartsAdapter({ getToken }))
+  let adapterRegistry = getCachedAdapterRegistry(userId ?? null)
+
+  if (!adapterRegistry) {
+    adapterRegistry = new AdapterRegistry()
+    adapterRegistry.register(createGenreAdapter(sourceRegistry.withCapability('genreArtists')))
+    adapterRegistry.register(createSimilarAdapter(sourceRegistry.withCapability('similarArtists')))
+
+    // Last.fm adapters -- only if the user has a Last.fm API key
+    if (lfApiKey) {
+      adapterRegistry.register(createLastfmTagAdapter({ apiKey: lfApiKey }))
+      adapterRegistry.register(createLastfmChartsAdapter({ apiKey: lfApiKey }))
     }
+
+    // ListenBrainz adapter -- only if the user has LB credentials
+    if (lbUsername && lbToken) {
+      adapterRegistry.register(createListenBrainzAdapter({ username: lbUsername, token: lbToken }))
+    }
+
+    // Spotify adapters -- only if the user has a stored OAuth token
+    if (userId !== null && userId !== undefined) {
+      const spotifyOAuthRow = await getOAuthToken(db, userId, 'spotify')
+      if (spotifyOAuthRow) {
+        const getToken = async (): Promise<string> => {
+          const oauthRow = await getOAuthToken(db, userId, 'spotify')
+          if (!oauthRow) throw new Error('No Spotify OAuth token -- connect Spotify in Settings')
+          if (oauthRow.clientId && oauthRow.clientSecret) {
+            const token = await getValidToken(db, userId, 'spotify', {
+              tokenEndpoint: 'https://accounts.spotify.com/api/token',
+              clientId: oauthRow.clientId,
+              clientSecret: oauthRow.clientSecret,
+            })
+            if (!token) throw new Error('Spotify OAuth token expired and could not be refreshed')
+            return token
+          }
+          // No refresh config available -- return the stored access token as-is
+          return oauthRow.accessToken
+        }
+        adapterRegistry.register(createSpotifyPlaylistAdapter({ getToken }))
+        adapterRegistry.register(createSpotifyChartsAdapter({ getToken }))
+      }
+    }
+
+    setCachedAdapterRegistry(userId ?? null, adapterRegistry)
   }
 
   const adapter = adapterRegistry.get(sub.sourceType)
@@ -466,16 +494,16 @@ async function getOidcService(): Promise<OidcService | null> {
   return service
 }
 
-// Build search sources -- MusicBrainz and Deezer are always available (no auth),
-// Bandcamp is also public. Sources that need per-user OAuth (Spotify, TIDAL) are
-// skipped for now since the search endpoint has no user context.
-function buildSearchSources(): SearchSource[] {
-  const sources: SearchSource[] = []
-  sources.push(createMusicBrainzSearchSource(createMusicBrainzClient()))
-  sources.push(createDeezerSearchSource(createDeezerClient()))
-  sources.push(createBandcampSearchSource(createBandcampClient()))
-  return sources
+// Static search sources -- no auth required, safe to build once at startup.
+function buildStaticSearchSources(): SearchSource[] {
+  return [
+    createMusicBrainzSearchSource(createMusicBrainzClient()),
+    createDeezerSearchSource(createDeezerClient()),
+    createBandcampSearchSource(createBandcampClient()),
+  ]
 }
+
+const staticSearchSources = buildStaticSearchSources()
 
 const app = createApp({
   db,
@@ -644,10 +672,41 @@ const app = createApp({
   },
   search: {
     search: async (query, opts) => {
-      const sources = buildSearchSources()
-      const filtered = opts?.sources
-        ? sources.filter((s) => opts.sources!.includes(s.id))
-        : sources
+      const sources: SearchSource[] = [...staticSearchSources]
+
+      // Add Spotify if the authenticated user has a stored OAuth token.
+      // Capture userId in a local const so TypeScript's control-flow narrowing
+      // carries into the async getToken callback (opts.userId could be re-read as
+      // undefined inside the callback if we referenced opts directly).
+      const searchUserId = opts?.userId
+      if (searchUserId) {
+        const spotifyOAuth = await getOAuthToken(db, searchUserId, 'spotify')
+        if (spotifyOAuth) {
+          sources.push(
+            createSpotifySearchSource({
+              getToken: async () => {
+                const oauthRow = await getOAuthToken(db, searchUserId, 'spotify')
+                if (!oauthRow) throw new Error('No Spotify OAuth token')
+                if (oauthRow.clientId && oauthRow.clientSecret) {
+                  const token = await getValidToken(db, searchUserId, 'spotify', {
+                    tokenEndpoint: 'https://accounts.spotify.com/api/token',
+                    clientId: oauthRow.clientId,
+                    clientSecret: oauthRow.clientSecret,
+                  })
+                  if (!token)
+                    throw new Error('Spotify OAuth token expired and could not be refreshed')
+                  return token
+                }
+                return oauthRow.accessToken
+              },
+            }),
+          )
+        }
+      }
+      // TIDAL search requires client credentials (not per-user OAuth). Wire it here
+      // once TIDAL client ID/secret are exposed via settings (not yet implemented).
+
+      const filtered = opts?.sources ? sources.filter((s) => opts.sources?.includes(s.id)) : sources
       return multiSourceSearch(query, filtered, { limit: opts?.limit })
     },
   },

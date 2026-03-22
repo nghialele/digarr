@@ -1,3 +1,4 @@
+import { createHttpClient } from '@/core/clients/http'
 import type { ServiceTestResult } from '@/core/types'
 import { errMsg } from '@/core/validation'
 
@@ -28,19 +29,11 @@ type DeezerSearchResponse = {
 
 export function createDeezerClient(config?: { baseUrl?: string }) {
   const baseUrl = config?.baseUrl ?? DEFAULT_BASE_URL
-
-  async function fetchJson<T>(url: string): Promise<T> {
-    const res = await fetch(url)
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} from ${url}`)
-    }
-    return res.json() as Promise<T>
-  }
+  const http = createHttpClient({ baseUrl })
 
   async function searchArtists(query: string, limit = 25): Promise<DeezerSearchResult[]> {
     const params = new URLSearchParams({ q: query, limit: String(limit) })
-    const url = `${baseUrl}/search/artist?${params.toString()}`
-    const res = await fetchJson<DeezerSearchResponse>(url)
+    const res = await http.get<DeezerSearchResponse>(`/search/artist?${params.toString()}`)
     if (res.error) {
       throw new Error(`Deezer API error: ${res.error.message}`)
     }
