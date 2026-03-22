@@ -59,6 +59,17 @@ export class OidcService {
     this.discoveryConfig = null
   }
 
+  /** Verify the issuer is reachable and returns a valid OIDC discovery document. */
+  async testConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      await this.getDiscovery()
+      return { success: true, message: 'OIDC discovery successful' }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { success: false, message }
+    }
+  }
+
   async getAuthorizationUrl(redirectUri: string): Promise<{ url: string; state: string }> {
     this.cleanupPendingAuths()
 

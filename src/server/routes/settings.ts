@@ -358,6 +358,22 @@ export function settingsRoutes(deps: AppDependencies) {
         const result = await client.testConnection()
         return c.json(result)
       }
+      case 'oidc': {
+        const issuerUrl = body.issuerUrl || (stored?.oidcIssuerUrl as string) || ''
+        const clientId = body.clientId || (stored?.oidcClientId as string) || ''
+        const clientSecret = body.clientSecret || (stored?.oidcClientSecret as string) || ''
+        if (!issuerUrl || !clientId) {
+          return c.json({ success: false, message: 'Issuer URL and Client ID are required' })
+        }
+        const { OidcService } = await import('@/core/auth/oidc')
+        const svc = new OidcService({
+          issuerUrl,
+          clientId,
+          clientSecret: clientSecret || undefined,
+          scopes: 'openid',
+        })
+        return c.json(await svc.testConnection())
+      }
       default:
         return c.json({ error: `Unknown service: ${service}` }, 400)
     }

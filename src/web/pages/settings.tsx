@@ -1763,6 +1763,7 @@ function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => voi
   )
   const [oidcScopes, setOidcScopes] = useState(settings.oidcScopes ?? '')
   const [saving, setSaving] = useState(false)
+  const [testingOidc, setTestingOidc] = useState(false)
 
   const { data: authStatus } = useQuery({
     queryKey: ['authStatus'],
@@ -1787,20 +1788,31 @@ function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => voi
     }
   }
 
+  async function handleTestOidc() {
+    setTestingOidc(true)
+    try {
+      const res = await testService('oidc', {
+        issuerUrl: oidcIssuerUrl,
+        clientId: oidcClientId,
+        clientSecret: oidcClientSecret || undefined,
+      })
+      if (res.success) toast.success('OIDC discovery successful')
+      else toast.error(res.message || 'OIDC connection failed')
+    } catch {
+      toast.error('Could not reach OIDC issuer')
+    } finally {
+      setTestingOidc(false)
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-lg">
-      {authStatus?.proxyAuthEnabled && (
-        <div className="text-sm text-muted p-3 rounded bg-surface border border-border">
-          Proxy authentication is enabled via environment variables. Users are auto-provisioned from
-          X-Forwarded-User headers.
-        </div>
-      )}
-
       <section className="space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">OIDC / SSO</h2>
           <p className="text-xs text-muted mt-1">
-            Configure OpenID Connect for single sign-on. Requires a restart to take effect.
+            Configure OpenID Connect for single sign-on. After saving, users will see a "Sign in
+            with SSO" button on the login page.
           </p>
         </div>
         <Field label="Issuer URL" id="oidc-issuer-url">
@@ -1837,11 +1849,49 @@ function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => voi
             onChange={(e) => setOidcScopes(e.target.value)}
           />
         </Field>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleTestOidc}
+            disabled={testingOidc || !oidcIssuerUrl || !oidcClientId}
+          >
+            {testingOidc ? 'Testing...' : 'Test Connection'}
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
       </section>
 
-      <Button onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving...' : 'Save'}
-      </Button>
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+            Reverse Proxy Auth
+          </h2>
+          <p className="text-xs text-muted mt-1">
+            When enabled, Digarr trusts an HTTP header from a configured reverse proxy and
+            auto-provisions users from it. Controlled via environment variables (
+            <code className="font-mono text-xs">PROXY_AUTH_ENABLED</code>,{' '}
+            <code className="font-mono text-xs">PROXY_AUTH_HEADER</code>,{' '}
+            <code className="font-mono text-xs">PROXY_TRUSTED_IPS</code>).
+          </p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface p-3 text-sm">
+          {authStatus?.proxyAuthEnabled ? (
+            <span className="text-text">
+              Proxy authentication is <strong>enabled</strong>. Users are auto-provisioned from the
+              configured header.
+            </span>
+          ) : (
+            <span className="text-muted">
+              Proxy authentication is <strong>disabled</strong>. Set{' '}
+              <code className="font-mono text-xs">PROXY_AUTH_ENABLED=true</code> in your environment
+              to enable it.
+            </span>
+          )}
+        </div>
+      </section>
     </div>
   )
 }
