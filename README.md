@@ -80,6 +80,7 @@ Editor classics (Tokyo Night, Catppuccin, Dracula, One Dark, Nord, Gruvbox, Sola
 Digarr wouldn't exist without the self-hosted music discovery community. These projects inspired us, and we recommend checking them out -- each takes a different approach to the same problem, and they're all worth your time:
 
 ### Discovery & Recommendations
+- [**Curatorr**](https://github.com/MickyGX/curatorr) -- behavior-first music curation for Plex. Tracks skips and play completion via webhooks, scores artists on engagement rather than genre tags, and progressively unlocks Lidarr albums as your listening signals strengthen. A different philosophy: it learns from *how* you listen, not what an AI thinks you'd like.
 - [**Aurral**](https://github.com/lklynet/aurral) -- artist discovery and request manager for Lidarr with Last.fm tag similarity and Weekly Flow playlists via Soulseek/Navidrome. Clean UI, fast-growing community.
 - [**MixArr**](https://github.com/aquantumofdonuts/mixarr) -- the widest net in the space with 56 subscription types across 12 services. If you want to pull from Spotify, TIDAL, Bandcamp, Discogs, and more all at once, MixArr is your tool.
 - [**Sonobarr**](https://github.com/Dodelidoo-Labs/sonobarr) -- Last.fm discovery in batch queues with an optional AI assistant. Real-time Socket.IO UI. Growing fast.
