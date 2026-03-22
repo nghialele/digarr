@@ -290,6 +290,17 @@ function ActionButtons({
   if (isPending) {
     return (
       <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
+          onClick={(e) => {
+            stop(e)
+            onReject(rec.id)
+          }}
+        >
+          Reject
+        </Button>
         {approveNode ??
           (targets && targets.length > 1 ? (
             <ApproveDropdown
@@ -311,17 +322,6 @@ function ActionButtons({
               Approve
             </Button>
           ))}
-        <Button
-          size="sm"
-          variant="outline"
-          className="text-reject border-reject/40 hover:bg-reject/10 hover:text-reject"
-          onClick={(e) => {
-            stop(e)
-            onReject(rec.id)
-          }}
-        >
-          Reject
-        </Button>
       </div>
     )
   }
