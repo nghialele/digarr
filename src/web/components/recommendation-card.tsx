@@ -27,6 +27,7 @@ export type Recommendation = {
     genres: string[] | null
     tags: string[] | null
     imageUrl: string | null
+    logoUrl?: string | null
     streamingUrls: Record<string, string> | null
   }
 }

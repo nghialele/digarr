@@ -38,6 +38,7 @@ const mockArtist = {
   tags: null,
   genres: null,
   imageUrl: null,
+  logoUrl: null,
   streamingUrls: null,
   imageFailedAt: null,
   cachedAt: new Date('2024-01-01'),

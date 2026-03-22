@@ -11,6 +11,7 @@ export type ArtistInsert = {
   tags?: string[] | null
   genres?: string[] | null
   imageUrl?: string | null
+  logoUrl?: string | null
   imageFailed?: boolean
   streamingUrls?: Record<string, string> | null
 }
@@ -35,6 +36,7 @@ export async function upsertArtist(db: Database, artist: ArtistInsert): Promise<
         tags: sql`COALESCE(excluded.tags, ${artists.tags})`,
         genres: sql`COALESCE(excluded.genres, ${artists.genres})`,
         imageUrl: sql`COALESCE(excluded.image_url, ${artists.imageUrl})`,
+        logoUrl: sql`COALESCE(excluded.logo_url, ${artists.logoUrl})`,
         streamingUrls: sql`COALESCE(excluded.streaming_urls, ${artists.streamingUrls})`,
         // Clear negative cache when image found; set it when lookup failed; preserve otherwise
         imageFailedAt: artist.imageUrl

@@ -98,6 +98,7 @@ export const artists = pgTable('artists', {
   tags: text('tags').array(),
   genres: text('genres').array(),
   imageUrl: text('image_url'),
+  logoUrl: text('logo_url'),
   streamingUrls: jsonb('streaming_urls').$type<Record<string, string>>(),
   imageFailedAt: timestamp('image_failed_at', { withTimezone: true }),
   cachedAt: timestamp('cached_at', { withTimezone: true }),

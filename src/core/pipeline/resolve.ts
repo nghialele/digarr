@@ -190,6 +190,7 @@ async function buildResolvedArtist(
     tags,
     genres: tags,
     imageUrl: imageResult.url,
+    logoUrl: imageResult.logoUrl,
     imageFailed: imageResult.failed,
     streamingUrls,
     suggestedAlbum,
@@ -200,7 +201,7 @@ async function buildResolvedArtist(
 async function fetchLidarrImage(
   mbid: string,
   lidarr?: LidarrLookupClient | null,
-): Promise<{ url?: string; failed: boolean }> {
+): Promise<{ url?: string; logoUrl?: string; failed: boolean }> {
   if (!lidarr) return { failed: false }
 
   try {
@@ -210,14 +211,20 @@ async function fetchLidarrImage(
       | undefined
     if (!artist?.images?.length) return { failed: true }
 
+    // Grab clearlogo separately
+    const logo = artist.images.find((i) => i.coverType === 'clearlogo' && i.remoteUrl)
+    const logoUrl = logo?.remoteUrl
+
     // Prefer poster/artistthumb, then fanart
     for (const type of ['poster', 'fanart', 'banner']) {
       const img = artist.images.find((i) => i.coverType === type && i.remoteUrl)
-      if (img?.remoteUrl) return { url: img.remoteUrl, failed: false }
+      if (img?.remoteUrl) return { url: img.remoteUrl, logoUrl, failed: false }
     }
-    // Fall back to any image with a remoteUrl
-    const any = artist.images.find((i) => i.remoteUrl)
-    return any?.remoteUrl ? { url: any.remoteUrl, failed: false } : { failed: true }
+    // Fall back to any non-clearlogo image with a remoteUrl
+    const any = artist.images.find((i) => i.coverType !== 'clearlogo' && i.remoteUrl)
+    return any?.remoteUrl
+      ? { url: any.remoteUrl, logoUrl, failed: false }
+      : { logoUrl, failed: true }
   } catch {
     return { failed: true }
   }

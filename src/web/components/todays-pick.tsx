@@ -15,6 +15,7 @@ export type Recommendation = {
     mbid?: string
     genres?: string[] | null
     imageUrl?: string | null
+    logoUrl?: string | null
     streamingUrls?: Record<string, string> | null
   }
 }
@@ -145,9 +146,23 @@ export function TodaysPick({
           <span className="text-white/50 text-[9px] ml-1 uppercase tracking-wider">match</span>
         </div>
 
-        {/* Artist name */}
+        {/* Artist name / logo */}
         <div className="absolute bottom-3 left-4 right-4">
-          <h3 className="text-white font-bold text-xl leading-tight drop-shadow-lg truncate">
+          {artist.logoUrl ? (
+            <img
+              src={artist.logoUrl}
+              alt={artist.name}
+              className="h-10 max-w-[70%] object-contain object-left drop-shadow-lg"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const sibling = e.currentTarget.nextElementSibling
+                if (sibling) sibling.classList.remove('hidden')
+              }}
+            />
+          ) : null}
+          <h3
+            className={`text-white font-bold text-xl leading-tight drop-shadow-lg truncate${artist.logoUrl ? ' hidden' : ''}`}
+          >
             {artist.name}
           </h3>
         </div>

@@ -18,6 +18,7 @@ export interface StoreDb {
     tags: string[]
     genres: string[]
     imageUrl?: string
+    logoUrl?: string
     imageFailed?: boolean
     streamingUrls: Record<string, string>
   }) => Promise<{ id: number }>
@@ -79,6 +80,7 @@ export async function store(
         tags: artist.tags,
         genres: artist.genres,
         imageUrl: artist.imageUrl,
+        logoUrl: artist.logoUrl,
         imageFailed: artist.imageFailed,
         streamingUrls: artist.streamingUrls,
       })
