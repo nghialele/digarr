@@ -1,8 +1,14 @@
 # Screenshots
 
-## Dashboard
+All screenshots use the Youtarr theme.
 
-![Dashboard](screenshots/dashboard-light.png)
+## Dashboard (dark)
+
+![Dashboard](screenshots/dashboard-dark.png)
+
+## Dashboard (light)
+
+![Dashboard Light](screenshots/dashboard-light.png)
 
 ## Discover
 
@@ -12,9 +18,21 @@
 
 ![Genres](screenshots/genres.png)
 
-## Library
+## Genre Detail
 
-![Library](screenshots/library.png)
+![Genre Detail](screenshots/genre-detail.png)
+
+## Playlists
+
+![Playlists](screenshots/playlists.png)
+
+## Subscriptions
+
+![Subscriptions](screenshots/subscriptions.png)
+
+## Library Health
+
+![Library Health](screenshots/library-health.png)
 
 ## Analytics
 
@@ -23,3 +41,7 @@
 ## Settings
 
 ![Settings](screenshots/settings.png)
+
+## User Management
+
+![User Management](screenshots/users.png)
