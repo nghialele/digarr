@@ -1,6 +1,7 @@
 import { QueryClientProvider, useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
+  ChevronDown,
   Compass,
   HeartPulse,
   LayoutDashboard,
@@ -16,7 +17,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { VERSION } from '@/version'
 import { AuthGate } from './components/auth-gate'
@@ -88,6 +89,70 @@ function MobileMenuIcon({ open }: { open: boolean }) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
       )}
     </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Nav dropdown
+// ---------------------------------------------------------------------------
+
+function NavDropdown({ label, icon, items }: {
+  label: string
+  icon: React.ReactNode
+  items: { to: string; label: string; icon: React.ReactNode }[]
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const location = useLocation()
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [open])
+
+  const isActive = items.some((item) => {
+    const path = item.to.split('?')[0]
+    return location.pathname === path || location.pathname.startsWith(path + '/')
+  })
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1 text-sm transition-colors ${isActive ? 'text-accent' : 'text-muted hover:text-text'}`}
+      >
+        {icon} {label}
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-2 w-48 bg-surface border border-border rounded-lg shadow-lg py-1 z-50">
+          {items.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => setOpen(false)}
+              className={({ isActive: active }) =>
+                `flex items-center gap-2 px-3 py-2 text-sm transition-colors ${active ? 'text-accent bg-accent/5' : 'text-text hover:bg-bg'}`
+              }
+            >
+              {item.icon} {item.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -303,73 +368,36 @@ function AppShell({ children }: { children: React.ReactNode }) {
     >
       <div className="min-h-screen bg-bg">
         <nav className="border-b border-border px-4 sm:px-6 py-3" aria-label="Main navigation">
-          <div className="flex items-center justify-between">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-6">
               <NavLink to="/" className="text-xl font-bold text-accent hover:opacity-90">
                 digarr
               </NavLink>
-              {/* Desktop nav links */}
-              <div className="hidden sm:flex items-center gap-6">
+              {/* Desktop nav links -- grouped */}
+              <div className="hidden sm:flex items-center gap-4">
                 <NavLink to="/" end className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <LayoutDashboard size={14} aria-hidden="true" />
                     Dashboard
                   </span>
                 </NavLink>
-                <NavLink to="/discover" className={navLinkClass}>
-                  <span className="flex items-center gap-1">
-                    <Compass size={14} aria-hidden="true" />
-                    Discover
-                  </span>
-                </NavLink>
-                <NavLink to="/genres" className={navLinkClass}>
-                  <span className="flex items-center gap-1">
-                    <Music size={14} aria-hidden="true" />
-                    Genres
-                  </span>
-                </NavLink>
-                <NavLink to="/playlists" className={navLinkClass}>
-                  <span className="flex items-center gap-1">
-                    <ListMusic size={14} aria-hidden="true" />
-                    Playlists
-                  </span>
-                </NavLink>
-                <NavLink to="/subscriptions" className={navLinkClass}>
-                  <span className="flex items-center gap-1">
-                    <Monitor size={14} aria-hidden="true" />
-                    Subscriptions
-                  </span>
-                </NavLink>
+                <NavDropdown label="Discover" icon={<Compass size={14} aria-hidden="true" />} items={[
+                  { to: '/discover', label: 'Recommendations', icon: <Compass size={14} /> },
+                  { to: '/genres', label: 'Genres', icon: <Music size={14} /> },
+                  { to: '/subscriptions', label: 'Subscriptions', icon: <Monitor size={14} /> },
+                  { to: '/playlists', label: 'Playlists', icon: <ListMusic size={14} /> },
+                ]} />
                 {currentUser?.isAdmin && (
-                  <NavLink to="/library/health" className={navLinkClass}>
-                    <span className="flex items-center gap-1">
-                      <HeartPulse size={14} aria-hidden="true" />
-                      Library
-                    </span>
-                  </NavLink>
+                  <NavDropdown label="Library" icon={<HeartPulse size={14} aria-hidden="true" />} items={[
+                    { to: '/library/health', label: 'Health', icon: <HeartPulse size={14} /> },
+                    { to: '/analytics', label: 'Analytics', icon: <BarChart3 size={14} /> },
+                  ]} />
                 )}
-                {currentUser?.isAdmin && (
-                  <NavLink to="/analytics" className={navLinkClass}>
-                    <span className="flex items-center gap-1">
-                      <BarChart3 size={14} aria-hidden="true" />
-                      Analytics
-                    </span>
-                  </NavLink>
-                )}
-                <NavLink to="/settings" className={navLinkClass}>
-                  <span className="flex items-center gap-1">
-                    <Settings size={14} aria-hidden="true" />
-                    Settings
-                  </span>
-                </NavLink>
-                {currentUser?.isAdmin && (
-                  <NavLink to="/users" className={navLinkClass}>
-                    <span className="flex items-center gap-1">
-                      <Users size={14} aria-hidden="true" />
-                      Users
-                    </span>
-                  </NavLink>
-                )}
+                <NavDropdown label="Settings" icon={<Settings size={14} aria-hidden="true" />} items={[
+                  { to: '/settings?tab=connections', label: 'Connections', icon: <Settings size={14} /> },
+                  { to: '/settings?tab=account', label: 'Account', icon: <Users size={14} /> },
+                  ...(currentUser?.isAdmin ? [{ to: '/users', label: 'User Management', icon: <Users size={14} /> }] : []),
+                ]} />
               </div>
             </div>
             <div className="flex items-center gap-2">
