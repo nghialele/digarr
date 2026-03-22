@@ -5,7 +5,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-836_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-962_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **AI-powered music discovery for your *arr stack.** Digarr analyzes your listening history from ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, or Discogs, finds similar artists using MusicBrainz and AI, scores and ranks them, and lets you approve recommendations -- optionally adding them straight to Lidarr, or curating a personal list to export.
@@ -42,8 +42,9 @@ Digarr takes a different approach with a **7-stage weighted scoring pipeline** t
 - **Smart scoring** -- weighted composite across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity; configurable weights, thresholds, and cooldowns. Auto-approve mode can automatically add high-scoring recommendations to your targets after each scan
 - **Mood discovery** -- free-text prompt discovery ("find me something like Boards of Canada but darker") powered by the same AI provider, with instant results right from the Discover page
 - **Lidarr-optional** -- approve recommendations into Lidarr, or run in discovery-only mode without Lidarr. Setup wizard lets you choose. Per-artist Lidarr profile/root folder selection on approve. Export your curated list as JSON, CSV, M3U, or XSPF (XSPF includes artist images, AI reasoning annotations, streaming links, and MusicBrainz metadata per track)
-- **Target registry** -- pluggable approval targets: Lidarr (download + monitor) and Spotify Playlist (push approved artists to a Spotify playlist via OAuth). Configure and test targets from Settings
-- **Spotify playlist push** -- connect Spotify via OAuth and auto-create a playlist target. Approved recommendations get pushed directly to a Spotify playlist
+- **Auto-playlists ("Digarr Digest")** -- automatically generate curated playlists from your approved recommendations and push them to Navidrome, Jellyfin, Plex, or Spotify. Four strategies: Weekly Digest (top recent picks), Genre Focus (single-genre deep dive), Mood Mix (vibe-based), and Rediscover (forgotten gems). Separate schedule from the main pipeline
+- **Target registry** -- pluggable approval targets: Lidarr (download + monitor), Spotify Playlist (push to playlist via OAuth), Navidrome/Jellyfin/Plex (playlist push via API). Configure and test targets from Settings
+- **OIDC/SSO authentication** -- sign in via Authentik, Authelia, Keycloak, Google, or any OIDC provider. Reverse proxy header auth (X-Forwarded-User) also supported. Local auth remains available as fallback
 - **Feedback insights** -- see how your approval patterns shape future recommendations with a genre-level feedback panel on the Discover page
 - **Artist enrichment** -- images (fanart.tv via Lidarr) with negative cache TTL (auto-retries after 7 days), streaming links (Spotify, YouTube, Deezer), MusicBrainz metadata; optional Spotify genre/popularity enrichment via [MusicMoveArr](https://github.com/MusicMoveArr/Datasets) dataset import
 - **Music previews** -- play Spotify embeds, Deezer 30-sec clips, or YouTube previews directly from recommendation cards
