@@ -8,7 +8,6 @@ import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
-import { runGenreSubscription, runSimilarSubscription } from './core/genre/subscription-runner'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
 import { getValidToken } from './core/oauth'
@@ -24,6 +23,14 @@ import { createListenBrainzSource } from './core/plugins/listenbrainz'
 import { SourceRegistry } from './core/plugins/registry'
 import { createDefaultRegistry } from './core/providers/registry'
 import { setSessionStore } from './core/sessions'
+import { createGenreAdapter } from './core/subscriptions/adapters/genre'
+import { createSimilarAdapter } from './core/subscriptions/adapters/similar'
+import { AdapterRegistry } from './core/subscriptions/registry'
+import { runSubscription } from './core/subscriptions/runner'
+import type {
+  MusicBrainzClient as SubMBClient,
+  SubscriptionConfig,
+} from './core/subscriptions/types'
 import { createJellyfinPlaylistTarget } from './core/targets/jellyfin-playlist'
 import { createLidarrTarget } from './core/targets/lidarr'
 import { createNavidromePlaylistTarget } from './core/targets/navidrome-playlist'
@@ -120,7 +127,11 @@ const storeDb: StoreDb = {
   insertBatch: async (data) => {
     const rows = await db
       .insert(recommendationBatches)
-      .values({ status: data.status, stats: data.stats, subscriptionId: data.subscriptionId ?? null })
+      .values({
+        status: data.status,
+        stats: data.stats,
+        subscriptionId: data.subscriptionId ?? null,
+      })
       .returning({ id: recommendationBatches.id })
     const row = rows[0]
     if (!row) throw new Error('insertBatch: no row returned')
@@ -285,24 +296,40 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
     sourceRegistry.register(createDiscogsSource(dcToken as string, dcUsername as string))
   }
 
-  const runnerFn = sub.sourceType === 'similar' ? runSimilarSubscription : runGenreSubscription
-  const capability = sub.sourceType === 'similar' ? 'similarArtists' : 'genreArtists'
+  // Build adapter registry from available sources
+  const adapterRegistry = new AdapterRegistry()
+  adapterRegistry.register(createGenreAdapter(sourceRegistry.withCapability('genreArtists')))
+  adapterRegistry.register(createSimilarAdapter(sourceRegistry.withCapability('similarArtists')))
 
-  await runnerFn({
-    subscription: {
-      id: sub.id,
-      userId: sub.userId,
-      sourceConfig: sub.sourceConfig,
-      maxArtistsPerRun: sub.maxArtistsPerRun,
-      scoreThreshold: sub.scoreThreshold,
-      scoringWeightPreset: sub.scoringWeightPreset,
-      scoringWeightOverrides: sub.scoringWeightOverrides,
+  const adapter = adapterRegistry.get(sub.sourceType)
+  if (!adapter) {
+    console.warn(
+      `[subscription-runner] Unknown type '${sub.sourceType}' for subscription ${subscriptionId} -- skipping`,
+    )
+    return
+  }
+
+  const subscriptionConfig: SubscriptionConfig = {
+    id: sub.id,
+    userId: sub.userId,
+    sourceType: sub.sourceType,
+    sourceConfig: sub.sourceConfig,
+    maxArtistsPerRun: sub.maxArtistsPerRun,
+    scoreThreshold: sub.scoreThreshold,
+    scoringWeightPreset: sub.scoringWeightPreset,
+    scoringWeightOverrides: sub.scoringWeightOverrides,
+  }
+
+  await runSubscription(subscriptionConfig, adapter, {
+    db: storeDb,
+    queries: {
+      insertRun: (data) => insertRun(db, data),
+      completeRun: (id, data) => completeRun(db, id, data),
+      updateSubscription: (id, data) => updateSubscription(db, id, data),
     },
-    sources: sourceRegistry.withCapability(capability),
-    mbClient: createMusicBrainzClient(),
-    lidarrClient,
-    storeDb,
-    subscriptionQueries: subscriptionQueriesImpl,
+    mbClient: createMusicBrainzClient() as SubMBClient,
+    lidarr: lidarrClient ?? undefined,
+    userId: sub.userId ?? undefined,
     libraryMbids: new Set<string>(),
     libraryGenres: [],
     rejectedMbids,
