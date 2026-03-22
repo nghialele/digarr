@@ -1,0 +1,154 @@
+// @vitest-environment node
+import * as http from 'node:http'
+import type { AddressInfo } from 'node:net'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { createDeezerClient } from '@/core/clients/deezer'
+
+let server: http.Server
+let baseUrl: string
+
+function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
+  const payload = JSON.stringify(body)
+  res.writeHead(status, { 'Content-Type': 'application/json' })
+  res.end(payload)
+}
+
+beforeAll(async () => {
+  server = http.createServer((req, res) => {
+    const parsed = new URL(req.url ?? '/', `http://localhost`)
+    const path = parsed.pathname
+
+    if (path === '/search/artist') {
+      const q = parsed.searchParams.get('q') ?? ''
+
+      if (q === 'fail') {
+        res.writeHead(500, { 'Content-Type': 'text/plain' })
+        res.end('server error')
+        return
+      }
+
+      if (q === 'apierror') {
+        sendJson(res, 200, {
+          data: [],
+          error: { type: 'Exception', message: 'Service Unavailable', code: 700 },
+        })
+        return
+      }
+
+      sendJson(res, 200, {
+        data: [
+          {
+            id: 1234,
+            name: 'Portishead',
+            nb_fan: 500000,
+            picture_medium: 'https://cdn.deezer.com/portishead.jpg',
+            link: 'https://www.deezer.com/artist/1234',
+          },
+          {
+            id: 5678,
+            name: 'Massive Attack',
+            nb_fan: 750000,
+            picture_medium: '',
+            link: 'https://www.deezer.com/artist/5678',
+          },
+        ],
+        total: 2,
+      })
+      return
+    }
+
+    res.writeHead(404, { 'Content-Type': 'text/plain' })
+    res.end('not found')
+  })
+
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const addr = server.address() as AddressInfo
+  baseUrl = `http://127.0.0.1:${addr.port}`
+})
+
+afterAll(() => {
+  server.close()
+})
+
+describe('createDeezerClient', () => {
+  describe('searchArtists(query, limit)', () => {
+    it('returns mapped DeezerSearchResult array on success', async () => {
+      const client = createDeezerClient({ baseUrl })
+      const results = await client.searchArtists('portishead')
+      expect(results).toHaveLength(2)
+      expect(results[0]).toEqual({
+        id: 1234,
+        name: 'Portishead',
+        fans: 500000,
+        imageUrl: 'https://cdn.deezer.com/portishead.jpg',
+        url: 'https://www.deezer.com/artist/1234',
+      })
+    })
+
+    it('omits imageUrl when picture_medium is empty string', async () => {
+      const client = createDeezerClient({ baseUrl })
+      const results = await client.searchArtists('portishead')
+      expect(results[1]?.imageUrl).toBeUndefined()
+    })
+
+    it('returns correct shape with all required fields', async () => {
+      const client = createDeezerClient({ baseUrl })
+      const results = await client.searchArtists('test')
+      for (const r of results) {
+        expect(typeof r.id).toBe('number')
+        expect(typeof r.name).toBe('string')
+        expect(typeof r.fans).toBe('number')
+        expect(typeof r.url).toBe('string')
+      }
+    })
+
+    it('throws on HTTP error', async () => {
+      const client = createDeezerClient({ baseUrl })
+      await expect(client.searchArtists('fail')).rejects.toThrow()
+    })
+
+    it('throws when API returns error field', async () => {
+      const client = createDeezerClient({ baseUrl })
+      await expect(client.searchArtists('apierror')).rejects.toThrow(/Deezer API error/)
+    })
+
+    it('uses provided baseUrl', async () => {
+      const client = createDeezerClient({ baseUrl })
+      const results = await client.searchArtists('portishead')
+      // Results returned from our mock server means baseUrl was used
+      expect(results.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('testConnection()', () => {
+    it('returns success:true when search responds', async () => {
+      const client = createDeezerClient({ baseUrl })
+      const result = await client.testConnection()
+      expect(result.success).toBe(true)
+      expect(typeof result.message).toBe('string')
+    })
+
+    it('includes resultCount in details', async () => {
+      const client = createDeezerClient({ baseUrl })
+      const result = await client.testConnection()
+      expect(result.details).toHaveProperty('resultCount')
+    })
+
+    it('returns success:false when server is unreachable', async () => {
+      const client = createDeezerClient({ baseUrl: 'http://127.0.0.1:1' })
+      const result = await client.testConnection()
+      expect(result.success).toBe(false)
+      expect(typeof result.message).toBe('string')
+    })
+  })
+
+  describe('default baseUrl', () => {
+    it('creates a client without options', () => {
+      expect(() => createDeezerClient()).not.toThrow()
+    })
+
+    it('creates a client with empty options', () => {
+      expect(() => createDeezerClient({})).not.toThrow()
+    })
+  })
+})
