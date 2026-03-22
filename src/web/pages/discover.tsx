@@ -886,7 +886,6 @@ export function DiscoverPage() {
                   {bulkMode ? 'Cancel' : 'Select'}
                 </button>
                 {filter === 'pending' && (
-                  <>
                     <button
                       type="button"
                       onClick={handleClearAll}
@@ -895,7 +894,6 @@ export function DiscoverPage() {
                     >
                       Clear All
                     </button>
-                  </>
                 )}
               </>
             )}
