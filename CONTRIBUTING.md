@@ -3,12 +3,20 @@
 ## Dev setup
 
 ```sh
-git clone https://github.com/your-org/digarr.git
+git clone https://github.com/iuliandita/digarr.git
 cd digarr
 bun install
 ```
 
-Start PostgreSQL (requires Docker):
+The fastest way to get a dev environment running:
+
+```sh
+./scripts/dev-setup.sh
+```
+
+This starts PostgreSQL in Docker, installs deps, runs migrations, and copies `.env.example`.
+
+Or set it up manually:
 
 ```sh
 docker run -d \
@@ -20,13 +28,6 @@ docker run -d \
   postgres:17-alpine
 ```
 
-Or use the Compose file:
-
-```sh
-# From deploy/docker -- only starts the postgres service
-docker compose up postgres -d
-```
-
 Copy the env file and set your API keys:
 
 ```sh
@@ -34,14 +35,13 @@ cp .env.example .env
 # edit .env with your Lidarr URL/key, Last.fm key, etc.
 ```
 
-Run migrations and start the dev server:
+Run migrations and start the dev servers:
 
 ```sh
 bun run db:migrate
-bun run dev
+bun run dev          # backend on :3000
+bun run dev:web      # frontend on :5173 (proxies /api to :3000)
 ```
-
-The app is now at http://localhost:3000.
 
 ---
 
