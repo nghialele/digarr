@@ -12,7 +12,7 @@ import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { GenreService } from './core/genre/service'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
-import { getValidToken } from './core/oauth'
+import { resolveSpotifyToken } from './core/spotify-auth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
@@ -354,21 +354,7 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
     if (userId !== null && userId !== undefined) {
       const spotifyOAuthRow = await getOAuthToken(db, userId, 'spotify')
       if (spotifyOAuthRow) {
-        const getToken = async (): Promise<string> => {
-          const oauthRow = await getOAuthToken(db, userId, 'spotify')
-          if (!oauthRow) throw new Error('No Spotify OAuth token -- connect Spotify in Settings')
-          if (oauthRow.clientId && oauthRow.clientSecret) {
-            const token = await getValidToken(db, userId, 'spotify', {
-              tokenEndpoint: 'https://accounts.spotify.com/api/token',
-              clientId: oauthRow.clientId,
-              clientSecret: oauthRow.clientSecret,
-            })
-            if (!token) throw new Error('Spotify OAuth token expired and could not be refreshed')
-            return token
-          }
-          // No refresh config available -- return the stored access token as-is
-          return oauthRow.accessToken
-        }
+        const getToken = () => resolveSpotifyToken(db, userId)
         adapterRegistry.register(createSpotifyPlaylistAdapter({ getToken }))
         adapterRegistry.register(createSpotifyChartsAdapter({ getToken }))
       }
@@ -625,21 +611,7 @@ const app = createApp({
       if (row.type === 'spotify-playlist') {
         targets.push(
           createSpotifyPlaylistTarget(row.id, {
-            getAccessToken: async () => {
-              const oauthRow = await getOAuthToken(db, userId, 'spotify')
-              if (!oauthRow || !oauthRow.clientId || !oauthRow.clientSecret) {
-                throw new Error('No Spotify OAuth token -- connect Spotify in Settings')
-              }
-              const token = await getValidToken(db, userId, 'spotify', {
-                tokenEndpoint: 'https://accounts.spotify.com/api/token',
-                clientId: oauthRow.clientId,
-                clientSecret: oauthRow.clientSecret,
-              })
-              if (!token) {
-                throw new Error('Spotify OAuth token expired and could not be refreshed')
-              }
-              return token
-            },
+            getAccessToken: () => resolveSpotifyToken(db, userId),
           }),
         )
       }
@@ -688,21 +660,7 @@ const app = createApp({
         if (spotifyOAuth) {
           sources.push(
             createSpotifySearchSource({
-              getToken: async () => {
-                const oauthRow = await getOAuthToken(db, searchUserId, 'spotify')
-                if (!oauthRow) throw new Error('No Spotify OAuth token')
-                if (oauthRow.clientId && oauthRow.clientSecret) {
-                  const token = await getValidToken(db, searchUserId, 'spotify', {
-                    tokenEndpoint: 'https://accounts.spotify.com/api/token',
-                    clientId: oauthRow.clientId,
-                    clientSecret: oauthRow.clientSecret,
-                  })
-                  if (!token)
-                    throw new Error('Spotify OAuth token expired and could not be refreshed')
-                  return token
-                }
-                return oauthRow.accessToken
-              },
+              getToken: () => resolveSpotifyToken(db, searchUserId),
             }),
           )
         }

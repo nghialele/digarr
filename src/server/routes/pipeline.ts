@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
-import { getValidToken } from '@/core/oauth'
+import { resolveSpotifyToken } from '@/core/spotify-auth'
 import type { AutoApproveDeps } from '@/core/pipeline/auto-approve'
 import { filter } from '@/core/pipeline/filter'
 import type { PipelineDeps } from '@/core/pipeline/orchestrator'
@@ -10,7 +10,6 @@ import { resolve } from '@/core/pipeline/resolve'
 import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
 import { upsertArtist } from '@/db/queries/artists'
-import { getOAuthToken } from '@/db/queries/oauth-tokens'
 import { getUserById, getUserConnections } from '@/db/queries/users'
 import { mergePreferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
@@ -36,21 +35,10 @@ export function pipelineRoutes(deps: AppDependencies) {
     // Resolve Spotify OAuth token if connected
     let spotifyAccessToken: string | null = null
     if (userId) {
-      const oauthToken = await getOAuthToken(deps.db, userId, 'spotify')
-      if (
-        oauthToken?.clientId &&
-        oauthToken?.clientSecret &&
-        !oauthToken.accessToken.startsWith('pending:')
-      ) {
-        try {
-          spotifyAccessToken = await getValidToken(deps.db, userId, 'spotify', {
-            tokenEndpoint: 'https://accounts.spotify.com/api/token',
-            clientId: oauthToken.clientId,
-            clientSecret: oauthToken.clientSecret,
-          })
-        } catch {
-          // Best-effort -- continue without Spotify
-        }
+      try {
+        spotifyAccessToken = await resolveSpotifyToken(deps.db, userId)
+      } catch {
+        // Best-effort -- continue without Spotify
       }
     }
 
