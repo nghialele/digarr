@@ -120,8 +120,7 @@ export function oauthRoutes(deps: AppDependencies) {
         })
 
         if (!tokenRes.ok) {
-          const errorBody = await tokenRes.text()
-          console.error(`Spotify token exchange failed: ${tokenRes.status} ${errorBody}`)
+          console.error(`Spotify token exchange failed: ${tokenRes.status}`)
           return c.redirect('/settings?oauth_error=token_exchange_failed')
         }
 
@@ -156,7 +155,7 @@ export function oauthRoutes(deps: AppDependencies) {
               userId,
             })
           }
-        } catch (err) {
+        } catch (err: unknown) {
           console.error('Failed to auto-create Spotify target:', err)
           // Non-fatal -- OAuth succeeded, target creation is best-effort
         }

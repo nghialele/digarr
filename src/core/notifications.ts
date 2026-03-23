@@ -13,23 +13,27 @@ export type WebhookPayload = {
   timestamp: string
 }
 
+function isPrivateIp(address: string): boolean {
+  if (/^127\./.test(address)) return true
+  if (/^10\./.test(address)) return true
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(address)) return true
+  if (/^192\.168\./.test(address)) return true
+  if (/^169\.254\./.test(address)) return true
+  if (address === '0.0.0.0') return true
+  if (address === '::1') return true
+  if (/^f[cd]/i.test(address)) return true
+  if (/^fe80/i.test(address)) return true
+  return false
+}
+
 export function isPrivateUrl(urlString: string): boolean {
   try {
     const url = new URL(urlString)
     const hostname = url.hostname
-    // IPv4 private ranges
-    if (/^127\./.test(hostname)) return true
-    if (/^10\./.test(hostname)) return true
-    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true
-    if (/^192\.168\./.test(hostname)) return true
-    if (/^169\.254\./.test(hostname)) return true // link-local / cloud metadata
-    if (hostname === '0.0.0.0') return true
-    // IPv6 loopback and private (hostname includes brackets for IPv6)
+    if (isPrivateIp(hostname)) return true
+    // IPv6 (hostname includes brackets)
     const bare = hostname.replace(/^\[|\]$/g, '')
-    if (bare === '::1') return true
-    if (/^f[cd]/i.test(bare)) return true
-    if (/^fe80/i.test(bare)) return true // link-local IPv6
-    // localhost
+    if (isPrivateIp(bare)) return true
     if (hostname === 'localhost') return true
     return false
   } catch {
@@ -66,26 +70,6 @@ function formatDiscordPayload(payload: WebhookPayload): Record<string, unknown> 
   }
 }
 
-/** Resolve hostname and check if the resolved IP is private (DNS rebinding mitigation). */
-async function resolvedIpIsPrivate(hostname: string): Promise<boolean> {
-  try {
-    const { address } = await lookup(hostname)
-    return (
-      /^127\./.test(address) ||
-      /^10\./.test(address) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(address) ||
-      /^192\.168\./.test(address) ||
-      /^169\.254\./.test(address) ||
-      address === '0.0.0.0' ||
-      address === '::1' ||
-      /^f[cd]/i.test(address) ||
-      /^fe80/i.test(address)
-    )
-  } catch {
-    return true // unresolvable = reject
-  }
-}
-
 export async function sendWebhook(url: string, payload: WebhookPayload): Promise<void> {
   if (!isHttpUrl(url)) {
     console.error('Webhook URL must use http:// or https://')
@@ -99,7 +83,8 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
   // DNS rebinding mitigation: verify the resolved IP is also not private
   try {
     const hostname = new URL(url).hostname
-    if (await resolvedIpIsPrivate(hostname)) {
+    const { address } = await lookup(hostname)
+    if (isPrivateIp(address)) {
       console.error('Webhook URL resolves to a private/internal IP address')
       return
     }
@@ -120,6 +105,7 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: controller.signal,
+      redirect: 'manual',
     })
     if (!res.ok) {
       console.error(`Webhook POST to ${safeUrl} failed: HTTP ${res.status}`)

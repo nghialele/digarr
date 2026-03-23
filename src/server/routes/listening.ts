@@ -52,7 +52,7 @@ export function listeningRoutes(deps: AppDependencies) {
             source: 'lastfm',
           })
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn('[listening] Last.fm fetch failed:', err)
       }
     }
@@ -70,7 +70,7 @@ export function listeningRoutes(deps: AppDependencies) {
             mbid: a.mbid,
           })
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn('[listening] ListenBrainz fetch failed:', err)
       }
     }

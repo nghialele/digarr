@@ -172,7 +172,7 @@ export function createApp(deps: AppDependencies) {
   app.use(
     '*',
     cors({
-      origin: envConfig.allowedOrigin ?? (process.env.NODE_ENV === 'production' ? 'null' : '*'),
+      origin: envConfig.allowedOrigin ?? (process.env.NODE_ENV === 'production' ? () => undefined : '*'),
     }),
   )
   app.use(
@@ -254,6 +254,7 @@ export function createApp(deps: AppDependencies) {
   // Rate limit auth endpoints: 10 attempts per minute for login/register
   app.use('/api/auth/login', rateLimiter({ windowMs: 60_000, max: 10, keyPrefix: 'auth' }))
   app.use('/api/auth/register', rateLimiter({ windowMs: 60_000, max: 5, keyPrefix: 'reg' }))
+  app.use('/api/auth/change-password', rateLimiter({ windowMs: 60_000, max: 5, keyPrefix: 'chpw' }))
   app.route('/', authRoutes(deps))
   app.route('/', oauthRoutes(deps))
   app.route('/', healthRoutes({ db: deps.db }))

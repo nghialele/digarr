@@ -9,6 +9,7 @@ import { resolve } from '@/core/pipeline/resolve'
 import { score } from '@/core/pipeline/score'
 import { store } from '@/core/pipeline/store'
 import { resolveSpotifyToken } from '@/core/spotify-auth'
+import { errMsg } from '@/core/validation'
 import { upsertArtist } from '@/db/queries/artists'
 import { getUserById, getUserConnections } from '@/db/queries/users'
 import { mergePreferences } from '@/db/schema'
@@ -174,10 +175,7 @@ export function pipelineRoutes(deps: AppDependencies) {
             const similar = await lfm.getSimilarArtists(artistName)
             discovered.push(...similar)
           } catch (err: unknown) {
-            console.warn(
-              'Last.fm similar artists lookup failed:',
-              err instanceof Error ? err.message : err,
-            )
+            console.warn('Last.fm similar artists lookup failed:', errMsg(err))
           }
         }
 
@@ -203,7 +201,7 @@ export function pipelineRoutes(deps: AppDependencies) {
               })
             }
           } catch (err: unknown) {
-            console.warn('AI recommendation failed:', err instanceof Error ? err.message : err)
+            console.warn('AI recommendation failed:', errMsg(err))
           }
         }
 
@@ -322,12 +320,12 @@ export function pipelineRoutes(deps: AppDependencies) {
           } catch (err: unknown) {
             console.warn(
               'MusicBrainz disambiguation lookup failed:',
-              err instanceof Error ? err.message : err,
+              errMsg(err),
             )
           }
         }
       } catch (err: unknown) {
-        console.warn('Rescan failed for artist:', err instanceof Error ? err.message : err)
+        console.warn('Rescan failed for artist:', errMsg(err))
       }
     }
 
