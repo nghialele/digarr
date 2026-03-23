@@ -8,6 +8,7 @@ const mockDeps = {
   getRecommendation: vi.fn(),
   updateRecommendationStatus: vi.fn().mockResolvedValue(undefined),
   bulkUpdateStatus: vi.fn().mockResolvedValue(undefined),
+  filterOwnedIds: vi.fn(async (ids: number[]) => ids),
   listRecommendations: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   getSettings: vi.fn().mockResolvedValue({ preferences: {} }),
   skyhookWarmer: null,

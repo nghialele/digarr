@@ -1,4 +1,8 @@
-import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
+import type {
+  AdapterConfigField,
+  AdapterResult,
+  SubscriptionAdapter,
+} from '@/core/subscriptions/types'
 import { extractArtistsFromPlaylist } from './spotify-shared'
 
 const CONFIG_FIELDS: AdapterConfigField[] = [
@@ -16,11 +20,11 @@ const CONFIG_FIELDS: AdapterConfigField[] = [
 function extractPlaylistId(raw: string): string {
   // spotify:playlist:ID
   const uriMatch = raw.match(/spotify:playlist:([A-Za-z0-9]+)/)
-  if (uriMatch) return uriMatch[1]!
+  if (uriMatch?.[1]) return uriMatch[1]
 
   // https://open.spotify.com/playlist/ID or open.spotify.com/playlist/ID
   const urlMatch = raw.match(/\/playlist\/([A-Za-z0-9]+)/)
-  if (urlMatch) return urlMatch[1]!
+  if (urlMatch?.[1]) return urlMatch[1]
 
   // bare ID
   return raw.trim()

@@ -90,7 +90,13 @@ export interface MusicBrainzClient {
 
 /** Minimal Lidarr lookup interface used by the runner. */
 export interface LidarrLookupClient {
-  lookupArtist(term: string): Promise<Array<{ foreignArtistId: string; artistName: string; images?: Array<{ url: string; coverType: string }> }>>
+  lookupArtist(term: string): Promise<
+    Array<{
+      foreignArtistId: string
+      artistName: string
+      images?: Array<{ url: string; coverType: string }>
+    }>
+  >
 }
 
 /** All dependencies the generic subscription runner needs. */

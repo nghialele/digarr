@@ -4,7 +4,11 @@ import type { ScoredArtist } from '@/core/types'
 export interface StoreDb {
   getExistingRecommendationMbids: () => Promise<Set<string>>
 
-  insertBatch: (data: { status: string; stats: Record<string, unknown>; subscriptionId?: number }) => Promise<{ id: number }>
+  insertBatch: (data: {
+    status: string
+    stats: Record<string, unknown>
+    subscriptionId?: number
+  }) => Promise<{ id: number }>
 
   completeBatch: (
     id: number,

@@ -82,7 +82,13 @@ async function executePipeline(
   const weights = resolveWeights(weightPreset, subscription.scoringWeightOverrides)
   const scored = score(resolved, deps.libraryGenres, weights, deps.feedbackHistory)
   const threshold = subscription.scoreThreshold ?? deps.defaultScoreThreshold
-  const filtered = filter(scored, deps.libraryMbids, deps.rejectedMbids, deps.cooldownDays, threshold)
+  const filtered = filter(
+    scored,
+    deps.libraryMbids,
+    deps.rejectedMbids,
+    deps.cooldownDays,
+    threshold,
+  )
 
   let batchId: number | undefined
   if (filtered.length > 0) {

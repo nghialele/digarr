@@ -35,7 +35,7 @@ async function resolveFromLocal(
       localPath: t.path,
       source: 'local' as const,
     }))
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('[track-resolver]', error)
     return []
   }
@@ -59,7 +59,7 @@ async function resolveFromSpotify(
         spotifyUri: t.uri,
         source: 'spotify' as const,
       }))
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('[track-resolver]', error)
     return []
   }
@@ -81,7 +81,7 @@ async function resolveFromMusicBrainz(
       mbid: r.id,
       source: 'musicbrainz' as const,
     }))
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('[track-resolver]', error)
     return []
   }

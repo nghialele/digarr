@@ -83,6 +83,7 @@ export type AppDependencies = {
     extra?: StatusUpdateExtra,
   ) => Promise<void>
   bulkUpdateStatus: (ids: number[], status: string) => Promise<void>
+  filterOwnedIds: (ids: number[], userId: number | undefined) => Promise<number[]>
   // Batch query functions
   listBatches: () => Promise<unknown[]>
   getBatch: (id: number) => Promise<unknown | null>
@@ -179,6 +180,16 @@ export function createApp(deps: AppDependencies) {
       xContentTypeOptions: 'nosniff',
       referrerPolicy: 'strict-origin-when-cross-origin',
       crossOriginOpenerPolicy: 'same-origin',
+      strictTransportSecurity: 'max-age=31536000; includeSubDomains',
+      contentSecurityPolicy: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'https:'],
+        fontSrc: ["'self'"],
+        frameSrc: ["'self'", 'https://open.spotify.com'],
+      },
     }),
   )
   app.use(

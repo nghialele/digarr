@@ -48,7 +48,8 @@ function parseHeader(line: string): Record<string, number> {
   const cols = line.split(',').map((c) => c.trim().toLowerCase())
   const map: Record<string, number> = {}
   for (let i = 0; i < cols.length; i++) {
-    map[cols[i]!] = i
+    const col = cols[i]
+    if (col) map[col] = i
   }
   return map
 }

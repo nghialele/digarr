@@ -114,6 +114,6 @@ describe('GET /api/search', () => {
     const res = await app.request('/api/search?q=test')
     expect(res.status).toBe(500)
     const body = (await res.json()) as { error: string }
-    expect(body.error).toMatch(/upstream failure/)
+    expect(body.error).toBe('Search failed')
   })
 })

@@ -1,4 +1,5 @@
 import { and, eq, like } from 'drizzle-orm'
+import { decryptField, encryptField } from '@/core/crypto'
 import type { Database } from '@/db'
 import { oauthTokens } from '@/db/schema'
 
@@ -6,6 +7,15 @@ type OAuthTokenRow = typeof oauthTokens.$inferSelect
 type OAuthTokenInsert = typeof oauthTokens.$inferInsert
 
 export type { OAuthTokenInsert, OAuthTokenRow }
+
+function decryptOAuthRow(row: OAuthTokenRow): OAuthTokenRow {
+  return {
+    ...row,
+    accessToken: decryptField(row.accessToken) ?? row.accessToken,
+    refreshToken: decryptField(row.refreshToken) ?? row.refreshToken,
+    clientSecret: decryptField(row.clientSecret) ?? row.clientSecret,
+  }
+}
 
 export async function getOAuthToken(
   db: Database,
@@ -17,31 +27,42 @@ export async function getOAuthToken(
     .from(oauthTokens)
     .where(and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, provider)))
     .limit(1)
-  return row ?? null
+  if (!row) return null
+  return decryptOAuthRow(row)
 }
 
 export async function upsertOAuthToken(
   db: Database,
   data: OAuthTokenInsert,
 ): Promise<OAuthTokenRow> {
+  // Don't encrypt pending tokens -- they're searched by prefix and are temporary
+  const isPending = data.accessToken.startsWith('pending:')
+  const values = isPending
+    ? data
+    : {
+        ...data,
+        accessToken: encryptField(data.accessToken) ?? data.accessToken,
+        refreshToken: encryptField(data.refreshToken) ?? data.refreshToken,
+        clientSecret: encryptField(data.clientSecret) ?? data.clientSecret,
+      }
   const [row] = await db
     .insert(oauthTokens)
-    .values(data)
+    .values(values)
     .onConflictDoUpdate({
       target: [oauthTokens.userId, oauthTokens.provider],
       set: {
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
+        accessToken: values.accessToken,
+        refreshToken: values.refreshToken,
         expiresAt: data.expiresAt,
         scopes: data.scopes,
-        clientId: data.clientId,
-        clientSecret: data.clientSecret,
+        clientId: values.clientId,
+        clientSecret: values.clientSecret,
         updatedAt: new Date(),
       },
     })
     .returning()
   if (!row) throw new Error('upsertOAuthToken: no row returned')
-  return row
+  return decryptOAuthRow(row)
 }
 
 /** Find a pending OAuth token by provider and opaque state (stored as `pending:{userId}:{state}`). */

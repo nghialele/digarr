@@ -124,6 +124,11 @@ export function recommendationRoutes(deps: AppDependencies) {
 
     if (!status) return c.json({ error: 'status is required' }, 400)
 
+    // Validate status early -- before any DB work
+    if (status !== 'approved' && status !== 'rejected' && status !== 'pending') {
+      return c.json({ error: `Invalid status: ${status}` }, 400)
+    }
+
     if (status === 'approved') {
       const rec = await deps.getRecommendation(id)
       if (!rec) return c.json({ error: 'Recommendation not found' }, 404)
@@ -174,11 +179,6 @@ export function recommendationRoutes(deps: AppDependencies) {
       })
     }
 
-    const VALID_STATUSES = new Set(['rejected', 'pending', 'approved'])
-    if (!VALID_STATUSES.has(status)) {
-      return c.json({ error: `Invalid status: ${status}` }, 400)
-    }
-
     const rec = await deps.getRecommendation(id)
     if (!rec) return c.json({ error: 'Recommendation not found' }, 404)
     const userId = c.get('userId')
@@ -216,13 +216,7 @@ export function recommendationRoutes(deps: AppDependencies) {
     const userId = c.get('userId')
 
     if (action === 'reject') {
-      const ownedIds: number[] = []
-      for (const id of ids) {
-        const rec = await deps.getRecommendation(id)
-        if (!rec) continue
-        if (!isOwned(rec, userId)) continue
-        ownedIds.push(id)
-      }
+      const ownedIds = await deps.filterOwnedIds(ids, userId)
       if (ownedIds.length > 0) {
         await deps.bulkUpdateStatus(ownedIds, 'rejected')
       }

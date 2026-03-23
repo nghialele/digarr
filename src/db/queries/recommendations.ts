@@ -132,12 +132,34 @@ export async function getGenreFeedbackHistory(
     for (const genre of row.genres) {
       const entry = genreMap.get(genre) ?? { approved: 0, total: 0 }
       entry.total += 1
-      if (row.status === 'approved') entry.approved += 1
+      if (row.status === 'approved' || row.status === 'added_to_lidarr') entry.approved += 1
       genreMap.set(genre, entry)
     }
   }
 
   return genreMap
+}
+
+export async function filterOwnedIds(
+  db: Database,
+  ids: number[],
+  userId: number | undefined,
+): Promise<number[]> {
+  if (ids.length === 0) return []
+
+  const conditions = [inArray(recommendations.id, ids)]
+  if (userId !== undefined) {
+    conditions.push(
+      sql`(${recommendations.userId} IS NULL OR ${recommendations.userId} = ${userId})`,
+    )
+  }
+
+  const rows = await db
+    .select({ id: recommendations.id })
+    .from(recommendations)
+    .where(and(...conditions))
+
+  return rows.map((r) => r.id)
 }
 
 export async function getRejectedArtistMbids(

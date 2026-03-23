@@ -70,7 +70,7 @@ export async function multiSourceSearch(
         try {
           const results = await withTimeout(source.search(query, limit), SOURCE_TIMEOUT_MS)
           allResults.push(...results)
-        } catch (err) {
+        } catch (err: unknown) {
           console.warn(
             `[search] source "${source.id}" failed:`,
             err instanceof Error ? err.message : String(err),

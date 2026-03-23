@@ -58,6 +58,9 @@ export const envConfig = {
   // Webhook (injected into preferences during auto-setup only)
   webhookUrl: env('WEBHOOK_URL'),
 
+  // Encryption (optional -- encrypts API keys and tokens at rest in the DB)
+  encryptionKey: env('DIGARR_ENCRYPTION_KEY'),
+
   // Registration control
   disableRegistration: envBool('DIGARR_DISABLE_REGISTRATION'),
 

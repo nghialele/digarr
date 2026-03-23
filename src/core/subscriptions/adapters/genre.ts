@@ -57,7 +57,14 @@ export function createGenreAdapter(sources: DiscoverySource[]): SubscriptionAdap
       if (capable.length === 0) return { artists: [] }
 
       const all = await Promise.all(
-        capable.map((s) => s.getGenreArtists!(genre, options?.limit !== undefined ? { limit: options.limit } : undefined)),
+        capable.map((s) =>
+          s.getGenreArtists
+            ? s.getGenreArtists(
+                genre,
+                options?.limit !== undefined ? { limit: options.limit } : undefined,
+              )
+            : Promise.resolve([]),
+        ),
       )
 
       const artists = all.flat().map((entry) => ({

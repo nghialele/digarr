@@ -29,6 +29,7 @@ function makeDeps() {
     getRecommendation: vi.fn(async () => null),
     updateRecommendationStatus: vi.fn(async () => {}),
     bulkUpdateStatus: vi.fn(async () => {}),
+    filterOwnedIds: vi.fn(async (ids: number[]) => ids),
     listBatches: vi.fn(async () => []),
     getBatch: vi.fn(async () => null),
     getArtistById: vi.fn(async () => null),

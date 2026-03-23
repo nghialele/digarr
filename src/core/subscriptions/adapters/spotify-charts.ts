@@ -1,4 +1,8 @@
-import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
+import type {
+  AdapterConfigField,
+  AdapterResult,
+  SubscriptionAdapter,
+} from '@/core/subscriptions/types'
 import { extractArtistsFromPlaylist } from './spotify-shared'
 
 // Viral 50 playlists only have a reliable global ID -- regional viral playlists
@@ -53,7 +57,8 @@ const CONFIG_FIELDS: AdapterConfigField[] = [
       { value: 'top50', label: 'Top 50' },
       { value: 'viral50', label: 'Viral 50 (Global only)' },
     ],
-    helpText: 'Viral 50 is only available for the Global region. Other regions fall back to Top 50.',
+    helpText:
+      'Viral 50 is only available for the Global region. Other regions fall back to Top 50.',
   },
 ]
 

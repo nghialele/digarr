@@ -9,10 +9,10 @@ import { createDeezerClient } from './core/clients/deezer'
 import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
+import { initEncryption, isEncryptionEnabled } from './core/crypto'
 import { GenreService } from './core/genre/service'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
-import { resolveSpotifyToken } from './core/spotify-auth'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
 import { SubscriptionScheduler } from './core/pipeline/subscription-scheduler'
@@ -31,6 +31,7 @@ import { createDeezerSearchSource } from './core/search/sources/deezer'
 import { createMusicBrainzSearchSource } from './core/search/sources/musicbrainz'
 import { createSpotifySearchSource } from './core/search/sources/spotify'
 import { setSessionStore } from './core/sessions'
+import { resolveSpotifyToken } from './core/spotify-auth'
 import { createGenreAdapter } from './core/subscriptions/adapters/genre'
 import { createLastfmChartsAdapter } from './core/subscriptions/adapters/lastfm-charts'
 import { createLastfmTagAdapter } from './core/subscriptions/adapters/lastfm-tag'
@@ -69,6 +70,7 @@ import {
 } from './db/queries/playlists'
 import {
   bulkUpdateStatus,
+  filterOwnedIds,
   getGenreFeedbackHistory,
   getRecommendation,
   getRejectedArtistMbids,
@@ -121,6 +123,14 @@ import {
   recommendations,
 } from './db/schema'
 import { createApp } from './server'
+
+// Initialize encryption before any DB operations.
+initEncryption(envConfig.encryptionKey)
+if (isEncryptionEnabled()) {
+  console.log('Field-level encryption enabled')
+} else {
+  console.log('Field-level encryption disabled (set DIGARR_ENCRYPTION_KEY to enable)')
+}
 
 // Run pending database migrations before anything else.
 // Uses drizzle-orm's programmatic migrator -- safe to run every boot (idempotent).
@@ -514,6 +524,7 @@ const app = createApp({
   updateRecommendationStatus: (id, status, extra) =>
     updateRecommendationStatus(db, id, status, extra),
   bulkUpdateStatus: (ids, status) => bulkUpdateStatus(db, ids, status),
+  filterOwnedIds: (ids, userId) => filterOwnedIds(db, ids, userId),
   listBatches: () => listBatches(db),
   getBatch: (id) => getBatch(db, id),
   getArtistById: (id) => getArtistById(db, id),

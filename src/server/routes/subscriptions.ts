@@ -26,23 +26,53 @@ export function subscriptionRoutes(deps: AppDependencies) {
           type: 'genre',
           label: 'Genre / Tag',
           configFields: [
-            { key: 'genre', label: 'Genre / Tag', type: 'text', required: true, placeholder: 'e.g. post-rock' },
-            { key: 'providers', label: 'Providers', type: 'text', required: false, placeholder: 'e.g. lastfm,musicbrainz (leave blank for all)' },
+            {
+              key: 'genre',
+              label: 'Genre / Tag',
+              type: 'text',
+              required: true,
+              placeholder: 'e.g. post-rock',
+            },
+            {
+              key: 'providers',
+              label: 'Providers',
+              type: 'text',
+              required: false,
+              placeholder: 'e.g. lastfm,musicbrainz (leave blank for all)',
+            },
           ],
         },
         {
           type: 'similar',
           label: 'Similar Artists',
           configFields: [
-            { key: 'seedArtists', label: 'Seed Artists', type: 'text', required: true, placeholder: 'e.g. Radiohead, Portishead' },
-            { key: 'providers', label: 'Providers', type: 'text', required: false, placeholder: 'e.g. lastfm,listenbrainz (leave blank for all)' },
+            {
+              key: 'seedArtists',
+              label: 'Seed Artists',
+              type: 'text',
+              required: true,
+              placeholder: 'e.g. Radiohead, Portishead',
+            },
+            {
+              key: 'providers',
+              label: 'Providers',
+              type: 'text',
+              required: false,
+              placeholder: 'e.g. lastfm,listenbrainz (leave blank for all)',
+            },
           ],
         },
         {
           type: 'spotify-playlist',
           label: 'Spotify Playlist',
           configFields: [
-            { key: 'playlistId', label: 'Playlist ID or URL', type: 'text', required: true, placeholder: 'e.g. 37i9dQZEVXbMDoHDwVN2tF or open.spotify.com/playlist/...' },
+            {
+              key: 'playlistId',
+              label: 'Playlist ID or URL',
+              type: 'text',
+              required: true,
+              placeholder: 'e.g. 37i9dQZEVXbMDoHDwVN2tF or open.spotify.com/playlist/...',
+            },
           ],
           requiredService: 'spotify',
         },
@@ -51,7 +81,10 @@ export function subscriptionRoutes(deps: AppDependencies) {
           label: 'Spotify Charts',
           configFields: [
             {
-              key: 'region', label: 'Region', type: 'select', required: true,
+              key: 'region',
+              label: 'Region',
+              type: 'select',
+              required: true,
               options: [
                 { value: 'global', label: 'Global' },
                 { value: 'us', label: 'United States' },
@@ -63,7 +96,10 @@ export function subscriptionRoutes(deps: AppDependencies) {
               ],
             },
             {
-              key: 'chartType', label: 'Chart Type', type: 'select', required: true,
+              key: 'chartType',
+              label: 'Chart Type',
+              type: 'select',
+              required: true,
               options: [
                 { value: 'top50', label: 'Top 50' },
                 { value: 'viral50', label: 'Viral 50 (Global only)' },
@@ -91,7 +127,10 @@ export function subscriptionRoutes(deps: AppDependencies) {
           label: 'ListenBrainz',
           configFields: [
             {
-              key: 'feedType', label: 'Feed Type', type: 'select', required: true,
+              key: 'feedType',
+              label: 'Feed Type',
+              type: 'select',
+              required: true,
               options: [
                 { value: 'fresh-releases', label: 'Fresh Releases' },
                 { value: 'weekly-jams', label: 'Weekly Jams' },

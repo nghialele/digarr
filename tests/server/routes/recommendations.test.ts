@@ -89,6 +89,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     getRecommendation: vi.fn(async (id: number) => (id === 1 ? mockRecommendation : null)),
     updateRecommendationStatus: vi.fn(async () => {}),
     bulkUpdateStatus: vi.fn(async () => {}),
+    filterOwnedIds: vi.fn(async (ids: number[]) => ids),
     listBatches: vi.fn(async () => []),
     getBatch: vi.fn(async () => null),
     getArtistById: vi.fn(async () => null),
@@ -388,11 +389,8 @@ describe('PATCH /api/recommendations/:id', () => {
 describe('POST /api/recommendations/bulk', () => {
   it('bulk rejects without calling Lidarr', async () => {
     const bulkUpdateStatus = vi.fn(async () => {})
-    const getRecommendation = vi.fn(async (id: number) => ({
-      ...mockRecommendation,
-      id,
-    }))
-    const app = createApp(makeDeps({ bulkUpdateStatus, getRecommendation }))
+    const filterOwnedIds = vi.fn(async (ids: number[]) => ids)
+    const app = createApp(makeDeps({ bulkUpdateStatus, filterOwnedIds }))
     const res = await app.request('/api/recommendations/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -401,6 +399,7 @@ describe('POST /api/recommendations/bulk', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.updated).toBe(3)
+    expect(filterOwnedIds).toHaveBeenCalledWith([1, 2, 3], undefined)
     expect(bulkUpdateStatus).toHaveBeenCalledWith([1, 2, 3], 'rejected')
   })
 

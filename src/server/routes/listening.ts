@@ -31,17 +31,12 @@ export function listeningRoutes(deps: AppDependencies) {
     const userConns = userId ? await getUserConnections(deps.db, userId) : null
 
     const lastfmUser =
-      (userConns?.lastfmUsername ?? (!userId ? (settings?.lastfmUsername as string) : null)) || ''
-    const lastfmKey =
-      (userConns?.lastfmApiKey ?? (!userId ? (settings?.lastfmApiKey as string) : null)) || ''
+      (userConns?.lastfmUsername ?? (!userId ? settings?.lastfmUsername : null)) || ''
+    const lastfmKey = (userConns?.lastfmApiKey ?? (!userId ? settings?.lastfmApiKey : null)) || ''
     const lbUser =
-      (userConns?.listenbrainzUsername ??
-        (!userId ? (settings?.listenbrainzUsername as string) : null)) ||
-      ''
+      (userConns?.listenbrainzUsername ?? (!userId ? settings?.listenbrainzUsername : null)) || ''
     const lbToken =
-      (userConns?.listenbrainzToken ??
-        (!userId ? (settings?.listenbrainzToken as string) : null)) ||
-      ''
+      (userConns?.listenbrainzToken ?? (!userId ? settings?.listenbrainzToken : null)) || ''
 
     const tracks: ListenTrack[] = []
 
@@ -89,9 +84,9 @@ export function listeningRoutes(deps: AppDependencies) {
     ) {
       try {
         const lidarr = createLidarrClient(
-          settings.lidarrUrl as string,
-          settings.lidarrApiKey as string,
-          (settings.skipTlsVerify as boolean) ?? false,
+          settings.lidarrUrl,
+          settings.lidarrApiKey,
+          settings.skipTlsVerify ?? false,
         )
         const seen = new Set<string>()
         const imageCache = new Map<string, string>()

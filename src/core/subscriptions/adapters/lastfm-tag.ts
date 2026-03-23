@@ -1,5 +1,9 @@
 import { deduplicateByName, normalizeListenerScore } from '@/core/subscriptions/dedup'
-import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
+import type {
+  AdapterConfigField,
+  AdapterResult,
+  SubscriptionAdapter,
+} from '@/core/subscriptions/types'
 
 const CONFIG_FIELDS: AdapterConfigField[] = [
   {

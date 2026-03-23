@@ -1,4 +1,5 @@
 import { count, eq } from 'drizzle-orm'
+import { decryptFields, encryptFields, SENSITIVE_USER_CONNECTIONS } from '@/core/crypto'
 import type { Database } from '@/db'
 import type { Preferences } from '@/db/schema'
 import { users } from '@/db/schema'
@@ -125,7 +126,8 @@ export async function getUserConnections(
     .from(users)
     .where(eq(users.id, userId))
     .limit(1)
-  return row ?? null
+  if (!row) return null
+  return decryptFields(row, SENSITIVE_USER_CONNECTIONS)
 }
 
 export async function updateUserConnections(
@@ -133,7 +135,8 @@ export async function updateUserConnections(
   userId: number,
   data: Partial<UserConnections>,
 ): Promise<void> {
-  await db.update(users).set(data).where(eq(users.id, userId))
+  const encrypted = encryptFields(data as Record<string, unknown>, SENSITIVE_USER_CONNECTIONS)
+  await db.update(users).set(encrypted).where(eq(users.id, userId))
 }
 
 export async function updateUser(

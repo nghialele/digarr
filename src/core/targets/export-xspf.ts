@@ -1,4 +1,5 @@
 import type { ExportableRecommendation } from './types'
+import { getStreamingUrl } from './types'
 
 function escapeXml(s: string): string {
   return s
@@ -7,15 +8,6 @@ function escapeXml(s: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;')
-}
-
-function getLocation(rec: ExportableRecommendation): string {
-  return (
-    rec.streamingUrls.spotify ??
-    rec.streamingUrls.youtube ??
-    rec.streamingUrls.deezer ??
-    `https://musicbrainz.org/artist/${rec.artistMbid}`
-  )
 }
 
 export function exportToXspf(
@@ -38,7 +30,7 @@ export function exportToXspf(
 
   const tracks = recommendations.map((rec) => {
     const parts = ['    <track>']
-    parts.push(`      <location>${escapeXml(getLocation(rec))}</location>`)
+    parts.push(`      <location>${escapeXml(getStreamingUrl(rec))}</location>`)
     parts.push(`      <creator>${escapeXml(rec.artistName)}</creator>`)
     parts.push(`      <title>${escapeXml(rec.artistName)}</title>`)
     if (rec.suggestedAlbum) {

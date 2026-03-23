@@ -24,9 +24,9 @@ export function searchRoutes(deps: SearchDeps) {
     try {
       const results = await deps.search(query, { limit, sources: sourcesParam, userId })
       return c.json({ results })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      return c.json({ error: msg }, 500)
+    } catch (err: unknown) {
+      console.error('[search] failed:', err instanceof Error ? err.message : String(err))
+      return c.json({ error: 'Search failed' }, 500)
     }
   })
 

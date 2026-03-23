@@ -1,5 +1,9 @@
 import { deduplicateByName } from '@/core/subscriptions/dedup'
-import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
+import type {
+  AdapterConfigField,
+  AdapterResult,
+  SubscriptionAdapter,
+} from '@/core/subscriptions/types'
 
 const CONFIG_FIELDS: AdapterConfigField[] = [
   {
@@ -111,9 +115,7 @@ async function fetchWeeklyJams(username: string, token: string): Promise<Adapter
   const data = (await res.json()) as UserPlaylistsResponse
   const playlists = data.playlists ?? []
 
-  const jamsEntry = playlists.find((p) =>
-    p.playlist?.title?.toLowerCase().includes('weekly jams'),
-  )
+  const jamsEntry = playlists.find((p) => p.playlist?.title?.toLowerCase().includes('weekly jams'))
 
   if (!jamsEntry?.playlist) return { artists: [] }
 

@@ -68,7 +68,7 @@ export function exportRoutes(deps: ExportDeps) {
 
     return new Response(output, {
       headers: {
-        'Content-Type': CONTENT_TYPES[format]!,
+        'Content-Type': CONTENT_TYPES[format] ?? 'application/octet-stream',
         'Content-Disposition': `attachment; filename="digarr-export-${timestamp}.${format}"`,
       },
     })

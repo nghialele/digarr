@@ -61,7 +61,9 @@ export function authGuard(hasUsers: () => Promise<boolean>) {
     // Fall back to legacy DIGARR_AUTH_TOKEN (no userId -- grants implicit admin)
     const legacyToken = envConfig.authToken
     if (legacyToken && provided && safeCompare(provided, legacyToken)) {
-      console.warn(`[auth] Legacy token auth used from ${c.req.header('x-forwarded-for') ?? 'direct'} -- consider migrating to user sessions`)
+      console.warn(
+        `[auth] Legacy token auth used from ${c.req.header('x-forwarded-for') ?? 'direct'} -- consider migrating to user sessions`,
+      )
       return next()
     }
 

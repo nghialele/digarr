@@ -77,3 +77,13 @@ export type ExportableRecommendation = {
   createdAt: string
   suggestedAlbum?: string
 }
+
+/** Resolve the best streaming URL for a recommendation, falling back to MusicBrainz. */
+export function getStreamingUrl(rec: ExportableRecommendation): string {
+  return (
+    rec.streamingUrls.spotify ??
+    rec.streamingUrls.youtube ??
+    rec.streamingUrls.deezer ??
+    `https://musicbrainz.org/artist/${rec.artistMbid}`
+  )
+}

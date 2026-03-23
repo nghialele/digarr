@@ -1,6 +1,10 @@
 import type { DiscoverySource } from '@/core/plugins/types'
 import { deduplicateByName } from '@/core/subscriptions/dedup'
-import type { AdapterConfigField, AdapterResult, SubscriptionAdapter } from '@/core/subscriptions/types'
+import type {
+  AdapterConfigField,
+  AdapterResult,
+  SubscriptionAdapter,
+} from '@/core/subscriptions/types'
 
 type SeedArtist = { name: string; mbid?: string }
 
@@ -29,7 +33,12 @@ function parseSeeds(raw: unknown): SeedArtist[] {
     return (raw as unknown[]).flatMap((item) => {
       if (typeof item === 'string') return [{ name: item }]
       if (typeof item === 'object' && item !== null && 'name' in item) {
-        return [{ name: String((item as Record<string, unknown>).name), mbid: (item as Record<string, unknown>).mbid as string | undefined }]
+        return [
+          {
+            name: String((item as Record<string, unknown>).name),
+            mbid: (item as Record<string, unknown>).mbid as string | undefined,
+          },
+        ]
       }
       return []
     })
@@ -76,16 +85,14 @@ export function createSimilarAdapter(sources: DiscoverySource[]): SubscriptionAd
       // Fan out: all seeds x all sources
       const calls = seeds.flatMap((seed) =>
         capable.map((source) =>
-          source
-            .getSimilarArtists(seed.name, seed.mbid)
-            .then((entries) =>
-              entries.map((entry) => ({
-                name: entry.name,
-                mbid: entry.mbid,
-                similarityScore: entry.similarityScore,
-                source: `similar-subscription:${source.id}`,
-              })),
-            ),
+          source.getSimilarArtists(seed.name, seed.mbid).then((entries) =>
+            entries.map((entry) => ({
+              name: entry.name,
+              mbid: entry.mbid,
+              similarityScore: entry.similarityScore,
+              source: `similar-subscription:${source.id}`,
+            })),
+          ),
         ),
       )
 

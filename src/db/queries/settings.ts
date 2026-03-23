@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { envSettingsOverrides } from '@/config/env'
+import { decryptFields, encryptFields, SENSITIVE_SETTINGS } from '@/core/crypto'
 import type { Database } from '@/db'
 import type { Preferences } from '@/db/schema'
 import { settings } from '@/db/schema'
@@ -35,28 +36,30 @@ export async function getSettings(db: Database): Promise<SettingsRow | null> {
       ;(merged as Record<string, unknown>)[key] = value
     }
   }
-  return merged
+  return decryptFields(merged, SENSITIVE_SETTINGS)
 }
 
 export async function updateSettings(db: Database, partial: SettingsPartial): Promise<void> {
+  const encrypted = encryptFields(partial as Record<string, unknown>, SENSITIVE_SETTINGS)
   await db
     .update(settings)
-    .set({ ...partial, updatedAt: new Date() })
+    .set({ ...encrypted, updatedAt: new Date() })
     .where(eq(settings.id, 1))
 }
 
 export async function completeSetup(db: Database, config: SetupConfig): Promise<SettingsRow> {
+  const encrypted = encryptFields(config as Record<string, unknown>, SENSITIVE_SETTINGS)
   const rows = await db
     .insert(settings)
-    .values({ ...config, setupComplete: true, id: 1 })
+    .values({ ...encrypted, setupComplete: true, id: 1 })
     .onConflictDoUpdate({
       target: settings.id,
-      set: { ...config, setupComplete: true, updatedAt: new Date() },
+      set: { ...encrypted, setupComplete: true, updatedAt: new Date() },
     })
     .returning()
   const row = rows[0]
   if (!row) throw new Error('completeSetup: no row returned')
-  return row
+  return decryptFields(row, SENSITIVE_SETTINGS)
 }
 
 export async function isSetupComplete(db: Database): Promise<boolean> {
