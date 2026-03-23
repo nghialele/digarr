@@ -263,8 +263,9 @@ export function pipelineRoutes(deps: AppDependencies) {
 
     const NEGATIVE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
-    // Get all artists missing images, respecting the negative cache TTL
-    const allRecs = await deps.listRecommendations({ limit: 200 })
+    // Get this user's artists missing images, respecting the negative cache TTL
+    const userId = c.get('userId')
+    const allRecs = await deps.listRecommendations({ limit: 200, userId })
     const artistsToUpdate = allRecs.items.filter((r: Record<string, unknown>) => {
       const artist = r.artist as Record<string, unknown> | undefined
       if (!artist) return false

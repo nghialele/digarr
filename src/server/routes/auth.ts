@@ -32,10 +32,16 @@ export function authRoutes(deps: AppDependencies) {
 
   // Register a new user. First user becomes admin.
   router.post('/api/auth/register', async (c) => {
-    // Allow disabling registration after first user via env var
+    // Registration closed by default after first user. Set DIGARR_DISABLE_REGISTRATION=false to open.
     const userCount = await deps.getUserCount()
     if (userCount > 0 && envConfig.disableRegistration) {
-      return c.json({ error: 'Registration is disabled' }, 403)
+      return c.json(
+        {
+          error:
+            'Registration is disabled. Set DIGARR_DISABLE_REGISTRATION=false to allow open registration.',
+        },
+        403,
+      )
     }
 
     const body = await c.req.json()

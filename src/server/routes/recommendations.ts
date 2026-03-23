@@ -54,6 +54,39 @@ function isOwned(rec: { userId?: number | null }, callerId?: number): boolean {
   return rec.userId === callerId
 }
 
+/** Build Lidarr add options from per-user preferences (with global fallback). */
+async function buildAddOptions(
+  deps: AppDependencies,
+  userId: number | undefined,
+  overrides: {
+    monitorOption?: string
+    selectedAlbumIds?: string[]
+    qualityProfileId?: number
+    metadataProfileId?: number
+    rootFolderId?: number
+  },
+): Promise<Record<string, unknown>> {
+  const settings = await deps.getSettings()
+  const globalPrefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
+
+  // Merge per-user preferences over global
+  let prefs = globalPrefs
+  if (userId) {
+    const user = await deps.getUserById(userId)
+    if (user?.preferences && Object.keys(user.preferences).length > 0) {
+      prefs = { ...globalPrefs, ...(user.preferences as Record<string, unknown>) }
+    }
+  }
+
+  return {
+    ...(overrides.monitorOption != null ? { monitorOption: overrides.monitorOption } : {}),
+    ...(overrides.selectedAlbumIds ? { selectedAlbumIds: overrides.selectedAlbumIds } : {}),
+    qualityProfileId: overrides.qualityProfileId ?? Number(prefs.qualityProfileId ?? 1),
+    metadataProfileId: overrides.metadataProfileId ?? Number(prefs.metadataProfileId ?? 1),
+    rootFolderId: overrides.rootFolderId ?? Number(prefs.rootFolderId ?? 1),
+  }
+}
+
 export function recommendationRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
 
@@ -135,8 +168,6 @@ export function recommendationRoutes(deps: AppDependencies) {
       const userId = c.get('userId')
       if (!isOwned(rec, userId)) return c.json({ error: 'Recommendation not found' }, 404)
 
-      const settings = await deps.getSettings()
-      const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
       const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
       const effectiveTargets = targetId ? targets.filter((t) => t.id === targetId) : targets
 
@@ -153,13 +184,13 @@ export function recommendationRoutes(deps: AppDependencies) {
         }
       }
 
-      const addOptions = {
+      const addOptions = await buildAddOptions(deps, userId, {
         monitorOption: monitorOption ?? 'all',
         selectedAlbumIds,
-        qualityProfileId: qpOverride ?? Number(prefs.qualityProfileId ?? 1),
-        metadataProfileId: mpOverride ?? Number(prefs.metadataProfileId ?? 1),
-        rootFolderId: rfOverride ?? Number(prefs.rootFolderId ?? 1),
-      }
+        qualityProfileId: qpOverride,
+        metadataProfileId: mpOverride,
+        rootFolderId: rfOverride,
+      })
 
       const result = await approveToTargets(
         { mbid: rec.artist.mbid, name: rec.artist.name },
@@ -227,13 +258,11 @@ export function recommendationRoutes(deps: AppDependencies) {
     const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
     const effectiveTargets = targetId ? targets.filter((t) => t.id === targetId) : targets
 
-    const settings = await deps.getSettings()
-    const prefs = (settings?.preferences as Record<string, unknown> | null) ?? {}
-    const addOptions = {
-      qualityProfileId: qpOverride ?? Number(prefs.qualityProfileId ?? 1),
-      metadataProfileId: mpOverride ?? Number(prefs.metadataProfileId ?? 1),
-      rootFolderId: rfOverride ?? Number(prefs.rootFolderId ?? 1),
-    }
+    const addOptions = await buildAddOptions(deps, userId, {
+      qualityProfileId: qpOverride,
+      metadataProfileId: mpOverride,
+      rootFolderId: rfOverride,
+    })
 
     const results: Array<{ id: number; status: string; error?: string }> = []
 

@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { envConfig } from '@/config/env'
 import { generateSessionToken, hashPassword } from '@/core/auth'
 import type { OidcService } from '@/core/auth/oidc'
 import { createSession } from '@/core/sessions'
@@ -20,15 +21,24 @@ type OidcRouteDeps = {
   updateUser: (id: number, data: { oidcSubject?: string; email?: string }) => Promise<void>
 }
 
+function buildRedirectUri(c: { req: { header: (name: string) => string | undefined } }): string {
+  // Prefer configured ALLOWED_ORIGIN to prevent Host header spoofing (CWE-601)
+  if (envConfig.allowedOrigin) {
+    return `${envConfig.allowedOrigin}/api/auth/oidc/callback`
+  }
+  // Fallback to headers only for development / unconfigured instances
+  const protocol = c.req.header('X-Forwarded-Proto') ?? 'http'
+  const host = c.req.header('Host') ?? 'localhost:3000'
+  return `${protocol}://${host}/api/auth/oidc/callback`
+}
+
 export function oidcRoutes(deps: OidcRouteDeps) {
   const router = new Hono()
 
   router.get('/api/auth/oidc/login', async (c) => {
     const oidcService = await deps.getOidcService()
     if (!oidcService) return c.json({ error: 'OIDC not configured' }, 400)
-    const protocol = c.req.header('X-Forwarded-Proto') ?? 'http'
-    const host = c.req.header('Host') ?? 'localhost:3000'
-    const redirectUri = `${protocol}://${host}/api/auth/oidc/callback`
+    const redirectUri = buildRedirectUri(c)
     const { url } = await oidcService.getAuthorizationUrl(redirectUri)
     return c.redirect(url)
   })
@@ -37,10 +47,13 @@ export function oidcRoutes(deps: OidcRouteDeps) {
     try {
       const oidcService = await deps.getOidcService()
       if (!oidcService) return c.json({ error: 'OIDC not configured' }, 400)
-      const protocol = c.req.header('X-Forwarded-Proto') ?? 'http'
-      const host = c.req.header('Host') ?? 'localhost:3000'
+
+      const baseUrl = envConfig.allowedOrigin
+        ? envConfig.allowedOrigin
+        : `${c.req.header('X-Forwarded-Proto') ?? 'http'}://${c.req.header('Host') ?? 'localhost:3000'}`
+
       const reqUrl = new URL(c.req.url)
-      const callbackUrl = new URL(`${protocol}://${host}${reqUrl.pathname}${reqUrl.search}`)
+      const callbackUrl = new URL(`${baseUrl}${reqUrl.pathname}${reqUrl.search}`)
       const result = await oidcService.handleCallback(callbackUrl)
 
       // User matching: OIDC subject -> email -> username -> auto-create
@@ -67,10 +80,17 @@ export function oidcRoutes(deps: OidcRouteDeps) {
 
       if (!user) {
         const isFirstUser = (await deps.getUserCount()) === 0
-        const username =
+        let username =
           result.claims.preferredUsername ??
           result.claims.email?.split('@')[0] ??
           `oidc-${result.claims.sub.slice(0, 8)}`
+
+        // Avoid UNIQUE constraint violation on username
+        const existing = await deps.getUserByUsername(username)
+        if (existing) {
+          username = `${username}-${result.claims.sub.slice(0, 8)}`
+        }
+
         user = await deps.createUser({
           username,
           passwordHash: hashPassword(crypto.randomUUID()),

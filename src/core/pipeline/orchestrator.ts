@@ -52,12 +52,17 @@ export class PipelineOrchestrator extends EventEmitter {
   private running = false
   private currentStage: string | null = null
   private currentMessage: string | null = null
+  private _currentUserId: number | undefined = undefined
 
   override emit(eventName: string | symbol, ...args: unknown[]): boolean {
     if (eventName === 'progress') {
       const progress = args[0] as { stage?: string; message?: string } | undefined
       if (progress?.stage) this.currentStage = progress.stage
       if (progress?.message) this.currentMessage = progress.message
+      // Inject userId so SSE clients can filter events
+      if (progress && this._currentUserId !== undefined) {
+        ;(progress as Record<string, unknown>).userId = this._currentUserId
+      }
     }
     return super.emit(eventName, ...args)
   }
@@ -67,6 +72,7 @@ export class PipelineOrchestrator extends EventEmitter {
     this.running = true
     this.currentStage = null
     this.currentMessage = null
+    this._currentUserId = deps.userId
 
     try {
       const { db, settings, providerRegistry } = deps
@@ -291,5 +297,9 @@ export class PipelineOrchestrator extends EventEmitter {
 
   get stageMessage(): string | null {
     return this.currentMessage
+  }
+
+  get currentUserId(): number | undefined {
+    return this._currentUserId
   }
 }

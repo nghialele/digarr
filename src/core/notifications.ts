@@ -1,3 +1,4 @@
+import { lookup } from 'node:dns/promises'
 import { isHttpUrl } from './validation'
 
 export type WebhookPayload = {
@@ -65,6 +66,26 @@ function formatDiscordPayload(payload: WebhookPayload): Record<string, unknown> 
   }
 }
 
+/** Resolve hostname and check if the resolved IP is private (DNS rebinding mitigation). */
+async function resolvedIpIsPrivate(hostname: string): Promise<boolean> {
+  try {
+    const { address } = await lookup(hostname)
+    return (
+      /^127\./.test(address) ||
+      /^10\./.test(address) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(address) ||
+      /^192\.168\./.test(address) ||
+      /^169\.254\./.test(address) ||
+      address === '0.0.0.0' ||
+      address === '::1' ||
+      /^f[cd]/i.test(address) ||
+      /^fe80/i.test(address)
+    )
+  } catch {
+    return true // unresolvable = reject
+  }
+}
+
 export async function sendWebhook(url: string, payload: WebhookPayload): Promise<void> {
   if (!isHttpUrl(url)) {
     console.error('Webhook URL must use http:// or https://')
@@ -72,6 +93,18 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
   }
   if (isPrivateUrl(url)) {
     console.error('Webhook URL points to a private/internal address')
+    return
+  }
+
+  // DNS rebinding mitigation: verify the resolved IP is also not private
+  try {
+    const hostname = new URL(url).hostname
+    if (await resolvedIpIsPrivate(hostname)) {
+      console.error('Webhook URL resolves to a private/internal IP address')
+      return
+    }
+  } catch {
+    console.error('Webhook URL hostname resolution failed')
     return
   }
 

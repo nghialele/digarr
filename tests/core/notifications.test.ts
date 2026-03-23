@@ -2,6 +2,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isPrivateUrl, sendWebhook, type WebhookPayload } from '@/core/notifications'
 
+// Mock DNS lookup to return a public IP for test domains
+vi.mock('node:dns/promises', () => ({
+  lookup: vi.fn().mockResolvedValue({ address: '93.184.216.34', family: 4 }),
+}))
+
 function makePayload(overrides?: Partial<WebhookPayload>): WebhookPayload {
   return {
     event: 'batch_complete',
@@ -149,6 +154,9 @@ describe('sendWebhook', () => {
     // The real timeout is 10s -- we can't wait that long in tests.
     // Instead, verify the signal is passed to fetch.
     const promise = sendWebhook('https://hooks.example.com/webhook', makePayload())
+
+    // Yield to let async DNS lookup resolve before checking fetch
+    await new Promise((r) => setTimeout(r, 10))
 
     // Verify signal was passed
     expect(fetchMock).toHaveBeenCalledOnce()

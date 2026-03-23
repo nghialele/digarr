@@ -172,7 +172,7 @@ export function createApp(deps: AppDependencies) {
   app.use(
     '*',
     cors({
-      origin: envConfig.allowedOrigin ?? '*',
+      origin: envConfig.allowedOrigin ?? (process.env.NODE_ENV === 'production' ? 'null' : '*'),
     }),
   )
   app.use(

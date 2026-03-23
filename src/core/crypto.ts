@@ -1,22 +1,37 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
+import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from 'node:crypto'
 
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12
 const PREFIX = 'enc:v1:'
 
 let derivedKey: Buffer | null = null
+let legacyKey: Buffer | null = null
 
 /** Initialize encryption with a key string. Call once at startup. */
 export function initEncryption(keyInput: string | undefined): void {
   if (!keyInput) {
     derivedKey = null
+    legacyKey = null
     return
   }
-  derivedKey = createHash('sha256').update(keyInput).digest()
+  // HKDF-derived key (current)
+  derivedKey = Buffer.from(hkdfSync('sha256', keyInput, '', 'digarr-field-encryption', 32))
+  // SHA-256 key (legacy -- kept for decrypting pre-migration values)
+  legacyKey = createHash('sha256').update(keyInput).digest()
 }
 
 export function isEncryptionEnabled(): boolean {
   return derivedKey !== null
+}
+
+function decryptWithKey(ivStr: string, encStr: string, tagStr: string, key: Buffer): string {
+  const iv = Buffer.from(ivStr, 'base64')
+  const encrypted = Buffer.from(encStr, 'base64')
+  const tag = Buffer.from(tagStr, 'base64')
+
+  const decipher = createDecipheriv(ALGORITHM, key, iv)
+  decipher.setAuthTag(tag)
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8')
 }
 
 /** Encrypt a string value. Returns the original if encryption is disabled or value is null. */
@@ -44,13 +59,19 @@ export function decryptField(value: string | null | undefined): typeof value {
   const [ivStr, encStr, tagStr] = value.slice(PREFIX.length).split('.')
   if (!ivStr || !encStr || !tagStr) return value // malformed
 
-  const iv = Buffer.from(ivStr, 'base64')
-  const encrypted = Buffer.from(encStr, 'base64')
-  const tag = Buffer.from(tagStr, 'base64')
-
-  const decipher = createDecipheriv(ALGORITHM, derivedKey, iv)
-  decipher.setAuthTag(tag)
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8')
+  // Try HKDF key first, then fall back to legacy SHA-256 key for pre-migration values
+  try {
+    return decryptWithKey(ivStr, encStr, tagStr, derivedKey)
+  } catch {
+    if (legacyKey) {
+      try {
+        return decryptWithKey(ivStr, encStr, tagStr, legacyKey)
+      } catch {
+        // Both keys failed
+      }
+    }
+    throw new Error('Decryption failed -- check DIGARR_ENCRYPTION_KEY')
+  }
 }
 
 /** Encrypt specific string fields in an object. */

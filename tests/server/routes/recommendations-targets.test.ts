@@ -5,12 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { HonoEnv } from '@/server/types'
 
 const mockDeps = {
+  db: {} as never,
   getRecommendation: vi.fn(),
   updateRecommendationStatus: vi.fn().mockResolvedValue(undefined),
   bulkUpdateStatus: vi.fn().mockResolvedValue(undefined),
   filterOwnedIds: vi.fn(async (ids: number[]) => ids),
   listRecommendations: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   getSettings: vi.fn().mockResolvedValue({ preferences: {} }),
+  getUserById: vi.fn().mockResolvedValue(null),
   skyhookWarmer: null,
   getEnabledTargetsForUser: vi.fn().mockResolvedValue([]),
 }

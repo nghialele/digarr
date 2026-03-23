@@ -62,7 +62,7 @@ export const envConfig = {
   encryptionKey: env('DIGARR_ENCRYPTION_KEY'),
 
   // Registration control
-  disableRegistration: envBool('DIGARR_DISABLE_REGISTRATION'),
+  disableRegistration: envBool('DIGARR_DISABLE_REGISTRATION', true),
 
   // Proxy auth
   proxyAuthEnabled: envBool('PROXY_AUTH_ENABLED'),
