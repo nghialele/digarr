@@ -800,7 +800,7 @@ if (envConfig.authToken && envConfig.authToken.length < 16) {
 }
 if (envConfig.authToken) {
   console.warn(
-    'Legacy DIGARR_AUTH_TOKEN is set -- this grants implicit admin access without audit trail. Consider migrating to user sessions.',
+    'DEPRECATED: DIGARR_AUTH_TOKEN provides read-only access with no admin privileges, no per-user features, and no audit trail. Create a user account instead.',
   )
 }
 if (!envConfig.authToken && !envConfig.initialUsername) {

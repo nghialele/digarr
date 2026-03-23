@@ -58,11 +58,11 @@ export function authGuard(hasUsers: () => Promise<boolean>) {
       }
     }
 
-    // Fall back to legacy DIGARR_AUTH_TOKEN (no userId -- grants implicit admin)
+    // Fall back to legacy DIGARR_AUTH_TOKEN (no userId, no admin, no per-user features)
     const legacyToken = envConfig.authToken
     if (legacyToken && provided && safeCompare(provided, legacyToken)) {
       console.warn(
-        `[auth] Legacy token auth used from ${c.req.header('x-forwarded-for') ?? 'direct'} -- consider migrating to user sessions`,
+        `[auth] DEPRECATED: Legacy token auth from ${c.req.header('x-forwarded-for') ?? 'direct'} -- no admin access, no per-user features. Migrate to user sessions.`,
       )
       return next()
     }
@@ -70,6 +70,7 @@ export function authGuard(hasUsers: () => Promise<boolean>) {
     // Auth is required if a legacy token is configured OR users have been registered
     const usersExist = await hasUsers()
     if (!legacyToken && !usersExist) {
+      c.set('authSkipped', true)
       return next() // No auth configured at all
     }
 

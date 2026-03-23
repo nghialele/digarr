@@ -5,25 +5,31 @@ type GetUserById = (id: number) => Promise<{ isAdmin: boolean } | null>
 
 /**
  * Middleware that rejects non-admin users with 403.
- * No userId (legacy token auth) is treated as admin for backward compatibility.
+ * Legacy token auth (no userId) is NOT admin -- users should migrate to session auth.
+ * If no auth is configured at all (authSkipped), allow through for fresh installs.
  */
 export function adminGuard(getUserById: GetUserById) {
   return createMiddleware<HonoEnv>(async (c, next) => {
+    if (c.get('authSkipped')) return next()
     const uid = c.get('userId')
-    if (uid) {
-      const u = await getUserById(uid)
-      if (!u?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
-    }
+    if (!uid) return c.json({ error: 'Admin access required' }, 403)
+    const u = await getUserById(uid)
+    if (!u?.isAdmin) return c.json({ error: 'Admin access required' }, 403)
     await next()
   })
 }
 
-/** Inline admin check for routes that need the isAdmin boolean for branching. */
+/**
+ * Inline admin check for routes that need the isAdmin boolean for branching.
+ * Pass authSkipped=true when no auth is configured (fresh installs).
+ */
 export async function resolveAdmin(
   userId: number | undefined,
   getUserById: GetUserById,
+  authSkipped?: boolean,
 ): Promise<boolean> {
-  if (!userId) return true
+  if (authSkipped) return true
+  if (!userId) return false
   const user = await getUserById(userId)
   return user?.isAdmin ?? false
 }

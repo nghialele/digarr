@@ -2,7 +2,7 @@ import { desc, eq } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { recommendationBatches } from '@/db/schema'
 
-type BatchRow = typeof recommendationBatches.$inferSelect
+export type BatchRow = typeof recommendationBatches.$inferSelect
 
 export type BatchStats = {
   discovered: number

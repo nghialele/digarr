@@ -12,6 +12,8 @@ import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
 import type { SubscriptionScheduler } from '@/core/pipeline/subscription-scheduler'
 import type { AiProviderRegistry } from '@/core/providers/registry'
 import type { ServiceTestResult } from '@/core/types'
+import type { ArtistRow } from '@/db/queries/artists'
+import type { BatchRow } from '@/db/queries/batches'
 import type { ActivityEntry, TasteGenre } from '@/db/queries/dashboard'
 import type {
   ListRecommendationsFilters,
@@ -85,10 +87,10 @@ export type AppDependencies = {
   bulkUpdateStatus: (ids: number[], status: string) => Promise<void>
   filterOwnedIds: (ids: number[], userId: number | undefined) => Promise<number[]>
   // Batch query functions
-  listBatches: () => Promise<unknown[]>
-  getBatch: (id: number) => Promise<unknown | null>
+  listBatches: () => Promise<BatchRow[]>
+  getBatch: (id: number) => Promise<BatchRow | null>
   // Artist query functions
-  getArtistById: (id: number) => Promise<unknown | null>
+  getArtistById: (id: number) => Promise<ArtistRow | null>
   restartScheduler: (cron: string | null) => void
   // User query functions
   createUser: (data: {

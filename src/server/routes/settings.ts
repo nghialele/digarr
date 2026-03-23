@@ -140,7 +140,7 @@ export function settingsRoutes(deps: AppDependencies) {
 
   router.get('/api/settings', async (c) => {
     const userId = c.get('userId')
-    const isAdmin = await resolveAdmin(userId, deps.getUserById)
+    const isAdmin = await resolveAdmin(userId, deps.getUserById, c.get('authSkipped'))
     const response = await buildSettingsResponse(deps, userId, isAdmin)
     if (!response) {
       return c.json({ error: 'Settings not found' }, 404)
@@ -189,7 +189,7 @@ export function settingsRoutes(deps: AppDependencies) {
     }
 
     const userId = c.get('userId')
-    const isAdmin = await resolveAdmin(userId, deps.getUserById)
+    const isAdmin = await resolveAdmin(userId, deps.getUserById, c.get('authSkipped'))
 
     // Split fields into user-connection vs global
     const userUpdate: Record<string, string | null> = {}
@@ -406,7 +406,7 @@ export function settingsRoutes(deps: AppDependencies) {
   // Test webhook by sending a test payload to the configured URL
   router.post('/api/settings/test-webhook', async (c) => {
     const userId = c.get('userId')
-    if (!(await resolveAdmin(userId, deps.getUserById))) {
+    if (!(await resolveAdmin(userId, deps.getUserById, c.get('authSkipped')))) {
       return c.json({ success: false, message: 'Admin access required' }, 403)
     }
 

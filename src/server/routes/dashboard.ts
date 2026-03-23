@@ -17,7 +17,7 @@ export function dashboardRoutes(deps: AppDependencies) {
     const limitParam = c.req.query('limit')
     const limit = limitParam ? Math.min(Math.max(Number(limitParam) || 1, 1), 20) : 5
 
-    const isAdmin = await resolveAdmin(userId, deps.getUserById)
+    const isAdmin = await resolveAdmin(userId, deps.getUserById, c.get('authSkipped'))
 
     const activity = await deps.dashboardQueries.getRecentActivity(userId, isAdmin, limit)
     return c.json(activity)
