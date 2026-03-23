@@ -1,6 +1,6 @@
 {
   "name": "digarr",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "type": "module",
   "private": true,
   "scripts": {
@@ -30,8 +30,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-kit": "^0.31.10",
+    "eslint": "^10.1.0",
     "jsdom": "^29.0.0",
     "lucide-react": "^0.577.0",
+    "prettier": "^3.8.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1",
