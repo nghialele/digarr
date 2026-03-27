@@ -8,8 +8,10 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-digarr}:${DB_PASS:?DB_PASS is required -- set it in .env}@postgres:5432/${DB_NAME:-digarr}
       - PORT=${PORT:-3000}
-      # Service config -- set these to auto-complete setup on first boot,
-      # or leave blank and configure via the web UI.
+      # Global service defaults -- set these to auto-complete setup on first
+      # boot, or leave blank and configure via the web UI.
+      # Per-user connectors (Spotify, TIDAL, Plex, Jellyfin, Navidrome,
+      # Discogs) are configured through the web UI only.
       - LIDARR_URL=${LIDARR_URL:-}
       - LIDARR_API_KEY=${LIDARR_API_KEY:-}
       - SKIP_TLS_VERIFY=${SKIP_TLS_VERIFY:-false}
@@ -21,15 +23,15 @@ services:
       - AI_MODEL=${AI_MODEL:-}
       - AI_API_KEY=${AI_API_KEY:-}
       - AI_BASE_URL=${AI_BASE_URL:-}
+      # Auth and security
       - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-}
       - DIGARR_AUTH_TOKEN=${DIGARR_AUTH_TOKEN:-}
       - DIGARR_INITIAL_USERNAME=${DIGARR_INITIAL_USERNAME:-}
       - DIGARR_INITIAL_PASSWORD=${DIGARR_INITIAL_PASSWORD:-}
       - DIGARR_DISABLE_REGISTRATION=${DIGARR_DISABLE_REGISTRATION:-true}
-      # Field-level encryption for API keys in the database (recommended)
       - DIGARR_ENCRYPTION_KEY=${DIGARR_ENCRYPTION_KEY:-}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
-      # Proxy auth (trusted reverse proxy header authentication)
+      # Proxy auth
       - PROXY_AUTH_ENABLED=${PROXY_AUTH_ENABLED:-false}
       - PROXY_AUTH_TRUSTED_PROXIES=${PROXY_AUTH_TRUSTED_PROXIES:-}
       # OIDC (OpenID Connect SSO)
