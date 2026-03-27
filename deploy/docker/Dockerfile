@@ -12,7 +12,7 @@ FROM oven/bun:1.3.11-slim@sha256:478281fdd196871c7e51ba6a820b7803a8ae97042ec86cd
 WORKDIR /app
 
 # Non-root user
-RUN groupadd --system digarr && useradd --system --gid digarr digarr
+RUN groupadd -g 1000 digarr && useradd -u 1000 -g digarr digarr
 
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile --production && rm -rf /tmp/*
