@@ -11,8 +11,7 @@ RUN bun run build
 FROM oven/bun:1.3.11-slim@sha256:478281fdd196871c7e51ba6a820b7803a8ae97042ec86cdbc2e1c6b6626442d9
 WORKDIR /app
 
-# Non-root user
-RUN groupadd -g 1000 digarr && useradd -u 1000 -g digarr digarr
+# Non-root user (bun base image ships with bun:bun at UID/GID 1000)
 
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile --production && rm -rf /tmp/*
@@ -27,5 +26,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD bun -e "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-USER digarr
+USER bun
 CMD ["bun", "dist/server/index.js"]
