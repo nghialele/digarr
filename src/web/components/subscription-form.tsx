@@ -1,9 +1,6 @@
 import { useState } from 'react'
 import { CronPicker } from './cron-picker'
 
-const LISTENBRAINZ_SIMILAR_ERROR =
-  'ListenBrainz similar-artist lookups are currently unavailable. Add Last.fm or choose a different subscription type.'
-
 export type SubscriptionFormData = {
   name: string
   sourceType: string
@@ -25,6 +22,8 @@ type SubscriptionFormProps = {
   configuredSources: string[]
 }
 
+const EDITABLE_SOURCE_TYPES = ['genre', 'similar'] as const
+
 const SOURCE_TYPES = [
   { value: 'genre', label: 'Genre', description: 'Discover artists in a specific genre' },
   { value: 'similar', label: 'Similar', description: 'Find artists similar to your favorites' },
@@ -45,13 +44,23 @@ const WEIGHT_PRESETS = [
   { value: 'genre', label: 'Genre-optimized' },
 ] as const
 
-function getUnsupportedSimilarProviderError(
-  sourceType: string,
-  providers: string[],
-): string | null {
-  return sourceType === 'similar' && providers.length === 1 && providers[0] === 'listenbrainz'
-    ? LISTENBRAINZ_SIMILAR_ERROR
-    : null
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  'spotify-charts': 'Spotify Charts',
+  'spotify-playlist': 'Spotify Playlist',
+  'lastfm-tag': 'Last.fm Tag',
+  'lastfm-charts': 'Last.fm Charts',
+  listenbrainz: 'ListenBrainz Feed',
+}
+
+function describeSourceConfig(sourceType: string, config: Record<string, unknown>): string | null {
+  if (sourceType === 'spotify-charts') {
+    const parts = [config.chartType, config.region].filter(Boolean)
+    return parts.length > 0 ? parts.join(' / ') : null
+  }
+  if (sourceType === 'spotify-playlist') return (config.playlistName as string) ?? null
+  if (sourceType === 'lastfm-tag') return (config.tag as string) ?? null
+  if (sourceType === 'listenbrainz') return (config.feedType as string) ?? null
+  return null
 }
 
 export function SubscriptionForm({
@@ -83,6 +92,13 @@ export function SubscriptionForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Source type/config is locked when editing a subscription type the form can't render
+  // (e.g. preset-created spotify-charts, lastfm-tag, listenbrainz subs).
+  // Users can still edit name, schedule, max artists, scoring, and enabled state.
+  const sourceEditable =
+    mode === 'create' ||
+    (EDITABLE_SOURCE_TYPES as readonly string[]).includes(initial?.sourceType ?? 'genre')
+
   function handleSourceTypeChange(nextType: string) {
     setSourceType(nextType)
     const capability = nextType === 'similar' ? 'similarArtists' : 'genreArtists'
@@ -103,32 +119,33 @@ export function SubscriptionForm({
       setError('Name is required')
       return
     }
-    if (sourceType === 'genre' && !genre.trim()) {
-      setError('Genre is required')
-      return
+
+    if (sourceEditable) {
+      if (sourceType === 'genre' && !genre.trim()) {
+        setError('Genre is required')
+        return
+      }
+      if (sourceType === 'similar' && !seedArtistInput.trim()) {
+        setError('At least one seed artist is required')
+        return
+      }
+      if (providers.length === 0) {
+        setError('Select at least one source')
+        return
+      }
     }
-    if (sourceType === 'similar' && !seedArtistInput.trim()) {
-      setError('At least one seed artist is required')
-      return
-    }
-    if (providers.length === 0) {
-      setError('Select at least one source')
-      return
-    }
-    const unsupportedProviderError = getUnsupportedSimilarProviderError(sourceType, providers)
-    if (unsupportedProviderError) {
-      setError(unsupportedProviderError)
-      return
-    }
+
     setError(null)
     setSubmitting(true)
     try {
       await onSubmit({
         name: name.trim(),
-        sourceType,
-        sourceProvider: providers.join(','),
-        sourceConfig:
-          sourceType === 'genre'
+        sourceType: sourceEditable ? sourceType : (initial?.sourceType ?? sourceType),
+        sourceProvider: sourceEditable
+          ? providers.join(',')
+          : (initial?.sourceProvider ?? providers.join(',')),
+        sourceConfig: sourceEditable
+          ? sourceType === 'genre'
             ? { genre: genre.trim(), providers }
             : {
                 seedArtists: seedArtistInput
@@ -137,7 +154,8 @@ export function SubscriptionForm({
                   .filter(Boolean)
                   .map((n) => ({ name: n })),
                 providers,
-              },
+              }
+          : (initial?.sourceConfig ?? {}),
         cron,
         enabled,
         maxArtistsPerRun: maxArtists,
@@ -193,102 +211,124 @@ export function SubscriptionForm({
             />
           </div>
 
-          {/* Source type */}
-          <div>
-            <label htmlFor="sub-source-type" className="block text-sm font-medium text-text mb-1">
-              Source Type
-            </label>
-            <select
-              id="sub-source-type"
-              value={sourceType}
-              onChange={(e) => handleSourceTypeChange(e.target.value)}
-              className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text focus:border-accent focus:outline-none"
-            >
-              {SOURCE_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label} -- {t.description}
-                </option>
-              ))}
-            </select>
-          </div>
+          {sourceEditable ? (
+            <>
+              {/* Source type */}
+              <div>
+                <label
+                  htmlFor="sub-source-type"
+                  className="block text-sm font-medium text-text mb-1"
+                >
+                  Source Type
+                </label>
+                <select
+                  id="sub-source-type"
+                  value={sourceType}
+                  onChange={(e) => handleSourceTypeChange(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text focus:border-accent focus:outline-none"
+                >
+                  {SOURCE_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label} -- {t.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {/* Config: depends on source type */}
-          {sourceType === 'genre' ? (
-            <div>
-              <label htmlFor="sub-genre" className="block text-sm font-medium text-text mb-1">
-                Genre
-              </label>
-              <input
-                id="sub-genre"
-                type="text"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                placeholder="shoegaze"
-                className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none"
-              />
-            </div>
+              {/* Config: depends on source type */}
+              {sourceType === 'genre' ? (
+                <div>
+                  <label htmlFor="sub-genre" className="block text-sm font-medium text-text mb-1">
+                    Genre
+                  </label>
+                  <input
+                    id="sub-genre"
+                    type="text"
+                    value={genre}
+                    onChange={(e) => setGenre(e.target.value)}
+                    placeholder="shoegaze"
+                    className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="sub-seeds" className="block text-sm font-medium text-text mb-1">
+                    Seed Artists
+                  </label>
+                  <input
+                    id="sub-seeds"
+                    type="text"
+                    value={seedArtistInput}
+                    onChange={(e) => setSeedArtistInput(e.target.value)}
+                    placeholder="Radiohead, Portishead, Massive Attack"
+                    className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none"
+                  />
+                  <p className="text-xs text-muted mt-1">Comma-separated artist names</p>
+                </div>
+              )}
+
+              {/* Source providers (multiselect, filtered by capability) */}
+              <div>
+                <span className="block text-sm font-medium text-text mb-1">Sources</span>
+                <div className="flex flex-wrap gap-2">
+                  {SOURCE_PROVIDERS.filter((p) =>
+                    p.capabilities.includes(
+                      sourceType === 'similar' ? 'similarArtists' : 'genreArtists',
+                    ),
+                  ).map((p) => {
+                    const configured = configuredSources.includes(p.value)
+                    const selected = providers.includes(p.value)
+                    return (
+                      <button
+                        key={p.value}
+                        type="button"
+                        disabled={!configured}
+                        onClick={() => {
+                          setProviders((prev) =>
+                            prev.includes(p.value)
+                              ? prev.filter((v) => v !== p.value)
+                              : [...prev, p.value],
+                          )
+                        }}
+                        className={`px-3 py-1.5 rounded text-sm border transition-colors ${
+                          !configured
+                            ? 'border-border text-muted/50 cursor-not-allowed bg-surface/50'
+                            : selected
+                              ? 'border-accent/50 bg-accent/15 text-accent'
+                              : 'border-border text-muted hover:border-accent/40 hover:text-text'
+                        }`}
+                        title={configured ? undefined : 'Configure in Settings > Connections'}
+                      >
+                        {p.label}
+                        {!configured && <span className="text-xs ml-1">(not configured)</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+                {providers.length === 0 && (
+                  <p className="text-xs text-reject mt-1">Select at least one source</p>
+                )}
+              </div>
+            </>
           ) : (
             <div>
-              <label htmlFor="sub-seeds" className="block text-sm font-medium text-text mb-1">
-                Seed Artists
-              </label>
-              <input
-                id="sub-seeds"
-                type="text"
-                value={seedArtistInput}
-                onChange={(e) => setSeedArtistInput(e.target.value)}
-                placeholder="Radiohead, Portishead, Massive Attack"
-                className="w-full px-3 py-2 bg-surface border border-border rounded text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none"
-              />
-              <p className="text-xs text-muted mt-1">Comma-separated artist names</p>
+              <span className="block text-sm font-medium text-text mb-1">Source</span>
+              <div className="px-3 py-2 bg-surface/50 border border-border rounded text-sm text-muted">
+                {SOURCE_TYPE_LABELS[initial?.sourceType ?? ''] ?? initial?.sourceType}
+                {initial?.sourceConfig &&
+                  (() => {
+                    const detail = describeSourceConfig(
+                      initial.sourceType ?? '',
+                      initial.sourceConfig as Record<string, unknown>,
+                    )
+                    return detail ? ` -- ${detail}` : null
+                  })()}
+              </div>
+              <p className="text-xs text-muted mt-1">
+                Source type and config cannot be changed for this subscription.
+              </p>
             </div>
           )}
-
-          {/* Source providers (multiselect, filtered by capability) */}
-          <div>
-            <span className="block text-sm font-medium text-text mb-1">Sources</span>
-            <div className="flex flex-wrap gap-2">
-              {SOURCE_PROVIDERS.filter((p) =>
-                p.capabilities.includes(
-                  sourceType === 'similar' ? 'similarArtists' : 'genreArtists',
-                ),
-              ).map((p) => {
-                const configured = configuredSources.includes(p.value)
-                const selected = providers.includes(p.value)
-                return (
-                  <button
-                    key={p.value}
-                    type="button"
-                    disabled={!configured}
-                    onClick={() => {
-                      setProviders((prev) =>
-                        prev.includes(p.value)
-                          ? prev.filter((v) => v !== p.value)
-                          : [...prev, p.value],
-                      )
-                    }}
-                    className={`px-3 py-1.5 rounded text-sm border transition-colors ${
-                      !configured
-                        ? 'border-border text-muted/50 cursor-not-allowed bg-surface/50'
-                        : selected
-                          ? 'border-accent/50 bg-accent/15 text-accent'
-                          : 'border-border text-muted hover:border-accent/40 hover:text-text'
-                    }`}
-                    title={configured ? undefined : 'Configure in Settings > Connections'}
-                  >
-                    {p.label}
-                    {!configured && <span className="text-xs ml-1">(not configured)</span>}
-                  </button>
-                )
-              })}
-            </div>
-            {providers.length === 0 && (
-              <p className="text-xs text-reject mt-1">Select at least one source</p>
-            )}
-            {providers.length > 0 && getUnsupportedSimilarProviderError(sourceType, providers) && (
-              <p className="text-xs text-reject mt-1">{LISTENBRAINZ_SIMILAR_ERROR}</p>
-            )}
-          </div>
 
           {/* Schedule */}
           <div>
