@@ -25,7 +25,18 @@ services:
       - DIGARR_AUTH_TOKEN=${DIGARR_AUTH_TOKEN:-}
       - DIGARR_INITIAL_USERNAME=${DIGARR_INITIAL_USERNAME:-}
       - DIGARR_INITIAL_PASSWORD=${DIGARR_INITIAL_PASSWORD:-}
+      - DIGARR_DISABLE_REGISTRATION=${DIGARR_DISABLE_REGISTRATION:-true}
+      # Field-level encryption for API keys in the database (recommended)
+      - DIGARR_ENCRYPTION_KEY=${DIGARR_ENCRYPTION_KEY:-}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
+      # Proxy auth (trusted reverse proxy header authentication)
+      - PROXY_AUTH_ENABLED=${PROXY_AUTH_ENABLED:-false}
+      - PROXY_AUTH_TRUSTED_PROXIES=${PROXY_AUTH_TRUSTED_PROXIES:-}
+      # OIDC (OpenID Connect SSO)
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_SCOPES=${OIDC_SCOPES:-}
     depends_on:
       postgres:
         condition: service_healthy
