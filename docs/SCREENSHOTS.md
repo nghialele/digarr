@@ -14,6 +14,10 @@ All screenshots use the Youtarr theme.
 
 ![Discover](screenshots/discover.png)
 
+## Search
+
+![Search](screenshots/search.png)
+
 ## Genres
 
 ![Genres](screenshots/genres.png)
@@ -41,7 +45,3 @@ All screenshots use the Youtarr theme.
 ## Settings
 
 ![Settings](screenshots/settings.png)
-
-## User Management
-
-![User Management](screenshots/users.png)
