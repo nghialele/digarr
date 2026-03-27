@@ -1,4 +1,8 @@
-# Digarr
+<p align="center">
+  <img src="docs/logo.png" alt="Digarr" width="120" />
+</p>
+
+<h1 align="center">digarr</h1>
 
 [![CI](https://github.com/iuliandita/digarr/actions/workflows/ci.yml/badge.svg)](https://github.com/iuliandita/digarr/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -175,3 +179,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT -- see [LICENSE](LICENSE).
+
+---
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=iuliandita%2Fdigarr&type=timeline&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=iuliandita/digarr&type=timeline&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=iuliandita/digarr&type=timeline&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=iuliandita/digarr&type=timeline&legend=top-left" />
+ </picture>
+</a>
