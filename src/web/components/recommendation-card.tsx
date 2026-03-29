@@ -387,7 +387,8 @@ function TopTracks({ artistId }: { artistId: number }) {
       if (!ct.startsWith('audio/')) {
         throw new Error('Invalid audio response from preview proxy')
       }
-      const blob = await res.blob()
+      const arrayBuffer = await res.arrayBuffer()
+      const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' })
       const blobUrl = URL.createObjectURL(blob)
       const audio = new Audio(blobUrl)
       audioRef.current = audio
