@@ -379,7 +379,14 @@ function TopTracks({ artistId }: { artistId: number }) {
       const res = await fetch(`/api/preview/audio?url=${encodeURIComponent(previewUrl)}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
-      if (!res.ok) throw new Error('Preview fetch failed')
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.error ?? 'Preview not available')
+      }
+      const ct = res.headers.get('Content-Type') ?? ''
+      if (!ct.startsWith('audio/')) {
+        throw new Error('Invalid audio response from preview proxy')
+      }
       const blob = await res.blob()
       const blobUrl = URL.createObjectURL(blob)
       const audio = new Audio(blobUrl)
@@ -391,6 +398,7 @@ function TopTracks({ artistId }: { artistId: number }) {
       audio.onerror = () => {
         setPlayingUrl(null)
         URL.revokeObjectURL(blobUrl)
+        toast.error('Audio playback failed')
       }
       await audio.play()
     } catch (err: unknown) {

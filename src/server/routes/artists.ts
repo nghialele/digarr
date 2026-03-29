@@ -86,13 +86,14 @@ export function artistRoutes(deps: AppDependencies) {
       const timer = setTimeout(() => controller.abort(), 10_000)
       const res = await fetch(url, { signal: controller.signal })
       clearTimeout(timer)
-      if (!res.ok || !res.body) {
-        return c.json({ error: 'Preview not available' }, 502)
+      const contentType = res.headers.get('Content-Type') ?? ''
+      if (!res.ok || !res.body || !contentType.startsWith('audio/')) {
+        return c.json({ error: 'Preview not available', status: res.status, contentType }, 502)
       }
       return new Response(res.body, {
         headers: {
-          'Content-Type': res.headers.get('Content-Type') ?? 'audio/mpeg',
-          'Cache-Control': 'public, max-age=86400',
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=300',
         },
       })
     } catch {
