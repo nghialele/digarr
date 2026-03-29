@@ -529,8 +529,8 @@ export function RecommendationCard({
           />
         </button>
       )}
-      {/* Hover edge buttons -- desktop only, only for pending cards */}
-      {!bulkMode && isPending && (
+      {/* Hover edge buttons -- desktop only, pending cards, not when expanded */}
+      {!bulkMode && isPending && !expanded && (
         <>
           {/* Left edge: reject */}
           <button
