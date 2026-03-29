@@ -78,7 +78,7 @@ export function artistRoutes(deps: AppDependencies) {
   // Proxy Deezer preview audio to avoid CORS issues in browsers
   router.get('/api/preview/audio', async (c) => {
     const url = c.req.query('url')
-    if (!url || !url.startsWith('https://cdns-preview-')) {
+    if (!url || !url.match(/^https:\/\/cdn[st]-?preview[.-]/)) {
       return c.json({ error: 'Invalid preview URL' }, 400)
     }
     try {
