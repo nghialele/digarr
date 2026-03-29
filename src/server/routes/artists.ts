@@ -87,12 +87,15 @@ export function artistRoutes(deps: AppDependencies) {
       const res = await fetch(url, { signal: controller.signal })
       clearTimeout(timer)
       const contentType = res.headers.get('Content-Type') ?? ''
-      if (!res.ok || !res.body || !contentType.startsWith('audio/')) {
+      if (!res.ok || !contentType.startsWith('audio/')) {
         return c.json({ error: 'Preview not available', status: res.status, contentType }, 502)
       }
-      return new Response(res.body, {
+      // Buffer fully before responding -- streaming can corrupt audio in some runtimes
+      const audioBuffer = await res.arrayBuffer()
+      return new Response(audioBuffer, {
         headers: {
           'Content-Type': contentType,
+          'Content-Length': String(audioBuffer.byteLength),
           'Cache-Control': 'public, max-age=300',
         },
       })
