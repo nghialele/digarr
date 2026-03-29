@@ -14,7 +14,7 @@
 
 **AI-powered music discovery for your *arr stack.** Connect your listening sources (ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, Discogs), pick an AI provider, and Digarr builds a taste profile, discovers new artists through a 7-stage pipeline, and scores them with a weighted formula that learns from your feedback. Approve what you like -- artists go straight to Lidarr, Spotify playlists, or your media server. Describe a mood in plain English and get instant results. Set up subscriptions that discover new music on a schedule while you sleep. Generate weekly digest playlists automatically. Browse your library by genre with deep-cut discovery. All self-hosted, all yours.
 
-> **Beta software -- working toward v1.0.** Usable and actively developed, but expect rough edges. We'd love your help: set it up, break things, [report issues](https://github.com/iuliandita/digarr/issues), and share your feature ideas.
+> **Beta software -- working toward v1.0.** Usable and actively developed, but expect rough edges. Things move fast during the beta -- there may be several releases per day with bug fixes, new features, and improvements. Check the [releases page](https://github.com/iuliandita/digarr/releases) frequently and read the release notes before updating. We'd love your help: set it up, break things, [report issues](https://github.com/iuliandita/digarr/issues), and share your feature ideas.
 >
 > Free and open source, forever. No tracking, no telemetry, no data collection -- your music taste stays on your server.
 
