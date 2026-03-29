@@ -695,3 +695,9 @@ export const getPlaylistScheduler = () =>
   fetchApi<{ nextRun: string | null; cron: string | null; enabled: boolean }>(
     '/playlists/scheduler',
   )
+
+// Artist top tracks
+export const getArtistTopTracks = (artistId: number) =>
+  fetchApi<{ tracks: Array<{ name: string; previewUrl?: string; durationMs?: number }> }>(
+    `/artists/${artistId}/top-tracks`,
+  )
