@@ -193,7 +193,7 @@ describe('RecommendationCard', () => {
         expanded
       />,
     )
-    expect(screen.getByText('Unknown Artist')).toBeInTheDocument()
+    expect(screen.getAllByText('Unknown Artist').length).toBeGreaterThan(0)
     // No AI reasoning section
     expect(screen.queryByText('Why this artist')).not.toBeInTheDocument()
     // No source scores section

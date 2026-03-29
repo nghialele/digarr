@@ -709,32 +709,36 @@ export function RecommendationCard({
         {/* Expanded-only section */}
         {expanded && (
           <div className="border-t border-border pb-4 space-y-4">
-            {/* Hero banner with artist image + logo */}
-            {rec.artist.imageUrl && (
-              <div
-                className="relative h-40 w-full bg-cover bg-center"
-                style={{ backgroundImage: `url(${rec.artist.imageUrl.replace(/[()'"]/g, '')})` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                {rec.artist.logoUrl ? (
-                  <img
-                    src={rec.artist.logoUrl}
-                    alt={rec.artist.name}
-                    className="absolute bottom-3 left-4 h-10 max-w-[60%] object-contain object-left drop-shadow-lg"
-                  />
-                ) : (
-                  <span className="absolute bottom-3 left-4 text-white font-bold text-xl drop-shadow-lg">
-                    {rec.artist.name}
-                  </span>
-                )}
-                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5">
-                  <span className="text-accent text-lg font-bold leading-none">{pct}</span>
-                  <span className="text-white/50 text-[9px] ml-1 uppercase tracking-wider">
-                    match
-                  </span>
-                </div>
+            {/* Hero banner with artist image or gradient fallback */}
+            <div
+              className="relative h-40 w-full bg-cover bg-center"
+              style={
+                rec.artist.imageUrl
+                  ? { backgroundImage: `url(${rec.artist.imageUrl.replace(/[()'"]/g, '')})` }
+                  : {
+                      background: `hsl(${Math.abs([...rec.artist.name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360)}, 40%, 25%)`,
+                    }
+              }
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              {rec.artist.logoUrl ? (
+                <img
+                  src={rec.artist.logoUrl}
+                  alt={rec.artist.name}
+                  className="absolute bottom-3 left-4 h-10 max-w-[60%] object-contain object-left drop-shadow-lg"
+                />
+              ) : (
+                <span className="absolute bottom-3 left-4 text-white font-bold text-xl drop-shadow-lg">
+                  {rec.artist.name}
+                </span>
+              )}
+              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5">
+                <span className="text-accent text-lg font-bold leading-none">{pct}</span>
+                <span className="text-white/50 text-[9px] ml-1 uppercase tracking-wider">
+                  match
+                </span>
               </div>
-            )}
+            </div>
 
             {/* MusicBrainz link */}
             <div className="px-4 flex items-center gap-2">
