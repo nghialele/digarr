@@ -1,0 +1,336 @@
+# API Reference
+
+All endpoints require authentication via `Authorization: Bearer <token>` header unless marked as public. Some endpoints also accept `?token=<token>` query param (for SSE and `<audio>` elements that can't send headers).
+
+Admin-only endpoints return 403 for non-admin users.
+
+---
+
+## Auth
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/register` | No | Create account. First user becomes admin. Rate limited: 5/min |
+| POST | `/api/auth/login` | No | Login with username/password. Rate limited: 10/min |
+| POST | `/api/auth/logout` | Yes | Invalidate current session |
+| GET | `/api/auth/status` | No | Server auth status, OIDC config, version |
+| GET | `/api/auth/me` | Yes | Current user profile |
+| POST | `/api/auth/change-password` | Yes | Change password. Invalidates all sessions. Rate limited: 5/min |
+| GET | `/api/auth/me/preferences` | Yes | Get merged user preferences |
+| PATCH | `/api/auth/me/preferences` | Yes | Update user preferences (partial merge) |
+
+### OIDC / OAuth
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/auth/oidc/login` | No | Redirect to OIDC provider |
+| GET | `/api/auth/oidc/callback` | No | OIDC callback, creates user if needed |
+| POST | `/api/auth/oauth/:provider/initiate` | Yes | Start OAuth flow (e.g. Spotify) |
+| GET | `/api/auth/oauth/:provider/callback` | No | OAuth callback |
+| GET | `/api/auth/oauth/:provider/status` | Yes | Check OAuth connection status |
+| DELETE | `/api/auth/oauth/:provider` | Yes | Disconnect OAuth provider |
+
+---
+
+## Setup
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/setup/status` | No | Check if setup is complete |
+| POST | `/api/setup/complete` | No | Complete initial setup |
+
+**POST /api/setup/complete** body:
+```json
+{
+  "aiProvider": "anthropic",
+  "aiModel": "claude-sonnet-4-20250514",
+  "listenbrainzUsername": "user",
+  "lastfmUsername": "user",
+  "lidarrUrl": "http://lidarr:8686",
+  "lidarrApiKey": "abc123",
+  "skipTlsVerify": false
+}
+```
+
+---
+
+## Pipeline
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/pipeline/run` | Yes | Start a full discovery scan. Returns 202. |
+| GET | `/api/pipeline/status` | Yes | Current pipeline status (running, stage, last run) |
+| GET | `/api/pipeline/events` | Yes | SSE stream of pipeline progress events |
+| POST | `/api/pipeline/quick-discover` | Yes | Fire-and-forget: discover artists similar to a given name |
+| POST | `/api/pipeline/rescan` | Yes | Re-fetch images/metadata for existing recommendations |
+
+**POST /api/pipeline/quick-discover** body:
+```json
+{ "artistName": "Radiohead" }
+```
+
+---
+
+## Recommendations
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/recommendations` | Yes | List recommendations (paginated, filterable) |
+| GET | `/api/recommendations/:id` | Yes | Get single recommendation with artist data |
+| PATCH | `/api/recommendations/:id` | Yes | Approve, reject, or restore a recommendation |
+| POST | `/api/recommendations/bulk` | Yes | Bulk approve/reject |
+| GET | `/api/recommendations/feedback-summary` | Yes | Genre approval rates (top 20) |
+
+**GET /api/recommendations** query params:
+- `status` -- `pending`, `approved`, `rejected`, `added_to_lidarr`, `add_failed` (comma-separated)
+- `batchId` -- filter by batch
+- `sort` -- `score_desc` (default), `score_asc`, `created_desc`, `acted_on_desc`
+- `limit` -- 1-200 (default 20)
+- `offset` -- pagination offset
+
+**PATCH /api/recommendations/:id** body:
+```json
+{
+  "status": "approved",
+  "monitorOption": "all",
+  "targetId": "lidarr-1",
+  "qualityProfileId": 1,
+  "metadataProfileId": 1,
+  "rootFolderId": 1
+}
+```
+
+---
+
+## Artists
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/artists/:id` | Yes | Get artist by ID |
+| GET | `/api/artists/:id/top-tracks` | Yes | Top 5 tracks (Deezer, MB fallback) |
+| GET | `/api/albums/:mbid` | Yes | Release groups for an artist MBID |
+| GET | `/api/preview/audio` | Yes | Proxy Deezer preview audio (CORS bypass) |
+
+**GET /api/preview/audio** query params:
+- `url` -- Deezer CDN preview URL (must match `*.dzcdn.net`)
+- `token` -- auth token (for `<audio>` elements that can't send headers)
+
+---
+
+## Batches
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/batches` | Yes | List all recommendation batches |
+| GET | `/api/batches/:id` | Yes | Get batch details |
+
+---
+
+## Subscriptions
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/subscriptions` | Yes | List user subscriptions |
+| POST | `/api/subscriptions` | Yes | Create subscription |
+| PATCH | `/api/subscriptions/:id` | Yes | Update subscription |
+| DELETE | `/api/subscriptions/:id` | Yes | Delete subscription |
+| POST | `/api/subscriptions/:id/run` | Yes | Trigger manual run (202) |
+| GET | `/api/subscriptions/:id/runs` | Yes | Run history |
+| GET | `/api/subscriptions/adapter-types` | Yes | Available adapter types with config schemas |
+| GET | `/api/subscriptions/scheduler` | Yes | Scheduler job status |
+| POST | `/api/subscriptions/bulk-toggle` | Yes | Enable/disable all subscriptions |
+
+**Adapter types**: `genre`, `similar`, `spotify-playlist`, `spotify-charts`, `lastfm-tag`, `lastfm-charts`, `listenbrainz`
+
+**POST /api/subscriptions** body:
+```json
+{
+  "name": "Weekly jazz",
+  "sourceType": "lastfm-tag",
+  "sourceProvider": "lastfm",
+  "sourceConfig": { "tag": "jazz" },
+  "cron": "0 0 * * 0",
+  "maxArtistsPerRun": 20
+}
+```
+
+---
+
+## Targets
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/targets` | Yes | List all targets (config masked for non-owners) |
+| POST | `/api/targets` | Admin | Create target |
+| PATCH | `/api/targets/:id` | Admin | Update target |
+| DELETE | `/api/targets/:id` | Admin | Delete target |
+| POST | `/api/targets/:id/test` | Yes | Test target connection |
+
+**Target types**: `lidarr`, `spotify-playlist`, `navidrome-playlist`, `jellyfin-playlist`, `plex-playlist`
+
+---
+
+## Genres
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/genres` | Yes | List genres with artist counts and examples |
+| GET | `/api/genres/search?q=` | Yes | Search genres (min 2 chars) |
+| GET | `/api/genres/:slug` | Yes | Genre detail with sub-genres and library artists |
+| GET | `/api/genres/:slug/artists` | Yes | Artists by genre (view: recommended/trending/deep_cuts) |
+| POST | `/api/genres/seed` | Yes | Seed genre database from Lidarr library (202) |
+
+---
+
+## Playlists
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/playlists` | Yes | List user playlists |
+| POST | `/api/playlists` | Yes | Create playlist |
+| GET | `/api/playlists/:id` | Yes | Playlist with tracks |
+| PATCH | `/api/playlists/:id` | Yes | Update playlist |
+| DELETE | `/api/playlists/:id` | Yes | Delete playlist |
+| POST | `/api/playlists/:id/generate` | Yes | Generate playlist tracks (202) |
+| GET | `/api/playlists/:id/export/:format` | Yes | Export as json/csv/m3u/xspf |
+| GET | `/api/playlists/scheduler` | Yes | Playlist scheduler status |
+
+**Strategies**: `weekly_digest`, `genre_focus`, `mood_mix`, `rediscover`
+
+---
+
+## Mood Discovery
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/mood/discover` | Yes | AI-powered mood-based discovery |
+
+**Body**:
+```json
+{ "query": "rainy day jazz with piano" }
+```
+
+**Response**:
+```json
+{
+  "results": [
+    {
+      "artistName": "Brad Mehldau",
+      "confidence": 0.9,
+      "reasoning": "...",
+      "inLibrary": false
+    }
+  ]
+}
+```
+
+---
+
+## Search
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/search?q=&sources=&limit=` | Yes | Cross-platform artist search |
+| GET | `/api/search/sources` | Yes | Available search sources |
+
+**Sources**: `spotify`, `deezer`, `musicbrainz`, `tidal`, `bandcamp`
+
+---
+
+## Analytics (Admin)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/analytics/overview` | Admin | Summary stats |
+| GET | `/api/analytics/batches` | Admin | Batch history |
+| GET | `/api/analytics/genres` | Admin | Top genres by recommendation count |
+| GET | `/api/analytics/sources` | Admin | Source effectiveness |
+| GET | `/api/analytics/scores` | Admin | Score distribution |
+| GET | `/api/analytics/trend` | Admin | Approval trend over time |
+| GET | `/api/analytics/time-to-act` | Admin | Time-to-decision metrics |
+
+---
+
+## Library Health (Admin)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/library/health` | Admin | Health check results + scan status |
+| POST | `/api/library/health/scan` | Admin | Start background health scan (202) |
+| POST | `/api/library/health/:checkId/fix` | Admin | Apply fix for a health check |
+| GET | `/api/library/stats` | Admin | Library statistics |
+| POST | `/api/library/warm` | Admin | Warm SkyHook cache for MBIDs (202) |
+| GET | `/api/library/warm/status?mbids=` | Admin | SkyHook warm status |
+
+---
+
+## Exports
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/exports/:format` | Yes | Export recommendations as json/csv/m3u/xspf |
+
+Query params: `status`, `batchId`. Limit: 10,000 rows.
+
+---
+
+## Dashboard
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/dashboard/taste` | Yes | Top genres from user's library |
+| GET | `/api/dashboard/activity?limit=` | Yes | Recent activity feed |
+
+---
+
+## Listening
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/listening/recent` | Yes | Recent listening history (Last.fm/ListenBrainz) |
+
+Query params: `range` (week/month/year), `limit` (1-50).
+
+---
+
+## Settings
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/settings` | Yes | Get settings (secrets masked) |
+| PATCH | `/api/settings` | Yes | Update settings (admin for global, any user for own connections) |
+| POST | `/api/settings/test/:service` | Yes | Test service connection |
+| POST | `/api/settings/test-webhook` | Admin | Send test webhook |
+
+**Testable services**: `lidarr`, `listenbrainz`, `lastfm`, `ai`, `plex`, `jellyfin`, `discogs`, `spotify`, `oidc`
+
+---
+
+## Users (Admin)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/users` | Admin | List all users |
+| POST | `/api/users` | Admin | Create user |
+| PATCH | `/api/users/:id` | Admin | Update user (admin status) |
+| DELETE | `/api/users/:id` | Admin | Delete user |
+
+---
+
+## Lidarr
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/lidarr/stats` | Yes | Artist count, monitored count |
+| GET | `/api/lidarr/profiles` | Yes | Quality profiles |
+| GET | `/api/lidarr/metadataprofiles` | Yes | Metadata profiles |
+| GET | `/api/lidarr/rootfolders` | Yes | Root folders |
+| POST | `/api/lidarr/add` | Yes | Add artist to Lidarr |
+
+---
+
+## Health
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/health` | No | Liveness check (DB connectivity) |
