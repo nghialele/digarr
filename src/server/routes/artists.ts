@@ -31,30 +31,29 @@ export function artistRoutes(deps: AppDependencies) {
       return c.json({ error: 'Artist not found' }, 404)
     }
 
-    // Return cached tracks if fresh (< 30 days)
-    const cached = artist.topTracks as TopTracksCache | null
-    if (cached?.tracks && cached.cachedAt) {
-      const age = Date.now() - new Date(cached.cachedAt).getTime()
-      if (age < CACHE_TTL_MS) {
-        return c.json({ tracks: cached.tracks })
-      }
-    }
-
-    // Fetch from Deezer
-    let tracks: TopTrack[] = []
-
-    // Try to extract Deezer artist ID from streaming URLs first (more precise than name search)
+    // Resolve Deezer artist ID (cached or fresh)
+    let deezerId: number | null = null
     const deezerUrl = (artist.streamingUrls as Record<string, string> | null)?.deezer
     const deezerIdMatch = deezerUrl?.match(/deezer\.com\/(?:\w+\/)?artist\/(\d+)/)
     if (deezerIdMatch?.[1]) {
-      tracks = await deezer.getArtistTopTracks(Number(deezerIdMatch[1]), 5)
+      deezerId = Number(deezerIdMatch[1])
+    } else {
+      const [topResult] = await deezer.searchArtists(artist.name, 1)
+      if (topResult) deezerId = topResult.id
     }
 
-    // Fall back to name search
+    // Always fetch fresh from Deezer (preview URLs are signed and expire)
+    let tracks: TopTrack[] = []
+    if (deezerId) {
+      tracks = await deezer.getArtistTopTracks(deezerId, 5)
+    }
+
+    // Fallback: use cached track names if Deezer fails but we have prior data
     if (tracks.length === 0) {
-      const [topResult] = await deezer.searchArtists(artist.name, 1)
-      if (topResult) {
-        tracks = await deezer.getArtistTopTracks(topResult.id, 5)
+      const cached = artist.topTracks as TopTracksCache | null
+      if (cached?.tracks?.length) {
+        // Strip expired preview URLs from cached data
+        tracks = cached.tracks.map((t) => ({ name: t.name, durationMs: t.durationMs }))
       }
     }
 
@@ -68,8 +67,9 @@ export function artistRoutes(deps: AppDependencies) {
       }
     }
 
-    // Cache result in DB (self-contained timestamp, independent of artist cachedAt)
-    const topTracksCache: TopTracksCache = { tracks, cachedAt: new Date().toISOString() }
+    // Cache track names/durations (preview URLs are not cached -- fetched fresh each time)
+    const toCache = tracks.map((t) => ({ name: t.name, durationMs: t.durationMs }))
+    const topTracksCache: TopTracksCache = { tracks: toCache, cachedAt: new Date().toISOString() }
     await deps.db.update(artists).set({ topTracks: topTracksCache }).where(eq(artists.id, id))
 
     return c.json({ tracks })
