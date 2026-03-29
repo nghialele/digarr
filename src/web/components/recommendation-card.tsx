@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, Music, Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { useClickOutside } from '../hooks/use-click-outside'
 import { getArtistTopTracks } from '../lib/api'
 import { GENRE_COLORS } from '../lib/constants'
@@ -392,8 +393,10 @@ function TopTracks({ artistId }: { artistId: number }) {
         URL.revokeObjectURL(blobUrl)
       }
       await audio.play()
-    } catch {
+    } catch (err: unknown) {
       setPlayingUrl(null)
+      const msg = err instanceof Error ? err.message : 'Preview playback failed'
+      toast.error(msg)
     }
   }
 
@@ -532,7 +535,7 @@ export function RecommendationCard({
           {/* Left edge: reject */}
           <button
             type="button"
-            className="hidden md:group-hover:flex absolute left-1 top-0 bottom-0 z-10 items-center justify-center w-10 opacity-0 group-hover:opacity-100 transition-all duration-150 bg-transparent border-none p-0"
+            className="hidden md:group-hover:flex absolute left-0 top-0 bottom-0 z-10 items-center justify-center w-10 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150 bg-transparent border-none p-0"
             onClick={(e) => {
               e.stopPropagation()
               onReject(rec.id)
@@ -559,7 +562,7 @@ export function RecommendationCard({
           {/* Right edge: approve */}
           <button
             type="button"
-            className="hidden md:group-hover:flex absolute right-1 top-0 bottom-0 z-10 items-center justify-center w-10 opacity-0 group-hover:opacity-100 transition-all duration-150 bg-transparent border-none p-0"
+            className="hidden md:group-hover:flex absolute right-0 top-0 bottom-0 z-10 items-center justify-center w-10 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150 bg-transparent border-none p-0"
             onClick={(e) => {
               e.stopPropagation()
               onApprove(rec.id)
@@ -832,17 +835,19 @@ export function RecommendationCard({
             )}
 
             {/* Action buttons (re-shown in expanded too) -- hidden in bulk mode */}
-            <ActionButtons
-              rec={rec}
-              bulkMode={bulkMode}
-              isPending={isPending}
-              isApproved={isApproved}
-              onApprove={onApprove}
-              onReject={onReject}
-              approveNode={approveNode}
-              targets={targets}
-              onApproveToTarget={onApproveToTarget}
-            />
+            <div className="px-4">
+              <ActionButtons
+                rec={rec}
+                bulkMode={bulkMode}
+                isPending={isPending}
+                isApproved={isApproved}
+                onApprove={onApprove}
+                onReject={onReject}
+                approveNode={approveNode}
+                targets={targets}
+                onApproveToTarget={onApproveToTarget}
+              />
+            </div>
           </div>
         )}
       </div>
