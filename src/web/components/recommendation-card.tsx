@@ -359,7 +359,7 @@ function TopTracks({ artistId }: { artistId: number }) {
   const [playingUrl, setPlayingUrl] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  async function handlePlay(previewUrl: string) {
+  function handlePlay(previewUrl: string) {
     if (playingUrl === previewUrl) {
       audioRef.current?.pause()
       setPlayingUrl(null)
@@ -372,41 +372,23 @@ function TopTracks({ artistId }: { artistId: number }) {
       audioRef.current.onerror = null
       audioRef.current.src = ''
     }
-    setPlayingUrl(previewUrl)
-    try {
-      // Fetch through auth'd proxy, play as blob to avoid CORS + auth issues
-      const token = localStorage.getItem('digarr-auth-token')
-      const res = await fetch(`/api/preview/audio?url=${encodeURIComponent(previewUrl)}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        throw new Error(body?.error ?? 'Preview not available')
-      }
-      const ct = res.headers.get('Content-Type') ?? ''
-      if (!ct.startsWith('audio/')) {
-        throw new Error('Invalid audio response from preview proxy')
-      }
-      const arrayBuffer = await res.arrayBuffer()
-      const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' })
-      const blobUrl = URL.createObjectURL(blob)
-      const audio = new Audio(blobUrl)
-      audioRef.current = audio
-      audio.onended = () => {
-        setPlayingUrl(null)
-        URL.revokeObjectURL(blobUrl)
-      }
-      audio.onerror = () => {
-        setPlayingUrl(null)
-        URL.revokeObjectURL(blobUrl)
-        toast.error('Audio playback failed')
-      }
-      await audio.play()
-    } catch (err: unknown) {
+    // Use proxy URL with token in query param (Audio element can't send headers)
+    const token = localStorage.getItem('digarr-auth-token')
+    const params = new URLSearchParams({ url: previewUrl })
+    if (token) params.set('token', token)
+    const proxyUrl = `/api/preview/audio?${params.toString()}`
+    const audio = new Audio(proxyUrl)
+    audioRef.current = audio
+    audio.onended = () => setPlayingUrl(null)
+    audio.onerror = () => {
       setPlayingUrl(null)
-      const msg = err instanceof Error ? err.message : 'Preview playback failed'
-      toast.error(msg)
+      toast.error('Audio preview not available')
     }
+    audio.play().catch(() => {
+      setPlayingUrl(null)
+      toast.error('Audio preview not available')
+    })
+    setPlayingUrl(previewUrl)
   }
 
   useEffect(() => {
