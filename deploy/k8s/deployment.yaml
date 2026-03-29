@@ -28,7 +28,7 @@ spec:
         - name: digarr
           securityContext:
             allowPrivilegeEscalation: false
-          image: ghcr.io/iuliandita/digarr:0.12.4
+          image: ghcr.io/iuliandita/digarr:0.12.5
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
