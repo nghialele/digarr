@@ -9,7 +9,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-1110_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1132_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **AI-powered music discovery for your *arr stack.** Connect your listening sources (ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, Discogs), pick an AI provider, and Digarr builds a taste profile, discovers new artists through a 7-stage pipeline, and scores them with a weighted formula that learns from your feedback. Approve what you like -- artists go straight to Lidarr, Spotify playlists, or your media server. Describe a mood in plain English and get instant results. Set up subscriptions that discover new music on a schedule while you sleep. Generate weekly digest playlists automatically. Browse your library by genre with deep-cut discovery. All self-hosted, all yours.
@@ -55,6 +55,8 @@ Search for artists across Spotify, Deezer, MusicBrainz, TIDAL, and Bandcamp simu
 - **Genre deep dive** -- browse by genre with Recommended, Trending, and Deep Cuts tabs
 - **Library health** -- 6 automated checks with one-click batch fixes
 - **Analytics** -- approval rates, genre trends, source effectiveness, score distribution, time-to-act
+- **Top tracks** -- Deezer 30-sec previews on recommendation cards with MusicBrainz fallback
+- **Decade filtering** -- filter recommendations by era (60s through 20s+) with toggle pills
 - **Music previews** -- Spotify embeds, Deezer clips, YouTube on recommendation cards
 - **OIDC/SSO + multi-user** -- per-user queues, sources, scoring weights, and target configs
 - **Swipe-to-approve** on mobile, card-stack mode on desktop
