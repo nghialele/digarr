@@ -154,19 +154,22 @@ export function pipelineRoutes(deps: AppDependencies) {
 
         // Add the seed artist directly (bypasses dedup, no Lidarr dependency)
         try {
+          const existingMbids =
+            await deps.storeDb.getExistingRecommendationMbids(quickDiscoverUserId)
           const seedDiscovered = [
             {
               name: artistName,
               similarityScore: 1.0,
               aiReasoning: 'Directly added from mood discovery.',
-              source: 'mood' as const,
+              source: 'mood',
             },
           ]
           // Resolve via MB only (no Lidarr image lookup -- avoids SkyHook dependency)
           const seedResolved = await resolve(seedDiscovered, mb)
-          if (seedResolved.length > 0) {
+          const newSeeds = seedResolved.filter((s) => !existingMbids.has(s.mbid))
+          if (newSeeds.length > 0) {
             const seedScored = score(
-              seedResolved,
+              newSeeds,
               [],
               {
                 consensus: 0,

@@ -589,7 +589,7 @@ export function DiscoverPage() {
   }
 
   async function handleApproveAbove() {
-    const eligible = items.filter(
+    const eligible = filteredItems.filter(
       (r) => r.score * 100 >= approveThreshold && r.status === 'pending',
     )
     if (eligible.length === 0) {

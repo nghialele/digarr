@@ -6,8 +6,6 @@ import type { TopTrack, TopTracksCache } from '@/db/schema'
 import { artists } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
-
 export function artistRoutes(deps: AppDependencies) {
   const router = new Hono()
   const deezer = createDeezerClient()
@@ -78,7 +76,7 @@ export function artistRoutes(deps: AppDependencies) {
   // Proxy Deezer preview audio to avoid CORS issues in browsers
   router.get('/api/preview/audio', async (c) => {
     const url = c.req.query('url')
-    if (!url || !url.match(/^https:\/\/cdn[st]-?preview[.-]/)) {
+    if (!url || !url.match(/^https:\/\/cdn[st]-?preview[a-z-]*\.dzcdn\.net\//)) {
       return c.json({ error: 'Invalid preview URL' }, 400)
     }
     try {
@@ -90,8 +88,15 @@ export function artistRoutes(deps: AppDependencies) {
       if (!res.ok || !contentType.startsWith('audio/')) {
         return c.json({ error: 'Preview not available', status: res.status, contentType }, 502)
       }
-      // Buffer fully before responding -- streaming can corrupt audio in some runtimes
+      const MAX_PREVIEW_BYTES = 2 * 1024 * 1024
+      const cl = res.headers.get('Content-Length')
+      if (cl && Number(cl) > MAX_PREVIEW_BYTES) {
+        return c.json({ error: 'Preview too large' }, 502)
+      }
       const audioBuffer = await res.arrayBuffer()
+      if (audioBuffer.byteLength > MAX_PREVIEW_BYTES) {
+        return c.json({ error: 'Preview too large' }, 502)
+      }
       return new Response(audioBuffer, {
         headers: {
           'Content-Type': contentType,
