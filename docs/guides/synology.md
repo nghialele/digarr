@@ -38,9 +38,25 @@ sudo docker compose up -d
 
 ## DSM 7.1 (Docker package -- no Project support)
 
-The Docker package on DSM 7.1 does not support compose projects or custom
-networks in the GUI. The Launch wizard has no Network tab, and container
-settings (environment variables, network) cannot be changed after creation.
+The Docker package on DSM 7.1 does not support compose projects in the GUI.
+You can create containers individually with the Launch wizard.
+
+### DSM 7.1 gotchas
+
+- **Settings are locked after creation.** Network, environment variables,
+  and volume mappings can only be set during the Launch wizard. If you need
+  to change anything, delete the container and recreate it.
+- **`localhost` doesn't mean what you think.** Each container has its own
+  network namespace. `localhost` inside the Digarr container points to
+  itself, not the NAS or the postgres container. Use a custom network with
+  container names as hostnames instead.
+- **Create the custom network first.** The Launch wizard shows a Network
+  step where you can pick a custom bridge network. Both containers must be
+  on the same custom network for hostname resolution to work.
+- **Start postgres before Digarr.** There's no health-check dependency in
+  the GUI (unlike docker compose). If Digarr starts before postgres is
+  ready, it crashes and enters a restart loop. Start `digarr-db` first,
+  wait for it to go green, then start `digarr`.
 
 ### SSH with docker compose (recommended)
 
