@@ -24,6 +24,7 @@
 
 ---
 
+> [!NOTE]
 > **Built with AI.** Digarr is built with the help of agentic AI coding tools. A human drives the roadmap, designs the architecture, makes every feature decision, and reviews the output -- but the code and tests are largely AI-generated. All output is reviewed for security issues and generic AI slop before it ships. This is stated upfront because transparency matters. If that's a dealbreaker for you, no hard feelings.
 
 ---
