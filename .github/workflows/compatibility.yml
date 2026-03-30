@@ -60,9 +60,10 @@ jobs:
         run: |
           brew install --cask docker
           open /Applications/Docker.app
-          for i in $(seq 1 60); do
+          # Docker Desktop on macOS runners can take 3+ minutes to initialize
+          for i in $(seq 1 90); do
             if docker info > /dev/null 2>&1; then
-              echo "Docker ready after ${i}s"
+              echo "Docker ready after $((i * 2))s"
               break
             fi
             sleep 2
@@ -94,4 +95,4 @@ jobs:
       - name: Tear down
         if: always()
         working-directory: deploy/docker
-        run: docker compose down -v
+        run: docker compose down -v 2>/dev/null || true
