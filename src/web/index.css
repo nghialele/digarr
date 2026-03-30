@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Compact text sizes for badges, pills, labels */
+@utility text-micro {
+  font-size: 0.625rem; /* 10px */
+}
+@utility text-micro-sm {
+  font-size: 0.5625rem; /* 9px */
+}
+@utility text-micro-lg {
+  font-size: 0.6875rem; /* 11px */
+}
+
 @theme {
   --color-bg: #1a1b26;
   --color-surface: #24283b;
@@ -11,11 +22,6 @@
   --color-info: #7dcfff;
   --color-text: #c0caf5;
   --color-muted: #565f89;
-
-  /* Compact text sizes for badges, pills, labels */
-  --font-size-micro: 0.625rem; /* 10px */
-  --font-size-micro-sm: 0.5625rem; /* 9px */
-  --font-size-micro-lg: 0.6875rem; /* 11px */
 
   /* Service brand colors -- overridable per theme */
   --color-svc-spotify: #1db954;
