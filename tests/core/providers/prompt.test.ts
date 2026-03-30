@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { buildRecommendationPrompt, parseRecommendationResponse } from '@/core/providers/prompt'
+import {
+  buildMoodPrompt,
+  buildRecommendationPrompt,
+  parseRecommendationResponse,
+} from '@/core/providers/prompt'
 import type { TasteProfile } from '@/core/types'
 
 const sampleProfile: TasteProfile = {
@@ -20,6 +24,19 @@ describe('buildRecommendationPrompt()', () => {
     const prompt = buildRecommendationPrompt(sampleProfile)
     expect(prompt).toContain('"suggestedAlbum"')
     expect(prompt).toContain('Dragging a Dead Deer Up a Hill')
+  })
+
+  it('includes name-description consistency warning', () => {
+    const prompt = buildRecommendationPrompt(sampleProfile)
+    expect(prompt).toContain('Do not confuse similarly-named artists')
+    expect(prompt).toContain('reasoning accurately describes the EXACT artist')
+  })
+})
+
+describe('buildMoodPrompt()', () => {
+  it('includes name-description consistency warning', () => {
+    const prompt = buildMoodPrompt('chill ambient vibes')
+    expect(prompt).toContain('Do not confuse similarly-named artists')
   })
 })
 

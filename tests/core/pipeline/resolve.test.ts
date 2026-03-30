@@ -223,6 +223,71 @@ describe('resolve()', () => {
       expect(result[0]?.mbid).toBe('mbid-right')
     })
 
+    it('skips artist when AI provides genres but best MB candidate has zero overlap', async () => {
+      // Simulates the issue where AI confuses similarly-named artists:
+      // AI says "Digital Underground" with rock genres, but MB only finds the hip-hop group
+      const discovered: DiscoveredArtist[] = [
+        {
+          name: 'Digital Underground',
+          similarityScore: 0.8,
+          source: 'ai',
+          aiReasoning: 'Experimental rock pioneers...',
+          genres: ['rock', 'experimental', 'art rock'],
+        },
+      ]
+
+      const hipHopArtist = makeMbArtist({
+        id: 'mbid-du',
+        name: 'Digital Underground',
+        tags: [
+          { name: 'hip hop', count: 10 },
+          { name: 'rap', count: 8 },
+          { name: 'funk', count: 5 },
+        ],
+      })
+
+      const mb = makeMb()
+      mb.searchArtist = vi.fn().mockResolvedValue({
+        artists: [{ id: 'mbid-du', name: 'Digital Underground', score: 100 }],
+      })
+      mb.lookupArtist = vi.fn().mockResolvedValue(hipHopArtist)
+
+      const result = await resolve(discovered, mb)
+
+      // Should be dropped -- genres completely mismatch
+      expect(result).toHaveLength(0)
+    })
+
+    it('accepts artist when AI provides genres but MB candidate has no tags', async () => {
+      // MB having no tags is common for lesser-known artists -- should not reject
+      const discovered: DiscoveredArtist[] = [
+        {
+          name: 'Obscure Band',
+          similarityScore: 0.75,
+          source: 'ai',
+          genres: ['shoegaze', 'dream pop'],
+        },
+      ]
+
+      const untaggedArtist = makeMbArtist({
+        id: 'mbid-obscure',
+        name: 'Obscure Band',
+        tags: [], // no tags in MB
+      })
+
+      const mb = makeMb()
+      mb.searchArtist = vi.fn().mockResolvedValue({
+        artists: [{ id: 'mbid-obscure', name: 'Obscure Band', score: 90 }],
+      })
+      mb.lookupArtist = vi.fn().mockResolvedValue(untaggedArtist)
+
+      const result = await resolve(discovered, mb)
+
+      // Should be accepted -- no tags to contradict, not a confirmed mismatch
+      expect(result).toHaveLength(1)
+      expect(result[0]?.mbid).toBe('mbid-obscure')
+    })
+
     it('falls back to first MB result when no genre data available', async () => {
       const discovered: DiscoveredArtist[] = [
         { name: 'SomeArtist', similarityScore: 0.8, source: 'lastfm' },

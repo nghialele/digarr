@@ -48,6 +48,8 @@ Example:
   }
 ]
 
+IMPORTANT: For each recommendation, verify that the reasoning accurately describes the EXACT artist named in artistName. Do not confuse similarly-named artists (e.g., "Velvet Underground" and "Digital Underground" are completely different artists). The genres field must match the actual genres of the named artist.
+
 Provide 15-20 diverse recommendations. Prioritize lesser-known artists alongside some well-known ones. Do not include artists already in the listener's top artists list.`
 }
 
@@ -68,7 +70,9 @@ Return ONLY a JSON array. Each element must have:
 - reasoning: string (2-3 sentences describing the artist and why they match)
 - confidence: number (0.0-1.0)
 - genres: string[]
-- suggestedAlbum: string (optional)${exclusionClause}`
+- suggestedAlbum: string (optional)
+
+IMPORTANT: For each recommendation, verify that the reasoning accurately describes the EXACT artist named in artistName. Do not confuse similarly-named artists. The genres field must match the actual genres of the named artist.${exclusionClause}`
 }
 
 export function parseRecommendationResponse(text: string): AiRecommendation[] {

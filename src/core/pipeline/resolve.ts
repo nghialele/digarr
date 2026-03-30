@@ -82,7 +82,7 @@ export async function resolve(
       const maxCandidates = discoveryGenres.length > 0 ? 5 : 1
 
       let bestCandidate: MBArtist | null = null
-      let bestOverlap = -1
+      let bestOverlap = -Infinity
 
       for (const hit of searchResult.artists.slice(0, maxCandidates)) {
         if (byMbid.has(hit.id)) continue
@@ -105,6 +105,12 @@ export async function resolve(
           // skip failed lookup, try next candidate
         }
       }
+
+      // Skip when AI provided genres but the best MB candidate has zero overlap --
+      // strong signal that the AI confused similarly-named artists (e.g. "Digital
+      // Underground" vs "The Velvet Underground"). bestOverlap of -1 means MB had
+      // no tags to compare, which is fine -- many lesser-known artists lack tags.
+      if (discoveryGenres.length > 0 && bestOverlap === 0) continue
 
       if (!bestCandidate || byMbid.has(bestCandidate.id)) continue
       resolved.push(await buildResolvedArtist(bestCandidate, discoveries, mb, lidarr))
