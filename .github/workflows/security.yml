@@ -60,8 +60,8 @@ jobs:
   trivy-image:
     name: Trivy container scan
     runs-on: ubuntu-latest
-    # skip on fork PRs -- DOCKERHUB_* secrets unavailable
-    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
+    # skip when DOCKERHUB secrets unavailable (fork PRs, dependabot)
+    if: github.event_name != 'pull_request' || (!github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]')
     permissions:
       security-events: write
     steps:
