@@ -43,44 +43,55 @@ You need to create the PostgreSQL and Digarr containers separately.
 
 ### Option A: GUI (two containers)
 
-#### Step 1: Create the PostgreSQL container
+#### Step 1: Create a network
 
-1. Open **Docker** > **Registry** > search for `postgres`
+Containers on the default bridge network can only reach each other by IP
+address, which changes on reboot. A custom network lets them use container
+names as hostnames.
+
+1. Open **Docker** > **Network** > **Add**
+2. Name: `digarr-net`
+3. Driver: `bridge`
+4. Click **Add**
+
+#### Step 2: Create the PostgreSQL container
+
+1. **Docker** > **Registry** > search for `postgres`
 2. Download `postgres:17-alpine`
-3. Go to **Image** > select `postgres:17-alpine` > **Launch**
-4. Name: `digarr-db`
-5. Under **Advanced Settings** > **Environment**:
+3. **Image** > select `postgres:17-alpine` > **Launch**
+4. Container name: `digarr-db`
+5. **Advanced Settings** > **Network**: select `digarr-net` (the network you just created)
+6. **Advanced Settings** > **Environment** -- add these variables:
    - `POSTGRES_USER` = `digarr`
-   - `POSTGRES_PASSWORD` = pick a password (remember it for the next step)
+   - `POSTGRES_PASSWORD` = pick a password (remember it for step 3)
    - `POSTGRES_DB` = `digarr`
-6. Under **Advanced Settings** > **Volume**: add a volume mapping
+7. **Advanced Settings** > **Volume** -- add a folder mapping:
+   - File/Folder: create `/volume1/docker/digarr-db` (or any path on your NAS)
    - Mount path: `/var/lib/postgresql/data`
-   - Either create a new folder (e.g., `/volume1/docker/digarr-db`) or let Docker manage the volume
-7. Under **Advanced Settings** > **Network**: leave as `bridge`
-8. Click **Apply** to start the container
-9. Go to **Container** > `digarr-db` > **Details** > **Network** and note the container's IP address (e.g., `172.17.0.2`)
+8. **Apply** to create and start the container
+9. Verify it's running in **Container** (green status)
 
-#### Step 2: Create the Digarr container
+#### Step 3: Create the Digarr container
 
-1. Go to **Registry** > search for `iuliandita/digarr`
+1. **Registry** > search for `iuliandita/digarr`
 2. Download `iuliandita/digarr:latest`
-3. Go to **Image** > select `iuliandita/digarr:latest` > **Launch**
-4. Name: `digarr`
-5. Under **Port Settings**: set local port `3000` -> container port `3000`
-6. Under **Advanced Settings** > **Environment**:
-   - `DATABASE_URL` = `postgresql://digarr:<your-password>@<postgres-ip>:5432/digarr`
-     (replace `<your-password>` with the password from step 1, and `<postgres-ip>` with the IP from step 1.9)
-   - `DIGARR_INITIAL_USERNAME` = pick an admin username (optional but recommended)
-   - `DIGARR_INITIAL_PASSWORD` = pick a password, min 8 chars (optional but recommended)
-7. Click **Apply** to start the container
+3. **Image** > select `iuliandita/digarr:latest` > **Launch**
+4. Container name: `digarr`
+5. **Advanced Settings** > **Network**: select `digarr-net` (same network as postgres)
+6. **Advanced Settings** > **Port Settings**: local port `3000` -> container port `3000`
+7. **Advanced Settings** > **Environment** -- add these variables:
+   - `DATABASE_URL` = `postgresql://digarr:YOUR_PASSWORD@digarr-db:5432/digarr`
+     (replace `YOUR_PASSWORD` with the password from step 2.6 -- the hostname
+     `digarr-db` is the postgres container's name on the shared network)
+   - `DIGARR_INITIAL_USERNAME` = pick an admin username
+   - `DIGARR_INITIAL_PASSWORD` = pick a password (min 8 chars)
+8. **Apply** to create and start the container
 
 Open `http://<nas-ip>:3000` in your browser.
 
-> **Tip:** If the postgres container IP changes after a NAS reboot, the app
-> will fail to connect. To avoid this, create a custom bridge network in
-> **Docker** > **Network** and attach both containers to it -- then use the
-> container name (`digarr-db`) as the hostname in `DATABASE_URL`:
-> `postgresql://digarr:<password>@digarr-db:5432/digarr`
+> **Note:** Both containers must be on the same custom network (`digarr-net`)
+> for the `digarr-db` hostname to resolve. Using `localhost` will not work --
+> each container has its own isolated network namespace.
 
 ### Option B: SSH (recommended for 7.1)
 
