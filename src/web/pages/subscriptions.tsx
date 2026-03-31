@@ -483,7 +483,7 @@ export default function SubscriptionsPage() {
       {!isLoading &&
         subscriptions &&
         subscriptions.length === 0 &&
-        (subscriptionMode === 'ai-only' ? (
+        (subscriptionMode === 'ai-only' && !showPresets ? (
           <div className="bg-surface border border-border rounded-lg px-4 py-12 text-center space-y-3">
             <p className="text-sm font-medium text-text">AI-only mode</p>
             <p className="text-xs text-muted">

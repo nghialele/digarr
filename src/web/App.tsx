@@ -18,15 +18,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import {
-  BrowserRouter,
-  Navigate,
-  NavLink,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from 'react-router-dom'
+import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { errMsg } from '@/core/validation'
 import { VERSION } from '@/version'
@@ -244,7 +236,6 @@ function ThemePicker({
 function UserMenu({ username }: { username: string }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const navigate = useNavigate()
 
   useClickOutside(ref, () => setOpen(false), open)
 
@@ -273,17 +264,14 @@ function UserMenu({ username }: { username: string }) {
           <div className="px-3 py-2 border-b border-border">
             <p className="text-sm font-medium text-text truncate">{username}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              navigate('/settings?tab=account')
-              setOpen(false)
-            }}
+          <NavLink
+            to="/settings?tab=account"
+            onClick={() => setOpen(false)}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-bg transition-colors"
           >
             <Settings size={14} />
             Settings
-          </button>
+          </NavLink>
           <button
             type="button"
             onClick={handleLogout}
