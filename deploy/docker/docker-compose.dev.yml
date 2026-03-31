@@ -8,7 +8,7 @@ services:
         required: false
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-digarr}:${DB_PASS:?DB_PASS is required -- set it in .env}@postgres:5432/${DB_NAME:-digarr}
-      - PORT=${PORT:-3000}
+      - PORT=3000
     ports:
       - "${PORT:-3000}:3000"
     depends_on:
