@@ -90,7 +90,7 @@ jobs:
             type=semver,pattern={{version}},value=${{ steps.tag.outputs.value }}
             type=semver,pattern={{major}}.{{minor}},value=${{ steps.tag.outputs.value }}
             type=semver,pattern={{major}},value=${{ steps.tag.outputs.value }}
-            type=raw,value=alpine,enable=${{ matrix.variant == 'alpine' }}
+            type=raw,value=alpine,enable=${{ matrix.variant == 'alpine' }},suffix=
 
       - name: Build and push
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
