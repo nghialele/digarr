@@ -1,4 +1,7 @@
-# Build stage
+# Global ARG -- must be before any FROM to use in FROM instructions
+ARG RUNTIME_IMAGE=oven/bun:1.3.11-slim
+
+# Build stage -- always Debian for consistent toolchain
 FROM oven/bun:1.3.11 AS builder
 WORKDIR /app
 COPY package.json bun.lock* ./
@@ -7,8 +10,8 @@ COPY . .
 ENV NODE_ENV=production
 RUN bun run build
 
-# Runtime stage -- production deps only
-FROM oven/bun:1.3.11-slim
+# Runtime stage -- override RUNTIME_IMAGE for alpine variant
+FROM ${RUNTIME_IMAGE}
 WORKDIR /app
 
 # Non-root user (bun base image ships with bun:bun at UID/GID 1000)
