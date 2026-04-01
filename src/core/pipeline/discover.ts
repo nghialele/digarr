@@ -1,6 +1,52 @@
 import type { DiscoverySource } from '@/core/plugins/types'
 import type { AiRecommendation, DiscoveredArtist, TasteProfile } from '@/core/types'
 
+const ARTICLES = /^(the|a|an)\s+/i
+
+/** Normalize an artist name for comparison: lowercase, strip leading articles. */
+function normalizeName(name: string): string {
+  return name.toLowerCase().replace(ARTICLES, '').trim()
+}
+
+/**
+ * Detect likely AI name confusion -- the model meant to describe a top artist
+ * but output a similarly-named different artist. Checks substring containment
+ * in both directions (covers "Sonic Youth" in "Sonic Youth Junior").
+ */
+function hasNameConfusion(
+  recName: string,
+  topArtistNames: string[],
+): boolean {
+  const recNorm = normalizeName(recName)
+  for (const topName of topArtistNames) {
+    const topNorm = normalizeName(topName)
+    if (recNorm === topNorm) continue // exact match handled by topArtistNames filter
+    if (topNorm.length < 4) continue // skip very short names to avoid false positives
+    if (recNorm.includes(topNorm) || topNorm.includes(recNorm)) return true
+  }
+  return false
+}
+
+/**
+ * Detect when AI reasoning explicitly mentions a different top artist by name.
+ * E.g. reasoning for "Digital Underground" literally says "Velvet Underground".
+ */
+function reasoningMentionsTopArtist(
+  reasoning: string,
+  recName: string,
+  topArtistNames: string[],
+): boolean {
+  const reaNorm = reasoning.toLowerCase()
+  const recNorm = normalizeName(recName)
+  for (const topName of topArtistNames) {
+    const topNorm = normalizeName(topName)
+    if (recNorm === topNorm) continue
+    if (topNorm.length < 5) continue // avoid matching short common words
+    if (reaNorm.includes(topNorm)) return true
+  }
+  return false
+}
+
 interface MusicBrainzSimilarSource {
   searchArtist: (
     query: string,
@@ -84,7 +130,14 @@ export async function discover(
   if (sources.ai != null) {
     try {
       const aiRecs = await sources.ai.getRecommendations(profile)
+      // Cross-check AI recommendations against the user's top artists to catch
+      // name confusion hallucinations (e.g. "Digital Underground" with a
+      // description of "Velvet Underground"). Uses the FULL top artists list,
+      // not just the seed slice, for maximum coverage.
+      const allTopNames = profile.topArtists.map((a) => a.name)
       for (const rec of aiRecs) {
+        if (hasNameConfusion(rec.artistName, allTopNames)) continue
+        if (reasoningMentionsTopArtist(rec.reasoning, rec.artistName, allTopNames)) continue
         results.push({
           name: rec.artistName,
           similarityScore: rec.confidence,

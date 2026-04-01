@@ -175,4 +175,95 @@ describe('discover()', () => {
     await discover(profile, { ai }, 10)
     expect(ai.getRecommendations).toHaveBeenCalledTimes(1)
   })
+
+  it('filters AI recs with names similar to top artists (substring match)', async () => {
+    const confusedProfile: TasteProfile = {
+      ...profile,
+      topArtists: [
+        { name: 'Sonic Youth', mbid: 'mbid-sy', playCount: 800, source: 'listenbrainz' },
+      ],
+    }
+    const ai = {
+      getRecommendations: vi.fn().mockResolvedValue([
+        {
+          artistName: 'Sonic Youth Junior',
+          reasoning: 'A UK drum and bass artist',
+          confidence: 0.8,
+          genres: ['drum and bass'],
+        },
+        {
+          artistName: 'Burial',
+          reasoning: 'Dark electronic producer',
+          confidence: 0.9,
+          genres: ['electronic'],
+        },
+      ]),
+    }
+
+    const results = await discover(confusedProfile, { ai }, 10)
+    const names = results.map((r) => r.name)
+
+    expect(names).not.toContain('Sonic Youth Junior')
+    expect(names).toContain('Burial')
+  })
+
+  it('filters AI recs whose reasoning mentions a different top artist', async () => {
+    const confusedProfile: TasteProfile = {
+      ...profile,
+      topArtists: [
+        {
+          name: 'The Velvet Underground',
+          mbid: 'mbid-vu',
+          playCount: 600,
+          source: 'listenbrainz',
+        },
+      ],
+    }
+    const ai = {
+      getRecommendations: vi.fn().mockResolvedValue([
+        {
+          artistName: 'Digital Underground',
+          reasoning:
+            'Known for their experimental art rock sound similar to Velvet Underground with droning guitars.',
+          confidence: 0.85,
+          genres: ['hip-hop'],
+        },
+        {
+          artistName: 'Grouper',
+          reasoning: 'Ambient folk artist with hazy soundscapes.',
+          confidence: 0.9,
+          genres: ['ambient'],
+        },
+      ]),
+    }
+
+    const results = await discover(confusedProfile, { ai }, 10)
+    const names = results.map((r) => r.name)
+
+    expect(names).not.toContain('Digital Underground')
+    expect(names).toContain('Grouper')
+  })
+
+  it('does not filter AI recs that legitimately share short name fragments', async () => {
+    const narrowProfile: TasteProfile = {
+      ...profile,
+      topArtists: [
+        { name: 'Air', mbid: 'mbid-air', playCount: 400, source: 'listenbrainz' },
+      ],
+    }
+    const ai = {
+      getRecommendations: vi.fn().mockResolvedValue([
+        {
+          artistName: 'Airborne Toxic Event',
+          reasoning: 'Indie rock band from Los Angeles.',
+          confidence: 0.75,
+          genres: ['indie rock'],
+        },
+      ]),
+    }
+
+    const results = await discover(narrowProfile, { ai }, 10)
+    // "Air" is only 3 chars -- below the 4-char threshold, so no false positive
+    expect(results.map((r) => r.name)).toContain('Airborne Toxic Event')
+  })
 })
