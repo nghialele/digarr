@@ -13,10 +13,7 @@ function normalizeName(name: string): string {
  * but output a similarly-named different artist. Checks substring containment
  * in both directions (covers "Sonic Youth" in "Sonic Youth Junior").
  */
-function hasNameConfusion(
-  recName: string,
-  topArtistNames: string[],
-): boolean {
+function hasNameConfusion(recName: string, topArtistNames: string[]): boolean {
   const recNorm = normalizeName(recName)
   for (const topName of topArtistNames) {
     const topNorm = normalizeName(topName)
@@ -31,11 +28,7 @@ function hasNameConfusion(
  * Detect when AI reasoning explicitly mentions a different top artist by name.
  * E.g. reasoning for "Digital Underground" literally says "Velvet Underground".
  */
-function reasoningMentionsTopArtist(
-  reasoning: string,
-  recName: string,
-  topArtistNames: string[],
-): boolean {
+function reasoningMentionsTopArtist(reasoning: string, recName: string, topArtistNames: string[]): boolean {
   const reaNorm = reasoning.toLowerCase()
   const recNorm = normalizeName(recName)
   for (const topName of topArtistNames) {

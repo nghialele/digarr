@@ -247,9 +247,7 @@ describe('discover()', () => {
   it('does not filter AI recs that legitimately share short name fragments', async () => {
     const narrowProfile: TasteProfile = {
       ...profile,
-      topArtists: [
-        { name: 'Air', mbid: 'mbid-air', playCount: 400, source: 'listenbrainz' },
-      ],
+      topArtists: [{ name: 'Air', mbid: 'mbid-air', playCount: 400, source: 'listenbrainz' }],
     }
     const ai = {
       getRecommendations: vi.fn().mockResolvedValue([
