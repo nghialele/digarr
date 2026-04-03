@@ -136,11 +136,12 @@ Admin-only endpoints return 403 for non-admin users.
 | DELETE | `/api/subscriptions/:id` | Yes | Delete subscription |
 | POST | `/api/subscriptions/:id/run` | Yes | Trigger manual run (202) |
 | GET | `/api/subscriptions/:id/runs` | Yes | Run history |
+| POST | `/api/subscriptions/import/spotify-liked-songs` | Yes | Create/reuse the helper Spotify Liked Songs subscription and trigger an import run (202) |
 | GET | `/api/subscriptions/adapter-types` | Yes | Available adapter types with config schemas |
 | GET | `/api/subscriptions/scheduler` | Yes | Scheduler job status |
 | POST | `/api/subscriptions/bulk-toggle` | Yes | Enable/disable all subscriptions |
 
-**Adapter types**: `genre`, `similar`, `spotify-playlist`, `spotify-charts`, `lastfm-tag`, `lastfm-charts`, `listenbrainz`
+**Adapter types**: `genre`, `similar`, `spotify-liked-songs`, `spotify-playlist`, `spotify-charts`, `lastfm-tag`, `lastfm-charts`, `listenbrainz`
 
 **POST /api/subscriptions** body:
 ```json

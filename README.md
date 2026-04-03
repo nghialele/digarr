@@ -9,10 +9,10 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-1140_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1178_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
-**AI-powered music discovery for your *arr stack.** Connect your listening sources (ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, Discogs), pick an AI provider, and Digarr builds a taste profile, discovers new artists through a 7-stage pipeline, and scores them with a weighted formula that learns from your feedback. Approve what you like -- artists go straight to Lidarr, Spotify playlists, or your media server. Describe a mood in plain English and get instant results. Set up subscriptions that discover new music on a schedule while you sleep. Generate weekly digest playlists automatically. Browse your library by genre with deep-cut discovery. All self-hosted, all yours.
+**AI-powered music discovery for your *arr stack.** Connect your listening sources (ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, Discogs), pick an AI provider, and Digarr builds a taste profile, discovers new artists through a 7-stage pipeline, and scores them with a weighted formula that learns from your feedback. Approve what you like -- artists go straight to Lidarr, Spotify playlists, or your media server. Describe a mood in plain English and get instant results. Import artists from Spotify Liked Songs for a faster cold start. Set up subscriptions that discover new music on a schedule while you sleep. Generate weekly digest playlists automatically. Browse your library by genre with deep-cut discovery. All self-hosted, all yours.
 
 > **Beta software -- working toward v1.0.** Usable and actively developed, but expect rough edges. Things move fast during the beta -- there may be several releases per day with bug fixes, new features, and improvements. Check the [releases page](https://github.com/iuliandita/digarr/releases) frequently and read the release notes before updating. We'd love your help: set it up, break things, [report issues](https://github.com/iuliandita/digarr/issues), and share your feature ideas.
 >
@@ -56,7 +56,7 @@ Search for artists across Spotify, Deezer, MusicBrainz, TIDAL, and Bandcamp simu
 - **6 data sources** -- ListenBrainz, Last.fm, Spotify (OAuth), Plex, Jellyfin, Discogs
 - **Smart scoring** -- weighted composite: consensus, similarity, genre overlap, AI confidence, feedback learning, popularity
 - **Auto-approve** -- automatically add high-scoring recs to your targets
-- **Subscriptions** -- scheduled discovery from Spotify playlists/charts, Last.fm tags/charts, ListenBrainz feeds, genre searches, similar-artist seeds
+- **Subscriptions** -- scheduled discovery from Spotify Liked Songs, playlists/charts, Last.fm tags/charts, ListenBrainz feeds, genre searches, similar-artist seeds
 - **Genre deep dive** -- browse by genre with Recommended, Trending, and Deep Cuts tabs
 - **Library health** -- 6 automated checks with one-click batch fixes
 - **Analytics** -- approval rates, genre trends, source effectiveness, score distribution, time-to-act
@@ -118,7 +118,7 @@ Runs on a cron schedule, manually, or via subscriptions for targeted discovery.
 
 ## Configuration
 
-All configuration is done through the web UI after initial setup -- connections, scoring weights, cron schedule, and preferences are all set there. See [`.env.example`](.env.example) for the full list of environment variable fallbacks (useful for zero-touch Docker deployments).
+All configuration is done through the web UI after initial setup -- connections, scoring weights, cron schedule, and preferences are all set there. If you connect Spotify, Settings > Connections now includes a one-click `Import Liked Songs` action to seed recommendations for a faster first scan. See [`.env.example`](.env.example) for the full list of environment variable fallbacks (useful for zero-touch Docker deployments).
 
 ---
 
