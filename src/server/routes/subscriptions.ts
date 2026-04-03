@@ -4,6 +4,15 @@ import { getOAuthToken } from '@/db/queries/oauth-tokens'
 import type { AppDependencies } from '@/server'
 import type { HonoEnv } from '@/server/types'
 
+/** Extract the bare playlist ID from a URL, URI, or raw ID. */
+function extractPlaylistId(raw: string): string {
+  const uriMatch = raw.match(/spotify:playlist:([A-Za-z0-9]+)/)
+  if (uriMatch?.[1]) return uriMatch[1]
+  const urlMatch = raw.match(/\/playlist\/([A-Za-z0-9]+)/)
+  if (urlMatch?.[1]) return urlMatch[1]
+  return raw.trim()
+}
+
 const ALLOWED_UPDATE_FIELDS = new Set([
   'name',
   'enabled',
@@ -145,6 +154,11 @@ export function subscriptionRoutes(deps: AppDependencies) {
           ],
           requiredService: 'listenbrainz',
         },
+        {
+          type: 'csv-import',
+          label: 'CSV Import',
+          configFields: [],
+        },
       ],
     })
   })
@@ -256,6 +270,120 @@ export function subscriptionRoutes(deps: AppDependencies) {
     return c.json(
       {
         message: 'Spotify Liked Songs import started',
+        subscriptionId: subscription.id,
+        created: !existing,
+      },
+      202,
+    )
+  })
+
+  router.post('/api/subscriptions/import/csv', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const body = await c.req.parseBody()
+    const file = body.file
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: 'No file uploaded' }, 400)
+    }
+
+    const MAX_SIZE = 1_048_576 // 1MB
+    if (file.size > MAX_SIZE) {
+      return c.json({ error: 'File too large (max 1MB)' }, 413)
+    }
+
+    const { parseCsvArtists } = await import('@/core/subscriptions/adapters/csv-import')
+    const text = await file.text()
+    const artists = parseCsvArtists(text, 500)
+
+    if (artists.length === 0) {
+      return c.json({ error: 'No valid artist names found in CSV' }, 400)
+    }
+
+    const subscription = await deps.subscriptionQueries.createSubscription({
+      name: `CSV Import (${artists.length} artists)`,
+      userId,
+      sourceType: 'csv-import',
+      sourceProvider: 'csv',
+      sourceConfig: { artists },
+      cron: '0 0 1 1 *', // never recurs -- just a carrier for the one-shot run
+      enabled: false,
+      maxArtistsPerRun: artists.length,
+      action: 'add_to_recommendations',
+      scoringWeightPreset: 'default',
+    })
+
+    Promise.resolve()
+      .then(() => deps.runSubscription(subscription.id))
+      .catch((err: unknown) => {
+        console.error('CSV import failed:', err)
+      })
+
+    const truncated = artists.length >= 500
+    return c.json(
+      {
+        message: `Importing ${artists.length} artists${truncated ? ' (truncated to 500)' : ''}`,
+        subscriptionId: subscription.id,
+        artistCount: artists.length,
+        truncated,
+      },
+      202,
+    )
+  })
+
+  router.post('/api/subscriptions/import/spotify-playlist', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const body = await c.req.json()
+    const rawId = String((body as Record<string, unknown>).playlistId ?? '').trim()
+    if (!rawId) {
+      return c.json({ error: 'playlistId is required' }, 400)
+    }
+
+    const spotifyToken = await getOAuthToken(deps.db, userId, 'spotify')
+    if (!spotifyToken || spotifyToken.accessToken.startsWith('pending:')) {
+      return c.json({ error: 'Spotify is not connected' }, 400)
+    }
+
+    // Normalize URL/URI to bare ID
+    const playlistId = extractPlaylistId(rawId)
+
+    const existingSubs = await deps.subscriptionQueries.getSubscriptionsByUser(userId)
+    const existing = existingSubs.find(
+      (sub) =>
+        sub.sourceType === 'spotify-playlist' &&
+        (sub.sourceConfig as Record<string, unknown>).playlistId === playlistId,
+    )
+
+    const subscription =
+      existing ??
+      (await deps.subscriptionQueries.createSubscription({
+        name: `Spotify Playlist Import`,
+        userId,
+        sourceType: 'spotify-playlist',
+        sourceProvider: 'spotify',
+        sourceConfig: { playlistId },
+        cron: '0 6 * * 1',
+        enabled: false,
+        maxArtistsPerRun: 100,
+        action: 'add_to_recommendations',
+        scoringWeightPreset: 'default',
+      }))
+
+    Promise.resolve()
+      .then(() => deps.runSubscription(subscription.id))
+      .catch((err: unknown) => {
+        console.error('Spotify playlist import failed:', err)
+      })
+
+    return c.json(
+      {
+        message: 'Spotify playlist import started',
         subscriptionId: subscription.id,
         created: !existing,
       },
