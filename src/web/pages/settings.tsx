@@ -23,6 +23,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
+import { useInstallPrompt } from '../hooks/use-install-prompt'
 import {
   AUTH_EXPIRED_EVENT,
   changePassword,
@@ -1472,6 +1473,10 @@ function RecommendationsTabInner({
   const [autoApproveMonitorOption, setAutoApproveMonitorOption] = useState(
     (prefs.autoApproveMonitorOption as string) ?? 'all',
   )
+  const [fanartApiKey, setFanartApiKey] = useState(String(prefs.fanartApiKey ?? ''))
+  const [metadataFallbackUrl, setMetadataFallbackUrl] = useState(
+    String(prefs.metadataFallbackUrl ?? ''),
+  )
   const [saving, setSaving] = useState(false)
 
   const weightSum =
@@ -1498,6 +1503,8 @@ function RecommendationsTabInner({
         autoApproveEnabled,
         autoApproveThreshold,
         autoApproveMonitorOption: autoApproveMonitorOption as 'all' | 'new' | 'none',
+        fanartApiKey: fanartApiKey === '***' ? undefined : fanartApiKey || undefined,
+        metadataFallbackUrl: metadataFallbackUrl || undefined,
       })
       queryClient.invalidateQueries({ queryKey: ['user-preferences'] })
       toast.success('Recommendation settings saved')
@@ -1693,6 +1700,37 @@ function RecommendationsTabInner({
               onChange={setLibrarySeedRatio}
             />
           </section>
+
+          <section className="space-y-4">
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
+              Image Sources
+            </h3>
+            <p className="text-xs text-muted">
+              Artist images come from Lidarr/SkyHook by default. A fanart.tv API key enables a
+              fallback when SkyHook is down.
+            </p>
+            <Field label="Fanart.tv API key (optional)" id="fanart-api-key">
+              <Input
+                id="fanart-api-key"
+                type="password"
+                value={fanartApiKey}
+                onChange={(e) => setFanartApiKey(e.target.value)}
+                placeholder="Personal API key from fanart.tv"
+              />
+            </Field>
+            <Field label="Metadata fallback URL (optional)" id="metadata-fallback-url">
+              <Input
+                id="metadata-fallback-url"
+                value={metadataFallbackUrl}
+                onChange={(e) => setMetadataFallbackUrl(e.target.value)}
+                placeholder="https://api.musicinfo.pro"
+              />
+            </Field>
+            <p className="text-micro text-muted">
+              Used when Lidarr's metadata server is down. Defaults to api.musicinfo.pro. Set to your
+              own hearring-aid instance URL if self-hosting.
+            </p>
+          </section>
         </div>
       </CollapsibleSection>
 
@@ -1778,6 +1816,7 @@ function AccountTab() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
+  const { canInstall, showIosHint, promptInstall, dismiss } = useInstallPrompt()
 
   async function handleLogout() {
     try {
@@ -1873,6 +1912,44 @@ function AccountTab() {
           </Button>
         </form>
       </section>
+
+      {(canInstall || showIosHint) && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">App</h2>
+          <div className="flex items-center justify-between p-3 bg-surface border border-border rounded-lg">
+            <div>
+              <p className="text-sm font-medium text-text">Install Digarr</p>
+              {showIosHint ? (
+                <p className="text-xs text-muted mt-0.5">
+                  Tap the share button, then "Add to Home Screen"
+                </p>
+              ) : (
+                <p className="text-xs text-muted mt-0.5">
+                  Add to your home screen for quick access
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={dismiss}
+                className="text-xs text-muted hover:text-text transition-colors"
+              >
+                Dismiss
+              </button>
+              {canInstall && (
+                <button
+                  type="button"
+                  onClick={promptInstall}
+                  className="px-3 py-1.5 text-xs font-medium bg-accent text-accent-fg rounded hover:bg-accent/90 transition-colors"
+                >
+                  Install
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

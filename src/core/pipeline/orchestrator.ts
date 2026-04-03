@@ -1,6 +1,9 @@
 import { EventEmitter } from 'node:events'
+import { createFanartClient } from '@/core/clients/fanart'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
+import { createMusicinfoClient } from '@/core/clients/musicinfo'
+import { decryptField } from '@/core/crypto'
 import { sendWebhook } from '@/core/notifications'
 import { createDiscogsSource } from '@/core/plugins/discogs'
 import { createJellyfinSource } from '@/core/plugins/jellyfin'
@@ -83,6 +86,13 @@ export class PipelineOrchestrator extends EventEmitter {
         settings.lidarrUrl && settings.lidarrApiKey
           ? createLidarrClient(settings.lidarrUrl, settings.lidarrApiKey, settings.skipTlsVerify)
           : null
+
+      const fanartApiKey = decryptField(prefs.fanartApiKey) ?? null
+      const fanartClient = fanartApiKey ? createFanartClient(fanartApiKey) : null
+
+      const musicinfoClient = prefs.metadataFallbackUrl
+        ? createMusicinfoClient(prefs.metadataFallbackUrl)
+        : null
 
       // Per-user connections take precedence over global settings
       const { userConnections } = deps
@@ -203,6 +213,8 @@ export class PipelineOrchestrator extends EventEmitter {
           this.emit('progress', progress)
         },
         lidarrClient,
+        fanartClient,
+        musicinfoClient,
       )
 
       // Enrich sparse genres from artist_metadata (if available)

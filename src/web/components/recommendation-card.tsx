@@ -6,7 +6,7 @@ import { useClickOutside } from '../hooks/use-click-outside'
 import { getArtistTopTracks } from '../lib/api'
 import { GENRE_COLORS } from '../lib/constants'
 import { usePreviewContext } from '../lib/preview-context'
-import { cn } from '../lib/utils'
+import { cn, hueFromName } from '../lib/utils'
 import { ArtistThumb } from './artist-thumb'
 import { Hint } from './hint'
 import { StreamingLinks } from './streaming-links'
@@ -350,6 +350,7 @@ function ActionButtons({
 }
 
 function TopTracks({ artistId }: { artistId: number }) {
+  const preview = usePreviewContext()
   const { data, isLoading } = useQuery({
     queryKey: ['top-tracks', artistId],
     queryFn: () => getArtistTopTracks(artistId),
@@ -358,6 +359,7 @@ function TopTracks({ artistId }: { artistId: number }) {
 
   const [playingUrl, setPlayingUrl] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const lastGlobalPlayIdRef = useRef(preview.globalPlayId)
 
   function handlePlay(previewUrl: string) {
     if (playingUrl === previewUrl) {
@@ -372,6 +374,8 @@ function TopTracks({ artistId }: { artistId: number }) {
       audioRef.current.onerror = null
       audioRef.current.src = ''
     }
+    // Stop global preview when playing a track
+    preview.stop()
     // Use proxy URL with token in query param (Audio element can't send headers)
     const token = localStorage.getItem('digarr-auth-token')
     const params = new URLSearchParams({ url: previewUrl })
@@ -401,6 +405,17 @@ function TopTracks({ artistId }: { artistId: number }) {
       }
     }
   }, [])
+
+  // Stop local audio when global preview starts
+  useEffect(() => {
+    if (preview.globalPlayId === lastGlobalPlayIdRef.current) return
+    lastGlobalPlayIdRef.current = preview.globalPlayId
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.src = ''
+      setPlayingUrl(null)
+    }
+  }, [preview.globalPlayId])
 
   const tracks = data?.tracks ?? []
 
@@ -716,7 +731,7 @@ export function RecommendationCard({
                 rec.artist.imageUrl
                   ? { backgroundImage: `url(${rec.artist.imageUrl.replace(/[()'"]/g, '')})` }
                   : {
-                      background: `hsl(${Math.abs([...rec.artist.name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360)}, 40%, 25%)`,
+                      background: `hsl(${hueFromName(rec.artist.name)}, 40%, 25%)`,
                     }
               }
             >
