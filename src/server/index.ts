@@ -276,6 +276,24 @@ export function createApp(deps: AppDependencies) {
       db: deps.db,
       getUserById: deps.getUserById,
       getSettings: deps.getSettings,
+      generateReasoning: async (artistName, genres) => {
+        const settings = await deps.getSettings()
+        const s = settings as Record<string, unknown> | null
+        if (!s?.aiProvider) throw new Error('No AI provider configured')
+        const provider = await deps.providerRegistry.create(s.aiProvider as string, {
+          apiKey: (s.aiApiKey as string) ?? null,
+          model: (s.aiModel as string) ?? '',
+          baseUrl: (s.aiBaseUrl as string) ?? null,
+        })
+        const genreList = genres.length > 0 ? genres.join(', ') : 'unknown'
+        const results = await provider.getRecommendations({
+          topArtists: [],
+          topGenres: [],
+          listeningPatterns: { totalListens: 0, recentTrend: 'stable' },
+          _rawPrompt: `Describe the artist "${artistName}" (genres: ${genreList}) in 2-3 sentences. First describe what they sound like and what they're known for, then explain why fans of ${genreList} might enjoy them. Return ONLY a JSON array with one element: [{"artistName":"${artistName}","reasoning":"...","confidence":0.8,"genres":${JSON.stringify(genres)}}]`,
+        })
+        return results[0]?.reasoning ?? `${artistName} is an artist in the ${genreList} genre.`
+      },
     }),
   )
   app.route('/', analyticsRoutes(deps))

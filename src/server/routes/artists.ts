@@ -37,8 +37,10 @@ export function artistRoutes(deps: AppDependencies) {
     if (deezerIdMatch?.[1]) {
       deezerId = Number(deezerIdMatch[1])
     } else {
-      const [topResult] = await deezer.searchArtists(artist.name, 1)
-      if (topResult) deezerId = topResult.id
+      // Search multiple results and pick the exact name match to avoid collisions
+      const results = await deezer.searchArtists(artist.name, 5)
+      const exactMatch = results.find((r) => r.name.toLowerCase() === artist.name.toLowerCase())
+      if (exactMatch) deezerId = exactMatch.id
     }
 
     // Always fetch fresh from Deezer (preview URLs are signed and expire)

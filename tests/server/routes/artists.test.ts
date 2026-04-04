@@ -263,7 +263,7 @@ describe('GET /api/artists/:id/top-tracks', () => {
     const body = await res.json()
     expect(body.tracks).toHaveLength(1)
     expect(body.tracks[0].name).toBe('Glory Box')
-    expect(mockSearchArtists).toHaveBeenCalledWith('Portishead', 1)
+    expect(mockSearchArtists).toHaveBeenCalledWith('Portishead', 5)
     expect(mockGetTopTracks).toHaveBeenCalledWith(42, 5)
   })
 
