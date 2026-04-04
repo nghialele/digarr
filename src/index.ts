@@ -14,6 +14,7 @@ import { initEncryption, isEncryptionEnabled } from './core/crypto'
 import { GenreService } from './core/genre/service'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
+import { runPreFlightCheck } from './core/ops/upgrade'
 import { analyze } from './core/pipeline/analyze'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
 import type { StoreDb } from './core/pipeline/store'
@@ -139,6 +140,9 @@ if (isEncryptionEnabled()) {
 } else {
   console.log('Field-level encryption disabled (set DIGARR_ENCRYPTION_KEY to enable)')
 }
+
+// Pre-flight check: detect pending migrations and auto-backup if needed.
+await runPreFlightCheck(db)
 
 // Run pending database migrations before anything else.
 // Uses drizzle-orm's programmatic migrator -- safe to run every boot (idempotent).
