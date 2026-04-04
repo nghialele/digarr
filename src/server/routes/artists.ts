@@ -37,10 +37,12 @@ export function artistRoutes(deps: AppDependencies) {
     if (deezerIdMatch?.[1]) {
       deezerId = Number(deezerIdMatch[1])
     } else {
-      // Search multiple results and pick the exact name match to avoid collisions
-      const results = await deezer.searchArtists(artist.name, 5)
-      const exactMatch = results.find((r) => r.name.toLowerCase() === artist.name.toLowerCase())
-      if (exactMatch) deezerId = exactMatch.id
+      // Search multiple results and require an unambiguous exact name match.
+      // If Deezer has 2+ artists with the same name, skip and fall through
+      // to MusicBrainz recordings (MBID-based, always correct).
+      const results = await deezer.searchArtists(artist.name, 10)
+      const exactMatches = results.filter((r) => r.name.toLowerCase() === artist.name.toLowerCase())
+      if (exactMatches.length === 1 && exactMatches[0]) deezerId = exactMatches[0].id
     }
 
     // Always fetch fresh from Deezer (preview URLs are signed and expire)

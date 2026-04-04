@@ -263,8 +263,41 @@ describe('GET /api/artists/:id/top-tracks', () => {
     const body = await res.json()
     expect(body.tracks).toHaveLength(1)
     expect(body.tracks[0].name).toBe('Glory Box')
-    expect(mockSearchArtists).toHaveBeenCalledWith('Portishead', 5)
+    expect(mockSearchArtists).toHaveBeenCalledWith('Portishead', 10)
     expect(mockGetTopTracks).toHaveBeenCalledWith(42, 5)
+  })
+
+  it('skips Deezer when multiple artists share the same name', async () => {
+    const { createDeezerClient } = await import('@/core/clients/deezer')
+    const deezerMock = createDeezerClient as ReturnType<typeof vi.fn>
+    const mockGetTopTracks = vi.fn(async () => [{ name: 'Wrong Track', durationMs: 30000 }])
+    deezerMock.mockReturnValue({
+      searchArtists: vi.fn(async () => [
+        { id: 11, name: 'Portishead', fans: 500, url: 'https://deezer.com/artist/11' },
+        { id: 42, name: 'Portishead', fans: 100000, url: 'https://deezer.com/artist/42' },
+      ]),
+      getArtistTopTracks: mockGetTopTracks,
+    })
+
+    const { createMusicBrainzClient } = await import('@/core/clients/musicbrainz')
+    const mbMock = createMusicBrainzClient as ReturnType<typeof vi.fn>
+    mbMock.mockReturnValue({
+      getRecordings: vi.fn(async () => [{ title: 'Sour Times' }, { title: 'Glory Box' }]),
+    })
+
+    const app = createApp(
+      makeDeps({
+        getArtistById: vi.fn(async () => ({ ...MOCK_ARTIST })),
+      }),
+    )
+
+    const res = await app.request('/api/artists/1/top-tracks')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    // Should NOT have called Deezer top tracks (ambiguous name)
+    expect(mockGetTopTracks).not.toHaveBeenCalled()
+    // Should fall through to MusicBrainz recordings
+    expect(body.tracks[0].name).toBe('Sour Times')
   })
 
   it('returns empty tracks when artist has no data and external APIs fail', async () => {
