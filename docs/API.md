@@ -23,7 +23,7 @@ Admin-only endpoints return 403 for non-admin users.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/auth/oidc/login` | No | Redirect to OIDC provider |
+| GET | `/api/auth/oidc/login` | No | Redirect to OIDC provider. Requires `ALLOWED_ORIGIN` env var |
 | GET | `/api/auth/oidc/callback` | No | OIDC callback, creates user if needed |
 | POST | `/api/auth/oauth/:provider/initiate` | Yes | Start OAuth flow (e.g. Spotify) |
 | GET | `/api/auth/oauth/:provider/callback` | No | OAuth callback |
@@ -61,7 +61,7 @@ Admin-only endpoints return 403 for non-admin users.
 | POST | `/api/pipeline/run` | Yes | Start a full discovery scan. Returns 202. |
 | GET | `/api/pipeline/status` | Yes | Current pipeline status (running, stage, last run) |
 | GET | `/api/pipeline/events` | Yes | SSE stream of pipeline progress events |
-| POST | `/api/pipeline/quick-discover` | Yes | Fire-and-forget: discover artists similar to a given name |
+| POST | `/api/pipeline/quick-discover` | Yes | Fire-and-forget: discover artists similar to a given name. Rate limited: 5/min |
 | POST | `/api/pipeline/rescan` | Yes | Re-fetch images/metadata for existing recommendations |
 
 **POST /api/pipeline/quick-discover** body:
@@ -207,7 +207,7 @@ Admin-only endpoints return 403 for non-admin users.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/mood/discover` | Yes | AI-powered mood-based discovery |
+| POST | `/api/mood/discover` | Yes | AI-powered mood-based discovery. Rate limited: 10/min |
 
 **Body**:
 ```json
