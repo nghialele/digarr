@@ -85,6 +85,7 @@ Admin-only endpoints return 403 for non-admin users.
 - `status` -- `pending`, `approved`, `rejected`, `added_to_lidarr`, `add_failed` (comma-separated)
 - `batchId` -- filter by batch
 - `sort` -- `score_desc` (default), `score_asc`, `created_desc`, `acted_on_desc`
+- `decades` -- era filter, comma-separated: `60s`, `70s`, `80s`, `90s`, `00s`, `10s`, `20s`
 - `limit` -- 1-200 (default 20)
 - `offset` -- pagination offset
 
