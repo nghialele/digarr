@@ -54,7 +54,7 @@ export async function getPendingMigrations(db: OpsDb): Promise<MigrationStatus> 
   try {
     const result = await (
       db as unknown as { execute: (q: unknown) => Promise<{ rows: unknown[] }> }
-    ).execute(sql`SELECT hash, created_at FROM "__drizzle_migrations" ORDER BY created_at`)
+    ).execute(sql`SELECT hash, created_at FROM drizzle."__drizzle_migrations" ORDER BY created_at`)
     appliedCount = Array.isArray(result.rows) ? result.rows.length : 0
   } catch {
     // Table doesn't exist yet (completely fresh DB)

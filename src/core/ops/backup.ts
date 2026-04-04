@@ -138,10 +138,17 @@ const RESTORE_ORDER: {
 
 // biome-ignore lint/suspicious/noExplicitAny: drizzle table type is opaque
 function filterToSchemaColumns(table: any, row: Record<string, unknown>): Record<string, unknown> {
-  const allowed = new Set(Object.keys(getTableColumns(table)))
+  const columns = getTableColumns(table)
   const filtered: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(row)) {
-    if (allowed.has(key)) filtered[key] = value
+  for (const [key, col] of Object.entries(columns) as [string, { dataType: string }][]) {
+    if (!(key in row)) continue
+    const value = row[key]
+    // JSON.parse turns Date objects into ISO strings; drizzle needs Date objects for timestamps
+    if (col.dataType === 'date' && typeof value === 'string') {
+      filtered[key] = new Date(value)
+    } else {
+      filtered[key] = value
+    }
   }
   return filtered
 }
