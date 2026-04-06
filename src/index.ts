@@ -12,6 +12,8 @@ import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { createSpotifyClient } from './core/clients/spotify'
 import { initEncryption, isEncryptionEnabled } from './core/crypto'
 import { GenreService } from './core/genre/service'
+import { createJobRecorder } from './core/jobs/recorder'
+import { startStuckDetector } from './core/jobs/stuck-detector'
 import { LibraryHealthService } from './core/library/health'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
 import { runPreFlightCheck } from './core/ops/upgrade'
@@ -58,6 +60,7 @@ import { createLidarrTarget } from './core/targets/lidarr'
 import { createNavidromePlaylistTarget } from './core/targets/navidrome-playlist'
 import { createPlexPlaylistTarget } from './core/targets/plex-playlist'
 import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
+import { errMsg } from './core/validation'
 import { db, pool } from './db'
 import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
 import { getArtistById, upsertArtist } from './db/queries/artists'
@@ -70,6 +73,7 @@ import {
   searchGenres,
   upsertGenre,
 } from './db/queries/genres'
+import * as jobQueries from './db/queries/jobs'
 import { getOAuthToken } from './db/queries/oauth-tokens'
 import {
   getEnabledPlaylists,
@@ -91,14 +95,11 @@ import { sessionQueries } from './db/queries/sessions'
 import type { SetupConfig } from './db/queries/settings'
 import { completeSetup, getSettings, isSetupComplete, updateSettings } from './db/queries/settings'
 import {
-  completeRun,
   createSubscription,
   deleteSubscription,
   getEnabledSubscriptions,
-  getRunsForSubscription,
   getSubscription,
   getSubscriptionsByUser,
-  insertRun,
   updateSubscription,
 } from './db/queries/subscriptions'
 import type { TargetInsert } from './db/queries/targets'
@@ -132,6 +133,9 @@ import {
   recommendations,
 } from './db/schema'
 import { createApp } from './server'
+
+// Job recording -- initialized after DB setup, before createApp()
+let jobRecorder: import('./core/jobs/types').JobRecorder
 
 // Initialize encryption before any DB operations.
 initEncryption(envConfig.encryptionKey)
@@ -194,6 +198,10 @@ const storeDb: StoreDb = {
   lookupArtistMetadata: (name) => lookupByName(db, name),
   getPopularityMap: () => getPopularityMap(db),
 }
+
+jobRecorder = createJobRecorder(db)
+// Mark stuck jobs at startup
+jobRecorder.markStuck().catch((err) => console.error('[startup] Stuck detection failed:', err))
 
 const orchestrator = new PipelineOrchestrator()
 const scheduler = new SubscriptionScheduler()
@@ -305,9 +313,6 @@ const subscriptionQueriesImpl = {
   updateSubscription: (id: number, data: Parameters<typeof updateSubscription>[2]) =>
     updateSubscription(db, id, data),
   deleteSubscription: (id: number) => deleteSubscription(db, id),
-  getRunsForSubscription: (id: number, limit?: number) => getRunsForSubscription(db, id, limit),
-  insertRun: (data: Parameters<typeof insertRun>[1]) => insertRun(db, data),
-  completeRun: (id: number, data: Parameters<typeof completeRun>[2]) => completeRun(db, id, data),
 }
 
 // Cache adapter registries per user -- building one per execution is redundant when
@@ -451,10 +456,9 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
   await runSubscription(subscriptionConfig, adapter, {
     db: storeDb,
     queries: {
-      insertRun: (data) => insertRun(db, data),
-      completeRun: (id, data) => completeRun(db, id, data),
       updateSubscription: (id, data) => updateSubscription(db, id, data),
     },
+    jobRecorder,
     mbClient: createMusicBrainzClient() as SubMBClient,
     lidarr: lidarrClient ?? undefined,
     userId: sub.userId ?? undefined,
@@ -491,6 +495,8 @@ async function buildPlaylistResolverDeps(userId: number | null) {
 }
 
 async function executePlaylistGeneration(playlistId: number): Promise<void> {
+  let jobId: number | null = null
+
   const result = await getPlaylistWithTracks(db, playlistId)
   if (!result) {
     console.warn(`[playlist-scheduler] Playlist ${playlistId} not found -- skipping`)
@@ -498,92 +504,116 @@ async function executePlaylistGeneration(playlistId: number): Promise<void> {
   }
 
   const playlist = result.playlist
-  const strategyDeps = buildStrategyDeps(db, playlist.userId ?? null)
-  const resolverDeps = await buildPlaylistResolverDeps(playlist.userId ?? null)
-  const cfg = playlist.config ?? { size: 25, trackSourcePriority: ['spotify' as const] }
-  const generation = await generatePlaylist(
-    playlist.strategy as import('./db/schema').PlaylistStrategy,
-    {
-      size: cfg.size,
-      genre: cfg.genre,
-      mood: cfg.mood,
-      trackSourcePriority: cfg.trackSourcePriority,
-    },
-    strategyDeps,
-    resolverDeps,
-  )
 
-  const trackInserts = generation.tracks.map((track, index) => ({
-    playlistId: playlist.id,
-    artistName: track.artistName,
-    trackName: track.trackName ?? null,
-    mbid: track.mbid ?? null,
-    spotifyUri: track.spotifyUri ?? null,
-    deezerId: track.deezerId ?? null,
-    localPath: track.localPath ?? null,
-    position: index,
-  }))
+  try {
+    jobId = await jobRecorder.start({
+      type: 'playlist',
+      userId: playlist.userId ?? undefined,
+      metadata: { playlistName: playlist.name, strategy: playlist.strategy },
+    })
 
-  await replacePlaylistTracks(db, playlist.id, trackInserts)
-  await updatePlaylistRow(db, playlist.id, {
-    lastGeneratedAt: new Date(),
-    trackCount: generation.tracks.length,
-  })
-
-  if (playlist.targetIds.length > 0 && playlist.userId != null) {
-    const targetRows = await getTargetsByUser(db, playlist.userId)
-    const enabledTargetRows = targetRows.filter(
-      (row) => row.enabled && playlist.targetIds.includes(row.id),
+    const strategyDeps = buildStrategyDeps(db, playlist.userId ?? null)
+    const resolverDeps = await buildPlaylistResolverDeps(playlist.userId ?? null)
+    const cfg = playlist.config ?? { size: 25, trackSourcePriority: ['spotify' as const] }
+    const generation = await generatePlaylist(
+      playlist.strategy as import('./db/schema').PlaylistStrategy,
+      {
+        size: cfg.size,
+        genre: cfg.genre,
+        mood: cfg.mood,
+        trackSourcePriority: cfg.trackSourcePriority,
+      },
+      strategyDeps,
+      resolverDeps,
     )
-    const playlistItems = generation.tracks.map((track) => ({
+
+    const trackInserts = generation.tracks.map((track, index) => ({
+      playlistId: playlist.id,
       artistName: track.artistName,
-      artistMbid: '',
-      trackName: track.trackName ?? undefined,
-      trackMbid: track.mbid ?? undefined,
+      trackName: track.trackName ?? null,
+      mbid: track.mbid ?? null,
+      spotifyUri: track.spotifyUri ?? null,
+      deezerId: track.deezerId ?? null,
+      localPath: track.localPath ?? null,
+      position: index,
     }))
 
-    for (const targetRow of enabledTargetRows) {
-      let target:
-        | ReturnType<typeof createNavidromePlaylistTarget>
-        | ReturnType<typeof createJellyfinPlaylistTarget>
-        | ReturnType<typeof createPlexPlaylistTarget>
-        | null = null
+    await replacePlaylistTracks(db, playlist.id, trackInserts)
+    await updatePlaylistRow(db, playlist.id, {
+      lastGeneratedAt: new Date(),
+      trackCount: generation.tracks.length,
+    })
 
-      if (targetRow.type === 'navidrome-playlist') {
-        target = createNavidromePlaylistTarget(targetRow.id, {
-          url: targetRow.config.url as string,
-          username: targetRow.config.username as string,
-          password: targetRow.config.password as string,
-        })
-      } else if (targetRow.type === 'jellyfin-playlist') {
-        target = createJellyfinPlaylistTarget(targetRow.id, {
-          url: targetRow.config.url as string,
-          apiKey: targetRow.config.apiKey as string,
-          userId: targetRow.config.userId as string,
-        })
-      } else if (targetRow.type === 'plex-playlist') {
-        target = createPlexPlaylistTarget(targetRow.id, {
-          url: targetRow.config.url as string,
-          token: targetRow.config.token as string,
-        })
-      }
+    if (playlist.targetIds.length > 0 && playlist.userId != null) {
+      const targetRows = await getTargetsByUser(db, playlist.userId)
+      const enabledTargetRows = targetRows.filter(
+        (row) => row.enabled && playlist.targetIds.includes(row.id),
+      )
+      const playlistItems = generation.tracks.map((track) => ({
+        artistName: track.artistName,
+        artistMbid: '',
+        trackName: track.trackName ?? undefined,
+        trackMbid: track.mbid ?? undefined,
+      }))
 
-      if (!target?.createPlaylist) continue
+      for (const targetRow of enabledTargetRows) {
+        let target:
+          | ReturnType<typeof createNavidromePlaylistTarget>
+          | ReturnType<typeof createJellyfinPlaylistTarget>
+          | ReturnType<typeof createPlexPlaylistTarget>
+          | null = null
 
-      try {
-        await target.createPlaylist(playlist.name, playlistItems)
-      } catch (err: unknown) {
-        console.error(
-          `[playlists] Failed to push to target ${targetRow.type}(${targetRow.id}):`,
-          err,
-        )
+        if (targetRow.type === 'navidrome-playlist') {
+          target = createNavidromePlaylistTarget(targetRow.id, {
+            url: targetRow.config.url as string,
+            username: targetRow.config.username as string,
+            password: targetRow.config.password as string,
+          })
+        } else if (targetRow.type === 'jellyfin-playlist') {
+          target = createJellyfinPlaylistTarget(targetRow.id, {
+            url: targetRow.config.url as string,
+            apiKey: targetRow.config.apiKey as string,
+            userId: targetRow.config.userId as string,
+          })
+        } else if (targetRow.type === 'plex-playlist') {
+          target = createPlexPlaylistTarget(targetRow.id, {
+            url: targetRow.config.url as string,
+            token: targetRow.config.token as string,
+          })
+        }
+
+        if (!target?.createPlaylist) continue
+
+        try {
+          await target.createPlaylist(playlist.name, playlistItems)
+        } catch (err: unknown) {
+          console.error(
+            `[playlists] Failed to push to target ${targetRow.type}(${targetRow.id}):`,
+            err,
+          )
+        }
       }
     }
-  }
 
-  console.log(
-    `[playlist-scheduler] Playlist '${playlist.name}' (id=${playlist.id}): ${generation.tracks.length} tracks`,
-  )
+    console.log(
+      `[playlist-scheduler] Playlist '${playlist.name}' (id=${playlist.id}): ${generation.tracks.length} tracks`,
+    )
+
+    if (jobId != null) {
+      await jobRecorder.complete(jobId, {
+        metadata: {
+          playlistName: playlist.name,
+          trackCount: generation.tracks.length,
+          strategy: playlist.strategy,
+        },
+      })
+    }
+  } catch (err: unknown) {
+    if (jobId != null) {
+      await jobRecorder.fail(jobId, errMsg(err)).catch(() => {})
+    }
+    throw err
+  }
 }
 
 async function restartPlaylistScheduler(): Promise<void> {
@@ -735,6 +765,13 @@ const app = createApp({
   dashboardQueries: {
     getTopGenresForUser: (userId) => getTopGenresForUser(db, userId),
     getRecentActivity: (userId, isAdmin, limit) => getRecentActivity(db, userId, isAdmin, limit),
+  },
+  jobRecorder,
+  jobQueries: {
+    listJobs: (filters) => jobQueries.listJobs(db, filters),
+    getJobById: (id) => jobQueries.getJobById(db, id),
+    getJobHealth: (nextRun) => jobQueries.getJobHealth(db, nextRun),
+    getJobsForSubscription: (subId, limit) => jobQueries.getJobsForSubscription(db, subId, limit),
   },
   getEnabledTargetsForUser: async (userId) => {
     const rows = await getTargetsByUser(db, userId)
@@ -920,6 +957,9 @@ const server = serve({ fetch: app.fetch, port })
     }
 
     await restartPlaylistScheduler()
+
+    // Start stuck job detector
+    startStuckDetector(jobRecorder)
   } catch (err: unknown) {
     console.error('Failed to initialize:', err)
   }

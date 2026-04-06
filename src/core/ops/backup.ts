@@ -12,6 +12,7 @@ import {
   artistMetadata,
   artists,
   genres,
+  jobRuns,
   oauthTokens,
   oidcTokens,
   playlists,
@@ -19,7 +20,6 @@ import {
   recommendationBatches,
   recommendations,
   settings,
-  subscriptionRuns,
   subscriptions,
   targets,
   users,
@@ -50,7 +50,7 @@ export async function createBackup(db: OpsDb, options: BackupOptions = {}): Prom
     oidcRows,
     targetRows,
     subRows,
-    subRunRows,
+    jobRunRows,
     batchRows,
     recRows,
     playlistRows,
@@ -62,7 +62,7 @@ export async function createBackup(db: OpsDb, options: BackupOptions = {}): Prom
     selectAll(db, oidcTokens),
     selectAll(db, targets),
     selectAll(db, subscriptions),
-    selectAll(db, subscriptionRuns),
+    selectAll(db, jobRuns),
     selectAll(db, recommendationBatches),
     selectAll(db, recommendations),
     selectAll(db, playlists),
@@ -82,7 +82,7 @@ export async function createBackup(db: OpsDb, options: BackupOptions = {}): Prom
       oidcTokens: oidcRows,
       targets: targetRows,
       subscriptions: subRows,
-      subscriptionRuns: subRunRows,
+      jobRuns: jobRunRows,
       recommendationBatches: batchRows,
       recommendations: recRows,
       playlists: playlistRows,
@@ -131,7 +131,7 @@ const RESTORE_ORDER: {
   { key: 'subscriptions', table: subscriptions },
   { key: 'playlists', table: playlists },
   { key: 'recommendationBatches', table: recommendationBatches },
-  { key: 'subscriptionRuns', table: subscriptionRuns },
+  { key: 'jobRuns', table: jobRuns },
   { key: 'recommendations', table: recommendations },
   { key: 'playlistTracks', table: playlistTracks },
 ]
@@ -207,6 +207,12 @@ export async function restoreBackup(
 
   // Wrap in a transaction so partial failures roll back cleanly
   try {
+    // Backward compatibility: map old subscriptionRuns to jobRuns format
+    const backupData = backup.data as unknown as Record<string, unknown[]>
+    if (backupData.subscriptionRuns?.length && !backup.data.jobRuns?.length) {
+      backup.data.jobRuns = backupData.subscriptionRuns as Record<string, unknown>[]
+    }
+
     // biome-ignore lint/suspicious/noExplicitAny: drizzle transaction type
     await (db as any).transaction(async (tx: OpsDb) => {
       for (const { key, table } of RESTORE_ORDER) {

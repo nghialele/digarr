@@ -23,10 +23,9 @@ import type {
 } from '@/db/queries/recommendations'
 import type { SettingsRow, SetupConfig } from '@/db/queries/settings'
 import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
-import type { subscriptionRuns, subscriptions } from '@/db/schema'
+import type { subscriptions } from '@/db/schema'
 
 type SubscriptionRow = typeof subscriptions.$inferSelect
-type SubscriptionRunRow = typeof subscriptionRuns.$inferSelect
 
 import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
 import type { UserPublic } from '@/db/queries/users'
@@ -46,6 +45,7 @@ import { dashboardRoutes } from './routes/dashboard'
 import { exportRoutes } from './routes/exports'
 import { genreRoutes } from './routes/genres'
 import { healthRoutes } from './routes/health'
+import { jobRoutes } from './routes/jobs'
 import { libraryRoutes } from './routes/library'
 import { lidarrRoutes } from './routes/lidarr'
 import { listeningRoutes } from './routes/listening'
@@ -130,7 +130,6 @@ export type AppDependencies = {
     getEnabledSubscriptions: () => Promise<SubscriptionRow[]>
     updateSubscription: (id: number, data: SubscriptionUpdate) => Promise<void>
     deleteSubscription: (id: number) => Promise<void>
-    getRunsForSubscription: (id: number, limit?: number) => Promise<SubscriptionRunRow[]>
   }
   // Manual subscription trigger
   runSubscription: (id: number) => Promise<void>
@@ -158,6 +157,19 @@ export type AppDependencies = {
       isAdmin: boolean,
       limit?: number,
     ) => Promise<ActivityEntry[]>
+  }
+  // Job recording & queries
+  jobRecorder: import('@/core/jobs/types').JobRecorder
+  jobQueries: {
+    listJobs: (
+      filters?: import('@/db/queries/jobs').ListJobsFilters,
+    ) => Promise<{ items: import('@/core/jobs/types').JobRunRow[]; total: number }>
+    getJobById: (id: number) => Promise<import('@/core/jobs/types').JobRunRow | null>
+    getJobHealth: (nextRun: Date | null) => Promise<import('@/db/queries/jobs').HealthSummary>
+    getJobsForSubscription: (
+      subId: number,
+      limit?: number,
+    ) => Promise<import('@/core/jobs/types').JobRunRow[]>
   }
   // Playlist deps (optional -- omit in test environments without a DB)
   playlistDeps?: PlaylistDeps
@@ -316,6 +328,18 @@ export function createApp(deps: AppDependencies) {
   app.route('/', userRoutes(deps))
   app.route('/', targetRoutes(deps))
   app.route('/', dashboardRoutes(deps))
+  app.route(
+    '/',
+    jobRoutes({
+      getUserById: deps.getUserById,
+      jobQueries: deps.jobQueries,
+      scheduler: {
+        get nextRun() {
+          return deps.scheduler.nextRun('main-pipeline')
+        },
+      },
+    }),
+  )
   app.route('/', exportRoutes(deps))
   if (deps.playlistDeps) {
     app.route('/', playlistRoutes(deps.playlistDeps))

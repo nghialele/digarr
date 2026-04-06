@@ -48,7 +48,6 @@ const mockSubQueries = {
   getEnabledSubscriptions: vi.fn(async () => [mockSub]),
   updateSubscription: vi.fn(async () => {}),
   deleteSubscription: vi.fn(async () => {}),
-  getRunsForSubscription: vi.fn(async () => []),
 }
 
 const mockScheduler = {
@@ -175,6 +174,23 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       getTopGenresForUser: vi.fn(async () => []),
       getRecentActivity: vi.fn(async () => []),
     },
+    jobRecorder: {
+      start: vi.fn().mockResolvedValue(1),
+      complete: vi.fn().mockResolvedValue(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
+      markStuck: vi.fn().mockResolvedValue(0),
+    },
+    jobQueries: {
+      listJobs: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      getJobById: vi.fn().mockResolvedValue(null),
+      getJobHealth: vi.fn().mockResolvedValue({
+        pipeline: { status: 'ok', lastRun: null, nextRun: null },
+        subscriptions: { status: 'ok', healthy: 0, total: 0 },
+        playlists: { status: 'ok', lastRun: null },
+        sources: {},
+      }),
+      getJobsForSubscription: vi.fn().mockResolvedValue([]),
+    },
     ...overrides,
   }
 }
@@ -232,7 +248,6 @@ beforeEach(() => {
   mockSubQueries.getEnabledSubscriptions.mockResolvedValue([mockSub])
   mockSubQueries.updateSubscription.mockResolvedValue(undefined)
   mockSubQueries.deleteSubscription.mockResolvedValue(undefined)
-  mockSubQueries.getRunsForSubscription.mockResolvedValue([])
   mockScheduler.schedule.mockReset()
   mockScheduler.remove.mockReset()
   mockScheduler.has.mockReturnValue(false)
@@ -603,12 +618,13 @@ describe('POST /api/subscriptions/:id/run', () => {
 
 describe('GET /api/subscriptions/:id/runs', () => {
   it('returns run history for owned subscription', async () => {
-    const app = createTestApp(makeDeps(), USER_ID)
+    const deps = makeDeps()
+    const app = createTestApp(deps, USER_ID)
     const res = await app.request('/api/subscriptions/1/runs')
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(Array.isArray(body)).toBe(true)
-    expect(mockSubQueries.getRunsForSubscription).toHaveBeenCalledWith(1)
+    expect(deps.jobQueries.getJobsForSubscription).toHaveBeenCalledWith(1)
   })
 
   it('returns 403 for non-owner', async () => {
