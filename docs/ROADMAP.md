@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-06 | Current: v0.16.0
+> Updated: 2026-04-07 | Current: v0.17.0
 >
 > This is a living document. Priorities shift based on feedback and demand.
 > Nothing here is a guarantee -- it reflects current intent and direction.
@@ -107,6 +107,13 @@ Low confidence. Would build only with real demand.
 - Native mobile apps (Android/iOS) -- PWA is already installable; native value is mostly reliable push notifications
 
 ## Recently Shipped
+
+### v0.16.0 -- v0.17.0
+
+- Plex and Jellyfin library sync
+- Reconciliation review page with correct/ignore actions and rerun support
+- Setup wizard first-sync guidance and admin library sources/status surface
+- Library-aware pipeline integration with regression, integration, and browser coverage
 
 ### v0.15.0 -- v0.16.0
 
