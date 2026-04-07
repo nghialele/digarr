@@ -1,5 +1,5 @@
 import { serve } from '@hono/node-server'
-import { eq, inArray, isNull, or } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { canAutoSetup, envConfig } from './config/env'
 import { hashPassword } from './core/auth'
@@ -9,13 +9,20 @@ import { createDeezerClient } from './core/clients/deezer'
 import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
+import { createPlexClient } from './core/clients/plex'
 import { createSpotifyClient } from './core/clients/spotify'
 import { initEncryption, isEncryptionEnabled } from './core/crypto'
 import { GenreService } from './core/genre/service'
 import { createJobRecorder } from './core/jobs/recorder'
 import { startStuckDetector } from './core/jobs/stuck-detector'
 import { LibraryHealthService } from './core/library/health'
+import { startLibrarySyncScheduler } from './core/library/scheduler'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
+import { createJellyfinLibrarySource } from './core/library/sources/jellyfin'
+import { createLidarrLibrarySource } from './core/library/sources/lidarr'
+import { createPlexLibrarySource } from './core/library/sources/plex'
+import { createLibrarySyncStore } from './core/library/store'
+import { createSyncOrchestrator, type SyncOrchestrator } from './core/library/sync'
 import { runPreFlightCheck } from './core/ops/upgrade'
 import { analyze } from './core/pipeline/analyze'
 import { PipelineOrchestrator } from './core/pipeline/orchestrator'
@@ -128,6 +135,7 @@ import {
 import {
   artists,
   DEFAULT_PREFERENCES,
+  libraryArtists,
   mergePreferences,
   recommendationBatches,
   recommendations,
@@ -159,6 +167,13 @@ console.log('Database migrations applied')
 
 // Wire up DB-backed session store after migrations are applied.
 setSessionStore(sessionQueries(db))
+
+// Read library sync interval once; used by both the orchestrator's stale
+// check and the background scheduler. Runtime changes require a restart.
+const bootSettings = await getSettings(db)
+const librarySyncIntervalHours = bootSettings?.librarySyncIntervalHours ?? 6
+
+const librarySyncStore = createLibrarySyncStore(db)
 
 const storeDb: StoreDb = {
   getExistingRecommendationMbids: async (userId) => {
@@ -197,6 +212,24 @@ const storeDb: StoreDb = {
   getFeedbackHistory: () => getGenreFeedbackHistory(db),
   lookupArtistMetadata: (name) => lookupByName(db, name),
   getPopularityMap: () => getPopularityMap(db),
+  getLibraryArtistsForUser: async (userId, options) => {
+    const conds = [or(eq(libraryArtists.userId, userId), isNull(libraryArtists.userId))]
+    if (options?.onlyReconciled) conds.push(isNotNull(libraryArtists.mbid))
+    if (options?.source) conds.push(eq(libraryArtists.source, options.source))
+    return db
+      .select({
+        mbid: libraryArtists.mbid,
+        name: libraryArtists.name,
+        source: libraryArtists.source,
+        sourceArtistId: libraryArtists.sourceArtistId,
+        genres: libraryArtists.genres,
+        matchMethod: libraryArtists.matchMethod,
+        matchConfidence: libraryArtists.matchConfidence,
+      })
+      .from(libraryArtists)
+      .where(and(...conds.filter((c): c is NonNullable<typeof c> => c !== undefined)))
+  },
+  userHasAnySyncState: (userId) => librarySyncStore.userHasAnySyncState(userId),
 }
 
 jobRecorder = createJobRecorder(db)
@@ -296,11 +329,68 @@ const libraryHealth = new LibraryHealthService({
 
 const skyhookWarmer = new SkyHookWarmer({ lookupArtist: lazyLidarrClient.lookupArtist })
 
-const runPipeline = async () => {
-  const currentSettings = await getSettings(db)
-  if (currentSettings) {
-    await orchestrator.run({ db: storeDb, settings: currentSettings, providerRegistry })
+// ---------------------------------------------------------------------------
+// Library sync orchestrator + per-source factories
+// ---------------------------------------------------------------------------
+
+// Helper that builds per-user sources from user connection rows.
+async function buildPerUserLibrarySources(userId: number) {
+  const conns = await getUserConnections(db, userId)
+  if (!conns) return []
+  const sources = []
+  if (conns.plexUrl && conns.plexToken) {
+    sources.push(createPlexLibrarySource(createPlexClient(conns.plexUrl, conns.plexToken), userId))
   }
+  if (conns.jellyfinUrl && conns.jellyfinApiKey && conns.jellyfinUserId) {
+    sources.push(
+      createJellyfinLibrarySource(
+        createJellyfinClient(conns.jellyfinUrl, conns.jellyfinApiKey, conns.jellyfinUserId),
+        userId,
+      ),
+    )
+  }
+  return sources
+}
+
+async function buildGlobalLibrarySources() {
+  const s = await getSettings(db)
+  if (s?.lidarrUrl && s?.lidarrApiKey) {
+    return [
+      createLidarrLibrarySource(
+        createLidarrClient(s.lidarrUrl, s.lidarrApiKey, s.skipTlsVerify ?? false),
+      ),
+    ]
+  }
+  return []
+}
+
+const librarySyncOrchestrator: SyncOrchestrator = createSyncOrchestrator({
+  store: librarySyncStore,
+  recorder: jobRecorder,
+  mbClient: createMusicBrainzClient(),
+  buildPerUserSources: buildPerUserLibrarySources,
+  buildGlobalSources: buildGlobalLibrarySources,
+  staleHours: librarySyncIntervalHours,
+})
+
+const runPipeline = async (userId?: number) => {
+  const currentSettings = await getSettings(db)
+  if (!currentSettings) return
+  // Default to admin user when not provided (cron-triggered runs)
+  let resolvedUserId = userId
+  if (resolvedUserId === undefined) {
+    const allUsers = await listUsers(db)
+    const admin = allUsers.find((u) => u.isAdmin) ?? allUsers[0]
+    resolvedUserId = admin?.id
+  }
+  if (resolvedUserId === undefined) return
+  await orchestrator.run({
+    db: storeDb,
+    settings: currentSettings,
+    providerRegistry,
+    librarySync: librarySyncOrchestrator,
+    userId: resolvedUserId,
+  })
 }
 
 // Shared subscription query facade (used both by routes and scheduler)
@@ -436,9 +526,27 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
     scoringWeightOverrides: sub.scoringWeightOverrides,
   }
 
-  const libraryArtists = lidarrClient ? await lidarrClient.getArtists() : []
-  const libraryGenres = [...new Set(libraryArtists.flatMap((artist) => artist.genres ?? []))]
-  const libraryMbids = new Set(libraryArtists.map((artist) => artist.foreignArtistId))
+  // Library data: prefer the new sync cache when available, fall back to direct Lidarr.
+  const subscriptionUserId = sub.userId ?? undefined
+  let libraryMbids: Set<string>
+  let libraryGenres: string[]
+  if (subscriptionUserId !== undefined && storeDb.getLibraryArtistsForUser) {
+    await librarySyncOrchestrator.syncForUser(subscriptionUserId).catch((err: unknown) => {
+      console.warn(
+        `[subscription-runner] library sync failed for user ${subscriptionUserId}:`,
+        errMsg(err),
+      )
+    })
+    const cached = await storeDb.getLibraryArtistsForUser(subscriptionUserId, {
+      onlyReconciled: true,
+    })
+    libraryMbids = new Set(cached.map((a) => a.mbid).filter((m): m is string => m !== null))
+    libraryGenres = [...new Set(cached.flatMap((a) => a.genres ?? []))]
+  } else {
+    const libraryArtistsRaw = lidarrClient ? await lidarrClient.getArtists() : []
+    libraryGenres = [...new Set(libraryArtistsRaw.flatMap((a) => a.genres ?? []))]
+    libraryMbids = new Set(libraryArtistsRaw.map((a) => a.foreignArtistId))
+  }
 
   // Build topArtistNames from listening sources so subscriptions exclude
   // artists the user already listens to (same exclusion as main pipeline)
@@ -719,6 +827,8 @@ const app = createApp({
   genreService,
   libraryHealth,
   skyhookWarmer,
+  librarySync: librarySyncOrchestrator,
+  librarySyncStore,
   subscriptionQueries: subscriptionQueriesImpl,
   runSubscription: (id) => executeSubscription(id),
   targetQueries: {
@@ -957,6 +1067,17 @@ const server = serve({ fetch: app.fetch, port })
     }
 
     await restartPlaylistScheduler()
+
+    // Library sync scheduler -- background, idempotent. Boot fire is non-blocking.
+    startLibrarySyncScheduler({
+      intervalHours: librarySyncIntervalHours,
+      orchestrator: librarySyncOrchestrator,
+      listUserIds: async () => (await listUsers(db)).map((u) => u.id),
+    })
+    // Fire one sync at boot so fresh installs don't wait for the first cron tick
+    void librarySyncOrchestrator
+      .syncGlobal()
+      .catch((err) => console.error('[boot] initial library syncGlobal failed:', err))
 
     // Start stuck job detector
     startStuckDetector(jobRecorder)

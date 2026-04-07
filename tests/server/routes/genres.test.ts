@@ -12,10 +12,6 @@ vi.mock('@/core/clients/lidarr', () => ({
   })),
 }))
 
-vi.mock('@/core/pipeline/collect', () => ({
-  collect: vi.fn(async () => []),
-}))
-
 vi.mock('@/db/queries/artists', () => ({
   getGenreEnrichments: vi.fn(async () => {
     const m = new Map()
@@ -146,6 +142,8 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     updatePassword: vi.fn(async () => {}),
     genreService: mockGenreService as unknown as AppDependencies['genreService'],
     libraryHealth: {} as unknown as AppDependencies['libraryHealth'],
+    librarySync: {} as unknown as AppDependencies['librarySync'],
+    librarySyncStore: {} as unknown as AppDependencies['librarySyncStore'],
     targetQueries: {
       createTarget: vi.fn().mockResolvedValue({ id: 1 }),
       getTargetsByUser: vi.fn().mockResolvedValue([]),
