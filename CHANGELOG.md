@@ -2,6 +2,19 @@
 
 All notable user-facing changes are documented here.
 
+## v0.19.0 - 2026-04-09
+
+### Added
+
+- Album coverage service and API surface, with persistent album overrides
+- Album coverage badge on recommendation cards showing owned/missing counts
+- Unreconciled album rows in the library reconciliation review
+- Album sync coverage summary in the admin Library Sources panel
+
+### Changed
+
+- Helm chart version now tracks the app version (single number per release)
+
 ## v0.18.0 - 2026-04-08
 
 ### Added

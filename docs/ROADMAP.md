@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-08 | Current: v0.18.0
+> Updated: 2026-04-09 | Current: v0.19.0
 >
 > This is a living document. Priorities shift based on feedback and demand.
 > Nothing here is a guarantee -- it reflects current intent and direction.
@@ -106,6 +106,14 @@ Low confidence. Would build only with real demand.
 - Native mobile apps (Android/iOS) -- PWA is already installable; native value is mostly reliable push notifications
 
 ## Recently Shipped
+
+### v0.18.0 -- v0.19.0
+
+- Album coverage service and API with persistent album overrides
+- Album coverage badge on recommendation cards
+- Unreconciled album rows in library reconciliation review
+- Album sync coverage summary in the admin Library Sources panel
+- Helm chart version aligned with app version
 
 ### v0.17.0 -- v0.18.0
 
