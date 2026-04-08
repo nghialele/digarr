@@ -1,7 +1,9 @@
+import PQueue from 'p-queue'
 import type { createMusicBrainzClient } from '@/core/clients/musicbrainz'
 import type { JobRecorder, JobType } from '@/core/jobs/types'
 import { errMsg } from '@/core/validation'
-import { type ReconcilerContext, reconcileArtist } from './reconciler'
+import { type ReconciledAlbum, reconcileAlbumsForArtist } from './album-reconciler'
+import { type ReconciledArtist, type ReconcilerContext, reconcileArtist } from './reconciler'
 import type { LibrarySource } from './sources/types'
 import { emptyLibrarySyncCounts, type LibrarySyncStore } from './store'
 
@@ -123,17 +125,58 @@ export function createSyncOrchestrator(deps: SyncOrchestratorDeps) {
         counts,
       }
 
-      const reconciled = []
+      const reconciled: ReconciledArtist[] = []
       for (const artist of rawArtists) {
         reconciled.push(await reconcileArtist(artist, source.id, ctx))
       }
 
-      const writtenCounts = await deps.store.replaceLibraryArtists(userId, source.id, reconciled)
+      let writtenCounts: ReturnType<typeof emptyLibrarySyncCounts>
+      const listAlbums = source.listAlbums
+      if (source.capabilities.includes('listAlbums') && listAlbums) {
+        const albumQueue = new PQueue({ concurrency: 3 })
+        const matchedArtists = reconciled.filter(
+          (artist): artist is (typeof reconciled)[number] & { mbid: string } =>
+            artist.mbid !== null,
+        )
+        const albumRows: ReconciledAlbum[] = []
+        const albumTasks: Promise<void>[] = []
+
+        for (const artist of matchedArtists) {
+          albumTasks.push(
+            albumQueue.add(async () => {
+              const rawAlbums = await listAlbums(artist.sourceArtistId)
+              const reconciledAlbums = await reconcileAlbumsForArtist(artist.mbid, rawAlbums, {
+                mbClient: deps.mbClient,
+              })
+              albumRows.push(...reconciledAlbums)
+            }),
+          )
+        }
+
+        const albumResults = await Promise.allSettled(albumTasks)
+        await albumQueue.onIdle()
+        const albumFailure = albumResults.find(
+          (result): result is PromiseRejectedResult => result.status === 'rejected',
+        )
+        if (albumFailure) {
+          throw albumFailure.reason
+        }
+
+        writtenCounts = await deps.store.replaceLibrarySnapshot(
+          userId,
+          source.id,
+          reconciled,
+          albumRows,
+        )
+      } else {
+        writtenCounts = await deps.store.replaceLibraryArtists(userId, source.id, reconciled)
+      }
       // Merge writer counts (tally pass) with reconciler counts (cacheHits, mbApiCalls)
       const merged = {
         ...writtenCounts,
         cacheHits: counts.cacheHits,
         mbApiCalls: counts.mbApiCalls,
+        albumsSynced: writtenCounts.albumsSynced ?? 0,
       }
 
       await deps.store.upsertLibrarySyncState(userId, source.id, {

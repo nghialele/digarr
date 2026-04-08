@@ -1,7 +1,15 @@
 import type { createLidarrClient } from '@/core/clients/lidarr'
-import type { LibraryArtist, LibrarySource } from './types'
+import type { LibraryAlbum, LibraryArtist, LibrarySource } from './types'
 
 type LidarrClient = ReturnType<typeof createLidarrClient>
+
+const LIDARR_PRIMARY_TYPE_MAP = {
+  Album: 'Album',
+  EP: 'EP',
+  Single: 'Single',
+  Compilation: 'Compilation',
+  Live: 'Live',
+} as const
 
 /**
  * Wraps the existing Lidarr client as a LibrarySource. Lidarr stores
@@ -14,7 +22,7 @@ export function createLidarrLibrarySource(client: LidarrClient): LibrarySource {
   return {
     id: 'lidarr',
     name: 'Lidarr',
-    capabilities: ['listArtists'],
+    capabilities: ['listArtists', 'listAlbums'],
     userId: null,
     mbidQuality: 'high',
 
@@ -25,6 +33,19 @@ export function createLidarrLibrarySource(client: LidarrClient): LibrarySource {
         name: a.artistName,
         mbid: a.foreignArtistId,
         genres: a.genres ?? [],
+      }))
+    },
+
+    async listAlbums(sourceArtistId): Promise<LibraryAlbum[]> {
+      const albums = await client.getAlbums(Number(sourceArtistId))
+      return albums.map((album) => ({
+        sourceAlbumId: String(album.id),
+        sourceArtistId: String(album.artistId),
+        title: album.title,
+        mbid: album.foreignAlbumId,
+        primaryType:
+          LIDARR_PRIMARY_TYPE_MAP[album.albumType as keyof typeof LIDARR_PRIMARY_TYPE_MAP] ??
+          'Other',
       }))
     },
 

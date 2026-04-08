@@ -56,7 +56,28 @@ export type PlexLibraryArtist = {
   genres: string[]
 }
 
-export function createPlexClient(url: string, token: string, options?: { baseUrl?: string }) {
+export type PlexLibraryAlbum = {
+  ratingKey: string
+  artistRatingKey: string
+  title: string
+  releaseYear?: number
+  primaryType?: 'Album'
+}
+
+export type PlexClient = {
+  getMusicSectionId: () => Promise<string>
+  getTopArtists: (limit?: number) => Promise<PlexTopArtist[]>
+  getAllArtists: (options?: { pageSize?: number }) => Promise<PlexLibraryArtist[]>
+  getAlbumsForArtist: (artistRatingKey: string) => Promise<PlexLibraryAlbum[]>
+  getRecentlyPlayed: (limit?: number) => Promise<PlexRecentTrack[]>
+  testConnection: () => Promise<ServiceTestResult>
+}
+
+export function createPlexClient(
+  url: string,
+  token: string,
+  options?: { baseUrl?: string },
+): PlexClient {
   const baseUrl = options?.baseUrl ?? url.replace(/\/+$/, '')
 
   const http = createHttpClient({
@@ -148,6 +169,51 @@ export function createPlexClient(url: string, token: string, options?: { baseUrl
     return all
   }
 
+  async function getAlbumsForArtist(artistRatingKey: string): Promise<PlexLibraryAlbum[]> {
+    const pageSize = 200
+    const all: PlexLibraryAlbum[] = []
+    let start = 0
+    let total: number | undefined
+
+    while (start < (total ?? Number.POSITIVE_INFINITY)) {
+      const params = new URLSearchParams({
+        type: '9',
+        'X-Plex-Container-Start': String(start),
+        'X-Plex-Container-Size': String(pageSize),
+      })
+      const res = await get<{
+        MediaContainer: {
+          totalSize?: number
+          Metadata?: Array<{
+            ratingKey: string
+            parentRatingKey: string
+            title: string
+            year?: number
+          }>
+        }
+      }>(`/library/metadata/${artistRatingKey}/children?${params}`)
+
+      const metadata = res.MediaContainer.Metadata ?? []
+      if (res.MediaContainer.totalSize != null) {
+        total = res.MediaContainer.totalSize
+      }
+      for (const item of metadata) {
+        all.push({
+          ratingKey: item.ratingKey,
+          artistRatingKey: item.parentRatingKey,
+          title: item.title,
+          releaseYear: item.year,
+          primaryType: 'Album',
+        })
+      }
+      if (metadata.length === 0) break
+      start += metadata.length
+      if (total == null && metadata.length < pageSize) break
+    }
+
+    return all
+  }
+
   async function testConnection(): Promise<ServiceTestResult> {
     try {
       const sectionId = await getMusicSectionId()
@@ -165,6 +231,7 @@ export function createPlexClient(url: string, token: string, options?: { baseUrl
     getMusicSectionId,
     getTopArtists,
     getAllArtists,
+    getAlbumsForArtist,
     getRecentlyPlayed,
     testConnection,
   }

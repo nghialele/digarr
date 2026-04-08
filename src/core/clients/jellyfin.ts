@@ -17,6 +17,15 @@ export type JellyfinLibraryArtist = {
   genres: string[]
 }
 
+export type JellyfinLibraryAlbum = {
+  id: string
+  artistId: string
+  title: string
+  mbid?: string
+  releaseYear?: number
+  primaryType?: 'Album'
+}
+
 export type JellyfinRecentTrack = {
   artistName: string
   trackName: string
@@ -215,6 +224,51 @@ export function createJellyfinClient(
     return all
   }
 
+  async function getAlbumsForArtist(artistId: string): Promise<JellyfinLibraryAlbum[]> {
+    const userId = await getUserId()
+    const pageSize = 200
+    const all: JellyfinLibraryAlbum[] = []
+    let startIndex = 0
+    let total = Number.POSITIVE_INFINITY
+
+    while (startIndex < total) {
+      const params = new URLSearchParams({
+        ParentId: artistId,
+        IncludeItemTypes: 'MusicAlbum',
+        Recursive: 'true',
+        Fields: 'ProviderIds,ProductionYear',
+        StartIndex: String(startIndex),
+        Limit: String(pageSize),
+      })
+
+      const res = await get<{
+        TotalRecordCount: number
+        Items: Array<{
+          Id: string
+          Name: string
+          ProductionYear?: number
+          ProviderIds?: { MusicBrainzReleaseGroup?: string; MusicBrainzAlbum?: string }
+        }>
+      }>(`/Users/${userId}/Items?${params}`)
+
+      total = res.TotalRecordCount ?? res.Items.length
+      for (const item of res.Items) {
+        all.push({
+          id: item.Id,
+          artistId,
+          title: item.Name,
+          mbid: item.ProviderIds?.MusicBrainzReleaseGroup?.trim() || undefined,
+          releaseYear: item.ProductionYear,
+          primaryType: 'Album',
+        })
+      }
+      if (res.Items.length === 0) break
+      startIndex += res.Items.length
+    }
+
+    return all
+  }
+
   async function testConnection(): Promise<ServiceTestResult> {
     try {
       const info = await get<JellyfinSystemInfo>('/System/Info')
@@ -236,6 +290,7 @@ export function createJellyfinClient(
   return {
     getTopArtists,
     getAllArtists,
+    getAlbumsForArtist,
     getRecentlyPlayed,
     getFavoriteArtists,
     testConnection,

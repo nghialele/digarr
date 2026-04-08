@@ -32,6 +32,7 @@ describe('lidarr LibrarySource', () => {
     expect(source.id).toBe('lidarr')
     expect(source.mbidQuality).toBe('high')
     expect(source.capabilities).toContain('listArtists')
+    expect(source.capabilities).toContain('listAlbums')
     expect(source.userId).toBeNull()
   })
 
@@ -77,5 +78,61 @@ describe('lidarr LibrarySource', () => {
     const result = await source.testConnection()
     expect(result.success).toBe(true)
     expect(client.testConnection).toHaveBeenCalled()
+  })
+
+  it('listAlbums maps Lidarr albums to LibraryAlbum rows', async () => {
+    const client = {
+      getArtists: vi.fn(),
+      getAlbums: vi.fn().mockResolvedValue([
+        {
+          id: 10,
+          title: 'OK Computer',
+          artistId: 1,
+          foreignAlbumId: '11111111-1111-1111-1111-111111111111',
+          monitored: true,
+          albumType: 'Album',
+        },
+      ]),
+      testConnection: vi.fn(),
+    }
+    const source = createLidarrLibrarySource(client as never)
+    const albums = await source.listAlbums?.('1')
+    expect(albums).toEqual([
+      {
+        sourceAlbumId: '10',
+        sourceArtistId: '1',
+        title: 'OK Computer',
+        mbid: '11111111-1111-1111-1111-111111111111',
+        primaryType: 'Album',
+      },
+    ])
+  })
+
+  it('listAlbums preserves Lidarr EP primary type', async () => {
+    const client = {
+      getArtists: vi.fn(),
+      getAlbums: vi.fn().mockResolvedValue([
+        {
+          id: 11,
+          title: 'Kid A Mnesia',
+          artistId: 1,
+          foreignAlbumId: '22222222-2222-2222-2222-222222222222',
+          monitored: true,
+          albumType: 'EP',
+        },
+      ]),
+      testConnection: vi.fn(),
+    }
+    const source = createLidarrLibrarySource(client as never)
+    const albums = await source.listAlbums?.('1')
+    expect(albums).toEqual([
+      {
+        sourceAlbumId: '11',
+        sourceArtistId: '1',
+        title: 'Kid A Mnesia',
+        mbid: '22222222-2222-2222-2222-222222222222',
+        primaryType: 'EP',
+      },
+    ])
   })
 })
