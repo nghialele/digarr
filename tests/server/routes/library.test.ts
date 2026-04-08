@@ -2,7 +2,8 @@
 
 import { EventEmitter } from 'node:events'
 import { Hono } from 'hono'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { clearAllSessions, createSession } from '@/core/sessions'
 import type { SettingsRow } from '@/db/queries/settings'
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'
@@ -103,6 +104,9 @@ function makeMockLibrarySyncStore() {
     userHasAnySyncState: vi.fn(async () => false),
     listSyncStateForUser: vi.fn(async () => []),
     listUnreconciledForUser: vi.fn(async () => []),
+    listUnreconciledAlbumsForUser: vi.fn(async () => []),
+    listOwnedAlbumsForArtist: vi.fn(async () => []),
+    upsertAlbumOverride: vi.fn(async () => {}),
   }
 }
 
@@ -212,6 +216,15 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     },
     librarySync: makeMockLibrarySync() as unknown as AppDependencies['librarySync'],
     librarySyncStore: makeMockLibrarySyncStore() as unknown as AppDependencies['librarySyncStore'],
+    albumCoverage: {
+      getCoverageForArtist: vi.fn(async () => ({
+        artistMbid: 'a74b1b7f-71a5-4011-9441-d0b5e4122711',
+        ownedCount: 0,
+        totalCount: 0,
+        owned: [],
+        missing: [],
+      })),
+    } as unknown as AppDependencies['albumCoverage'],
     ...overrides,
   }
 }
@@ -254,6 +267,21 @@ beforeEach(() => {
     mockLidarrClient as ReturnType<typeof createLidarrClient>,
   )
 })
+
+afterEach(async () => {
+  delete process.env.DIGARR_AUTH_TOKEN
+  await clearAllSessions()
+})
+
+async function createMountedAppWithLegacyToken(
+  token: string,
+  overrides: Partial<AppDependencies> = {},
+) {
+  vi.resetModules()
+  process.env.DIGARR_AUTH_TOKEN = token
+  const { createApp: createMountedApp } = await import('@/server')
+  return createMountedApp(makeDeps(overrides))
+}
 
 describe('GET /api/library/health', () => {
   it('returns cached results and scanning status', async () => {
@@ -471,9 +499,20 @@ describe('GET /api/library/warm/status', () => {
 
 import { libraryRoutes } from '@/server/routes/library'
 
+type SyncAppOptions = {
+  authSkipped?: boolean
+  userId?: number
+  isAdmin?: boolean
+  getUserById?: AppDependencies['getUserById']
+  albumCoverageOverride?: {
+    getCoverageForArtist: (userId: number, artistMbid: string) => Promise<unknown>
+  }
+}
+
 function makeSyncApp(
   librarySyncOverride?: Record<string, unknown>,
   librarySyncStoreOverride?: Record<string, unknown>,
+  options: SyncAppOptions = {},
 ) {
   const librarySync = {
     ...makeMockLibrarySync(),
@@ -483,21 +522,42 @@ function makeSyncApp(
     ...makeMockLibrarySyncStore(),
     ...librarySyncStoreOverride,
   } as unknown as AppDependencies['librarySyncStore']
+  const albumCoverage = options.albumCoverageOverride ?? {
+    getCoverageForArtist: vi.fn(async (userId: number, artistMbid: string) => ({
+      artistMbid,
+      ownedCount: 0,
+      totalCount: 0,
+      owned: [],
+      missing: [],
+      userId,
+    })),
+  }
+  const getUserById =
+    options.getUserById ??
+    (vi.fn(async () => ({
+      isAdmin: options.isAdmin ?? true,
+    })) as unknown as AppDependencies['getUserById'])
+  const routeDeps = {
+    libraryHealth: makeMockLibraryHealth() as unknown as AppDependencies['libraryHealth'],
+    skyhookWarmer: null,
+    librarySync,
+    librarySyncStore,
+    albumCoverage,
+    getUserById,
+  } as Parameters<typeof libraryRoutes>[0] & {
+    albumCoverage: typeof albumCoverage
+    getUserById: AppDependencies['getUserById']
+  }
   const app = new Hono<HonoEnv>()
   app.use('*', async (c, next) => {
-    c.set('userId', 42)
+    c.set('authSkipped', options.authSkipped ?? false)
+    if (options.userId !== undefined ? options.userId : 42) {
+      c.set('userId', options.userId ?? 42)
+    }
     return next()
   })
-  app.route(
-    '/',
-    libraryRoutes({
-      libraryHealth: makeMockLibraryHealth() as unknown as AppDependencies['libraryHealth'],
-      skyhookWarmer: null,
-      librarySync,
-      librarySyncStore,
-    }),
-  )
-  return { app, librarySync, librarySyncStore }
+  app.route('/', libraryRoutes(routeDeps))
+  return { app, librarySync, librarySyncStore, albumCoverage, getUserById }
 }
 
 describe('GET /api/library/sources', () => {
@@ -665,6 +725,206 @@ describe('GET /api/library/unreconciled', () => {
   })
 })
 
+describe('GET /api/library/album-coverage/:artistMbid', () => {
+  it('returns owned and missing studio albums for the current user', async () => {
+    const artistMbid = 'a74b1b7f-71a5-4011-9441-d0b5e4122711'
+    const coverage = {
+      artistMbid,
+      ownedCount: 1,
+      totalCount: 2,
+      owned: [
+        {
+          albumMbid: '11111111-1111-1111-1111-111111111111',
+          title: 'Dummy',
+          releaseYear: 1991,
+        },
+      ],
+      missing: [
+        {
+          albumMbid: '22222222-2222-2222-2222-222222222222',
+          title: 'Hex',
+          releaseYear: 1994,
+        },
+      ],
+    }
+    const { app, albumCoverage } = makeSyncApp(undefined, undefined, {
+      albumCoverageOverride: {
+        getCoverageForArtist: vi.fn(async () => coverage),
+      },
+    })
+
+    const res = await app.request(`/api/library/album-coverage/${artistMbid}`)
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual(coverage)
+    expect(albumCoverage.getCoverageForArtist).toHaveBeenCalledWith(42, artistMbid)
+  })
+
+  it('allows non-admin authenticated users through the real app mount', async () => {
+    const token = 'library-session-token'
+    const artistMbid = 'a74b1b7f-71a5-4011-9441-d0b5e4122711'
+    const coverage = {
+      artistMbid,
+      ownedCount: 1,
+      totalCount: 2,
+      owned: [
+        {
+          albumMbid: '11111111-1111-1111-1111-111111111111',
+          title: 'Dummy',
+          releaseYear: 1991,
+        },
+      ],
+      missing: [
+        {
+          albumMbid: '22222222-2222-2222-2222-222222222222',
+          title: 'Hex',
+          releaseYear: 1994,
+        },
+      ],
+    }
+    await createSession(7, token)
+    const app = createApp(
+      makeDeps({
+        getUserCount: vi.fn(async () => 1),
+        getUserById: vi.fn(async () => ({
+          id: 7,
+          username: 'listener',
+          isAdmin: false,
+        })) as unknown as AppDependencies['getUserById'],
+        albumCoverage: {
+          getCoverageForArtist: vi.fn(async () => coverage),
+        },
+      }),
+    )
+
+    const res = await app.request(`/api/library/album-coverage/${artistMbid}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual(coverage)
+  })
+})
+
+describe('Mounted library admin gating', () => {
+  it('blocks non-admin users from library maintenance endpoints in the real app mount', async () => {
+    const token = 'library-maintenance-session-token'
+    await createSession(9, token)
+    const libraryHealth = makeMockLibraryHealth()
+    const app = createApp(
+      makeDeps({
+        getUserCount: vi.fn(async () => 1),
+        getUserById: vi.fn(async () => ({
+          id: 9,
+          username: 'listener',
+          isAdmin: false,
+        })) as unknown as AppDependencies['getUserById'],
+        libraryHealth: libraryHealth as unknown as AppDependencies['libraryHealth'],
+      }),
+    )
+
+    const res = await app.request('/api/library/health/scan', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    expect(res.status).toBe(403)
+    expect((libraryHealth.startScan as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0)
+  })
+})
+
+describe('Mounted library legacy-token gating', () => {
+  it('rejects legacy-token auth for admin-only library maintenance even when user 1 is admin', async () => {
+    const token = 'legacy-library-token'
+    const libraryHealth = makeMockLibraryHealth()
+    const app = await createMountedAppWithLegacyToken(token, {
+      getUserById: vi.fn(async () => ({
+        id: 1,
+        username: 'admin',
+        isAdmin: true,
+      })) as unknown as AppDependencies['getUserById'],
+      libraryHealth: libraryHealth as unknown as AppDependencies['libraryHealth'],
+    })
+
+    const res = await app.request('/api/library/health', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    expect(res.status).toBe(403)
+    expect((libraryHealth.getLastResults as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0)
+  })
+
+  it('rejects legacy-token auth for per-user library sources', async () => {
+    const token = 'legacy-library-token'
+    const app = await createMountedAppWithLegacyToken(token)
+
+    const res = await app.request('/api/library/sources', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    expect(res.status).toBe(403)
+    await expect(res.json()).resolves.toEqual({ error: 'Session authentication required' })
+  })
+
+  it('rejects legacy-token auth for album coverage', async () => {
+    const token = 'legacy-library-token'
+    const artistMbid = 'a74b1b7f-71a5-4011-9441-d0b5e4122711'
+    const app = await createMountedAppWithLegacyToken(token, {
+      albumCoverage: {
+        getCoverageForArtist: vi.fn(async () => ({
+          artistMbid,
+          ownedCount: 0,
+          totalCount: 0,
+          owned: [],
+          missing: [],
+        })),
+      },
+    })
+
+    const res = await app.request(`/api/library/album-coverage/${artistMbid}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    expect(res.status).toBe(403)
+    await expect(res.json()).resolves.toEqual({ error: 'Session authentication required' })
+  })
+})
+
+describe('GET /api/library/unreconciled-albums', () => {
+  it('returns unreconciled album rows for admins', async () => {
+    const mockItems = [
+      {
+        id: 1,
+        userId: 42,
+        source: 'plex',
+        sourceArtistId: 'artist-1',
+        sourceAlbumId: 'album-1',
+        title: 'Unknown Album',
+        titleNormalized: 'unknown album',
+        albumMbid: null,
+        artistMbid: 'a74b1b7f-71a5-4011-9441-d0b5e4122711',
+        primaryType: 'Album',
+        releaseYear: 1991,
+        syncedAt: new Date(),
+      },
+    ]
+    const { app, librarySyncStore } = makeSyncApp(undefined, {
+      listUnreconciledAlbumsForUser: vi.fn(async () => mockItems),
+    })
+
+    const res = await app.request('/api/library/unreconciled-albums')
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.items).toHaveLength(1)
+    expect(body.items[0].sourceAlbumId).toBe('album-1')
+    expect(
+      (librarySyncStore.listUnreconciledAlbumsForUser as ReturnType<typeof vi.fn>).mock
+        .calls[0]?.[0],
+    ).toBe(42)
+  })
+})
+
 describe('POST /api/library/overrides', () => {
   it('calls upsertOverride with correct args and returns ok', async () => {
     const { app, librarySyncStore } = makeSyncApp()
@@ -732,6 +992,79 @@ describe('POST /api/library/overrides', () => {
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/source/i)
+  })
+})
+
+describe('POST /api/library/album-overrides', () => {
+  it('calls upsertAlbumOverride with correct args for admins', async () => {
+    const { app, librarySyncStore } = makeSyncApp()
+    const res = await app.request('/api/library/album-overrides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'plex',
+        sourceAlbumId: 'album-1',
+        correctAlbumMbid: '123e4567-e89b-12d3-a456-426614174000',
+        note: 'manual album fix',
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ ok: true })
+    expect(librarySyncStore.upsertAlbumOverride as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
+      42,
+      'plex',
+      'album-1',
+      '123e4567-e89b-12d3-a456-426614174000',
+      'manual album fix',
+    )
+  })
+
+  it('returns 400 when correctAlbumMbid is not a UUID', async () => {
+    const { app, librarySyncStore } = makeSyncApp()
+    const res = await app.request('/api/library/album-overrides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'plex',
+        sourceAlbumId: 'album-1',
+        correctAlbumMbid: 'not-a-uuid',
+      }),
+    })
+
+    expect(res.status).toBe(400)
+    expect(librarySyncStore.upsertAlbumOverride as ReturnType<typeof vi.fn>).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when sourceAlbumId is missing', async () => {
+    const { app, librarySyncStore } = makeSyncApp()
+    const res = await app.request('/api/library/album-overrides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'plex',
+        correctAlbumMbid: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+    })
+
+    expect(res.status).toBe(400)
+    expect(librarySyncStore.upsertAlbumOverride as ReturnType<typeof vi.fn>).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    const { app, librarySyncStore } = makeSyncApp(undefined, undefined, { isAdmin: false })
+    const res = await app.request('/api/library/album-overrides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'plex',
+        sourceAlbumId: 'album-1',
+        correctAlbumMbid: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+    })
+
+    expect(res.status).toBe(403)
+    expect(librarySyncStore.upsertAlbumOverride as ReturnType<typeof vi.fn>).not.toHaveBeenCalled()
   })
 })
 

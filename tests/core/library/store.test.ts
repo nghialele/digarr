@@ -17,6 +17,7 @@ const SHOULD_RUN =
     process.env.DB_NAME !== undefined)
 let db: import('@/db').Database
 let libraryAlbums: typeof import('@/db/schema').libraryAlbums
+let libraryAlbumMatchOverrides: typeof import('@/db/schema').libraryAlbumMatchOverrides
 let libraryArtists: typeof import('@/db/schema').libraryArtists
 let libraryMatchOverrides: typeof import('@/db/schema').libraryMatchOverrides
 let librarySyncState: typeof import('@/db/schema').librarySyncState
@@ -24,16 +25,28 @@ let users: typeof import('@/db/schema').users
 
 if (SHOULD_RUN) {
   ;({ db } = await import('@/db'))
-  ;({ libraryAlbums, libraryArtists, libraryMatchOverrides, librarySyncState, users } =
-    await import('@/db/schema'))
+  ;({
+    libraryAlbums,
+    libraryAlbumMatchOverrides,
+    libraryArtists,
+    libraryMatchOverrides,
+    librarySyncState,
+    users,
+  } = await import('@/db/schema'))
 }
 
 let userId: number
 
 beforeEach(async () => {
+  await db.delete(libraryAlbums).where(eq(libraryAlbums.source, LIDARR_SOURCE))
+  await db.delete(libraryAlbums).where(eq(libraryAlbums.source, PLEX_SOURCE))
+  await db.delete(libraryAlbums).where(eq(libraryAlbums.source, JELLYFIN_SOURCE))
   await db.delete(libraryArtists).where(eq(libraryArtists.source, LIDARR_SOURCE))
   await db.delete(libraryArtists).where(eq(libraryArtists.source, PLEX_SOURCE))
   await db.delete(libraryArtists).where(eq(libraryArtists.source, JELLYFIN_SOURCE))
+  await db
+    .delete(libraryAlbumMatchOverrides)
+    .where(eq(libraryAlbumMatchOverrides.source, PLEX_SOURCE))
   await db.delete(librarySyncState).where(eq(librarySyncState.source, LIDARR_SOURCE))
   await db.delete(librarySyncState).where(eq(librarySyncState.source, PLEX_SOURCE))
   await db.delete(librarySyncState).where(eq(librarySyncState.source, JELLYFIN_SOURCE))
@@ -45,9 +58,15 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  await db.delete(libraryAlbums).where(eq(libraryAlbums.source, LIDARR_SOURCE))
+  await db.delete(libraryAlbums).where(eq(libraryAlbums.source, PLEX_SOURCE))
+  await db.delete(libraryAlbums).where(eq(libraryAlbums.source, JELLYFIN_SOURCE))
   await db.delete(libraryArtists).where(eq(libraryArtists.source, LIDARR_SOURCE))
   await db.delete(libraryArtists).where(eq(libraryArtists.source, PLEX_SOURCE))
   await db.delete(libraryArtists).where(eq(libraryArtists.source, JELLYFIN_SOURCE))
+  await db
+    .delete(libraryAlbumMatchOverrides)
+    .where(eq(libraryAlbumMatchOverrides.source, PLEX_SOURCE))
   await db.delete(librarySyncState).where(eq(librarySyncState.source, LIDARR_SOURCE))
   await db.delete(librarySyncState).where(eq(librarySyncState.source, PLEX_SOURCE))
   await db.delete(librarySyncState).where(eq(librarySyncState.source, JELLYFIN_SOURCE))
@@ -364,5 +383,140 @@ describe.skipIf(!SHOULD_RUN)('LibrarySyncStore', () => {
     )
 
     expect(await store.listUnreconciledForUser(userId)).toHaveLength(0)
+  })
+
+  it('album override CRUD round-trips', async () => {
+    const store = createLibrarySyncStore(db)
+
+    await store.upsertAlbumOverride(
+      userId,
+      'plex',
+      'album-1',
+      '11111111-1111-1111-1111-111111111111',
+      'manual fix',
+    )
+
+    const overrides = await store.listAlbumOverrides(userId)
+    expect(overrides).toEqual([
+      {
+        source: 'plex',
+        sourceAlbumId: 'album-1',
+        correctAlbumMbid: '11111111-1111-1111-1111-111111111111',
+      },
+    ])
+
+    await store.upsertAlbumOverride(userId, 'plex', 'album-1', null, 'ignore')
+
+    const updated = await store.listAlbumOverrides(userId)
+    expect(updated).toEqual([
+      {
+        source: 'plex',
+        sourceAlbumId: 'album-1',
+        correctAlbumMbid: null,
+      },
+    ])
+
+    await store.deleteAlbumOverride(userId, 'plex', 'album-1')
+    expect(await store.listAlbumOverrides(userId)).toEqual([])
+  })
+
+  it('listUnreconciledAlbumsForUser hides rows that already have an override', async () => {
+    const store = createLibrarySyncStore(db)
+    const artistMbid = 'a74b1b7f-71a5-4011-9441-d0b5e4122711'
+
+    await store.replaceLibraryAlbums(userId, 'plex', [
+      reconciledAlbum({
+        sourceAlbumId: 'album-1',
+        sourceArtistId: 'artist-1',
+        title: 'Unknown Album',
+        titleNormalized: 'unknown album',
+        albumMbid: null,
+        artistMbid,
+        primaryType: 'Album',
+      }),
+    ])
+
+    expect(await store.listUnreconciledAlbumsForUser(userId)).toHaveLength(1)
+
+    await store.upsertAlbumOverride(userId, 'plex', 'album-1', null, 'ignore')
+
+    expect(await store.listUnreconciledAlbumsForUser(userId)).toHaveLength(0)
+  })
+
+  it('listOwnedAlbumsForArtist returns full album shape for user and global rows only', async () => {
+    const store = createLibrarySyncStore(db)
+    const artistMbid = 'a74b1b7f-71a5-4011-9441-d0b5e4122711'
+
+    await store.replaceLibraryAlbums(userId, PLEX_SOURCE, [
+      reconciledAlbum({
+        sourceAlbumId: 'album-user',
+        sourceArtistId: 'artist-1',
+        title: 'Dummy',
+        artistMbid,
+        albumMbid: '11111111-1111-1111-1111-111111111111',
+        releaseYear: 1991,
+        primaryType: 'Album',
+      }),
+      reconciledAlbum({
+        sourceAlbumId: 'album-ep',
+        sourceArtistId: 'artist-1',
+        title: 'Bonus EP',
+        artistMbid,
+        albumMbid: '33333333-3333-3333-3333-333333333333',
+        releaseYear: 1992,
+        primaryType: 'EP',
+      }),
+      reconciledAlbum({
+        sourceAlbumId: 'album-null-mbid',
+        sourceArtistId: 'artist-1',
+        title: 'Unknown Album',
+        artistMbid,
+        albumMbid: null,
+        releaseYear: 1993,
+        primaryType: 'Album',
+      }),
+      reconciledAlbum({
+        sourceAlbumId: 'album-other-artist',
+        sourceArtistId: 'artist-2',
+        title: 'Other Artist Album',
+        artistMbid: '8f6bd1e4-fbe1-4f50-aa9b-94c450ec0a11',
+        albumMbid: '44444444-4444-4444-4444-444444444444',
+        releaseYear: 1995,
+        primaryType: 'Album',
+      }),
+    ])
+
+    await store.replaceLibraryAlbums(null, LIDARR_SOURCE, [
+      reconciledAlbum({
+        sourceAlbumId: 'album-global',
+        sourceArtistId: 'artist-global',
+        title: 'Hex',
+        artistMbid,
+        albumMbid: '22222222-2222-2222-2222-222222222222',
+        releaseYear: 1994,
+        primaryType: 'Album',
+      }),
+    ])
+
+    const owned = await store.listOwnedAlbumsForArtist(userId, artistMbid)
+
+    expect(owned).toEqual([
+      {
+        source: PLEX_SOURCE,
+        sourceAlbumId: 'album-user',
+        albumMbid: '11111111-1111-1111-1111-111111111111',
+        title: 'Dummy',
+        releaseYear: 1991,
+        primaryType: 'Album',
+      },
+      {
+        source: LIDARR_SOURCE,
+        sourceAlbumId: 'album-global',
+        albumMbid: '22222222-2222-2222-2222-222222222222',
+        title: 'Hex',
+        releaseYear: 1994,
+        primaryType: 'Album',
+      },
+    ])
   })
 })
