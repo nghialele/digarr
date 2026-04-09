@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-09 | Current: v0.19.2
+> Updated: 2026-04-09 | Current: v0.20.0
 >
 > This is a living document. Priorities shift based on feedback and demand.
 > Nothing here is a guarantee -- it reflects current intent and direction.

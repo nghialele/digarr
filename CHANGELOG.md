@@ -2,6 +2,19 @@
 
 All notable user-facing changes are documented here.
 
+## v0.20.0 - 2026-04-09
+
+### Added
+
+- Emby media server support with library sync and playlist push capabilities
+- Per-user Emby connection management in setup wizard
+- Emby album coverage and reconciliation features
+
+### Changed
+
+- Updated Helm chart version alignment with app version
+- Improved library sync robustness for all media server types
+
 ## v0.19.2 - 2026-04-09
 
 ### Changed
