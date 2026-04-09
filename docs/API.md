@@ -282,8 +282,11 @@ When one enabled source fails, Digarr still returns results from the healthy sou
 | GET | `/api/library/sources` | Admin | Per-source sync state for global + per-user library sources |
 | POST | `/api/library/sync` | Admin | Run a manual library sync for all sources or a specific source |
 | GET | `/api/library/unreconciled` | Admin | List unreconciled library artists still needing a match |
-| POST | `/api/library/overrides` | Admin | Save a manual MBID override or an “ignore forever” decision |
-| DELETE | `/api/library/overrides/:source/:sourceArtistId` | Admin | Remove a saved manual override |
+| GET | `/api/library/unreconciled-albums` | Admin | List unreconciled library albums still needing a release-group match |
+| GET | `/api/library/album-coverage/:artistMbid` | Yes | Owned/missing album counts for an artist, used by the recommendation card coverage badge |
+| POST | `/api/library/overrides` | Admin | Save a manual artist MBID override or an “ignore forever” decision |
+| POST | `/api/library/album-overrides` | Admin | Save a manual album release-group MBID override or an ignore decision |
+| DELETE | `/api/library/overrides/:source/:sourceArtistId` | Admin | Remove a saved manual artist override |
 | POST | `/api/library/reconcile` | Admin | Trigger a background reconcile pass after override changes |
 
 **GET /api/library/sources** response notes:
@@ -333,6 +336,29 @@ Notes:
 Override notes:
 - Set `correctMbid` to `null` or `""` to store an ignore decision instead of a correction
 - `correctMbid`, when present, must be a valid UUID
+
+**POST /api/library/album-overrides** body:
+```json
+{
+  "source": "plex",
+  "sourceAlbumId": "album-456",
+  "correctAlbumMbid": "d8564bdd-5be3-4f3e-9d2b-3c4b5a6b7c8d",
+  "note": "Matched against tracklist"
+}
+```
+
+Album override notes:
+- Set `correctAlbumMbid` to `null` or `""` to store an ignore decision instead of a correction
+- `correctAlbumMbid`, when present, must be a valid release-group UUID
+- Album overrides persist in a separate `album_override` table keyed by `(userId, source, sourceAlbumId)`
+
+**GET /api/library/album-coverage/:artistMbid** notes:
+- `artistMbid` must be a valid UUID
+- Returns owned and missing album counts derived from the user's reconciled library snapshot
+- Powers the coverage badge shown on recommendation cards
+
+**GET /api/library/unreconciled-albums** response notes:
+- Returns unreconciled album rows from both the current user's sources and any global sources visible to that user
 
 **POST /api/library/reconcile** notes:
 - Triggers a forced sync for the current user and returns `202`

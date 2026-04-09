@@ -40,11 +40,11 @@ All screenshots use the Youtarr theme.
 
 ## Library Reconciliation
 
-No committed screenshot yet. This page shipped in `v0.17.0` and covers unreconciled-artist review plus manual correct/ignore override flow.
+No committed screenshot yet. This page shipped in `v0.17.0` and covers unreconciled-artist review plus manual correct/ignore override flow. Extended in `v0.19.0` with unreconciled-album review and album override persistence.
 
 ## Library Sources Panel
 
-No committed screenshot yet. This admin panel shipped in `v0.17.0` and expanded in `v0.18.0` with per-source album sync counts and snapshot status.
+No committed screenshot yet. This admin panel shipped in `v0.17.0` and expanded in `v0.18.0` with per-source album sync counts and snapshot status. Polished in `v0.19.0` with album sync coverage summaries.
 
 ## Analytics
 
