@@ -6,6 +6,7 @@ import { hashPassword } from './core/auth'
 import { OidcService } from './core/auth/oidc'
 import { createBandcampClient } from './core/clients/bandcamp'
 import { createDeezerClient } from './core/clients/deezer'
+import { createEmbyClient } from './core/clients/emby'
 import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
@@ -19,6 +20,7 @@ import { createAlbumCoverageService } from './core/library/album-coverage'
 import { LibraryHealthService } from './core/library/health'
 import { startLibrarySyncScheduler } from './core/library/scheduler'
 import { SkyHookWarmer } from './core/library/skyhook-warmer'
+import { createEmbyLibrarySource } from './core/library/sources/emby'
 import { createJellyfinLibrarySource } from './core/library/sources/jellyfin'
 import { createLidarrLibrarySource } from './core/library/sources/lidarr'
 import { createPlexLibrarySource } from './core/library/sources/plex'
@@ -64,6 +66,7 @@ import type {
   MusicBrainzClient as SubMBClient,
   SubscriptionConfig,
 } from './core/subscriptions/types'
+import { createEmbyPlaylistTarget } from './core/targets/emby-playlist'
 import { createJellyfinPlaylistTarget } from './core/targets/jellyfin-playlist'
 import { createLidarrTarget } from './core/targets/lidarr'
 import { createNavidromePlaylistTarget } from './core/targets/navidrome-playlist'
@@ -238,6 +241,14 @@ const storeDb: StoreDb = {
 jobRecorder = createJobRecorder(db)
 // Mark stuck jobs at startup
 jobRecorder.markStuck().catch((err) => console.error('[startup] Stuck detection failed:', err))
+// Reset any library_sync_state rows left in 'running' from a previous crash/restart.
+// The orchestrator never finishes those, so the UI would show a permanent "running" badge.
+librarySyncStore
+  .clearRunningSyncStates()
+  .then((n) => {
+    if (n > 0) console.warn(`[startup] Cleared ${n} stale 'running' library sync state(s)`)
+  })
+  .catch((err) => console.error('[startup] Library sync state sweep failed:', err))
 
 const orchestrator = new PipelineOrchestrator()
 const scheduler = new SubscriptionScheduler()
@@ -348,6 +359,14 @@ async function buildPerUserLibrarySources(userId: number) {
     sources.push(
       createJellyfinLibrarySource(
         createJellyfinClient(conns.jellyfinUrl, conns.jellyfinApiKey, conns.jellyfinUserId),
+        userId,
+      ),
+    )
+  }
+  if (conns.embyUrl && conns.embyApiKey && conns.embyUserId) {
+    sources.push(
+      createEmbyLibrarySource(
+        createEmbyClient(conns.embyUrl, conns.embyApiKey, conns.embyUserId),
         userId,
       ),
     )
@@ -676,6 +695,7 @@ async function executePlaylistGeneration(playlistId: number): Promise<void> {
         let target:
           | ReturnType<typeof createNavidromePlaylistTarget>
           | ReturnType<typeof createJellyfinPlaylistTarget>
+          | ReturnType<typeof createEmbyPlaylistTarget>
           | ReturnType<typeof createPlexPlaylistTarget>
           | null = null
 
@@ -687,6 +707,12 @@ async function executePlaylistGeneration(playlistId: number): Promise<void> {
           })
         } else if (targetRow.type === 'jellyfin-playlist') {
           target = createJellyfinPlaylistTarget(targetRow.id, {
+            url: targetRow.config.url as string,
+            apiKey: targetRow.config.apiKey as string,
+            userId: targetRow.config.userId as string,
+          })
+        } else if (targetRow.type === 'emby-playlist') {
+          target = createEmbyPlaylistTarget(targetRow.id, {
             url: targetRow.config.url as string,
             apiKey: targetRow.config.apiKey as string,
             userId: targetRow.config.userId as string,
@@ -867,6 +893,15 @@ const app = createApp({
         { skipTlsVerify: (config.skipTlsVerify as boolean) ?? false },
       )
       return client.testConnection()
+    }
+
+    if (type === 'emby-playlist') {
+      const target = createEmbyPlaylistTarget(0, {
+        url: config.url as string,
+        apiKey: config.apiKey as string,
+        userId: config.userId as string,
+      })
+      return target.testConnection()
     }
 
     if (type === 'spotify-playlist') {

@@ -28,6 +28,7 @@ const SECRET_FIELDS = [
   'oidcClientSecret',
   'plexToken',
   'jellyfinApiKey',
+  'embyApiKey',
   'discogsToken',
 ] as const
 
@@ -105,6 +106,10 @@ async function buildSettingsResponse(
       response.jellyfinApiKey = userConns.jellyfinApiKey
       response.jellyfinUserId = userConns.jellyfinUserId ?? ''
       response._jellyfinScope = 'user'
+      response.embyUrl = userConns.embyUrl ?? ''
+      response.embyApiKey = userConns.embyApiKey
+      response.embyUserId = userConns.embyUserId ?? ''
+      response._embyScope = 'user'
       response.discogsUsername = userConns.discogsUsername ?? ''
       response.discogsToken = userConns.discogsToken
       response._discogsScope = 'user'
@@ -157,6 +162,9 @@ export function settingsRoutes(deps: AppDependencies) {
     'jellyfinUrl',
     'jellyfinApiKey',
     'jellyfinUserId',
+    'embyUrl',
+    'embyApiKey',
+    'embyUserId',
     'discogsToken',
     'discogsUsername',
   ])
@@ -341,6 +349,22 @@ export function settingsRoutes(deps: AppDependencies) {
         const client = createJellyfinClient(url, apiKey, jfUserId, { skipTlsVerify: skipTls })
         const result = await client.testConnection()
         if (result.success && !jfUserId) {
+          result.message += ' (warning: no user ID set -- listening data will not work without it)'
+        }
+        return c.json(result)
+      }
+      case 'emby': {
+        const url = body.url || userConns?.embyUrl || ''
+        const apiKey = body.apiKey || userConns?.embyApiKey || ''
+        const embyUserId = body.userId || userConns?.embyUserId || ''
+        if (!url || !apiKey) {
+          return c.json({ success: false, message: `Missing ${!url ? 'URL' : 'API key'}` })
+        }
+        const { createEmbyClient } = await import('@/core/clients/emby')
+        const skipTls = body.skipTlsVerify ?? (stored?.skipTlsVerify as boolean) ?? false
+        const client = createEmbyClient(url, apiKey, embyUserId, { skipTlsVerify: skipTls })
+        const result = await client.testConnection()
+        if (result.success && !embyUserId) {
           result.message += ' (warning: no user ID set -- listening data will not work without it)'
         }
         return c.json(result)

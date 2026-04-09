@@ -6,6 +6,7 @@ import { createMusicinfoClient } from '@/core/clients/musicinfo'
 import { decryptField } from '@/core/crypto'
 import { sendWebhook } from '@/core/notifications'
 import { createDiscogsSource } from '@/core/plugins/discogs'
+import { createEmbySource } from '@/core/plugins/emby'
 import { createJellyfinSource } from '@/core/plugins/jellyfin'
 import { createLastFmSource } from '@/core/plugins/lastfm'
 import { createListenBrainzSource } from '@/core/plugins/listenbrainz'
@@ -151,6 +152,14 @@ export class PipelineOrchestrator extends EventEmitter {
         registry.register(createJellyfinSource(jfUrl, jfApiKey, jfUserId, settings.skipTlsVerify))
       }
 
+      // Emby
+      const embyUrl = userConnections?.embyUrl
+      const embyApiKey = userConnections?.embyApiKey
+      const embyUserId = userConnections?.embyUserId
+      if (embyUrl && embyApiKey && embyUserId) {
+        registry.register(createEmbySource(embyUrl, embyApiKey, embyUserId, settings.skipTlsVerify))
+      }
+
       // Discogs
       const dcToken = userConnections?.discogsToken
       const dcUsername = userConnections?.discogsUsername
@@ -255,7 +264,15 @@ export class PipelineOrchestrator extends EventEmitter {
       const sourceResults: Record<string, import('@/core/jobs/types').SourceResult> = {}
 
       // Mark unconfigured sources as skipped
-      const knownSourceIds = ['listenbrainz', 'lastfm', 'spotify', 'plex', 'jellyfin', 'discogs']
+      const knownSourceIds = [
+        'listenbrainz',
+        'lastfm',
+        'spotify',
+        'plex',
+        'jellyfin',
+        'emby',
+        'discogs',
+      ]
       for (const id of knownSourceIds) {
         if (!registry.all().some((s) => s.id === id)) {
           sourceResults[id] = { status: 'skipped', reason: 'not_configured' }

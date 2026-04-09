@@ -5,6 +5,27 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'
 
+vi.mock('@/core/sessions', async () => {
+  const actual = await vi.importActual<typeof import('@/core/sessions')>('@/core/sessions')
+  return {
+    ...actual,
+    getSession: vi.fn(async (token: string) =>
+      token === 'test-session-token' ? { userId: 42, token } : null,
+    ),
+  }
+})
+
+const { updateUserConnectionsMock } = vi.hoisted(() => ({
+  updateUserConnectionsMock: vi.fn(async () => {}),
+}))
+vi.mock('@/db/queries/users', async () => {
+  const actual = await vi.importActual<typeof import('@/db/queries/users')>('@/db/queries/users')
+  return {
+    ...actual,
+    updateUserConnections: updateUserConnectionsMock,
+  }
+})
+
 function makeMockOrchestrator() {
   const emitter = new EventEmitter()
   return Object.assign(emitter, {
@@ -52,6 +73,9 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       jellyfinUrl: null,
       jellyfinApiKey: null,
       jellyfinUserId: null,
+      embyUrl: null,
+      embyApiKey: null,
+      embyUserId: null,
       discogsToken: null,
       discogsUsername: null,
       createdAt: new Date(),
@@ -241,6 +265,71 @@ describe('POST /api/setup/complete', () => {
       lidarrApiKey: 'abc123',
       aiProvider: 'ollama',
       aiModel: 'llama3',
+    })
+  })
+
+  it('rejects emby fields when apiKey or userId are missing', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/setup/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        embyUrl: 'http://emby:8096',
+        aiProvider: 'ollama',
+        aiModel: 'llama3',
+      }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('accepts emby fields and creates an emby-playlist target during setup completion', async () => {
+    updateUserConnectionsMock.mockClear()
+    const createTarget = vi.fn().mockResolvedValue({ id: 7 })
+    const deps = makeDeps({
+      getUserCount: vi.fn(async () => 1),
+      targetQueries: {
+        createTarget,
+        getTargetsByUser: vi.fn().mockResolvedValue([]),
+        getAllTargets: vi.fn().mockResolvedValue([]),
+        getTarget: vi.fn().mockResolvedValue(null),
+        updateTarget: vi.fn().mockResolvedValue(undefined),
+        deleteTarget: vi.fn().mockResolvedValue(undefined),
+      },
+    })
+    const app = createApp(deps)
+    const res = await app.request('/api/setup/complete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-session-token',
+      },
+      body: JSON.stringify({
+        embyUrl: 'http://emby:8096',
+        embyApiKey: 'key',
+        embyUserId: 'user-1',
+        aiProvider: 'openai',
+        aiModel: 'gpt-5.4-mini',
+      }),
+    })
+    expect(res.status).toBe(200)
+    expect(createTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'emby-playlist',
+        name: 'Emby',
+        config: {
+          url: 'http://emby:8096',
+          apiKey: 'key',
+          userId: 'user-1',
+        },
+        userId: 42,
+      }),
+    )
+    // Emby credentials must also land on the users row so library sync, the
+    // discovery plugin, and the listening fallback can read them post-setup.
+    expect(updateUserConnectionsMock).toHaveBeenCalledWith(expect.anything(), 42, {
+      embyUrl: 'http://emby:8096',
+      embyApiKey: 'key',
+      embyUserId: 'user-1',
     })
   })
 })

@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { SetupConfig } from '@/db/queries/settings'
+import { updateUserConnections } from '@/db/queries/users'
 import type { AppDependencies } from '@/server'
 import type { HonoEnv } from '@/server/types'
 
@@ -27,11 +28,9 @@ export function setupRoutes(deps: AppDependencies) {
       return c.json({ error: 'Setup already complete' }, 409)
     }
 
-    const body = await c.req.json()
+    const body = (await c.req.json()) as Record<string, unknown>
     const sanitized = Object.fromEntries(
-      Object.entries(body as Record<string, unknown>).filter(([key]) =>
-        GLOBAL_SETUP_FIELDS.has(key),
-      ),
+      Object.entries(body).filter(([key]) => GLOBAL_SETUP_FIELDS.has(key)),
     )
 
     const missing: string[] = []
@@ -43,6 +42,10 @@ export function setupRoutes(deps: AppDependencies) {
     }
     if (!sanitized.lidarrUrl && sanitized.lidarrApiKey) {
       missing.push('lidarrUrl (required when lidarrApiKey is set)')
+    }
+    // Emby is optional -- only validate if partially provided
+    if (body.embyUrl && (!body.embyApiKey || !body.embyUserId)) {
+      missing.push('embyApiKey and embyUserId (required when embyUrl is set)')
     }
 
     if (missing.length > 0) {
@@ -67,6 +70,43 @@ export function setupRoutes(deps: AppDependencies) {
         })
       } catch {
         // Best-effort -- the boot-time backfill will handle it on next restart
+      }
+    }
+
+    // Persist Emby credentials on the users row and auto-create the playlist
+    // target if Emby was configured during setup. Both are needed: the target
+    // drives playlist push, while the users.emby_* columns drive library sync,
+    // the discovery plugin, and the listening-history fallback.
+    if (body.embyUrl && body.embyApiKey && body.embyUserId && userId) {
+      try {
+        await updateUserConnections(deps.db, userId, {
+          embyUrl: body.embyUrl as string,
+          embyApiKey: body.embyApiKey as string,
+          embyUserId: body.embyUserId as string,
+        })
+      } catch (err) {
+        // Best-effort, but log loudly: a silent failure here leaves library
+        // sync, the discovery plugin, and the listening fallback all seeing
+        // NULL Emby credentials while the setup wizard reports success.
+        console.warn(
+          '[setup] updateUserConnections failed for emby; credentials not persisted:',
+          err,
+        )
+      }
+      try {
+        await deps.targetQueries.createTarget({
+          type: 'emby-playlist',
+          name: 'Emby',
+          config: {
+            url: body.embyUrl as string,
+            apiKey: body.embyApiKey as string,
+            userId: body.embyUserId as string,
+          },
+          userId,
+        })
+      } catch (err) {
+        // Best-effort -- surface failures later via the targets UI
+        console.warn('[setup] createTarget failed for emby-playlist:', err)
       }
     }
 
