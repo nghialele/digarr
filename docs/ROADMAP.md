@@ -6,7 +6,7 @@
 
 ## Where We Are
 
-All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release. Current focus is on refining the shipped media-server support and expanding discovery integrations.
+All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, and Emby. Current focus is discovery expansion, download-target breadth, and polish on the shipped media-server path.
 
 ## v1 Goals
 
