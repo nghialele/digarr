@@ -14,6 +14,7 @@
 
 **Music discovery for your *arr stack.** Connect your listening sources, pick an AI provider, and Digarr turns that into a taste profile, a recommendation pipeline, and a queue you can actually work through. You can approve artists into Lidarr or playlist targets, run mood searches in plain English, import Spotify Liked Songs to get started faster, schedule recurring discovery, generate playlists, and browse your library by genre. It is self-hosted, so the data stays with you.
 
+> [!NOTE]
 > **Beta software, working toward v1.0.** You can use it today, but expect rough edges. Releases can land quickly, sometimes several in a day, so check the [releases page](https://github.com/iuliandita/digarr/releases) and [CHANGELOG.md](CHANGELOG.md) before updating. If you run into something broken, [open an issue](https://github.com/iuliandita/digarr/issues) or send over a feature idea.
 >
 > Free and open source, forever. No tracking, no telemetry, no data collection. Your music taste stays on your server.
