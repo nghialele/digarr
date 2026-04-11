@@ -1,9 +1,50 @@
 import { describe, expect, it } from 'vitest'
 import { SUPPORTED_LOCALES, type SupportedLocale } from '@/core/i18n/locales'
 import { getMessages } from '@/core/i18n/messages'
+import { de } from '@/core/i18n/messages/de'
+import { en } from '@/core/i18n/messages/en'
+import { es } from '@/core/i18n/messages/es'
+import { fr } from '@/core/i18n/messages/fr'
+import { it as itCatalog } from '@/core/i18n/messages/it'
+import { ja } from '@/core/i18n/messages/ja'
+import { ko } from '@/core/i18n/messages/ko'
+import { nl } from '@/core/i18n/messages/nl'
+import { pl } from '@/core/i18n/messages/pl'
+import { ptBR } from '@/core/i18n/messages/pt-BR'
+import { ro } from '@/core/i18n/messages/ro'
+import { ru } from '@/core/i18n/messages/ru'
+import { tr } from '@/core/i18n/messages/tr'
+import { uk } from '@/core/i18n/messages/uk'
+import { zhCN } from '@/core/i18n/messages/zh-CN'
 import { formatDateTime, formatShortDate } from '@/web/lib/intl'
 
+const rawCatalogs = {
+  en,
+  es,
+  fr,
+  de,
+  'pt-BR': ptBR,
+  it: itCatalog,
+  nl,
+  ro,
+  pl,
+  tr,
+  uk,
+  ru,
+  ja,
+  ko,
+  'zh-CN': zhCN,
+} as const
+
 describe('message catalogs', () => {
+  it('every locale catalog file has every english key', () => {
+    const englishKeys = Object.keys(en).sort()
+
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(Object.keys(rawCatalogs[locale]).sort()).toEqual(englishKeys)
+    }
+  })
+
   it('every locale has every english key', () => {
     const englishKeys = Object.keys(getMessages('en')).sort()
 
