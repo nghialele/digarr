@@ -65,7 +65,17 @@ const LOCALE_LABELS: Record<SupportedLocale, string> = {
 export function normalizeLocale(input?: string | null): SupportedLocale | null {
   const value = input?.trim()
   if (!value) return null
-  return LOCALE_ALIASES[value.toLowerCase()] ?? null
+  const normalized = value.toLowerCase()
+
+  const exactMatch = LOCALE_ALIASES[normalized]
+  if (exactMatch) return exactMatch
+
+  const baseLanguage = normalized.split(/[-_]/, 1)[0]
+  if (baseLanguage !== normalized) {
+    return LOCALE_ALIASES[baseLanguage] ?? null
+  }
+
+  return null
 }
 
 export function resolveSupportedLocale(input?: string | null): SupportedLocale {
