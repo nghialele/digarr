@@ -1,7 +1,11 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest'
-import { buildTranslationMessages, validateTranslatedCatalog } from '../../scripts/i18n-machine-translate'
+import {
+  buildChatCompletionsUrl,
+  buildTranslationMessages,
+  validateTranslatedCatalog,
+} from '../../scripts/i18n-machine-translate'
 
 describe('i18n machine translation helpers', () => {
   it('passes real source strings to the model without escaping them', () => {
@@ -32,12 +36,18 @@ describe('i18n machine translation helpers', () => {
     expect(() =>
       validateTranslatedCatalog(
         {
-          sample: 'Digarr syncs with Lidarr and OpenAI-Compatible services.',
+          sample: 'Digarr syncs with Lidarr and OpenAI-compatible services.',
         },
         {
           sample: 'Digar syncs with Lidarr and compatible AI services.',
         },
       ),
     ).toThrow(/protected term/i)
+  })
+
+  it('accepts OpenAI-style base urls with or without /v1', () => {
+    expect(buildChatCompletionsUrl('https://api.openai.com')).toBe('https://api.openai.com/v1/chat/completions')
+    expect(buildChatCompletionsUrl('https://api.openai.com/v1')).toBe('https://api.openai.com/v1/chat/completions')
+    expect(buildChatCompletionsUrl('https://api.openai.com/v1/')).toBe('https://api.openai.com/v1/chat/completions')
   })
 })

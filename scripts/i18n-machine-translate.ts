@@ -28,6 +28,7 @@ const model = process.env.TRANSLATION_MODEL?.trim() || 'gpt-4o-mini'
 const PLACEHOLDER_PATTERN = /\$\{[^}]+\}|\{\{[^}]+\}\}|\{[A-Za-z0-9_]+\}|%[sdif]/g
 const LINE_BREAK_PATTERN = /\r\n|\n|\r/g
 const PROTECTED_TERMS = [
+  'OpenAI-compatible',
   'OpenAI-Compatible',
   'Google Gemini',
   'OpenRouter',
@@ -85,6 +86,12 @@ function renderTypeScriptCatalog(locale: string, catalog: Record<string, string>
     '} as const',
     '',
   ].join('\n')
+}
+
+export function buildChatCompletionsUrl(baseUrlValue: string): string {
+  const normalized = baseUrlValue.replace(/\/+$/, '')
+  const suffix = normalized.endsWith('/v1') ? '/chat/completions' : '/v1/chat/completions'
+  return `${normalized}${suffix}`
 }
 
 function countExactMatches(value: string, term: string): number {
@@ -173,7 +180,7 @@ async function translateCatalog(): Promise<Record<string, string>> {
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`
   const messages = buildTranslationMessages(sourceLocale, targetLocale!, sourceMessages)
 
-  const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`, {
+  const res = await fetch(buildChatCompletionsUrl(baseUrl), {
     method: 'POST',
     headers,
     body: JSON.stringify({
