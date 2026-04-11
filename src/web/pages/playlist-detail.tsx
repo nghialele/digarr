@@ -135,7 +135,7 @@ function PlaylistActions({
     setGenerating(true)
     try {
       await generatePlaylistApi(playlist.id)
-      toast.success(`${t('playlist.generatingNamed')} "${playlist.name}"...`)
+      toast.success(t('playlist.generatingNamed'))
       onRefetch()
     } catch {
       toast.error(t('playlist.generateFailed'))

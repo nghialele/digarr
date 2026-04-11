@@ -855,9 +855,9 @@ export function DiscoverPage() {
             <div className="flex items-center gap-0.5 bg-surface border border-border rounded-lg p-1">
               {(
                 [
-                  { mode: 'grid' as ViewMode, Icon: GridIcon, label: 'Grid view' },
-                  { mode: 'list' as ViewMode, Icon: ListIcon, label: 'List view' },
-                  { mode: 'stack' as ViewMode, Icon: StackIcon, label: 'Stack view' },
+                  { mode: 'grid' as ViewMode, Icon: GridIcon, label: t('discover.viewGrid') },
+                  { mode: 'list' as ViewMode, Icon: ListIcon, label: t('discover.viewList') },
+                  { mode: 'stack' as ViewMode, Icon: StackIcon, label: t('discover.viewStack') },
                 ] as const
               ).map(({ mode, Icon, label }) => (
                 <button
@@ -991,12 +991,13 @@ export function DiscoverPage() {
         {!bulkMode && viewMode !== 'stack' && (
           <>
             <p className="text-xs text-muted hidden sm:block mb-4">
-              Shortcuts: <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
+              {t('discover.shortcutsLabel')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
               {t('discover.navigate')} <kbd className="px-1 bg-surface border border-border rounded">a</kbd>{' '}
-              {t('recommendation.approve').toLowerCase()} <kbd className="px-1 bg-surface border border-border rounded">r</kbd>{' '}
-              {t('recommendation.reject').toLowerCase()} <kbd className="px-1 bg-surface border border-border rounded">d</kbd>{' '}
-              {t('discover.expand').toLowerCase()} <kbd className="px-1 bg-surface border border-border rounded">?</kbd>{' '}
-              {t('discover.shortcuts').toLowerCase()}
+              {t('discover.shortcutApprove')} <kbd className="px-1 bg-surface border border-border rounded">r</kbd>{' '}
+              {t('discover.shortcutReject')} <kbd className="px-1 bg-surface border border-border rounded">d</kbd>{' '}
+              {t('discover.shortcutExpand')} <kbd className="px-1 bg-surface border border-border rounded">?</kbd>{' '}
+              {t('discover.shortcuts')}
             </p>
             <p className="text-xs text-muted sm:hidden mb-4">
               {t('discover.swipeHint')}

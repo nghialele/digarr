@@ -290,6 +290,27 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('Tableau de bord')).toBeInTheDocument()
   })
 
+  it('uses translated theme menu labels', async () => {
+    mockGetStoredLocale.mockReturnValue('fr')
+    mockGetCurrentUser.mockResolvedValue({
+      id: 1,
+      username: 'admin',
+      isAdmin: true,
+      preferredLocale: 'fr',
+    })
+
+    render(
+      <I18nProvider>
+        <App />
+      </I18nProvider>,
+    )
+
+    fireEvent.click(await screen.findByLabelText('Paramètres du thème'))
+
+    expect(screen.getByText('Éditeur')).toBeInTheDocument()
+    expect(screen.getByText('Clair')).toBeInTheDocument()
+  })
+
   it('shows loading skeleton while fetching settings', () => {
     mockGetSettings.mockReturnValue(new Promise(() => {}))
     renderWithQuery(<SettingsPage />)

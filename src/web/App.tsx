@@ -197,9 +197,17 @@ function ThemePicker({
           role="menu"
           className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-50 py-1"
         >
-          <div className="px-3 py-1.5 text-micro uppercase tracking-wider text-muted">Mode</div>
+          <div className="px-3 py-1.5 text-micro uppercase tracking-wider text-muted">
+            {t('app.themeMode')}
+          </div>
           {(['dark', 'light', 'system'] as const).map((m) => {
             const Icon = m === 'dark' ? Moon : m === 'light' ? Sun : Monitor
+            const label =
+              m === 'dark'
+                ? t('app.themeModeDark')
+                : m === 'light'
+                  ? t('app.themeModeLight')
+                  : t('app.themeModeSystem')
             return (
               <button
                 key={m}
@@ -209,7 +217,7 @@ function ThemePicker({
                 className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-bg transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px] ${mode === m ? 'text-accent' : 'text-text'}`}
               >
                 <Icon size={14} />
-                <span className="capitalize">{m}</span>
+                <span>{label}</span>
               </button>
             )
           })}
@@ -218,7 +226,7 @@ function ThemePicker({
             {(['Editor', 'Streaming'] as const).map((group) => (
               <div key={group}>
                 <div className="px-3 py-1.5 text-micro uppercase tracking-wider text-muted sticky top-0 bg-surface">
-                  {group}
+                  {group === 'Editor' ? t('app.themeGroupEditor') : t('app.themeGroupStreaming')}
                 </div>
                 {COLOR_THEMES.filter((t) => t.group === group).map((t) => (
                   <button
@@ -407,7 +415,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
       }}
     >
       <div className="min-h-screen bg-bg">
-        <nav className="border-b border-border px-4 sm:px-6 py-3" aria-label="Main navigation">
+        <nav
+          className="border-b border-border px-4 sm:px-6 py-3"
+          aria-label={t('app.mainNavigation')}
+        >
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-6">
               <NavLink to="/" className="text-xl font-bold text-accent hover:opacity-90">
@@ -474,10 +485,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 disabled={!!pipelineRunning}
                 onClick={() =>
                   triggerPipeline()
-                    .then(() => toast.success('Scan started -- check Dashboard for progress'))
+                    .then(() => toast.success(t('discover.scanStarted')))
                     .catch((err) => {
                       const msg = errMsg(err)
-                      toast.error(msg.includes('409') ? 'Scan already running' : msg)
+                      toast.error(msg.includes('409') ? t('discover.scanAlreadyRunning') : msg)
                     })
                 }
                 className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-60"
@@ -500,7 +511,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
                 className="sm:hidden p-1"
-                aria-label="Toggle menu"
+                aria-label={t('app.toggleMenu')}
               >
                 <MobileMenuIcon open={menuOpen} />
               </button>

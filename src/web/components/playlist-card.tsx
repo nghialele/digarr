@@ -16,14 +16,14 @@ import { ConfirmDialog } from './confirm-dialog'
 function formatRelativeTime(locale: string, dateStr: string | null, neverLabel: string): string {
   if (!dateStr) return neverLabel
   const date = new Date(dateStr)
-  const diffMinutes = Math.round((date.getTime() - Date.now()) / 60_000)
+  const diffMinutes = Math.round((Date.now() - date.getTime()) / 60_000)
   const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
   if (Math.abs(diffMinutes) < 1) return formatter.format(0, 'second')
-  if (Math.abs(diffMinutes) < 60) return formatter.format(diffMinutes, 'minute')
+  if (Math.abs(diffMinutes) < 60) return formatter.format(-diffMinutes, 'minute')
   const diffHours = Math.round(diffMinutes / 60)
-  if (Math.abs(diffHours) < 24) return formatter.format(diffHours, 'hour')
+  if (Math.abs(diffHours) < 24) return formatter.format(-diffHours, 'hour')
   const diffDays = Math.round(diffHours / 24)
-  if (Math.abs(diffDays) < 30) return formatter.format(diffDays, 'day')
+  if (Math.abs(diffDays) < 30) return formatter.format(-diffDays, 'day')
   return formatShortDate(locale as never, date)
 }
 
@@ -101,7 +101,7 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
     setGenerating(true)
     try {
       await generatePlaylistApi(playlist.id)
-      toast.success(`${t('playlist.generatingNamed')} "${playlist.name}"...`)
+      toast.success(t('playlist.generatingNamed'))
       onRefetch()
     } catch {
       toast.error(t('playlist.generateFailed'))
@@ -122,7 +122,7 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
   async function handleDelete() {
     try {
       await deletePlaylistApi(playlist.id)
-      toast.success(`${t('playlist.deletedNamed')} "${playlist.name}"`)
+      toast.success(t('playlist.deletedNamed'))
       onRefetch()
     } catch {
       toast.error(t('playlist.deleteFailed'))
@@ -245,7 +245,7 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
       {showDeleteConfirm && (
         <ConfirmDialog
           title={t('playlist.delete')}
-          message={`${t('playlist.deleteConfirm')} "${playlist.name}"? ${t('playlist.deleteWarning')}`}
+          message={t('playlist.deleteWarning')}
           confirmLabel={t('playlist.delete')}
           onConfirm={() => {
             setShowDeleteConfirm(false)

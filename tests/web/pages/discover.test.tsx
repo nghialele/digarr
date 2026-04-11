@@ -314,4 +314,14 @@ describe('DiscoverPage', () => {
 
     expect(await screen.findByRole('button', { name: 'Afficher les retours' })).toBeInTheDocument()
   })
+
+  it('uses translated view switcher labels in French', async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    setupMockApi()
+    renderWithQuery(<DiscoverPage />)
+
+    expect(await screen.findByRole('button', { name: 'Vue en grille' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Vue en liste' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Vue empilée' })).toBeInTheDocument()
+  })
 })

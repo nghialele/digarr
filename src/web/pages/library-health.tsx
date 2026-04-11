@@ -119,9 +119,9 @@ export function LibraryHealthPage() {
           }
         } else {
           toast.warning(
-            `${t('libraryHealth.processed')} ${data.completed}, ${t('common.failed').toLowerCase()} ${data.failed} ${t('common.of')} ${data.total}`,
+            `${t('libraryHealth.processed')}: ${data.completed} • ${t('common.failed')}: ${data.failed}/${data.total}`,
             {
-            description: data.errors.slice(0, 3).join('; '),
+              description: data.errors.slice(0, 3).join('; '),
             },
           )
         }

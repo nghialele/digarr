@@ -232,7 +232,7 @@ function SubscriptionCard({
               <span className="text-text">{formatDate(locale, t, sub.lastRunAt)}</span>
               {sub.lastResultCount != null && (
                 <span className={`ml-1 ${sub.lastResultCount > 0 ? 'text-approve' : 'text-muted'}`}>
-                  ({sub.lastResultCount} {t('common.found').toLowerCase()})
+                  ({sub.lastResultCount} {t('subscriptions.foundResults')})
                 </span>
               )}
             </span>
@@ -276,7 +276,7 @@ function SubscriptionCard({
             type="button"
             onClick={onEdit}
             className="p-1.5 text-muted hover:text-text transition-colors"
-            title="Edit"
+            title={t('common.edit')}
           >
             <Pencil size={14} />
           </button>

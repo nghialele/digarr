@@ -139,8 +139,8 @@ describe('SetupWizard', () => {
     await fillAndContinueLidarr()
 
     await screen.findByText('Fournisseur IA')
-    expect(screen.getByText('Haiku 4.5 (rapide, moins cher)')).toBeInTheDocument()
-    expect(screen.getByText('Sonnet 4.6 (equilibre)')).toBeInTheDocument()
+    expect(screen.getByText('Haiku 4.5 (rapide, le moins cher)')).toBeInTheDocument()
+    expect(screen.getByText('Sonnet 4.6 (équilibré)')).toBeInTheDocument()
   })
 
   it('uses a translated fallback model placeholder in French for openai-compatible', async () => {
