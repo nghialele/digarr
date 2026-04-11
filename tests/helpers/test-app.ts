@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { vi } from 'vitest'
+import { createDefaultDiscoveryModeRegistry } from '@/core/discovery-modes/registry'
 import { type AppDependencies, createApp } from '@/server'
 
 export function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
@@ -152,6 +153,15 @@ export function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependenc
       getTopGenresForUser: vi.fn(async () => []),
       getRecentActivity: vi.fn(async () => []),
     },
+    discoveryModeRegistry: createDefaultDiscoveryModeRegistry(),
+    getDiscoveryConnectionSnapshot: vi.fn(async () => ({
+      hasListenBrainz: false,
+      hasSpotify: false,
+      hasLastfm: false,
+      hasDiscogs: false,
+      hasLibrarySync: false,
+    })),
+    runDiscoveryMode: vi.fn(async () => ({ batchId: 1 })),
     jobRecorder: {
       start: vi.fn(async () => 1),
       complete: vi.fn().mockResolvedValue(undefined),

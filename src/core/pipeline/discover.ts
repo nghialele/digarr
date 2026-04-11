@@ -1,3 +1,5 @@
+import { discoveryCandidatesToDiscoveredArtists } from '@/core/discovery-modes/candidates'
+import type { DiscoveryCandidate } from '@/core/discovery-modes/types'
 import type { DiscoverySource } from '@/core/plugins/types'
 import type { AiRecommendation, DiscoveredArtist, TasteProfile } from '@/core/types'
 
@@ -61,13 +63,46 @@ export interface DiscoverSources {
   ai?: AiSource | null
 }
 
+export type DiscoverOptions = {
+  explicitCandidates?: Array<DiscoveredArtist | DiscoveryCandidate>
+  explicitRun?: boolean
+}
+
+function isDiscoveryCandidate(
+  candidate: DiscoveredArtist | DiscoveryCandidate,
+): candidate is DiscoveryCandidate {
+  return 'candidateType' in candidate
+}
+
+function dedupeDiscoveredArtists(candidates: DiscoveredArtist[]): DiscoveredArtist[] {
+  const seen = new Set<string>()
+
+  return candidates.filter((candidate) => {
+    const key = candidate.mbid?.trim().toLowerCase() || normalizeName(candidate.name)
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
+
 export async function discover(
   profile: TasteProfile,
   sources: DiscoverSources,
   topArtistsLimit: number,
   libraryArtists?: Array<{ mbid: string; name: string }>,
   librarySeedRatio = 0.3,
+  options: DiscoverOptions = {},
 ): Promise<DiscoveredArtist[]> {
+  if (options.explicitRun) {
+    const explicitCandidates = options.explicitCandidates ?? []
+    const explicitArtists = explicitCandidates.some(isDiscoveryCandidate)
+      ? discoveryCandidatesToDiscoveredArtists(explicitCandidates.filter(isDiscoveryCandidate))
+      : (explicitCandidates as DiscoveredArtist[])
+    return dedupeDiscoveredArtists(explicitArtists)
+  }
+
   const topArtists = profile.topArtists.slice(0, topArtistsLimit)
   const results: DiscoveredArtist[] = []
 
@@ -81,9 +116,13 @@ export async function discover(
     const shuffled = [...libraryArtists]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      const tmp = shuffled[i]!
-      shuffled[i] = shuffled[j]!
-      shuffled[j] = tmp
+      const current = shuffled[i]
+      const swap = shuffled[j]
+      if (!current || !swap) {
+        throw new Error('Unexpected missing library artist during shuffle')
+      }
+      shuffled[i] = swap
+      shuffled[j] = current
     }
     // Exclude artists already in topArtists
     const topMbids = new Set(topArtists.map((a) => a.mbid).filter(Boolean))

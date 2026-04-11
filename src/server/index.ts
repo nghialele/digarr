@@ -5,6 +5,8 @@ import { cors } from 'hono/cors'
 import { secureHeaders } from 'hono/secure-headers'
 import { envConfig } from '@/config/env'
 import type { OidcService } from '@/core/auth/oidc'
+import type { DiscoveryModeRegistry } from '@/core/discovery-modes/registry'
+import type { DiscoveryModeRequest } from '@/core/discovery-modes/request'
 import type { GenreService } from '@/core/genre/service'
 import type { AlbumCoverage } from '@/core/library/album-coverage'
 import type { LibraryHealthService } from '@/core/library/health'
@@ -45,6 +47,7 @@ import { artistRoutes } from './routes/artists'
 import { authRoutes } from './routes/auth'
 import { batchRoutes } from './routes/batches'
 import { dashboardRoutes } from './routes/dashboard'
+import { discoveryModeRoutes } from './routes/discovery-modes'
 import { exportRoutes } from './routes/exports'
 import { genreRoutes } from './routes/genres'
 import { healthRoutes } from './routes/health'
@@ -66,7 +69,7 @@ import { setupRoutes } from './routes/setup'
 import { subscriptionRoutes } from './routes/subscriptions'
 import { targetRoutes } from './routes/targets'
 import { userRoutes } from './routes/users'
-import type { HonoEnv } from './types'
+import type { DiscoveryConnectionSnapshot, HonoEnv } from './types'
 
 export type AppDependencies = {
   db: import('@/db').Database
@@ -167,6 +170,9 @@ export type AppDependencies = {
       limit?: number,
     ) => Promise<ActivityEntry[]>
   }
+  discoveryModeRegistry?: DiscoveryModeRegistry
+  getDiscoveryConnectionSnapshot?: (userId: number) => Promise<DiscoveryConnectionSnapshot>
+  runDiscoveryMode?: (request: DiscoveryModeRequest) => Promise<{ batchId: number }>
   // Job recording & queries
   jobRecorder: import('@/core/jobs/types').JobRecorder
   jobQueries: {
@@ -331,6 +337,7 @@ export function createApp(deps: AppDependencies) {
   app.route('/', artistRoutes(deps))
   app.route('/', lidarrRoutes(deps))
   app.route('/', listeningRoutes(deps))
+  app.route('/', discoveryModeRoutes(deps))
   app.route('/', genreRoutes(deps))
   app.route('/', subscriptionRoutes(deps))
   app.route('/', userRoutes(deps))

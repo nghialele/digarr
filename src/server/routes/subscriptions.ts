@@ -1,5 +1,11 @@
 import { Cron } from 'croner'
 import { Hono } from 'hono'
+import {
+  buildDiscoveryModeExecutionContext,
+  evaluateDiscoveryModeAvailability,
+} from '@/core/discovery-modes/availability'
+import type { DiscoveryModeRegistry } from '@/core/discovery-modes/registry'
+import { DISCOVERY_MODE_SUBSCRIPTION_TYPE } from '@/core/subscriptions/registry'
 import { errMsg } from '@/core/validation'
 import { getOAuthToken } from '@/db/queries/oauth-tokens'
 import type { AppDependencies } from '@/server'
@@ -25,6 +31,92 @@ const ALLOWED_UPDATE_FIELDS = new Set([
   'scoringWeightPreset',
   'scoringWeightOverrides',
 ])
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null
+  }
+  return value as Record<string, unknown>
+}
+
+const EMPTY_DISCOVERY_SNAPSHOT = {
+  hasListenBrainz: false,
+  hasSpotify: false,
+  hasLastfm: false,
+  hasDiscogs: false,
+  hasLibrarySync: false,
+}
+
+function normalizeDiscoveryModeSourceConfig(sourceConfig: unknown): Record<string, unknown> | null {
+  const config = asRecord(sourceConfig)
+  if (!config) {
+    return null
+  }
+
+  const modeId = typeof config.modeId === 'string' ? config.modeId.trim() : config.modeId
+  return {
+    ...config,
+    modeId,
+  }
+}
+
+function validateDiscoveryModeSourceConfig(
+  sourceConfig: unknown,
+  registry?: DiscoveryModeRegistry,
+): { error: string | null; normalizedConfig: Record<string, unknown> | null } {
+  const config = normalizeDiscoveryModeSourceConfig(sourceConfig)
+  if (!config) {
+    return { error: 'sourceConfig is required', normalizedConfig: null }
+  }
+  const modeId = typeof config.modeId === 'string' ? config.modeId : ''
+  if (!modeId) {
+    return { error: 'discovery-mode sourceConfig.modeId is required', normalizedConfig: null }
+  }
+  if (config.settingsMode !== 'easy' && config.settingsMode !== 'advanced') {
+    return {
+      error: 'discovery-mode sourceConfig.settingsMode must be easy or advanced',
+      normalizedConfig: null,
+    }
+  }
+  const settings = asRecord(config.settings)
+  if (!settings) {
+    return { error: 'discovery-mode sourceConfig.settings is required', normalizedConfig: null }
+  }
+  if (!registry?.get(modeId)) {
+    return { error: `Unknown discovery mode '${modeId}'`, normalizedConfig: null }
+  }
+  return { error: null, normalizedConfig: config }
+}
+
+async function resolveDiscoveryModeSourceConfig(
+  sourceConfig: unknown,
+  userId: number,
+  deps: AppDependencies,
+): Promise<{ error: string | null; normalizedConfig: Record<string, unknown> | null }> {
+  const { error, normalizedConfig } = validateDiscoveryModeSourceConfig(
+    sourceConfig,
+    deps.discoveryModeRegistry,
+  )
+  if (error || !normalizedConfig) {
+    return { error, normalizedConfig }
+  }
+
+  const modeId = String(normalizedConfig.modeId)
+  const snapshot = await (deps.getDiscoveryConnectionSnapshot?.(userId) ??
+    Promise.resolve(EMPTY_DISCOVERY_SNAPSHOT))
+  const availability = evaluateDiscoveryModeAvailability(modeId, snapshot)
+  if (!availability.enabled) {
+    return { error: availability.reason ?? 'This mode is unavailable.', normalizedConfig: null }
+  }
+
+  return {
+    error: null,
+    normalizedConfig: {
+      ...normalizedConfig,
+      ...buildDiscoveryModeExecutionContext(availability),
+    },
+  }
+}
 
 export function subscriptionRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
@@ -156,6 +248,11 @@ export function subscriptionRoutes(deps: AppDependencies) {
           requiredService: 'listenbrainz',
         },
         {
+          type: DISCOVERY_MODE_SUBSCRIPTION_TYPE,
+          label: 'Discovery Mode',
+          configFields: [],
+        },
+        {
           type: 'csv-import',
           label: 'CSV Import',
           configFields: [],
@@ -194,6 +291,18 @@ export function subscriptionRoutes(deps: AppDependencies) {
     if (!sourceConfig || typeof sourceConfig !== 'object' || Array.isArray(sourceConfig)) {
       return c.json({ error: 'sourceConfig is required' }, 400)
     }
+    let normalizedSourceConfig = sourceConfig as Record<string, unknown>
+    if (sourceType === DISCOVERY_MODE_SUBSCRIPTION_TYPE) {
+      const { error, normalizedConfig } = await resolveDiscoveryModeSourceConfig(
+        sourceConfig,
+        userId,
+        deps,
+      )
+      if (error) {
+        return c.json({ error }, 400)
+      }
+      normalizedSourceConfig = normalizedConfig as Record<string, unknown>
+    }
     if (!cron || typeof cron !== 'string') {
       return c.json({ error: 'cron is required' }, 400)
     }
@@ -208,7 +317,7 @@ export function subscriptionRoutes(deps: AppDependencies) {
       userId,
       sourceType,
       sourceProvider,
-      sourceConfig: sourceConfig as Record<string, unknown>,
+      sourceConfig: normalizedSourceConfig,
       cron,
       enabled: typeof body.enabled === 'boolean' ? body.enabled : true,
       maxArtistsPerRun:
@@ -454,6 +563,21 @@ export function subscriptionRoutes(deps: AppDependencies) {
       } catch {
         return c.json({ error: 'Invalid cron expression' }, 400)
       }
+    }
+
+    if (
+      existing.sourceType === DISCOVERY_MODE_SUBSCRIPTION_TYPE &&
+      Object.hasOwn(update, 'sourceConfig')
+    ) {
+      const { error, normalizedConfig } = await resolveDiscoveryModeSourceConfig(
+        update.sourceConfig,
+        userId,
+        deps,
+      )
+      if (error) {
+        return c.json({ error }, 400)
+      }
+      update.sourceConfig = normalizedConfig as Record<string, unknown>
     }
 
     await deps.subscriptionQueries.updateSubscription(id, update)

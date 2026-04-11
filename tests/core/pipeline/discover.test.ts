@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
+import type { DiscoveryCandidate } from '@/core/discovery-modes/types'
 import { discover } from '@/core/pipeline/discover'
 import type { DiscoverySource } from '@/core/plugins/types'
 import type { TasteProfile } from '@/core/types'
@@ -263,5 +264,67 @@ describe('discover()', () => {
     const results = await discover(narrowProfile, { ai }, 10)
     // "Air" is only 3 chars -- below the 4-char threshold, so no false positive
     expect(results.map((r) => r.name)).toContain('Airborne Toxic Event')
+  })
+
+  it('returns mapped and deduped discovery-mode candidates before querying sources', async () => {
+    const lb = makeLb()
+    const explicitCandidates: DiscoveryCandidate[] = [
+      {
+        candidateType: 'artist',
+        name: 'Stereolab',
+        mbid: 'mbid-st',
+        provenanceMode: 'labels',
+        provenanceProvider: 'discogs',
+        confidenceHint: 0.9,
+        fallbackUsed: false,
+      },
+      {
+        candidateType: 'artist',
+        name: 'Stereolab',
+        mbid: 'mbid-st',
+        provenanceMode: 'labels',
+        provenanceProvider: 'discogs',
+        confidenceHint: 0.7,
+        fallbackUsed: false,
+      },
+    ]
+
+    const results = await discover(profile, { listeningSources: [lb] }, 10, undefined, 0.3, {
+      explicitCandidates,
+      explicitRun: true,
+    })
+
+    expect(results).toEqual([
+      {
+        name: 'Stereolab',
+        mbid: 'mbid-st',
+        similarityScore: 0.9,
+        source: 'labels',
+      },
+    ])
+    expect(lb.getSimilarArtists).not.toHaveBeenCalled()
+  })
+
+  it('returns an empty result for explicit discovery runs with zero candidates', async () => {
+    const lb = makeLb()
+    const ai = {
+      getRecommendations: vi.fn().mockResolvedValue([
+        {
+          artistName: 'Should Not Be Used',
+          reasoning: 'legacy path',
+          confidence: 0.7,
+          genres: [],
+        },
+      ]),
+    }
+
+    const results = await discover(profile, { listeningSources: [lb], ai }, 10, undefined, 0.3, {
+      explicitCandidates: [],
+      explicitRun: true,
+    })
+
+    expect(results).toEqual([])
+    expect(lb.getSimilarArtists).not.toHaveBeenCalled()
+    expect(ai.getRecommendations).not.toHaveBeenCalled()
   })
 })

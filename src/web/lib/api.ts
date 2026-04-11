@@ -1,3 +1,5 @@
+import type { DiscoveryAvailabilityResult } from '../../core/discovery-modes/availability'
+import type { DiscoveryConfigField } from '../../core/discovery-modes/types'
 import type { GenreInfo } from '../../core/genre/types'
 
 export type LibraryArtist = {
@@ -7,6 +9,15 @@ export type LibraryArtist = {
   disambiguation: string | null
   genres: string[] | null
   imageUrl: string | null
+}
+
+export type DiscoveryModeResponse = {
+  id: string
+  label: string
+  description: string
+  availability: DiscoveryAvailabilityResult
+  easyFields: DiscoveryConfigField[]
+  advancedFields: DiscoveryConfigField[]
 }
 
 const BASE = '/api'
@@ -208,6 +219,15 @@ export const quickDiscover = (artistName: string) =>
   fetchApi<{ message: string }>('/pipeline/quick-discover', {
     method: 'POST',
     body: JSON.stringify({ artistName }),
+  })
+
+export const getDiscoveryModes = () =>
+  fetchApi<{ modes: DiscoveryModeResponse[] }>('/discovery-modes')
+
+export const runDiscoveryMode = (body: Record<string, unknown>) =>
+  fetchApi<{ message: string }>('/discovery-modes/run', {
+    method: 'POST',
+    body: JSON.stringify(body),
   })
 
 // Analytics

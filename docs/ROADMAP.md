@@ -1,12 +1,12 @@
 # Roadmap
 
-> Updated: 2026-04-10 | Current: v0.20.2
+> Updated: 2026-04-11 | Current: v0.20.3
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
 ## Where We Are
 
-All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, and Emby. Current focus is discovery expansion, download-target breadth, and polish on the shipped media-server path.
+All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, and Emby. Discovery mode expansion is partially shipped: manual and subscription flows are in place, and the currently runnable modes are ListenBrainz, Release Radar, and Similar Artist Web. Labels and Artist Relationships remain planned and are marked unavailable in the UI until they have real integrations. Current focus is download-target breadth and polish on the shipped media-server path.
 
 ## v1 Goals
 
@@ -28,7 +28,7 @@ Admin job tracking surface with health endpoint, run history, stuck-task detecti
 
 ### Critical Workflows Have Release Protection -- Pass
 
-End-to-end browser test suite (Playwright) covering setup, login, scan, approve/reject, subscriptions, and playlists. CI gates on critical workflow failures.
+End-to-end browser test suite (Playwright) covering setup, login, scan, approve/reject, discovery modes, subscriptions, and playlists. CI gates on critical workflow failures.
 
 ## Planned
 
@@ -37,7 +37,9 @@ Committed direction, roughly in priority order.
 ### Discovery
 
 - Deezer favorites import
-- Deeper ListenBrainz integration (weekly jams, radio, fresh releases, similar users)
+- Deeper ListenBrainz integration (radio, fresh releases, stronger similar-users coverage)
+- Label-catalog discovery mode implementation
+- Artist-relationship discovery mode implementation
 
 ### Integrations
 
@@ -55,12 +57,10 @@ Ideas we're considering. Feedback welcome -- open an issue or discussion if any 
 
 ### Discovery
 
-- Release radar / genre-scoped new releases
-- Label-based discovery
-- Artist relationship discovery
 - Genre extraction from listening data (for non-library installs)
 - Deeper listening-source data (Spotify saved albums, TIDAL favorites, Deezer flow)
-- music-map.com as a similar-artist source
+- Contextual discovery-mode presets
+- Additional graph-based discovery modes
 
 ### Integrations
 
@@ -101,6 +101,14 @@ Low confidence. Would build only with real demand.
 - Native mobile apps (Android/iOS) -- PWA is already installable; native value is mostly reliable push notifications
 
 ## Recently Shipped
+
+### Unreleased
+
+- Discovery modes on the Discover page, with runnable executors for ListenBrainz, Release Radar, and Similar Artist Web
+- Labels and Artist Relationships now marked unavailable until they have real implementations
+- Save discovery mode forms as subscriptions for recurring runs
+- Discovery-mode runs and subscriptions now enforce availability server-side and keep the selected provider/fallback execution path
+- Browser coverage for manual discovery-mode runs and discovery-mode subscription creation
 
 ### v0.20.2
 

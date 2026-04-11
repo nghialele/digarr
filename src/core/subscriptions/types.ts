@@ -1,6 +1,18 @@
 import type { MBArtist, MBSearchResult } from '@/core/clients/musicbrainz'
+import type { DiscoveryConnectionSnapshot } from '@/core/discovery-modes/availability'
+import type { DiscoveryModeRegistry } from '@/core/discovery-modes/registry'
+import type { runDiscoveryMode } from '@/core/discovery-modes/run'
+import type { PipelineDeps, PipelineOrchestrator } from '@/core/pipeline/orchestrator'
 import type { StoreDb } from '@/core/pipeline/store'
 import type { DiscoveredArtist } from '@/core/types'
+
+export type DiscoveryModeSubscriptionConfig = {
+  modeId: string
+  settingsMode: 'easy' | 'advanced'
+  settings: Record<string, unknown>
+  providerContext?: Record<string, unknown>
+  fallbackPolicy?: 'strict' | 'allow-fallback'
+}
 
 /** What an adapter returns from fetch(). */
 export type AdapterResult = {
@@ -35,7 +47,7 @@ export type SubscriptionConfig = {
   id: number
   userId: number | null
   sourceType: string
-  sourceConfig: Record<string, unknown>
+  sourceConfig: Record<string, unknown> | DiscoveryModeSubscriptionConfig
   maxArtistsPerRun: number | null
   scoreThreshold: number | null
   scoringWeightPreset: string | null
@@ -89,11 +101,20 @@ export type SubscriptionRunDeps = {
   defaultScoreThreshold: number
   /** Lowercase names of the user's top listened artists -- excluded from results. */
   topArtistNames?: Set<string>
+  discoveryModeRunner?: typeof runDiscoveryMode
+  discoveryModeRegistry?: DiscoveryModeRegistry
+  getDiscoveryConnectionSnapshot?: (userId: number) => Promise<DiscoveryConnectionSnapshot>
+  pipelineOrchestrator?: Pick<PipelineOrchestrator, 'run'>
+  discoveryModePipelineDeps?: Omit<
+    PipelineDeps,
+    'explicitCandidates' | 'explicitDiscoveryMode' | 'jobRecorder' | 'trigger' | 'userId'
+  >
 }
 
 /** DB query interface for the subscription runner. */
 export interface SubscriptionQueries {
   updateSubscription(id: number, data: SubscriptionUpdate): Promise<void>
+  getBatchStats?(batchId: number): Promise<{ added: number } | null>
 }
 
 /** Return type from a completed runSubscription call. */
