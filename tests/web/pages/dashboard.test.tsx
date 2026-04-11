@@ -223,6 +223,14 @@ describe('Dashboard', () => {
     })
   })
 
+  it("uses translated today's pick copy in French", async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    setupMocks()
+    renderWithQuery(<Dashboard />)
+
+    expect(await screen.findByText('Le choix du jour')).toBeInTheDocument()
+  })
+
   it('renders listening activity', async () => {
     setupMocks()
     renderWithQuery(<Dashboard />)

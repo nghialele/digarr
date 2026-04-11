@@ -267,6 +267,24 @@ describe('language switcher surfaces', () => {
     expect(screen.getByText('Vous avez deja un compte ? Se connecter')).toBeInTheDocument()
   })
 
+  it('uses translated SSO copy in French', async () => {
+    mockGetAuthStatus.mockResolvedValue({
+      required: true,
+      hasUsers: true,
+      oidcEnabled: true,
+    })
+    mockGetStoredToken.mockReturnValue(null)
+    mockGetStoredLocale.mockReturnValue('fr')
+
+    renderWithProviders(
+      <AuthGate>
+        <div>app</div>
+      </AuthGate>,
+    )
+
+    expect(await screen.findByRole('link', { name: 'Connectez-vous avec SSO' })).toBeInTheDocument()
+  })
+
   it('renders a language switcher in the top bar for authenticated users', async () => {
     mockGetStoredToken.mockReturnValue('token')
     renderWithAppShell()
