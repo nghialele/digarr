@@ -44,14 +44,14 @@ describe('SetupWizard', () => {
   async function goToLidarrStep() {
     renderSetupWizard()
     fireEvent.click(screen.getByRole('button', { name: /Lidarr/i }))
-    await screen.findByText('Connect Lidarr')
+    await screen.findByText(/Connect(?:er)? Lidarr/i)
   }
 
   async function fillAndContinueLidarr() {
-    fireEvent.change(screen.getByLabelText('Lidarr URL'), {
+    fireEvent.change(screen.getByLabelText(/(?:Lidarr URL|URL Lidarr)/i), {
       target: { value: 'http://localhost:8686' },
     })
-    fireEvent.change(screen.getByLabelText('API Key'), {
+    fireEvent.change(screen.getByLabelText(/(?:API Key|Clé API)/i), {
       target: { value: 'secret' },
     })
     fireEvent.click(screen.getByRole('button', { name: /continue|continuer/i }))
@@ -100,12 +100,12 @@ describe('SetupWizard', () => {
     renderSetupWizard()
 
     fireEvent.click(screen.getByRole('button', { name: /lidarr/i }))
-    await screen.findByText('Connect Lidarr')
+    await screen.findByText(/Connect(?:er)? Lidarr/i)
     expect(screen.getByPlaceholderText('Votre cle API Lidarr')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /retour/i }))
     fireEvent.click(screen.getByRole('button', { name: /emby/i }))
-    await screen.findByText('Connect Emby')
+    await screen.findByText(/Connect(?:er)? Emby/i)
     expect(screen.getByPlaceholderText('Votre cle API Emby')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('ID utilisateur Emby')).toBeInTheDocument()
   })
@@ -135,7 +135,7 @@ describe('SetupWizard', () => {
     renderSetupWizard()
 
     fireEvent.click(screen.getByRole('button', { name: /lidarr/i }))
-    await screen.findByText('Connect Lidarr')
+    await screen.findByText(/Connect(?:er)? Lidarr/i)
     await fillAndContinueLidarr()
 
     await screen.findByText('Fournisseur IA')
@@ -148,10 +148,10 @@ describe('SetupWizard', () => {
     renderSetupWizard()
 
     fireEvent.click(screen.getByRole('button', { name: /lidarr/i }))
-    await screen.findByText('Connect Lidarr')
+    await screen.findByText(/Connect(?:er)? Lidarr/i)
     await fillAndContinueLidarr()
 
-    fireEvent.change(screen.getByLabelText('Provider'), {
+    fireEvent.change(screen.getByLabelText(/(?:Provider|Fournisseur)/i), {
       target: { value: 'openai-compatible' },
     })
 
