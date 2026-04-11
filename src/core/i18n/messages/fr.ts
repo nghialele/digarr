@@ -350,4 +350,9 @@ export const fr = {
   "playlists.scheduled": "Planifie",
   "playlists.updateFailed": "Failed to update playlist",
   "playlists.updated": "Playlist updated",
+  'genres.seedFailed': "Echec de l'initialisation des genres",
+  'genres.seedStarted': 'Initialisation des genres lancee',
+  'setup.embyApiKeyPlaceholder': 'Votre cle API Emby',
+  'setup.embyUserIdPlaceholder': 'ID utilisateur Emby',
+  'setup.lidarrApiKeyPlaceholder': 'Votre cle API Lidarr',
 } satisfies MessageCatalog

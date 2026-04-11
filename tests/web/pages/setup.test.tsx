@@ -95,6 +95,21 @@ describe('SetupWizard', () => {
     expect(screen.getByLabelText('User ID')).toBeInTheDocument()
   })
 
+  it('uses translated setup input placeholders in French', async () => {
+    mockGetStoredLocale.mockReturnValue('fr')
+    renderSetupWizard()
+
+    fireEvent.click(screen.getByRole('button', { name: /lidarr/i }))
+    await screen.findByText('Connect Lidarr')
+    expect(screen.getByPlaceholderText('Votre cle API Lidarr')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /retour/i }))
+    fireEvent.click(screen.getByRole('button', { name: /emby/i }))
+    await screen.findByText('Connect Emby')
+    expect(screen.getByPlaceholderText('Votre cle API Emby')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('ID utilisateur Emby')).toBeInTheDocument()
+  })
+
   it('renders a language switcher during setup', () => {
     renderSetupWizard()
 

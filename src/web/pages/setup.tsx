@@ -182,7 +182,7 @@ function StepLidarr({
         <Input
           id="lidarr-apikey"
           type="password"
-          placeholder="Your Lidarr API key"
+          placeholder={t('setup.lidarrApiKeyPlaceholder')}
           value={form.apiKey}
           onChange={(e) => onFormChange({ ...form, apiKey: e.target.value })}
         />
@@ -226,7 +226,7 @@ function StepEmby({
         <Input
           id="emby-apikey"
           type="password"
-          placeholder="Your Emby API key"
+          placeholder={t('setup.embyApiKeyPlaceholder')}
           value={form.apiKey}
           onChange={(e) => onFormChange({ ...form, apiKey: e.target.value })}
         />
@@ -234,7 +234,7 @@ function StepEmby({
       <Field label={t('setup.userId')} id="emby-userid">
         <Input
           id="emby-userid"
-          placeholder="Emby user ID"
+          placeholder={t('setup.embyUserIdPlaceholder')}
           value={form.userId}
           onChange={(e) => onFormChange({ ...form, userId: e.target.value })}
         />

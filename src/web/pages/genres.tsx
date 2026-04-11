@@ -52,12 +52,12 @@ export function GenresPage() {
     setSeeding(true)
     try {
       const result = await seedGenres()
-      toast.success(result.message ?? 'Genre seed started')
+      toast.success(result.message ?? t('genres.seedStarted'))
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['genres'] })
       }, 3000)
     } catch {
-      toast.error('Failed to seed genres')
+      toast.error(t('genres.seedFailed'))
     } finally {
       setSeeding(false)
     }

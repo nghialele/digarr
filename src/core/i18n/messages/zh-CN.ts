@@ -350,4 +350,9 @@ export const zhCN = {
   "playlists.scheduled": "Scheduled",
   "playlists.updateFailed": "Failed to update playlist",
   "playlists.updated": "Playlist updated",
+  'genres.seedFailed': 'Failed to seed genres',
+  'genres.seedStarted': 'Genre seed started',
+  'setup.embyApiKeyPlaceholder': 'Your Emby API key',
+  'setup.embyUserIdPlaceholder': 'Emby user ID',
+  'setup.lidarrApiKeyPlaceholder': 'Your Lidarr API key',
 } satisfies MessageCatalog
