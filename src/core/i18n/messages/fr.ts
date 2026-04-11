@@ -145,6 +145,7 @@ export const fr = {
   "setup.listeningSourcesLater": "Vous connecterez vos sources d ecoute personnelles plus tard dans les parametres apres connexion.",
   "setup.mode": "Mode",
   "setup.model": "Model",
+  "setup.modelPlaceholder": "nom-du-modele",
   "setup.openAiCompatibleHint": "Fonctionne avec Groq, OpenRouter, LiteLLM, LocalAI et tout endpoint compatible OpenAI. La cle API est facultative pour les services locaux.",
   "setup.personalSourcesAfterSetup": "Les sources d ecoute personnelles se connectent par utilisateur depuis les parametres apres la configuration.",
   "setup.provider": "Provider",

@@ -145,6 +145,7 @@ export const de = {
   "setup.listeningSourcesLater": "Persoenliche Hoerquellen verbindest du spaeter in den Einstellungen nach der Anmeldung.",
   "setup.mode": "Mode",
   "setup.model": "Model",
+  "setup.modelPlaceholder": "model-name",
   "setup.openAiCompatibleHint": "Works with Groq, OpenRouter, LiteLLM, LocalAI, and any OpenAI-compatible endpoint. API key is optional for local services.",
   "setup.personalSourcesAfterSetup": "Personal listening sources are connected per user from Settings after setup.",
   "setup.provider": "Provider",

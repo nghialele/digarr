@@ -142,4 +142,19 @@ describe('SetupWizard', () => {
     expect(screen.getByText('Haiku 4.5 (rapide, moins cher)')).toBeInTheDocument()
     expect(screen.getByText('Sonnet 4.6 (equilibre)')).toBeInTheDocument()
   })
+
+  it('uses a translated fallback model placeholder in French for openai-compatible', async () => {
+    mockGetStoredLocale.mockReturnValue('fr')
+    renderSetupWizard()
+
+    fireEvent.click(screen.getByRole('button', { name: /lidarr/i }))
+    await screen.findByText('Connect Lidarr')
+    await fillAndContinueLidarr()
+
+    fireEvent.change(screen.getByLabelText('Provider'), {
+      target: { value: 'openai-compatible' },
+    })
+
+    expect(screen.getByPlaceholderText('nom-du-modele')).toBeInTheDocument()
+  })
 })

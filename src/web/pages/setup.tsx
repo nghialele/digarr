@@ -326,7 +326,7 @@ function StepAi({
         <Input
           id="ai-model"
           list="ai-model-suggestions"
-          placeholder={suggestions[0]?.value ?? 'model-name'}
+          placeholder={suggestions[0]?.value ?? t('setup.modelPlaceholder')}
           value={form.model}
           onChange={(e) => onFormChange({ ...form, model: e.target.value })}
         />
