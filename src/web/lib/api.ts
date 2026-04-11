@@ -569,7 +569,10 @@ export async function exportRecommendations(
   const qs = query.toString() ? `?${query}` : ''
   const token = getStoredToken()
   const response = await fetch(`${BASE}/exports/${format}${qs}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-Digarr-Locale': getRequestLocale(),
+    },
   })
   if (!response.ok) throw new Error('Export failed')
   await downloadResponseBlob(
@@ -880,7 +883,10 @@ export async function exportPlaylistApi(
 ): Promise<void> {
   const token = getStoredToken()
   const response = await fetch(`${BASE}/playlists/${id}/export/${format}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-Digarr-Locale': getRequestLocale(),
+    },
   })
   if (!response.ok) throw new Error('Playlist export failed')
   await downloadResponseBlob(response, `playlist-${id}.${format}`)
@@ -904,7 +910,10 @@ export async function downloadBackup(includeCaches = false): Promise<void> {
   const qs = includeCaches ? '?includeCaches=true' : ''
   const res = await fetch(`${BASE}/admin/backup${qs}`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-Digarr-Locale': getRequestLocale(),
+    },
   })
   if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => ({})))
   await downloadResponseBlob(res, 'digarr-backup.json')
