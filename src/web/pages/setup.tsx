@@ -5,24 +5,12 @@ import { Field } from '../components/field'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
-import { completeSetup, testService } from '../lib/api'
+import { completeSetup } from '../lib/api'
 
 type FormState = {
   lidarr: { url: string; apiKey: string; skipTlsVerify: boolean }
   emby: { url: string; apiKey: string; userId: string }
   ai: { provider: string; model: string; apiKey: string; baseUrl: string }
-}
-
-type TestResults = {
-  lidarr: boolean | null
-  emby: boolean | null
-  ai: boolean | null
-}
-
-type TestingState = {
-  lidarr: boolean
-  emby: boolean
-  ai: boolean
 }
 
 type SetupMode = 'lidarr' | 'emby' | 'discover'
@@ -161,13 +149,11 @@ function StepMode({
 function StepLidarr({
   form,
   onFormChange,
-  testing,
-  onTest,
+  onContinue,
 }: {
   form: FormState['lidarr']
   onFormChange: (v: FormState['lidarr']) => void
-  testing: boolean
-  onTest: () => void
+  onContinue: () => void
 }) {
   return (
     <div className="space-y-4">
@@ -202,8 +188,12 @@ function StepLidarr({
           onChange={(e) => onFormChange({ ...form, apiKey: e.target.value })}
         />
       </Field>
-      <Button onClick={onTest} disabled={!form.url || !form.apiKey || testing} className="w-full">
-        {testing ? 'Testing...' : 'Test & Continue'}
+      <p className="text-xs text-muted">
+        Connection tests are available in Settings after setup. Continue once the URL and API key
+        look right.
+      </p>
+      <Button onClick={onContinue} disabled={!form.url || !form.apiKey} className="w-full">
+        Continue
       </Button>
     </div>
   )
@@ -212,13 +202,11 @@ function StepLidarr({
 function StepEmby({
   form,
   onFormChange,
-  testing,
-  onTest,
+  onContinue,
 }: {
   form: FormState['emby']
   onFormChange: (v: FormState['emby']) => void
-  testing: boolean
-  onTest: () => void
+  onContinue: () => void
 }) {
   return (
     <div className="space-y-4">
@@ -257,12 +245,16 @@ function StepEmby({
           Found under Emby Dashboard -&gt; Users -&gt; (select user). The URL contains the user ID.
         </p>
       </Field>
+      <p className="text-xs text-muted">
+        Connection tests are available in Settings after setup. Continue once the URL, API key, and
+        user ID look right.
+      </p>
       <Button
-        onClick={onTest}
-        disabled={!form.url || !form.apiKey || !form.userId || testing}
+        onClick={onContinue}
+        disabled={!form.url || !form.apiKey || !form.userId}
         className="w-full"
       >
-        {testing ? 'Testing...' : 'Test & Continue'}
+        Continue
       </Button>
     </div>
   )
@@ -271,13 +263,11 @@ function StepEmby({
 function StepAi({
   form,
   onFormChange,
-  testing,
-  onTest,
+  onContinue,
 }: {
   form: FormState['ai']
   onFormChange: (v: FormState['ai']) => void
-  testing: boolean
-  onTest: () => void
+  onContinue: () => void
 }) {
   const needsApiKey = form.provider !== 'ollama' && form.provider !== 'openai-compatible'
   const apiKeyOptional = form.provider === 'openai-compatible'
@@ -402,14 +392,16 @@ function StepAi({
           is optional for local services.
         </p>
       )}
+      <p className="text-xs text-muted">
+        You can verify the provider from Settings after setup. Continue once the provider details
+        are filled in.
+      </p>
       <Button
-        onClick={onTest}
-        disabled={
-          !form.model || (needsApiKey && !form.apiKey) || (needsBaseUrl && !form.baseUrl) || testing
-        }
+        onClick={onContinue}
+        disabled={!form.model || (needsApiKey && !form.apiKey) || (needsBaseUrl && !form.baseUrl)}
         className="w-full"
       >
-        {testing ? 'Testing...' : 'Test & Continue'}
+        Continue
       </Button>
     </div>
   )
@@ -469,115 +461,16 @@ const DEFAULT_FORM: FormState = {
   ai: { provider: 'anthropic', model: '', apiKey: '', baseUrl: '' },
 }
 
-const DEFAULT_RESULTS: TestResults = {
-  lidarr: null,
-  emby: null,
-  ai: null,
-}
-
-const DEFAULT_TESTING: TestingState = {
-  lidarr: false,
-  emby: false,
-  ai: false,
-}
-
 export function SetupWizard({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(1)
   const [mode, setMode] = useState<SetupMode | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
-  const [results, setResults] = useState<TestResults>(DEFAULT_RESULTS)
-  const [testing, setTesting] = useState<TestingState>(DEFAULT_TESTING)
   const [starting, setStarting] = useState(false)
 
   const hasServiceStep = mode === 'lidarr' || mode === 'emby'
   const totalSteps = hasServiceStep ? 4 : 3
   const aiStep = hasServiceStep ? 3 : 2
   const doneStep = hasServiceStep ? 4 : 3
-
-  function setTestingKey(key: keyof TestingState, val: boolean) {
-    setTesting((prev) => ({ ...prev, [key]: val }))
-  }
-
-  function setResultKey(key: keyof TestResults, val: boolean | null) {
-    setResults((prev) => ({ ...prev, [key]: val }))
-  }
-
-  async function testLidarr() {
-    setTestingKey('lidarr', true)
-    try {
-      const res = await testService('lidarr', {
-        url: form.lidarr.url,
-        apiKey: form.lidarr.apiKey,
-        skipTlsVerify: form.lidarr.skipTlsVerify,
-      })
-      if (res.success) {
-        setResultKey('lidarr', true)
-        toast.success('Lidarr connected successfully')
-        setStep(aiStep)
-      } else {
-        setResultKey('lidarr', false)
-        toast.error(res.message || 'Lidarr connection failed')
-      }
-    } catch {
-      setResultKey('lidarr', false)
-      toast.error('Could not reach Lidarr')
-    } finally {
-      setTestingKey('lidarr', false)
-    }
-  }
-
-  async function testEmby() {
-    setTestingKey('emby', true)
-    try {
-      const res = await testService('emby', {
-        url: form.emby.url,
-        apiKey: form.emby.apiKey,
-        userId: form.emby.userId,
-      })
-      if (res.success) {
-        setResultKey('emby', true)
-        toast.success('Emby connected successfully')
-        setStep(aiStep)
-      } else {
-        setResultKey('emby', false)
-        toast.error(res.message || 'Emby connection failed')
-      }
-    } catch {
-      setResultKey('emby', false)
-      toast.error('Could not reach Emby')
-    } finally {
-      setTestingKey('emby', false)
-    }
-  }
-
-  async function testAi() {
-    setTestingKey('ai', true)
-    const config: Record<string, string> = {
-      provider: form.ai.provider,
-      model: form.ai.model,
-    }
-    if (form.ai.provider !== 'ollama' && form.ai.provider !== 'openai-compatible')
-      config.apiKey = form.ai.apiKey
-    if (form.ai.provider === 'openai-compatible' && form.ai.apiKey) config.apiKey = form.ai.apiKey
-    if (form.ai.provider === 'ollama' || form.ai.provider === 'openai-compatible')
-      config.baseUrl = form.ai.baseUrl
-    try {
-      const res = await testService('ai', config)
-      if (res.success) {
-        setResultKey('ai', true)
-        toast.success('AI provider connected')
-        setStep(doneStep)
-      } else {
-        setResultKey('ai', false)
-        toast.error(res.message || 'AI provider connection failed')
-      }
-    } catch {
-      setResultKey('ai', false)
-      toast.error('Could not reach AI provider')
-    } finally {
-      setTestingKey('ai', false)
-    }
-  }
 
   async function handleStart() {
     setStarting(true)
@@ -619,14 +512,6 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
         <StepIndicator current={step} total={totalSteps} />
 
         <div className="rounded-lg border border-border bg-surface p-6">
-          {mode === 'lidarr' && results.lidarr === true && step >= aiStep && (
-            <div className="mb-4 rounded-lg border border-accent/20 bg-accent/5 px-4 py-3">
-              <p className="text-sm text-muted">
-                Connected. We&apos;ll start syncing your library in the background. The first sync
-                may take a while (see Library Health for progress).
-              </p>
-            </div>
-          )}
           {step === 1 && (
             <StepMode
               mode={mode}
@@ -640,24 +525,21 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
             <StepLidarr
               form={form.lidarr}
               onFormChange={(v) => setForm((f) => ({ ...f, lidarr: v }))}
-              testing={testing.lidarr}
-              onTest={testLidarr}
+              onContinue={() => setStep(aiStep)}
             />
           )}
           {step === 2 && mode === 'emby' && (
             <StepEmby
               form={form.emby}
               onFormChange={(v) => setForm((f) => ({ ...f, emby: v }))}
-              testing={testing.emby}
-              onTest={testEmby}
+              onContinue={() => setStep(aiStep)}
             />
           )}
           {step === aiStep && (
             <StepAi
               form={form.ai}
               onFormChange={(v) => setForm((f) => ({ ...f, ai: v }))}
-              testing={testing.ai}
-              onTest={testAi}
+              onContinue={() => setStep(doneStep)}
             />
           )}
           {step === doneStep && (

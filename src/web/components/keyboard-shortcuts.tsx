@@ -5,8 +5,6 @@ type KeyboardShortcutsProps = {
   onClose: () => void
 }
 
-// Shortcut data
-
 const SHORTCUTS: { key: string; label: string }[] = [
   { key: 'j', label: 'Next card' },
   { key: 'k', label: 'Previous card' },
@@ -17,8 +15,6 @@ const SHORTCUTS: { key: string; label: string }[] = [
   { key: '\u2190', label: 'Previous card (stack view)' },
   { key: '\u2192', label: 'Next card (stack view)' },
 ]
-
-// Component
 
 export function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
   // Close on Escape (handled in hook, but belt-and-suspenders here)

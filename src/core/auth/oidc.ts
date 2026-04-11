@@ -19,6 +19,7 @@ interface PendingAuth {
 export interface OidcUserClaims {
   sub: string
   email?: string
+  emailVerified?: boolean
   preferredUsername?: string
   name?: string
 }
@@ -125,6 +126,7 @@ export class OidcService {
       claims: {
         sub: idClaims.sub,
         email: idClaims.email as string | undefined,
+        emailVerified: idClaims.email_verified as boolean | undefined,
         preferredUsername: idClaims.preferred_username as string | undefined,
         name: idClaims.name as string | undefined,
       },

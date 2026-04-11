@@ -39,6 +39,7 @@ function makeMockOidcService() {
       claims: {
         sub: 'oidc-subject-123',
         email: 'alice@example.com',
+        emailVerified: true,
         preferredUsername: 'alice',
         name: 'Alice Doe',
       },
@@ -163,7 +164,7 @@ describe('GET /api/auth/oidc/callback', () => {
     expect(createSession).toHaveBeenCalledWith(10, 'mock-session-token-123')
   })
 
-  it('matches existing user by username and links OIDC subject + email', async () => {
+  it('does not auto-link by username alone', async () => {
     const deps = makeDeps({
       getUserByUsername: vi.fn(async () => ({
         id: 20,
@@ -175,12 +176,38 @@ describe('GET /api/auth/oidc/callback', () => {
     const res = await app.request('/api/auth/oidc/callback?state=abc&code=auth-code-123')
 
     expect(res.status).toBe(302)
-    expect(deps.updateUser).toHaveBeenCalledWith(20, {
-      oidcSubject: 'oidc-subject-123',
-      email: 'alice@example.com',
+    expect(deps.updateUser).not.toHaveBeenCalled()
+    expect(deps.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'alice-oidc-sub' }),
+    )
+  })
+
+  it('does not auto-link by unverified email', async () => {
+    const deps = makeDeps({
+      getUserByEmail: vi.fn(async () => ({
+        id: 10,
+        username: 'email-user',
+      })),
     })
-    expect(deps.createUser).not.toHaveBeenCalled()
-    expect(createSession).toHaveBeenCalledWith(20, 'mock-session-token-123')
+    deps.mockOidcService.handleCallback.mockResolvedValue({
+      claims: {
+        sub: 'oidc-subject-123',
+        email: 'alice@example.com',
+        emailVerified: false,
+        preferredUsername: 'alice',
+      },
+      accessToken: 'at-xyz',
+      refreshToken: 'rt-xyz',
+      idToken: 'id-xyz',
+      expiresIn: 3600,
+    })
+    const app = createTestApp(deps)
+
+    const res = await app.request('/api/auth/oidc/callback?state=abc&code=auth-code-123')
+
+    expect(res.status).toBe(302)
+    expect(deps.updateUser).not.toHaveBeenCalled()
+    expect(deps.createUser).toHaveBeenCalledWith(expect.objectContaining({ username: 'alice' }))
   })
 
   it('creates non-admin user when users already exist', async () => {

@@ -51,6 +51,11 @@ describe('isPrivateUrl', () => {
     expect(isPrivateUrl('http://[::1]/hook')).toBe(true)
   })
 
+  it('rejects IPv4-mapped IPv6 loopback and RFC1918 addresses', () => {
+    expect(isPrivateUrl('http://[::ffff:127.0.0.1]/hook')).toBe(true)
+    expect(isPrivateUrl('http://[::ffff:10.0.0.5]/hook')).toBe(true)
+  })
+
   it('rejects fc/fd IPv6 private', () => {
     expect(isPrivateUrl('http://[fc00::1]/hook')).toBe(true)
     expect(isPrivateUrl('http://[fd12::1]/hook')).toBe(true)

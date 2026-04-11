@@ -42,6 +42,25 @@ function maskSecrets(settings: Record<string, unknown>): SettingsResponse {
   return masked
 }
 
+function mergePreferenceUpdate(
+  current: Partial<Preferences> | null | undefined,
+  incoming: Partial<Preferences>,
+): Partial<Preferences> {
+  const merged: Partial<Preferences> = {
+    ...(current ?? {}),
+    ...incoming,
+  }
+
+  if (current?.scoringWeights && incoming.scoringWeights) {
+    merged.scoringWeights = {
+      ...current.scoringWeights,
+      ...incoming.scoringWeights,
+    }
+  }
+
+  return merged
+}
+
 /** Strip global connection fields that should not leak to non-admin users. */
 function stripForNonAdmin(settings: Record<string, unknown>): SettingsResponse {
   const stripped: SettingsResponse = {}
@@ -187,6 +206,10 @@ export function settingsRoutes(deps: AppDependencies) {
       c.get('authSkipped'),
       c.get('legacyTokenAuth'),
     )
+    const storedSettings =
+      Object.hasOwn(sanitized, 'preferences') || Object.hasOwn(sanitized, 'skipTlsVerify')
+        ? await deps.getSettings()
+        : null
 
     // Split fields into user-connection vs global
     const userUpdate: Record<string, string | null> = {}
@@ -202,6 +225,15 @@ export function settingsRoutes(deps: AppDependencies) {
       globalFields[key] = val
     }
 
+    const incomingPrefs =
+      globalFields.preferences && typeof globalFields.preferences === 'object'
+        ? (globalFields.preferences as Partial<Preferences>)
+        : undefined
+
+    if (incomingPrefs) {
+      globalFields.preferences = mergePreferenceUpdate(storedSettings?.preferences, incomingPrefs)
+    }
+
     if (!isAdmin && Object.keys(globalFields).length > 0) {
       return c.json({ error: 'Admin access required to modify global settings' }, 403)
     }
@@ -214,10 +246,12 @@ export function settingsRoutes(deps: AppDependencies) {
       await deps.updateSettings(globalFields)
     }
 
-    const prefs = globalFields.preferences as Partial<Preferences> | undefined
-    if (prefs?.scheduleCron !== undefined && typeof prefs.scheduleCron === 'string') {
+    if (
+      incomingPrefs?.scheduleCron !== undefined &&
+      typeof incomingPrefs.scheduleCron === 'string'
+    ) {
       try {
-        deps.restartScheduler(prefs.scheduleCron || null)
+        deps.restartScheduler(incomingPrefs.scheduleCron || null)
       } catch (err: unknown) {
         console.error('Failed to apply cron expression:', err)
         const row = await buildSettingsResponse(deps, userId, isAdmin)
@@ -228,7 +262,10 @@ export function settingsRoutes(deps: AppDependencies) {
       }
     }
 
-    if (prefs?.playlistEnabled !== undefined || prefs?.playlistSchedule !== undefined) {
+    if (
+      incomingPrefs?.playlistEnabled !== undefined ||
+      incomingPrefs?.playlistSchedule !== undefined
+    ) {
       await deps.restartPlaylistScheduler()
     }
 

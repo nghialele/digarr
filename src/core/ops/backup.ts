@@ -159,6 +159,7 @@ type RestoreTx = Parameters<Parameters<OpsDb['transaction']>[0]>[0]
 type RestoreSpec<TTable extends BackupTable> = {
   key: keyof BackupFile['data']
   table: TTable
+  clear: (tx: RestoreTx) => Promise<void>
   restore: (tx: RestoreTx, rows: Record<string, unknown>[]) => Promise<void>
 }
 
@@ -170,6 +171,9 @@ function createRestoreSpec<TTable extends BackupTable>(
   return {
     key,
     table,
+    async clear(tx) {
+      await tx.delete(table)
+    },
     async restore(tx, rows) {
       const target = conflictTarget ?? getDefaultConflictTarget(table)
       for (const row of rows) {
@@ -256,9 +260,15 @@ export async function restoreBackup(
     }
 
     await db.transaction(async (tx) => {
+      const includedSpecs = RESTORE_ORDER.filter((spec) => Array.isArray(backup.data[spec.key]))
+
+      for (const spec of [...includedSpecs].reverse()) {
+        await spec.clear(tx)
+      }
+
       for (const spec of RESTORE_ORDER) {
         const rows = backup.data[spec.key]
-        if (!rows || !Array.isArray(rows) || rows.length === 0) continue
+        if (!Array.isArray(rows) || rows.length === 0) continue
 
         await spec.restore(tx, rows)
         tablesRestored[spec.key] = rows.length

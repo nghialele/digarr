@@ -13,27 +13,54 @@ export type WebhookPayload = {
   timestamp: string
 }
 
+function normalizeIp(address: string): string {
+  const bare =
+    address
+      .trim()
+      .replace(/^\[|\]$/g, '')
+      .toLowerCase()
+      .split('%')[0] ?? ''
+  if (!bare.startsWith('::ffff:')) return bare
+
+  const mapped = bare.slice(7)
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(mapped)) return mapped
+
+  const parts = mapped.split(':')
+  const [highPart, lowPart] = parts
+  if (
+    highPart &&
+    lowPart &&
+    parts.length === 2 &&
+    /^[0-9a-f]+$/i.test(highPart) &&
+    /^[0-9a-f]+$/i.test(lowPart)
+  ) {
+    const high = Number.parseInt(highPart, 16)
+    const low = Number.parseInt(lowPart, 16)
+    return `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`
+  }
+
+  return mapped
+}
+
 export function isPrivateIp(address: string): boolean {
-  if (/^127\./.test(address)) return true
-  if (/^10\./.test(address)) return true
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(address)) return true
-  if (/^192\.168\./.test(address)) return true
-  if (/^169\.254\./.test(address)) return true
-  if (address === '0.0.0.0') return true
-  if (address === '::1') return true
-  if (/^f[cd]/i.test(address)) return true
-  if (/^fe80/i.test(address)) return true
+  const normalized = normalizeIp(address)
+  if (/^127\./.test(normalized)) return true
+  if (/^10\./.test(normalized)) return true
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(normalized)) return true
+  if (/^192\.168\./.test(normalized)) return true
+  if (/^169\.254\./.test(normalized)) return true
+  if (normalized === '0.0.0.0') return true
+  if (normalized === '::1') return true
+  if (/^f[cd]/i.test(normalized)) return true
+  if (/^fe80/i.test(normalized)) return true
   return false
 }
 
 export function isPrivateUrl(urlString: string): boolean {
   try {
     const url = new URL(urlString)
-    const hostname = url.hostname
+    const hostname = normalizeIp(url.hostname)
     if (isPrivateIp(hostname)) return true
-    // IPv6 (hostname includes brackets)
-    const bare = hostname.replace(/^\[|\]$/g, '')
-    if (isPrivateIp(bare)) return true
     if (hostname === 'localhost') return true
     return false
   } catch {

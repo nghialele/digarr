@@ -11,7 +11,7 @@ const SETUP_EXEMPT = new Set([
 ])
 
 // Prefixes exempt from setup check (auth must work before setup completes)
-const SETUP_EXEMPT_PREFIXES = ['/api/auth/', '/api/settings/test/'] as const
+const SETUP_EXEMPT_PREFIXES = ['/api/auth/'] as const
 
 export function setupGuard(isSetupComplete: () => Promise<boolean>) {
   return async (c: Context, next: Next) => {

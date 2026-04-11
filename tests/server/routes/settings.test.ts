@@ -294,6 +294,30 @@ describe('PATCH /api/settings', () => {
     expect(restartScheduler).not.toHaveBeenCalled()
   })
 
+  it('does not restart scheduler when scheduleCron only exists in stored preferences', async () => {
+    const restartScheduler = vi.fn()
+    const getSettings = vi.fn(
+      async () =>
+        ({
+          ...mockSettings,
+          preferences: {
+            scheduleCron: '0 4 * * *',
+            playlistEnabled: false,
+          },
+        }) as unknown as SettingsRow,
+    )
+    const app = createApp(makeDeps({ restartScheduler, getSettings }))
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { librarySeedRatio: 0.4 } }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(restartScheduler).not.toHaveBeenCalled()
+  })
+
   it('restarts playlist scheduling when playlist preferences change', async () => {
     const restartPlaylistScheduler = vi.fn(async () => {})
     const app = createApp(makeDeps({ restartPlaylistScheduler }))
@@ -306,6 +330,31 @@ describe('PATCH /api/settings', () => {
     expect(restartPlaylistScheduler).toHaveBeenCalledOnce()
   })
 
+  it('does not restart playlist scheduling when playlist fields only exist in stored preferences', async () => {
+    const restartPlaylistScheduler = vi.fn(async () => {})
+    const getSettings = vi.fn(
+      async () =>
+        ({
+          ...mockSettings,
+          preferences: {
+            scheduleCron: null,
+            playlistEnabled: true,
+            playlistSchedule: '0 6 * * 1',
+          },
+        }) as unknown as SettingsRow,
+    )
+    const app = createApp(makeDeps({ restartPlaylistScheduler, getSettings }))
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { librarySeedRatio: 0.4 } }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(restartPlaylistScheduler).not.toHaveBeenCalled()
+  })
+
   it('does not restart scheduler when no preferences in body', async () => {
     const restartScheduler = vi.fn()
     const app = createApp(makeDeps({ restartScheduler }))
@@ -316,6 +365,39 @@ describe('PATCH /api/settings', () => {
     })
     expect(res.status).toBe(200)
     expect(restartScheduler).not.toHaveBeenCalled()
+  })
+
+  it('merges partial preference updates with the stored preferences blob', async () => {
+    const updateSettings = vi.fn(async () => {})
+    const getSettings = vi.fn(
+      async () =>
+        ({
+          ...mockSettings,
+          preferences: {
+            scoreThreshold: 0.72,
+            rejectionCooldownDays: 45,
+            subscriptionMode: 'active',
+          },
+        }) as unknown as SettingsRow,
+    )
+    const app = createApp(makeDeps({ updateSettings, getSettings }))
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { subscriptionMode: 'ai-only' } }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferences: {
+          scoreThreshold: 0.72,
+          rejectionCooldownDays: 45,
+          subscriptionMode: 'ai-only',
+        },
+      }),
+    )
   })
 
   it('returns 403 when setup not complete', async () => {
@@ -398,16 +480,14 @@ describe('POST /api/settings/test/:service', () => {
     expect(res.status).toBe(400)
   })
 
-  it('allows test endpoints even when setup not complete', async () => {
+  it('blocks test endpoints until setup is complete', async () => {
     const app = createApp(makeDeps({ isSetupComplete: async () => false }))
     const res = await app.request('/api/settings/test/lidarr', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'http://lidarr:8686', apiKey: 'key' }),
     })
-    // Test endpoints are exempted from setup guard so users can
-    // verify connections during the setup wizard
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(403)
   })
 })
 

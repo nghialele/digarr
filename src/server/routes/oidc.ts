@@ -57,22 +57,11 @@ export function oidcRoutes(deps: OidcRouteDeps) {
       // User matching: OIDC subject -> email -> username -> auto-create
       let user = await deps.getUserByOidcSubject(result.claims.sub)
 
-      if (!user && result.claims.email) {
+      if (!user && result.claims.email && result.claims.emailVerified === true) {
         const emailUser = await deps.getUserByEmail(result.claims.email)
         if (emailUser) {
           await deps.updateUser(emailUser.id, { oidcSubject: result.claims.sub })
           user = emailUser
-        }
-      }
-
-      if (!user && result.claims.preferredUsername) {
-        const usernameUser = await deps.getUserByUsername(result.claims.preferredUsername)
-        if (usernameUser) {
-          await deps.updateUser(usernameUser.id, {
-            oidcSubject: result.claims.sub,
-            email: result.claims.email,
-          })
-          user = usernameUser
         }
       }
 

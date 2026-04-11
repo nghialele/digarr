@@ -101,10 +101,17 @@ describe('createSimilarAdapter', () => {
   })
 
   it('deduplicates artists across seeds by lowercase name', async () => {
-    const source = makeSource('lastfm', [])
-    const getSimilarFn = vi.mocked(source.getSimilarArtists)
+    const getSimilarArtists = vi.fn().mockResolvedValue([])
+    const source: DiscoverySource = {
+      id: 'lastfm',
+      name: 'Source lastfm',
+      capabilities: ['similarArtists'],
+      getTopArtists: vi.fn().mockResolvedValue([]),
+      getSimilarArtists,
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    }
     // Seed 1 returns Artist C; Seed 2 also returns artist c (different case)
-    getSimilarFn
+    getSimilarArtists
       .mockResolvedValueOnce([{ name: 'Artist C', similarityScore: 0.9, source: 'lastfm' }])
       .mockResolvedValueOnce([{ name: 'artist c', similarityScore: 0.7, source: 'lastfm' }])
 
@@ -174,12 +181,28 @@ describe('createSimilarAdapter', () => {
   })
 
   it('merges results from multiple seeds and sources', async () => {
-    const lastfm = makeSource('lastfm', [])
-    const lb = makeSource('listenbrainz', [])
-    vi.mocked(lastfm.getSimilarArtists)
+    const lastfmGetSimilarArtists = vi.fn().mockResolvedValue([])
+    const lbGetSimilarArtists = vi.fn().mockResolvedValue([])
+    const lastfm: DiscoverySource = {
+      id: 'lastfm',
+      name: 'Source lastfm',
+      capabilities: ['similarArtists'],
+      getTopArtists: vi.fn().mockResolvedValue([]),
+      getSimilarArtists: lastfmGetSimilarArtists,
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    }
+    const lb: DiscoverySource = {
+      id: 'listenbrainz',
+      name: 'Source listenbrainz',
+      capabilities: ['similarArtists'],
+      getTopArtists: vi.fn().mockResolvedValue([]),
+      getSimilarArtists: lbGetSimilarArtists,
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    }
+    lastfmGetSimilarArtists
       .mockResolvedValueOnce([{ name: 'Artist B', similarityScore: 0.9, source: 'lastfm' }])
       .mockResolvedValueOnce([{ name: 'Artist C', similarityScore: 0.7, source: 'lastfm' }])
-    vi.mocked(lb.getSimilarArtists)
+    lbGetSimilarArtists
       .mockResolvedValueOnce([{ name: 'Artist D', similarityScore: 0.6, source: 'listenbrainz' }])
       .mockResolvedValueOnce([{ name: 'Artist E', similarityScore: 0.5, source: 'listenbrainz' }])
 
@@ -190,5 +213,24 @@ describe('createSimilarAdapter', () => {
 
     // 2 seeds x 2 sources = 4 unique entries
     expect(result.artists).toHaveLength(4)
+  })
+
+  it('applies the runner-provided result limit', async () => {
+    const source = makeSource('lastfm', [
+      { name: 'Artist B', similarityScore: 0.9, source: 'lastfm' },
+      { name: 'Artist C', similarityScore: 0.8, source: 'lastfm' },
+    ])
+    const adapter = createSimilarAdapter([source])
+
+    const result = await adapter.fetch(
+      {
+        seedArtists: [{ name: 'Artist A' }],
+      },
+      { limit: 1 },
+    )
+
+    expect(result.artists).toHaveLength(1)
+    const firstArtist = requireArtist(result.artists[0], 'Expected first limited artist')
+    expect(firstArtist.name).toBe('Artist B')
   })
 })

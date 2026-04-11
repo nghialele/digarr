@@ -1,5 +1,6 @@
 import type { ServiceTestResult } from '@/core/types'
 import { errMsg } from '@/core/validation'
+import { pickBestTrackMatch } from './playlist-match'
 import type { DestinationTarget, PlaylistItem, PlaylistResult } from './types'
 
 export type PlexPlaylistConfig = {
@@ -85,17 +86,15 @@ export function createPlexPlaylistTarget(
       const hubs = res.MediaContainer.Hub ?? []
       const trackHub = hubs.find((h) => h.type === 'track')
       const results = trackHub?.Metadata ?? []
-
-      if (results.length === 0) return null
-
-      // Prefer exact artist+title match, fall back to first result
-      const exact = results.find((m) => {
-        const titleMatch = m.title.toLowerCase() === trackName.toLowerCase()
-        const artistMatch = (m.grandparentTitle ?? '').toLowerCase() === artistName.toLowerCase()
-        return titleMatch && artistMatch
-      })
-
-      return (exact ?? results[0])?.ratingKey ?? null
+      return pickBestTrackMatch(
+        results.map((result) => ({
+          id: result.ratingKey,
+          title: result.title,
+          artists: result.grandparentTitle ? [result.grandparentTitle] : [],
+        })),
+        artistName,
+        trackName,
+      )
     } catch {
       return null
     }
