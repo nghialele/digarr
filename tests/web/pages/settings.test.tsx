@@ -18,13 +18,16 @@ function renderWithQuery(ui: ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return render(
-    <I18nProvider>
-      <MemoryRouter>
-        <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-      </MemoryRouter>
-    </I18nProvider>,
-  )
+  return {
+    client,
+    ...render(
+      <I18nProvider>
+        <MemoryRouter>
+          <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+        </MemoryRouter>
+      </I18nProvider>,
+    ),
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -44,7 +47,12 @@ vi.mock('@/web/lib/api', () => ({
   deleteTargetApi: vi.fn().mockResolvedValue(undefined),
   testTargetApi: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
   exportRecommendations: vi.fn().mockResolvedValue(undefined),
-  getCurrentUser: vi.fn().mockResolvedValue({ id: 1, username: 'admin', isAdmin: true }),
+  getCurrentUser: vi.fn().mockResolvedValue({
+    id: 1,
+    username: 'admin',
+    isAdmin: true,
+    preferredLocale: 'en',
+  }),
   getOAuthStatus: vi.fn().mockResolvedValue({ connected: false, scopes: null }),
   importSpotifyLikedSongs: vi.fn().mockResolvedValue({
     message: 'started',
@@ -89,9 +97,11 @@ import {
   getLidarrProfiles,
   getLidarrRootFolders,
   getOAuthStatus,
+  getCurrentUser,
   getSettings,
   importSpotifyLikedSongs,
   testService,
+  updatePreferredLocale,
   updateSettings,
 } from '@/web/lib/api'
 import { SettingsPage } from '@/web/pages/settings'
@@ -104,6 +114,8 @@ const mockGetLidarrMetadataProfiles = getLidarrMetadataProfiles as ReturnType<ty
 const mockGetLidarrRootFolders = getLidarrRootFolders as ReturnType<typeof vi.fn>
 const mockGetOAuthStatus = getOAuthStatus as ReturnType<typeof vi.fn>
 const mockImportSpotifyLikedSongs = importSpotifyLikedSongs as ReturnType<typeof vi.fn>
+const mockGetCurrentUser = getCurrentUser as ReturnType<typeof vi.fn>
+const mockUpdatePreferredLocale = updatePreferredLocale as ReturnType<typeof vi.fn>
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -151,6 +163,13 @@ describe('SettingsPage', () => {
         removeEventListener: vi.fn(),
       }),
     })
+    mockGetCurrentUser.mockResolvedValue({
+      id: 1,
+      username: 'admin',
+      isAdmin: true,
+      preferredLocale: 'en',
+    })
+    mockUpdatePreferredLocale.mockResolvedValue({ success: true, preferredLocale: 'en' })
   })
 
   it('shows loading skeleton while fetching settings', () => {
@@ -298,5 +317,34 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByText('Account'))
 
     expect(await screen.findByLabelText('Language')).toBeInTheDocument()
+  })
+
+  it('persists account locale changes and updates the current user cache', async () => {
+    setupMocks()
+    mockUpdatePreferredLocale.mockResolvedValue({ success: true, preferredLocale: 'de' })
+    const { client } = renderWithQuery(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Connections')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Account'))
+
+    const switcher = await screen.findByLabelText('Language')
+    fireEvent.change(switcher, { target: { value: 'de' } })
+
+    await waitFor(() => {
+      expect(mockUpdatePreferredLocale.mock.calls[0]?.[0]).toBe('de')
+    })
+    await waitFor(() => {
+      expect(screen.getByLabelText('Language')).toHaveValue('de')
+    })
+
+    expect(client.getQueryData(['currentUser'])).toEqual({
+      id: 1,
+      username: 'admin',
+      isAdmin: true,
+      preferredLocale: 'de',
+    })
   })
 })

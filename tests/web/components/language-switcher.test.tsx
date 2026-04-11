@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthGate } from '@/web/components/auth-gate'
@@ -109,24 +109,42 @@ import {
   getPipelineStatus,
   getSetupStatus,
   getStoredToken,
+  updatePreferredLocale,
 } from '@/web/lib/api'
+import { setStoredLocale } from '@/web/lib/locale-storage'
 
 const mockGetAuthStatus = getAuthStatus as ReturnType<typeof vi.fn>
 const mockGetCurrentUser = getCurrentUser as ReturnType<typeof vi.fn>
 const mockGetPipelineStatus = getPipelineStatus as ReturnType<typeof vi.fn>
 const mockGetSetupStatus = getSetupStatus as ReturnType<typeof vi.fn>
 const mockGetStoredToken = getStoredToken as ReturnType<typeof vi.fn>
+const mockUpdatePreferredLocale = updatePreferredLocale as ReturnType<typeof vi.fn>
+const mockSetStoredLocale = setStoredLocale as ReturnType<typeof vi.fn>
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (error?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+
+  return { promise, resolve, reject }
+}
 
 function renderWithProviders(ui: ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
 
-  return render(
-    <I18nProvider>
-      <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-    </I18nProvider>,
-  )
+  return {
+    client,
+    ...render(
+      <I18nProvider>
+        <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+      </I18nProvider>,
+    ),
+  }
 }
 
 function renderWithAppShell() {
@@ -152,6 +170,14 @@ describe('language switcher surfaces', () => {
         removeEventListener: vi.fn(),
       }),
     })
+    Object.defineProperty(globalThis, 'fetch', {
+      configurable: true,
+      value: vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({}),
+      }),
+    })
     mockGetStoredToken.mockReturnValue(null)
     mockGetAuthStatus.mockResolvedValue({
       required: true,
@@ -166,6 +192,7 @@ describe('language switcher surfaces', () => {
     })
     mockGetPipelineStatus.mockResolvedValue({ running: false })
     mockGetSetupStatus.mockResolvedValue({ setupComplete: true })
+    mockUpdatePreferredLocale.mockResolvedValue({ success: true, preferredLocale: 'en' })
   })
 
   it('renders a language switcher under the login form', async () => {
@@ -179,8 +206,64 @@ describe('language switcher surfaces', () => {
   })
 
   it('renders a language switcher in the top bar for authenticated users', async () => {
+    mockGetStoredToken.mockReturnValue('token')
     renderWithAppShell()
 
     expect(await screen.findByLabelText('Language')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Run Scan|Scan/i })).toBeInTheDocument()
+  })
+
+  it('keeps unauthenticated locale changes local and updates stored locale', async () => {
+    renderWithProviders(
+      <AuthGate>
+        <div>app</div>
+      </AuthGate>,
+    )
+
+    const switcher = await screen.findByLabelText('Language')
+    fireEvent.change(switcher, { target: { value: 'de' } })
+
+    expect(switcher).toHaveValue('de')
+    expect(mockSetStoredLocale).toHaveBeenCalledWith('de')
+    expect(mockUpdatePreferredLocale).not.toHaveBeenCalled()
+  })
+
+  it('persists authenticated locale changes without snapping back to stale account data', async () => {
+    mockGetStoredToken.mockReturnValue('token')
+    const userRequest = deferred<{
+      id: number
+      username: string
+      isAdmin: boolean
+      preferredLocale: string | null
+    }>()
+    const localeRequest = deferred<{ success: true; preferredLocale: string | null }>()
+    mockGetCurrentUser.mockReturnValue(userRequest.promise)
+    mockUpdatePreferredLocale.mockReturnValue(localeRequest.promise)
+
+    renderWithAppShell()
+
+    const switcher = await screen.findByLabelText('Language')
+    fireEvent.change(switcher, { target: { value: 'de' } })
+    expect(switcher).toHaveValue('de')
+
+    userRequest.resolve({
+      id: 1,
+      username: 'admin',
+      isAdmin: true,
+      preferredLocale: 'en',
+    })
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Language')).toHaveValue('de')
+    })
+
+    localeRequest.resolve({ success: true, preferredLocale: 'de' })
+
+    await waitFor(() => {
+      expect(mockUpdatePreferredLocale.mock.calls[0]?.[0]).toBe('de')
+    })
+    await waitFor(() => {
+      expect(screen.getByLabelText('Language')).toHaveValue('de')
+    })
   })
 })

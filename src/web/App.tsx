@@ -298,8 +298,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [colorTheme, setColorThemeState] = useState<ColorTheme>(getStoredColorTheme)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const preview = usePreview()
+  const latestRequestedLocaleRef = useRef<SupportedLocale | null>(null)
+  const submittedPendingLocaleRef = useRef<SupportedLocale | null>(null)
   const queryClient = useQueryClient()
-  const { locale, setLocale } = useI18n()
+  const { locale, pendingLocale, setLocale, hydrateLocale } = useI18n()
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const { data: pipelineStatus } = useQuery({
     queryKey: ['pipelineStatus'],
@@ -310,6 +312,14 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const localeMutation = useMutation({
     mutationFn: updatePreferredLocale,
     onSuccess: ({ preferredLocale }) => {
+      const normalizedPreferredLocale = normalizeLocale(preferredLocale)
+      if (
+        normalizedPreferredLocale &&
+        latestRequestedLocaleRef.current &&
+        normalizedPreferredLocale !== latestRequestedLocaleRef.current
+      ) {
+        return
+      }
       queryClient.setQueryData(['currentUser'], (prev: typeof currentUser) =>
         prev ? { ...prev, preferredLocale } : prev,
       )
@@ -321,9 +331,30 @@ function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const preferredLocale = normalizeLocale(currentUser?.preferredLocale)
     if (preferredLocale) {
-      setLocale(preferredLocale)
+      hydrateLocale(preferredLocale)
     }
-  }, [currentUser?.preferredLocale, setLocale])
+  }, [currentUser?.preferredLocale, hydrateLocale])
+
+  useEffect(() => {
+    if (!pendingLocale) {
+      submittedPendingLocaleRef.current = null
+      return
+    }
+
+    if (!currentUser) return
+
+    const preferredLocale = normalizeLocale(currentUser.preferredLocale)
+    if (preferredLocale === pendingLocale) {
+      submittedPendingLocaleRef.current = null
+      return
+    }
+
+    if (submittedPendingLocaleRef.current === pendingLocale) return
+
+    submittedPendingLocaleRef.current = pendingLocale
+    latestRequestedLocaleRef.current = pendingLocale
+    localeMutation.mutate(pendingLocale)
+  }, [currentUser, localeMutation, pendingLocale])
 
   function handleModeChange(m: Mode) {
     setModeState(m)
@@ -338,8 +369,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   function handleLocaleChange(nextLocale: SupportedLocale) {
+    latestRequestedLocaleRef.current = nextLocale
     setLocale(nextLocale)
     if (currentUser) {
+      submittedPendingLocaleRef.current = nextLocale
       localeMutation.mutate(nextLocale)
     }
   }
