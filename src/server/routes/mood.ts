@@ -51,7 +51,7 @@ export function moodRoutes(deps: MoodDeps) {
       acceptLanguage: c.req.header('Accept-Language'),
     })
     const promptLocale = detectPromptLocale(trimmedQuery)
-    const responseLocale = promptLocale ?? uiLocale
+    const responseLocale = uiLocale
     const prompt = buildMoodPrompt(trimmedQuery, [], responseLocale)
     const recs = await provider.getRecommendations({
       topArtists: [],

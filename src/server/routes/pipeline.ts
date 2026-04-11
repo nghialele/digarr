@@ -202,7 +202,7 @@ export function pipelineRoutes(deps: AppDependencies) {
       acceptLanguage: c.req.header('Accept-Language'),
     })
     const promptLocale = detectPromptLocale(trimmedArtistName)
-    const responseLocale = promptLocale ?? uiLocale
+    const responseLocale = uiLocale
 
     const lastfmApiKey = quickDiscoverUserConns?.lastfmApiKey ?? null
     const lastfmUsername = quickDiscoverUserConns?.lastfmUsername ?? ''
