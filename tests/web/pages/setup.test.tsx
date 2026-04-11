@@ -23,10 +23,14 @@ vi.mock('sonner', () => ({
 }))
 
 import { SetupWizard } from '@/web/pages/setup'
+import { getStoredLocale } from '@/web/lib/locale-storage'
+
+const mockGetStoredLocale = vi.mocked(getStoredLocale)
 
 describe('SetupWizard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetStoredLocale.mockReturnValue('en')
   })
 
   function renderSetupWizard() {
@@ -95,5 +99,19 @@ describe('SetupWizard', () => {
     renderSetupWizard()
 
     expect(screen.getByLabelText('Language')).toBeInTheDocument()
+  })
+
+  it('uses translated discovery setup copy in French', async () => {
+    mockGetStoredLocale.mockReturnValue('fr')
+    renderSetupWizard()
+
+    fireEvent.click(screen.getByRole('button', { name: /decouvrir|just discover/i }))
+
+    await screen.findByText('Fournisseur IA')
+    expect(
+      screen.getByText(
+        /Vous connecterez vos sources d ecoute personnelles plus tard dans les parametres/i,
+      ),
+    ).toBeInTheDocument()
   })
 })

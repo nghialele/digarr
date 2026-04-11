@@ -308,6 +308,46 @@ describe('Dashboard', () => {
     expect(screen.getByText(/11\./)).toBeInTheDocument()
   })
 
+  it('uses translated dashboard section copy in French', async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    setupMocks()
+    mockGetSubscriptions.mockResolvedValue([] as never)
+
+    renderWithQuery(<Dashboard />)
+
+    expect(await screen.findByText('Abonnements')).toBeInTheDocument()
+    expect(screen.getByText('Commencer')).toBeInTheDocument()
+  })
+
+  it('localizes playlist card metadata labels in French', () => {
+    localStorage.setItem('digarr-locale', 'fr')
+
+    renderWithQuery(
+      <PlaylistCard
+        playlist={{
+          id: 8,
+          userId: 1,
+          name: 'Night Shift',
+          strategy: 'weekly_digest',
+          schedule: '0 0 * * *',
+          enabled: false,
+          targetIds: [],
+          trackCount: 12,
+          lastGeneratedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          config: { size: 25, trackSourcePriority: ['local', 'spotify', 'deezer'] },
+        }}
+        onEdit={vi.fn()}
+        onRefetch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Planification:')).toBeInTheDocument()
+    expect(screen.getByText('Quotidien')).toBeInTheDocument()
+    expect(screen.getByText('Jamais')).toBeInTheDocument()
+    expect(screen.getByText('Desactive')).toBeInTheDocument()
+  })
+
   it('shows add_failed recommendations in Recently Approved', async () => {
     setupMocks()
     mockGetRecommendations.mockImplementation((params) => {

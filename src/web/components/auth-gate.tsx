@@ -361,17 +361,17 @@ function RegisterForm({
               />
               {error && <p className="text-sm text-reject">{error}</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Create account'}
-            </Button>
-            <button
-              type="button"
-              onClick={onSwitchToLogin}
-              className="text-sm text-muted hover:text-text"
-            >
-              Already have an account? Sign in
-            </button>
-          </form>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
+              </Button>
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+                className="text-sm text-muted hover:text-text"
+              >
+                {t('auth.alreadyHaveAccount')}
+              </button>
+            </form>
           <div className="mt-4 flex justify-center">
             <LanguageSwitcher value={locale} onChange={setLocale} />
           </div>

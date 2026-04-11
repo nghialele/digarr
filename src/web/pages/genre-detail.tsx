@@ -14,33 +14,6 @@ type GenreDetail = GenreInfo & { subGenres: GenreInfo[]; libraryArtists: Library
 
 type DetailTab = 'library' | 'recommended' | 'trending' | 'deep_cuts'
 
-const TABS: { id: DetailTab; label: string; description: string }[] = [
-  { id: 'library', label: 'In Your Library', description: 'Artists already in your music library' },
-  {
-    id: 'recommended',
-    label: 'Recommended',
-    description: 'Artists you approved that match this genre',
-  },
-  {
-    id: 'trending',
-    label: 'Trending',
-    description: 'Recently discovered artists in this genre (last 30 days)',
-  },
-  {
-    id: 'deep_cuts',
-    label: 'Deep Cuts',
-    description: 'Hidden gems -- niche artists with low popularity',
-  },
-]
-
-const TAB_EMPTY_LABELS: Record<DetailTab, string> = {
-  library: 'No artists in your library for this genre.',
-  recommended: 'No recommended artists yet. Run a scan and approve some recommendations first.',
-  trending: 'No recent discoveries in this genre. Run a scan to find new artists.',
-  deep_cuts:
-    'No deep cuts found. These appear after scanning -- artists with low popularity or few genre tags.',
-}
-
 // Library artist card
 
 function LibraryArtistCard({ artist }: { artist: LibraryArtist }) {
@@ -64,6 +37,7 @@ function LibraryArtistCard({ artist }: { artist: LibraryArtist }) {
 // Genre artist card (for recommendation-backed tabs)
 
 function GenreArtistCard({ artist }: { artist: GenreArtist }) {
+  const { t } = useI18n()
   const [discovering, setDiscovering] = useState(false)
   const [queued, setQueued] = useState(false)
   const genres = artist.genres ?? []
@@ -110,7 +84,7 @@ function GenreArtistCard({ artist }: { artist: GenreArtist }) {
                 : preview.play(artist.mbid, artist.name, artist.streamingUrls ?? null)
             }
             className="w-7 h-7 flex items-center justify-center rounded-full border border-border text-muted hover:text-accent hover:border-accent/60 transition-colors"
-            aria-label={isPlaying ? 'Stop preview' : 'Play preview'}
+            aria-label={isPlaying ? t('recommendation.stopPreview') : t('recommendation.playPreview')}
           >
             {isPlaying ? (
               <svg
@@ -144,7 +118,7 @@ function GenreArtistCard({ artist }: { artist: GenreArtist }) {
           onClick={handleQuickDiscover}
           className="px-2 py-1 text-xs rounded border border-border text-muted hover:text-text hover:border-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {queued ? 'In Queue' : discovering ? '...' : '+ Queue'}
+          {queued ? t('genreDetail.inQueue') : discovering ? t('common.loadingEllipsis') : t('genreDetail.queue')}
         </button>
       </div>
     </div>
@@ -204,6 +178,34 @@ export function GenreDetailPage() {
   })
 
   const libraryArtists = data?.libraryArtists
+  const tabs: { id: DetailTab; label: string; description: string }[] = [
+    {
+      id: 'library',
+      label: t('genreDetail.tabLibrary'),
+      description: t('genreDetail.tabLibraryDescription'),
+    },
+    {
+      id: 'recommended',
+      label: t('genreDetail.tabRecommended'),
+      description: t('genreDetail.tabRecommendedDescription'),
+    },
+    {
+      id: 'trending',
+      label: t('genreDetail.tabTrending'),
+      description: t('genreDetail.tabTrendingDescription'),
+    },
+    {
+      id: 'deep_cuts',
+      label: t('genreDetail.tabDeepCuts'),
+      description: t('genreDetail.tabDeepCutsDescription'),
+    },
+  ]
+  const tabEmptyLabels: Record<DetailTab, string> = {
+    library: t('genreDetail.emptyLibrary'),
+    recommended: t('genreDetail.emptyRecommended'),
+    trending: t('genreDetail.emptyTrending'),
+    deep_cuts: t('genreDetail.emptyDeepCuts'),
+  }
 
   useEffect(() => {
     if (libraryArtists && libraryArtists.length > 0) {
@@ -227,7 +229,7 @@ export function GenreDetailPage() {
           &larr; {t('genreDetail.backToGenres')}
         </button>
         <div className="py-16 text-center">
-          <p className="text-muted text-sm">Genre not found.</p>
+          <p className="text-muted text-sm">{t('genreDetail.notFound')}</p>
         </div>
       </div>
     )
@@ -248,15 +250,17 @@ export function GenreDetailPage() {
       <div>
         <h1 className="text-2xl font-bold text-text">{data.name}</h1>
         <p className="text-sm text-muted mt-1">
-          {data.libraryArtists.length} artist{data.libraryArtists.length !== 1 ? 's' : ''} in your
-          library
+          {data.libraryArtists.length} {data.libraryArtists.length === 1 ? t('genreDetail.artistSingular') : t('genreDetail.artistPlural')}{' '}
+          {t('genreDetail.inYourLibrary')}
         </p>
       </div>
 
       {/* Sub-genres */}
       {data.subGenres.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-muted uppercase tracking-wide font-semibold">Sub-genres</p>
+          <p className="text-xs text-muted uppercase tracking-wide font-semibold">
+            {t('genreDetail.subGenres')}
+          </p>
           <div className="flex flex-wrap gap-2">
             {data.subGenres.map((sub) => (
               <button
@@ -278,7 +282,7 @@ export function GenreDetailPage() {
       {/* Tabs */}
       <div className="space-y-4">
         <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1 w-fit">
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -293,13 +297,12 @@ export function GenreDetailPage() {
         </div>
 
         <p className="text-xs text-muted -mt-2">
-          {TABS.find((t) => t.id === activeTab)?.description}
+          {tabs.find((tab) => tab.id === activeTab)?.description}
         </p>
 
         {isNonLibraryTab && (
           <Hint id="genre-detail-queue-tip" type="inline">
-            Use the + Queue button to add artists to your recommendation queue for review on the
-            Discover page.
+            {t('genreDetail.queueHint')}
           </Hint>
         )}
 
@@ -307,13 +310,14 @@ export function GenreDetailPage() {
         {activeTab === 'library' ? (
           data.libraryArtists.length === 0 ? (
             <div className="py-12 text-center bg-surface border border-border rounded-lg">
-              <p className="text-muted text-sm">{TAB_EMPTY_LABELS.library}</p>
+              <p className="text-muted text-sm">{tabEmptyLabels.library}</p>
             </div>
           ) : (
             <div className="space-y-2">
               <p className="text-xs text-muted">
-                {data.libraryArtists.length} artist{data.libraryArtists.length !== 1 ? 's' : ''} in
-                your library
+                {data.libraryArtists.length}{' '}
+                {data.libraryArtists.length === 1 ? t('genreDetail.artistSingular') : t('genreDetail.artistPlural')}{' '}
+                {t('genreDetail.inYourLibrary')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {data.libraryArtists.map((artist) => (
@@ -326,11 +330,14 @@ export function GenreDetailPage() {
           <TabSkeleton />
         ) : !genreArtistsData?.artists || genreArtistsData.artists.length === 0 ? (
           <div className="py-12 text-center bg-surface border border-border rounded-lg">
-            <p className="text-muted text-sm">{TAB_EMPTY_LABELS[activeTab]}</p>
+            <p className="text-muted text-sm">{tabEmptyLabels[activeTab]}</p>
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs text-muted">{genreArtistsData.artists.length} artists</p>
+            <p className="text-xs text-muted">
+              {genreArtistsData.artists.length}{' '}
+              {genreArtistsData.artists.length === 1 ? t('genreDetail.artistSingular') : t('genreDetail.artistPlural')}
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {genreArtistsData.artists.map((artist) => (
                 <GenreArtistCard key={artist.mbid} artist={artist} />

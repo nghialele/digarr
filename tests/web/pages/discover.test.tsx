@@ -306,4 +306,12 @@ describe('DiscoverPage', () => {
       expect(screen.getByTitle('Spotify')).toBeInTheDocument()
     })
   })
+
+  it('uses translated feedback insights copy in French', async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    setupMockApi()
+    renderWithQuery(<DiscoverPage />)
+
+    expect(await screen.findByRole('button', { name: 'Afficher les retours' })).toBeInTheDocument()
+  })
 })

@@ -4,19 +4,18 @@ import { JobRunRow } from '../components/job-run-row'
 import { listJobs } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 
-const TABS = [
-  { key: '', label: 'All' },
-  { key: 'pipeline', label: 'Pipeline' },
-  { key: 'subscription', label: 'Subscriptions' },
-  { key: 'target', label: 'Targets' },
-  { key: 'quick_discover', label: 'Quick Discover' },
-  { key: 'playlist', label: 'Playlists' },
-]
-
 const PAGE_SIZE = 50
 
 export default function JobHistoryPage() {
   const { t } = useI18n()
+  const TABS = [
+    { key: '', label: t('jobHistory.all') },
+    { key: 'pipeline', label: t('jobHistory.pipeline') },
+    { key: 'subscription', label: t('jobHistory.subscriptions') },
+    { key: 'target', label: t('jobHistory.targets') },
+    { key: 'quick_discover', label: t('jobHistory.quickDiscover') },
+    { key: 'playlist', label: t('jobHistory.playlists') },
+  ]
   const [type, setType] = useState('')
   const [offset, setOffset] = useState(0)
 
@@ -52,9 +51,9 @@ export default function JobHistoryPage() {
 
       <div className="overflow-hidden rounded-lg border border-border bg-surface">
         {isLoading ? (
-          <div className="p-8 text-center text-muted">Loading...</div>
+          <div className="p-8 text-center text-muted">{t('common.loading')}</div>
         ) : !data?.items.length ? (
-          <div className="p-8 text-center text-muted">No jobs found.</div>
+          <div className="p-8 text-center text-muted">{t('jobHistory.empty')}</div>
         ) : (
           data.items.map((job) => <JobRunRow key={job.id} job={job} />)
         )}
@@ -63,7 +62,8 @@ export default function JobHistoryPage() {
       {data && data.total > PAGE_SIZE && (
         <div className="flex items-center justify-between text-sm text-muted">
           <span>
-            Showing {offset + 1}-{Math.min(offset + PAGE_SIZE, data.total)} of {data.total}
+            {t('jobHistory.showing')} {offset + 1}-{Math.min(offset + PAGE_SIZE, data.total)}{' '}
+            {t('jobHistory.of')} {data.total}
           </span>
           <div className="flex gap-2">
             <button
@@ -72,7 +72,7 @@ export default function JobHistoryPage() {
               disabled={offset === 0}
               className="rounded bg-surface-alt px-3 py-1 disabled:opacity-50"
             >
-              Previous
+              {t('common.previous')}
             </button>
             <button
               type="button"
@@ -80,7 +80,7 @@ export default function JobHistoryPage() {
               disabled={offset + PAGE_SIZE >= data.total}
               className="rounded bg-surface-alt px-3 py-1 disabled:opacity-50"
             >
-              Next
+              {t('common.next')}
             </button>
           </div>
         </div>

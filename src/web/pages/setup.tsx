@@ -18,6 +18,7 @@ type FormState = {
 type SetupMode = 'lidarr' | 'emby' | 'discover'
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center justify-center gap-0 mb-8">
       {Array.from({ length: total }, (_, i) => {
@@ -44,7 +45,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2.5}
-                  aria-label="Step complete"
+                  aria-label={t('setup.stepComplete')}
                   role="img"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -133,7 +134,7 @@ function StepMode({
             <div>
               <span className="text-sm font-medium text-text">{t('setup.discoveryOnlyLabel')}</span>
               <p className="text-xs text-muted mt-0.5">
-                Curate a personal list of recommendations. Export as JSON, CSV, or M3U.
+                {t('setup.discoveryModeDescription')}
               </p>
             </div>
           </div>
@@ -187,8 +188,7 @@ function StepLidarr({
         />
       </Field>
       <p className="text-xs text-muted">
-        Connection tests are available in Settings after setup. Continue once the URL and API key
-        look right.
+        {t('setup.connectionTestsContinueLidarr')}
       </p>
       <Button onClick={onContinue} disabled={!form.url || !form.apiKey} className="w-full">
         {t('common.continue')}
@@ -239,12 +239,11 @@ function StepEmby({
           onChange={(e) => onFormChange({ ...form, userId: e.target.value })}
         />
         <p className="text-xs text-muted mt-1">
-          Found under Emby Dashboard -&gt; Users -&gt; (select user). The URL contains the user ID.
+          {t('setup.embyUserIdHelp')}
         </p>
       </Field>
       <p className="text-xs text-muted">
-        Connection tests are available in Settings after setup. Continue once the URL, API key, and
-        user ID look right.
+        {t('setup.connectionTestsContinueEmby')}
       </p>
       <Button
         onClick={onContinue}
@@ -308,9 +307,7 @@ function StepAi({
       <div>
         <h2 className="text-xl font-semibold text-text">{t('setup.aiProvider')}</h2>
         <p className="text-sm text-muted mt-1">{t('setup.aiDescription')}</p>
-        <p className="text-xs text-muted mt-2">
-          You&apos;ll connect personal listening sources later in Settings after you log in.
-        </p>
+        <p className="text-xs text-muted mt-2">{t('setup.listeningSourcesLater')}</p>
       </div>
       <Field label={t('setup.provider')} id="ai-provider">
         <Select
@@ -318,11 +315,11 @@ function StepAi({
           value={form.provider}
           onChange={(e) => onFormChange({ ...form, provider: e.target.value, model: '' })}
         >
-          <option value="anthropic">Anthropic</option>
-          <option value="openai">OpenAI</option>
-          <option value="gemini">Google Gemini</option>
-          <option value="ollama">Ollama (local)</option>
-          <option value="openai-compatible">OpenAI-Compatible</option>
+          <option value="anthropic">{t('setup.providerAnthropic')}</option>
+          <option value="openai">{t('setup.providerOpenAi')}</option>
+          <option value="gemini">{t('setup.providerGemini')}</option>
+          <option value="ollama">{t('setup.providerOllama')}</option>
+          <option value="openai-compatible">{t('setup.providerOpenAiCompatible')}</option>
         </Select>
       </Field>
       <Field label={t('setup.model')} id="ai-model">
@@ -385,15 +382,9 @@ function StepAi({
         </Field>
       )}
       {form.provider === 'openai-compatible' && (
-        <p className="text-xs text-muted">
-          Works with Groq, OpenRouter, LiteLLM, LocalAI, and any OpenAI-compatible endpoint. API key
-          is optional for local services.
-        </p>
+        <p className="text-xs text-muted">{t('setup.openAiCompatibleHint')}</p>
       )}
-      <p className="text-xs text-muted">
-        You can verify the provider from Settings after setup. Continue once the provider details
-        are filled in.
-      </p>
+      <p className="text-xs text-muted">{t('setup.verifyProviderLater')}</p>
       <Button
         onClick={onContinue}
         disabled={!form.model || (needsApiKey && !form.apiKey) || (needsBaseUrl && !form.baseUrl)}
@@ -435,9 +426,7 @@ function StepDone({
       <div>
         <h2 className="text-xl font-semibold text-text">{t('setup.readyTitle')}</h2>
         <p className="text-sm text-muted mt-1">{t('setup.readyDescription')}</p>
-        <p className="text-xs text-muted mt-2">
-          Personal listening sources are connected per user from Settings after setup.
-        </p>
+        <p className="text-xs text-muted mt-2">{t('setup.personalSourcesAfterSetup')}</p>
       </div>
       <div className="rounded-lg border border-border bg-surface divide-y divide-border">
         {rows.map((row) => (
@@ -496,7 +485,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       await completeSetup(config)
       onComplete()
     } catch {
-      toast.error('Setup failed -- please try again')
+      toast.error(t('setup.failed'))
       setStarting(false)
     }
   }

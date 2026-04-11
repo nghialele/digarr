@@ -34,17 +34,18 @@ import {
 } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 
-function relativeTime(dateStr: string | Date): string {
-  const ms = Date.now() - new Date(dateStr).getTime()
-  const future = ms < 0
-  const abs = Math.abs(ms)
-  const mins = Math.floor(abs / 60_000)
-  if (mins < 2) return future ? 'soon' : 'just now'
-  if (mins < 60) return future ? `in ${mins}m` : `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return future ? `in ${hrs}h` : `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  return future ? `in ${days}d` : `${days}d ago`
+function formatRelativeTime(locale: string, dateStr: string | Date): string {
+  const diffMs = new Date(dateStr).getTime() - Date.now()
+  const diffMinutes = Math.round(diffMs / 60_000)
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+
+  if (Math.abs(diffMinutes) < 1) return formatter.format(0, 'second')
+  if (Math.abs(diffMinutes) < 60) return formatter.format(diffMinutes, 'minute')
+
+  const diffHours = Math.round(diffMinutes / 60)
+  if (Math.abs(diffHours) < 24) return formatter.format(diffHours, 'hour')
+
+  return formatter.format(Math.round(diffHours / 24), 'day')
 }
 
 function SectionHeader({
@@ -75,17 +76,19 @@ function SubscriptionPulse({
   subs: Subscription[] | undefined
   scheduler: { jobs: SchedulerJob[] } | undefined
 }) {
+  const { locale, t } = useI18n()
   if (!subs || subs.length === 0) {
     return (
       <div>
-        <SectionHeader title="Subscriptions" linkText="Get started" linkTo="/subscriptions" />
+        <SectionHeader
+          title={t('dashboard.subscriptions')}
+          linkText={t('dashboard.getStarted')}
+          linkTo="/subscriptions"
+        />
         <div className="bg-surface border border-border rounded-lg p-6 text-center space-y-2">
-          <p className="text-sm text-muted">
-            You haven't set up any automatic discovery yet. Digarr can find new artists for you on a
-            schedule.
-          </p>
+          <p className="text-sm text-muted">{t('dashboard.subscriptionsEmpty')}</p>
           <Link to="/subscriptions" className="text-xs text-accent hover:underline inline-block">
-            Set up automatic discovery
+            {t('dashboard.setUpAutomaticDiscovery')}
           </Link>
         </div>
       </div>
@@ -94,11 +97,15 @@ function SubscriptionPulse({
 
   return (
     <div>
-      <SectionHeader title="Subscriptions" linkText="Manage" linkTo="/subscriptions" />
+      <SectionHeader
+        title={t('dashboard.subscriptions')}
+        linkText={t('dashboard.manage')}
+        linkTo="/subscriptions"
+      />
       <div className="bg-surface border border-border rounded-lg divide-y divide-border">
         {subs.slice(0, 5).map((sub) => {
           const job = scheduler?.jobs.find((j) => j.name === `subscription-${sub.id}`)
-          const nextRun = job?.nextRun ? relativeTime(job.nextRun) : null
+          const nextRun = job?.nextRun ? formatRelativeTime(locale, job.nextRun) : null
           return (
             <div key={sub.id} className="flex items-center gap-3 px-4 py-2.5">
               <span
@@ -108,9 +115,9 @@ function SubscriptionPulse({
                 <p className="text-sm text-text truncate">{sub.name}</p>
                 <p className="text-xs text-muted">
                   {sub.lastResultCount != null
-                    ? `${sub.lastResultCount} found last run`
-                    : 'No runs yet'}
-                  {nextRun && ` \u00b7 next ${nextRun}`}
+                    ? `${sub.lastResultCount} ${t('dashboard.foundLastRun')}`
+                    : t('dashboard.noRunsYet')}
+                  {nextRun && ` \u00b7 ${t('dashboard.nextRun')} ${nextRun}`}
                 </p>
               </div>
             </div>
@@ -140,10 +147,13 @@ function ListeningActivity({
   range: 'week' | 'month'
   onRangeChange: (r: 'week' | 'month') => void
 }) {
+  const { t } = useI18n()
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Listening</h2>
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+          {t('dashboard.listening')}
+        </h2>
         <div className="flex gap-1">
           {(['week', 'month'] as const).map((r) => (
             <button
@@ -159,11 +169,9 @@ function ListeningActivity({
       </div>
       {!data || data.tracks.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg p-6 text-center space-y-2">
-          <p className="text-sm text-muted">
-            Connect your Last.fm or ListenBrainz account so Digarr can learn what you listen to.
-          </p>
+          <p className="text-sm text-muted">{t('dashboard.connectListening')}</p>
           <Link to="/settings" className="text-xs text-accent hover:underline inline-block">
-            Connect an account
+            {t('dashboard.connectAccount')}
           </Link>
         </div>
       ) : (
@@ -187,9 +195,10 @@ function ListeningActivity({
 }
 
 function TasteProfile({ genres, loading }: { genres: TasteGenre[] | undefined; loading: boolean }) {
+  const { t } = useI18n()
   return (
     <div>
-      <SectionHeader title="Your Taste" />
+      <SectionHeader title={t('dashboard.yourTaste')} />
       <div className="bg-surface border border-border rounded-lg p-4">
         {loading ? (
           <div className="space-y-3">
@@ -198,10 +207,7 @@ function TasteProfile({ genres, loading }: { genres: TasteGenre[] | undefined; l
             ))}
           </div>
         ) : !genres || genres.length === 0 ? (
-          <p className="text-sm text-muted text-center py-4">
-            As you approve or reject artist recommendations, Digarr learns your taste and gets
-            better at finding music you'll like.
-          </p>
+          <p className="text-sm text-muted text-center py-4">{t('dashboard.tasteEmpty')}</p>
         ) : (
           <div className="space-y-2.5">
             {genres.map((g, i) => (
@@ -232,9 +238,10 @@ function ActivityFeed({
   entries: ActivityEntry[] | undefined
   loading: boolean
 }) {
+  const { locale, t } = useI18n()
   return (
     <div>
-      <SectionHeader title="Recent Activity" />
+      <SectionHeader title={t('dashboard.recentActivity')} />
       <div className="bg-surface border border-border rounded-lg">
         {loading ? (
           <div className="p-4 space-y-3">
@@ -243,9 +250,7 @@ function ActivityFeed({
             ))}
           </div>
         ) : !entries || entries.length === 0 ? (
-          <p className="text-sm text-muted text-center py-6">
-            Nothing here yet. Activity will show up as you discover and approve new artists.
-          </p>
+          <p className="text-sm text-muted text-center py-6">{t('dashboard.activityEmpty')}</p>
         ) : (
           <div className="divide-y divide-border">
             {entries.map((entry) => (
@@ -267,14 +272,19 @@ function ActivityFeed({
                     {entry.data.username && (
                       <span className="text-muted">{entry.data.username}: </span>
                     )}
-                    {entry.type === 'approved' && `Approved ${entry.data.artistName}`}
-                    {entry.type === 'rejected' && `Rejected ${entry.data.artistName}`}
+                    {entry.type === 'approved' &&
+                      `${t('dashboard.activityApproved')} ${entry.data.artistName}`}
+                    {entry.type === 'rejected' &&
+                      `${t('dashboard.activityRejected')} ${entry.data.artistName}`}
                     {entry.type === 'subscription_run' &&
-                      `${entry.data.subscriptionName}: ${entry.data.artistsNew} new`}
-                    {entry.type === 'scan_completed' && `Scan: ${entry.data.discovered} discovered`}
+                      `${entry.data.subscriptionName}: ${entry.data.artistsNew} ${t('dashboard.activityNew')}`}
+                    {entry.type === 'scan_completed' &&
+                      `${t('dashboard.activityScan')}: ${entry.data.discovered} ${t('dashboard.activityDiscovered')}`}
                   </p>
                 </div>
-                <span className="text-xs text-muted shrink-0">{relativeTime(entry.timestamp)}</span>
+                <span className="text-xs text-muted shrink-0">
+                  {formatRelativeTime(locale, entry.timestamp)}
+                </span>
               </div>
             ))}
           </div>
@@ -421,13 +431,15 @@ export function Dashboard() {
       } else {
         await updateRecommendation(id, { status })
       }
-      toast.success(status === 'approved' ? 'Approved' : 'Rejected')
+      toast.success(
+        status === 'approved' ? t('dashboard.approvedSuccess') : t('dashboard.rejectedSuccess'),
+      )
       queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
       if (status === 'approved') {
         queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
       }
     } catch {
-      toast.error('Failed')
+      toast.error(t('dashboard.actionFailed'))
       setActedIds((prev) => {
         const next = new Set(prev)
         next.delete(id)
@@ -448,11 +460,11 @@ export function Dashboard() {
     setActedIds((prev) => new Set([...prev, recId]))
     try {
       await approveToTarget(recId, targetId)
-      toast.success('Sent to target')
+      toast.success(t('dashboard.sentToTarget'))
       queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
     } catch {
-      toast.error('Failed to approve')
+      toast.error(t('dashboard.approveFailed'))
     } finally {
       setActedIds((prev) => {
         const next = new Set(prev)
@@ -495,8 +507,8 @@ export function Dashboard() {
             onSkip={handleSkip}
             onRunScan={() => {
               triggerPipeline()
-                .then(() => toast.success('Scan started'))
-                .catch(() => toast.error('Failed to start scan'))
+                .then(() => toast.success(t('discover.scanStarted')))
+                .catch(() => toast.error(t('discover.scanStartFailed')))
             }}
             targets={approveTargets}
             onApproveToTarget={handleApproveToTarget}
@@ -509,8 +521,7 @@ export function Dashboard() {
       </div>
 
       <Hint id="dashboard-feedback-tip" type="spotlight">
-        Approve or reject recommendations to teach Digarr your taste. The more feedback you give,
-        the better your future recommendations get.
+        {t('dashboard.feedbackTip')}
       </Hint>
 
       {/* Subscription Pulse + Listening Activity */}
@@ -518,8 +529,7 @@ export function Dashboard() {
         <div className="space-y-3">
           <SubscriptionPulse subs={subsData} scheduler={schedulerData} />
           <Hint id="dashboard-subscriptions-tip" type="inline">
-            Subscriptions automatically find new artists on a schedule. Check the Subscriptions page
-            to set one up.
+            {t('dashboard.subscriptionsTip')}
           </Hint>
         </div>
         <div className="space-y-3">
@@ -529,8 +539,7 @@ export function Dashboard() {
             onRangeChange={setListenRange}
           />
           <Hint id="dashboard-listening-tip" type="inline">
-            Your listening data comes from ListenBrainz or Last.fm. Make sure your token is set in
-            Settings for accurate results.
+            {t('dashboard.listeningTip')}
           </Hint>
         </div>
       </div>
@@ -540,8 +549,7 @@ export function Dashboard() {
         <div className="space-y-3">
           <TasteProfile genres={tasteData} loading={tasteLoading} />
           <Hint id="dashboard-taste-tip" type="inline">
-            Your taste profile is built from your listening history and approved recommendations.
-            Connect more sources in Settings for richer taste analysis.
+            {t('dashboard.tasteTip')}
           </Hint>
         </div>
         <ActivityFeed entries={activityData} loading={activityLoading} />
@@ -567,11 +575,11 @@ export function Dashboard() {
               } else {
                 await approveRecommendation(recId, overrides)
               }
-              toast.success('Added to Lidarr')
+              toast.success(t('dashboard.addedToLidarr'))
               queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
               queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
             } catch {
-              toast.error('Failed to add to Lidarr')
+              toast.error(t('dashboard.addToLidarrFailed'))
             } finally {
               setActedIds((prev) => {
                 const next = new Set(prev)

@@ -152,13 +152,14 @@ import {
   getStoredToken,
   updatePreferredLocale,
 } from '@/web/lib/api'
-import { setStoredLocale } from '@/web/lib/locale-storage'
+import { getStoredLocale, setStoredLocale } from '@/web/lib/locale-storage'
 
 const mockGetAuthStatus = getAuthStatus as ReturnType<typeof vi.fn>
 const mockGetCurrentUser = getCurrentUser as ReturnType<typeof vi.fn>
 const mockGetPipelineStatus = getPipelineStatus as ReturnType<typeof vi.fn>
 const mockGetSetupStatus = getSetupStatus as ReturnType<typeof vi.fn>
 const mockGetStoredToken = getStoredToken as ReturnType<typeof vi.fn>
+const mockGetStoredLocale = getStoredLocale as ReturnType<typeof vi.fn>
 const mockUpdatePreferredLocale = updatePreferredLocale as ReturnType<typeof vi.fn>
 const mockSetStoredLocale = setStoredLocale as ReturnType<typeof vi.fn>
 
@@ -220,6 +221,7 @@ describe('language switcher surfaces', () => {
       }),
     })
     mockGetStoredToken.mockReturnValue(null)
+    mockGetStoredLocale.mockReturnValue('en')
     mockGetAuthStatus.mockResolvedValue({
       required: true,
       hasUsers: true,
@@ -244,6 +246,25 @@ describe('language switcher surfaces', () => {
     )
 
     expect(await screen.findByLabelText('Language')).toBeInTheDocument()
+  })
+
+  it('uses translated registration copy in French', async () => {
+    mockGetAuthStatus.mockResolvedValue({
+      required: true,
+      hasUsers: false,
+      oidcEnabled: false,
+    })
+    mockGetStoredToken.mockReturnValue(null)
+    mockGetStoredLocale.mockReturnValue('fr')
+
+    renderWithProviders(
+      <AuthGate>
+        <div>app</div>
+      </AuthGate>,
+    )
+
+    expect(await screen.findByRole('button', { name: 'Creer un compte' })).toBeInTheDocument()
+    expect(screen.getByText('Vous avez deja un compte ? Se connecter')).toBeInTheDocument()
   })
 
   it('renders a language switcher in the top bar for authenticated users', async () => {
