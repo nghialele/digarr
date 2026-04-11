@@ -225,11 +225,13 @@ export function settingsRoutes(deps: AppDependencies) {
       globalFields[key] = val
     }
 
-    if (globalFields.preferences && typeof globalFields.preferences === 'object') {
-      globalFields.preferences = mergePreferenceUpdate(
-        storedSettings?.preferences,
-        globalFields.preferences as Partial<Preferences>,
-      )
+    const incomingPrefs =
+      globalFields.preferences && typeof globalFields.preferences === 'object'
+        ? (globalFields.preferences as Partial<Preferences>)
+        : undefined
+
+    if (incomingPrefs) {
+      globalFields.preferences = mergePreferenceUpdate(storedSettings?.preferences, incomingPrefs)
     }
 
     if (!isAdmin && Object.keys(globalFields).length > 0) {
@@ -244,10 +246,12 @@ export function settingsRoutes(deps: AppDependencies) {
       await deps.updateSettings(globalFields)
     }
 
-    const prefs = globalFields.preferences as Partial<Preferences> | undefined
-    if (prefs?.scheduleCron !== undefined && typeof prefs.scheduleCron === 'string') {
+    if (
+      incomingPrefs?.scheduleCron !== undefined &&
+      typeof incomingPrefs.scheduleCron === 'string'
+    ) {
       try {
-        deps.restartScheduler(prefs.scheduleCron || null)
+        deps.restartScheduler(incomingPrefs.scheduleCron || null)
       } catch (err: unknown) {
         console.error('Failed to apply cron expression:', err)
         const row = await buildSettingsResponse(deps, userId, isAdmin)
@@ -258,7 +262,10 @@ export function settingsRoutes(deps: AppDependencies) {
       }
     }
 
-    if (prefs?.playlistEnabled !== undefined || prefs?.playlistSchedule !== undefined) {
+    if (
+      incomingPrefs?.playlistEnabled !== undefined ||
+      incomingPrefs?.playlistSchedule !== undefined
+    ) {
       await deps.restartPlaylistScheduler()
     }
 

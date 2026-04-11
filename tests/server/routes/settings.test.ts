@@ -294,6 +294,30 @@ describe('PATCH /api/settings', () => {
     expect(restartScheduler).not.toHaveBeenCalled()
   })
 
+  it('does not restart scheduler when scheduleCron only exists in stored preferences', async () => {
+    const restartScheduler = vi.fn()
+    const getSettings = vi.fn(
+      async () =>
+        ({
+          ...mockSettings,
+          preferences: {
+            scheduleCron: '0 4 * * *',
+            playlistEnabled: false,
+          },
+        }) as unknown as SettingsRow,
+    )
+    const app = createApp(makeDeps({ restartScheduler, getSettings }))
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { librarySeedRatio: 0.4 } }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(restartScheduler).not.toHaveBeenCalled()
+  })
+
   it('restarts playlist scheduling when playlist preferences change', async () => {
     const restartPlaylistScheduler = vi.fn(async () => {})
     const app = createApp(makeDeps({ restartPlaylistScheduler }))
@@ -304,6 +328,31 @@ describe('PATCH /api/settings', () => {
     })
     expect(res.status).toBe(200)
     expect(restartPlaylistScheduler).toHaveBeenCalledOnce()
+  })
+
+  it('does not restart playlist scheduling when playlist fields only exist in stored preferences', async () => {
+    const restartPlaylistScheduler = vi.fn(async () => {})
+    const getSettings = vi.fn(
+      async () =>
+        ({
+          ...mockSettings,
+          preferences: {
+            scheduleCron: null,
+            playlistEnabled: true,
+            playlistSchedule: '0 6 * * 1',
+          },
+        }) as unknown as SettingsRow,
+    )
+    const app = createApp(makeDeps({ restartPlaylistScheduler, getSettings }))
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: { librarySeedRatio: 0.4 } }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(restartPlaylistScheduler).not.toHaveBeenCalled()
   })
 
   it('does not restart scheduler when no preferences in body', async () => {
