@@ -1,8 +1,6 @@
-import { en } from './en'
 import type { MessageCatalog } from './types'
 
 export const zhCN = {
-  ...en,
   'auth.signIn': '登录',
   'auth.signingIn': '正在登录...',
   'auth.username': '用户名',

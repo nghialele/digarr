@@ -16,9 +16,10 @@ import { ru } from '@/core/i18n/messages/ru'
 import { tr } from '@/core/i18n/messages/tr'
 import { uk } from '@/core/i18n/messages/uk'
 import { zhCN } from '@/core/i18n/messages/zh-CN'
-import { formatDateTime, formatShortDate } from '@/web/lib/intl'
+import type { MessageCatalog } from '@/core/i18n/messages/types'
+import { formatDate, formatDateTime, formatShortDate, formatShortDateTime } from '@/web/lib/intl'
 
-const rawCatalogs = {
+const rawCatalogs: Record<SupportedLocale, MessageCatalog> = {
   en,
   es,
   fr,
@@ -69,6 +70,37 @@ describe('intl helpers', () => {
       new Intl.DateTimeFormat(locale, {
         dateStyle: 'medium',
         timeStyle: 'short',
+      }).format(new Date(value)),
+    )
+  })
+
+  it('formats short date times for month-day-time views', () => {
+    expect(formatShortDateTime(locale, value)).toBe(
+      new Intl.DateTimeFormat(locale, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(value)),
+    )
+  })
+
+  it('supports arbitrary Intl date formatting options', () => {
+    expect(
+      formatDate(locale, value, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    ).toBe(
+      new Intl.DateTimeFormat(locale, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       }).format(new Date(value)),
     )
   })

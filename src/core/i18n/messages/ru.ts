@@ -1,8 +1,6 @@
-import { en } from './en'
 import type { MessageCatalog } from './types'
 
 export const ru = {
-  ...en,
   'auth.signIn': 'Войти',
   'auth.signingIn': 'Вход...',
   'auth.username': 'Имя пользователя',

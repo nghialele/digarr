@@ -1,8 +1,6 @@
-import { en } from './en'
 import type { MessageCatalog } from './types'
 
 export const ko = {
-  ...en,
   'auth.signIn': '로그인',
   'auth.signingIn': '로그인 중...',
   'auth.username': '사용자 이름',
