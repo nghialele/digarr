@@ -2,6 +2,14 @@
 
 All notable user-facing changes are documented here.
 
+## v0.21.1 - 2026-04-12
+
+### Fixed
+
+- Locale catalogs now read naturally across the shipped languages instead of leaving large English fallback blocks in genre browsing, job history, library reconciliation, and common UI actions
+- Register and voice are more consistent across translations, including Romanian formal UI copy and less literal machine-translated wording in multiple locales
+- Translation copy around pull-to-refresh, queueing, playlist actions, and "you're all caught up" states now fits the app context better across languages
+
 ## v0.21.0 - 2026-04-11
 
 ### Added
