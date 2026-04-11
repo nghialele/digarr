@@ -9,6 +9,8 @@ import {
   registerUser,
   setStoredToken,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
+import { LanguageSwitcher } from './language-switcher'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
@@ -130,6 +132,7 @@ function LoginForm({
   oidcEnabled?: boolean
   version?: string
 }) {
+  const { locale, setLocale } = useI18n()
   const [mode, setMode] = useState<'credentials' | 'token'>('credentials')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -273,6 +276,9 @@ function LoginForm({
               </button>
             </form>
           )}
+          <div className="mt-4 flex justify-center">
+            <LanguageSwitcher value={locale} onChange={setLocale} />
+          </div>
         </CardContent>
       </Card>
       {version && <p className="text-xs text-muted mt-4 text-center">v{version}</p>}
@@ -291,6 +297,7 @@ function RegisterForm({
   onSwitchToLogin: () => void
   version?: string
 }) {
+  const { locale, setLocale } = useI18n()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -365,6 +372,9 @@ function RegisterForm({
               Already have an account? Sign in
             </button>
           </form>
+          <div className="mt-4 flex justify-center">
+            <LanguageSwitcher value={locale} onChange={setLocale} />
+          </div>
         </CardContent>
       </Card>
       {version && <p className="text-xs text-muted mt-4 text-center">v{version}</p>}

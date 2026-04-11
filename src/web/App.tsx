@@ -1,4 +1,4 @@
-import { QueryClientProvider, useQuery } from '@tanstack/react-query'
+import { QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3,
   ChevronDown,
@@ -22,10 +22,12 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 're
 import { Toaster, toast } from 'sonner'
 import { errMsg } from '@/core/validation'
 import { VERSION } from '@/version'
+import { normalizeLocale, type SupportedLocale } from '@/core/i18n/locales'
 import { AuthGate } from './components/auth-gate'
 import { BottomNav } from './components/bottom-nav'
 import { ErrorBoundary } from './components/error-boundary'
 import { KeyboardShortcuts } from './components/keyboard-shortcuts'
+import { LanguageSwitcher } from './components/language-switcher'
 import { PreviewPlayer } from './components/preview-player'
 import { useClickOutside } from './hooks/use-click-outside'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
@@ -38,7 +40,9 @@ import {
   getSetupStatus,
   logoutUser,
   triggerPipeline,
+  updatePreferredLocale,
 } from './lib/api'
+import { useI18n } from './lib/i18n'
 import { PreviewContext } from './lib/preview-context'
 import { queryClient } from './lib/query-client'
 import {
@@ -294,6 +298,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [colorTheme, setColorThemeState] = useState<ColorTheme>(getStoredColorTheme)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const preview = usePreview()
+  const queryClient = useQueryClient()
+  const { locale, setLocale } = useI18n()
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const { data: pipelineStatus } = useQuery({
     queryKey: ['pipelineStatus'],
@@ -301,8 +307,23 @@ function AppShell({ children }: { children: React.ReactNode }) {
     refetchInterval: (query) => (query.state.data?.running ? 3000 : 15000),
   })
   const pipelineRunning = pipelineStatus?.running ?? false
+  const localeMutation = useMutation({
+    mutationFn: updatePreferredLocale,
+    onSuccess: ({ preferredLocale }) => {
+      queryClient.setQueryData(['currentUser'], (prev: typeof currentUser) =>
+        prev ? { ...prev, preferredLocale } : prev,
+      )
+    },
+  })
 
   useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
+
+  useEffect(() => {
+    const preferredLocale = normalizeLocale(currentUser?.preferredLocale)
+    if (preferredLocale) {
+      setLocale(preferredLocale)
+    }
+  }, [currentUser?.preferredLocale, setLocale])
 
   function handleModeChange(m: Mode) {
     setModeState(m)
@@ -314,6 +335,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
     setColorThemeState(t)
     setStoredColorTheme(t)
     applyTheme(t, mode)
+  }
+
+  function handleLocaleChange(nextLocale: SupportedLocale) {
+    setLocale(nextLocale)
+    if (currentUser) {
+      localeMutation.mutate(nextLocale)
+    }
   }
 
   // Listen for system preference changes when in system mode
@@ -397,6 +425,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <LanguageSwitcher value={locale} onChange={handleLocaleChange} />
               <ThemePicker
                 mode={mode}
                 colorTheme={colorTheme}

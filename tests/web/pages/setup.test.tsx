@@ -2,6 +2,14 @@
 
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nProvider } from '@/web/lib/i18n'
+
+vi.mock('@/web/lib/locale-storage', () => ({
+  detectBrowserLocale: vi.fn(() => 'en'),
+  getRequestLocale: vi.fn(() => 'en'),
+  getStoredLocale: vi.fn(() => 'en'),
+  setStoredLocale: vi.fn(),
+}))
 
 vi.mock('@/web/lib/api', () => ({
   completeSetup: vi.fn(),
@@ -21,8 +29,16 @@ describe('SetupWizard', () => {
     vi.clearAllMocks()
   })
 
+  function renderSetupWizard() {
+    return render(
+      <I18nProvider>
+        <SetupWizard onComplete={vi.fn()} />
+      </I18nProvider>,
+    )
+  }
+
   async function goToLidarrStep() {
-    render(<SetupWizard onComplete={vi.fn()} />)
+    renderSetupWizard()
     fireEvent.click(screen.getByRole('button', { name: /Lidarr/i }))
     await screen.findByText('Connect Lidarr')
   }
@@ -48,7 +64,7 @@ describe('SetupWizard', () => {
   })
 
   it('discovery mode goes straight to AI setup', async () => {
-    render(<SetupWizard onComplete={vi.fn()} />)
+    renderSetupWizard()
     fireEvent.click(screen.getByRole('button', { name: /Just discover/i }))
 
     await screen.findByText('AI Provider')
@@ -61,17 +77,23 @@ describe('SetupWizard', () => {
   })
 
   it('shows Emby as a setup mode option', async () => {
-    render(<SetupWizard onComplete={vi.fn()} />)
+    renderSetupWizard()
     expect(screen.getByRole('button', { name: /Emby/i })).toBeInTheDocument()
   })
 
   it('emby mode reveals the Emby connection step', async () => {
-    render(<SetupWizard onComplete={vi.fn()} />)
+    renderSetupWizard()
     fireEvent.click(screen.getByRole('button', { name: /Emby/i }))
 
     await screen.findByText('Connect Emby')
     expect(screen.getByLabelText('Emby URL')).toBeInTheDocument()
     expect(screen.getByLabelText('API Key')).toBeInTheDocument()
     expect(screen.getByLabelText('User ID')).toBeInTheDocument()
+  })
+
+  it('renders a language switcher during setup', () => {
+    renderSetupWizard()
+
+    expect(screen.getByLabelText('Language')).toBeInTheDocument()
   })
 })

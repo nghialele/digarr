@@ -1,11 +1,13 @@
 import { Compass, MonitorPlay } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { LanguageSwitcher } from '../components/language-switcher'
 import { Field } from '../components/field'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
 import { completeSetup } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 type FormState = {
   lidarr: { url: string; apiKey: string; skipTlsVerify: boolean }
@@ -462,6 +464,7 @@ const DEFAULT_FORM: FormState = {
 }
 
 export function SetupWizard({ onComplete }: { onComplete: () => void }) {
+  const { locale, setLocale } = useI18n()
   const [step, setStep] = useState(1)
   const [mode, setMode] = useState<SetupMode | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -561,6 +564,10 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
             &larr; Back
           </button>
         )}
+
+        <div className="mt-4 flex justify-center">
+          <LanguageSwitcher value={locale} onChange={setLocale} />
+        </div>
       </div>
     </div>
   )

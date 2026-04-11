@@ -5,15 +5,25 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nProvider } from '@/web/lib/i18n'
+
+vi.mock('@/web/lib/locale-storage', () => ({
+  detectBrowserLocale: vi.fn(() => 'en'),
+  getRequestLocale: vi.fn(() => 'en'),
+  getStoredLocale: vi.fn(() => 'en'),
+  setStoredLocale: vi.fn(),
+}))
 
 function renderWithQuery(ui: ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
-    <MemoryRouter>
-      <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-    </MemoryRouter>,
+    <I18nProvider>
+      <MemoryRouter>
+        <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+      </MemoryRouter>
+    </I18nProvider>,
   )
 }
 
@@ -45,6 +55,7 @@ vi.mock('@/web/lib/api', () => ({
   disconnectOAuth: vi.fn().mockResolvedValue(undefined),
   changePassword: vi.fn().mockResolvedValue({ ok: true }),
   logoutUser: vi.fn().mockResolvedValue({ ok: true }),
+  updatePreferredLocale: vi.fn().mockResolvedValue({ success: true, preferredLocale: 'en' }),
   clearStoredToken: vi.fn(),
   AUTH_EXPIRED_EVENT: 'digarr:auth-expired',
   getUserPreferences: vi.fn().mockResolvedValue({
@@ -132,6 +143,14 @@ function setupMocks() {
 describe('SettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    })
   })
 
   it('shows loading skeleton while fetching settings', () => {
@@ -266,5 +285,18 @@ describe('SettingsPage', () => {
     await waitFor(() => {
       expect(mockImportSpotifyLikedSongs).toHaveBeenCalled()
     })
+  })
+
+  it('renders a language switcher in account settings', async () => {
+    setupMocks()
+    renderWithQuery(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Connections')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Account'))
+
+    expect(await screen.findByLabelText('Language')).toBeInTheDocument()
   })
 })
