@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { envConfig } from '@/config/env'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { encryptField } from '@/core/crypto'
+import { normalizeLocale } from '@/core/i18n/locales'
 import { isPrivateIp, isPrivateUrl } from '@/core/notifications'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
 import { isHttpUrl } from '@/core/validation'
@@ -122,6 +123,22 @@ export function authRoutes(deps: AppDependencies) {
       return c.json({ error: 'User not found' }, 404)
     }
     return c.json(user)
+  })
+
+  router.patch('/api/auth/me/locale', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Not authenticated' }, 401)
+
+    const body = await c.req.json()
+    const preferredLocale =
+      body.preferredLocale === null ? null : normalizeLocale(body.preferredLocale)
+
+    if (body.preferredLocale !== null && !preferredLocale) {
+      return c.json({ error: 'Unsupported locale' }, 400)
+    }
+
+    await deps.updateUserPreferredLocale(userId, preferredLocale)
+    return c.json({ success: true, preferredLocale })
   })
 
   // Change password for the current session user (requires session auth, not legacy token)

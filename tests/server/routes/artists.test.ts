@@ -113,6 +113,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     getUserById: vi.fn(async () => null),
     getUserCount: vi.fn(async () => 0),
     updatePassword: vi.fn(async () => {}),
+    updateUserPreferredLocale: vi.fn(async () => {}),
     genreService: {
       getLibraryGenres: vi.fn(async () => []),
       search: vi.fn(async () => []),

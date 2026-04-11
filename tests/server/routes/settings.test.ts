@@ -134,6 +134,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     })),
     getUserCount: vi.fn(async () => 0),
     updatePassword: vi.fn(async () => {}),
+    updateUserPreferredLocale: vi.fn(async () => {}),
     genreService: {} as unknown as AppDependencies['genreService'],
     libraryHealth: {} as unknown as AppDependencies['libraryHealth'],
     librarySync: {} as unknown as AppDependencies['librarySync'],

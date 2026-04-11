@@ -104,7 +104,12 @@ export const registerUser = (username: string, password: string) =>
     method: 'POST',
     body: JSON.stringify({ username, password }),
   })
-export type UserProfile = { id: number; username: string; isAdmin: boolean }
+export type UserProfile = {
+  id: number
+  username: string
+  isAdmin: boolean
+  preferredLocale?: string | null
+}
 export async function getCurrentUser(): Promise<UserProfile | null> {
   const token = getStoredToken()
   if (!token) return null
@@ -122,6 +127,11 @@ export const changePassword = (currentPassword: string, newPassword: string) =>
   fetchApi<{ ok: boolean; token?: string }>('/auth/change-password', {
     method: 'POST',
     body: JSON.stringify({ currentPassword, newPassword }),
+  })
+export const updatePreferredLocale = (preferredLocale: string | null) =>
+  fetchApi<{ success: true; preferredLocale: string | null }>('/auth/me/locale', {
+    method: 'PATCH',
+    body: JSON.stringify({ preferredLocale }),
   })
 
 export const logoutUser = () => fetchApi<{ ok: boolean }>('/auth/logout', { method: 'POST' })

@@ -60,6 +60,7 @@ export const users = pgTable('users', {
   username: text('username').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
   isAdmin: boolean('is_admin').default(false).notNull(),
+  preferredLocale: text('preferred_locale'),
   email: text('email'),
   oidcSubject: text('oidc_subject'),
   authProvider: text('auth_provider').notNull().default('local'),
