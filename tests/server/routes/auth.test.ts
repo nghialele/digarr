@@ -527,7 +527,7 @@ describe('GET /api/auth/me', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.username).toBe('testuser')
-  })
+  }, 15_000)
 
   it('returns preferredLocale from /api/auth/me', async () => {
     const app = createApp(

@@ -353,7 +353,7 @@ describe('Dashboard', () => {
     expect(screen.getByText('Planification:')).toBeInTheDocument()
     expect(screen.getByText('Quotidien')).toBeInTheDocument()
     expect(screen.getByText('Jamais')).toBeInTheDocument()
-    expect(screen.getByText('Desactive')).toBeInTheDocument()
+    expect(screen.getByText('Désactivé')).toBeInTheDocument()
   })
 
   it('shows add_failed recommendations in Recently Approved', async () => {

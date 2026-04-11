@@ -185,7 +185,7 @@ describe('DiscoverPage discovery modes', () => {
     })
 
     expect(toast.success).toHaveBeenCalledWith(
-      'Discovery run started -- check Dashboard for progress',
+      'Discovery run started - check Dashboard for progress',
     )
 
     expect(await screen.findByText('ListenBrainz')).toBeInTheDocument()

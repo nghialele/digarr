@@ -120,7 +120,9 @@ describe('SetupWizard', () => {
     mockGetStoredLocale.mockReturnValue('fr')
     renderSetupWizard()
 
-    fireEvent.click(screen.getByRole('button', { name: /decouvrir|just discover/i }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /découverte uniquement|decouvrir|just discover/i }),
+    )
 
     await screen.findByText('Fournisseur IA')
     expect(
