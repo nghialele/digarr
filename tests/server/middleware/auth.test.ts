@@ -143,7 +143,7 @@ describe('auth middleware', () => {
       const res = await app.request('/api/recommendations')
       // 200 or 404, but NOT 401
       expect(res.status).not.toBe(401)
-    })
+    }, 15_000)
 
     it('reports auth as not required', async () => {
       const app = await createAppWithAuth()

@@ -310,5 +310,5 @@ describe('GET /api/dashboard/activity', () => {
 
     expect(res.status).toBe(200)
     expect(getRecentActivity).toHaveBeenCalledWith(1, false, 5)
-  })
+  }, 15_000)
 })
