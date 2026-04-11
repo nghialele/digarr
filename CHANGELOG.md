@@ -2,6 +2,20 @@
 
 All notable user-facing changes are documented here.
 
+## v0.20.4 - 2026-04-11
+
+### Fixed
+
+- Settings preference updates now merge partial values safely instead of dropping stored defaults or restarting schedulers on unrelated saves
+- Backup restore now recreates the backed-up state cleanly by clearing included tables before re-importing data
+- Similar Artist subscriptions now respect the configured result limit consistently
+- Setup no longer exposes pre-auth connection-test routes, OIDC only auto-links verified emails, and private-host webhook guards now catch IPv4-mapped IPv6 bypasses
+
+### Changed
+
+- Playlist target matching now uses a shared scoring helper across Plex, Jellyfin, and Emby
+- README, contributing guidance, Synology docs, screenshots, and roadmap text were tightened for clarity and release accuracy
+
 ## v0.20.3 - 2026-04-11
 
 ### Added
