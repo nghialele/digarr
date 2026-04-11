@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/web/lib/api', () => ({
   completeSetup: vi.fn(),
-  testService: vi.fn(),
 }))
 
 vi.mock('sonner', () => ({
@@ -15,10 +14,7 @@ vi.mock('sonner', () => ({
   },
 }))
 
-import { testService } from '@/web/lib/api'
 import { SetupWizard } from '@/web/pages/setup'
-
-const mockTestService = vi.mocked(testService)
 
 describe('SetupWizard', () => {
   beforeEach(() => {
@@ -31,53 +27,23 @@ describe('SetupWizard', () => {
     await screen.findByText('Connect Lidarr')
   }
 
-  async function fillAndTestLidarr() {
+  async function fillAndContinueLidarr() {
     fireEvent.change(screen.getByLabelText('Lidarr URL'), {
       target: { value: 'http://localhost:8686' },
     })
     fireEvent.change(screen.getByLabelText('API Key'), {
       target: { value: 'secret' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Test & Continue' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
   }
 
-  it('shows the background sync note after a successful Lidarr test', async () => {
-    mockTestService.mockResolvedValue({ success: true, message: 'Connected' })
-
+  it('moves to AI setup after continuing past Lidarr details', async () => {
     await goToLidarrStep()
-    await fillAndTestLidarr()
-
-    await waitFor(() => {
-      expect(mockTestService).toHaveBeenCalledWith('lidarr', {
-        url: 'http://localhost:8686',
-        apiKey: 'secret',
-        skipTlsVerify: false,
-      })
-    })
+    await fillAndContinueLidarr()
 
     await screen.findByText('AI Provider')
     expect(
-      screen.getByText(
-        "Connected. We'll start syncing your library in the background. The first sync may take a while (see Library Health for progress).",
-      ),
-    ).toBeInTheDocument()
-  })
-
-  it('does not show the background sync note after a failed Lidarr test', async () => {
-    mockTestService.mockResolvedValue({ success: false, message: 'Nope' })
-
-    await goToLidarrStep()
-    await fillAndTestLidarr()
-
-    await waitFor(() => {
-      expect(mockTestService).toHaveBeenCalled()
-    })
-
-    expect(screen.getByText('Connect Lidarr')).toBeInTheDocument()
-    expect(
-      screen.queryByText(
-        "Connected. We'll start syncing your library in the background. The first sync may take a while (see Library Health for progress).",
-      ),
+      screen.queryByText(/We'll start syncing your library in the background/i),
     ).not.toBeInTheDocument()
   })
 

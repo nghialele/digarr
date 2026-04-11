@@ -34,6 +34,10 @@ All screenshots use the Youtarr theme.
 
 ![Subscriptions](screenshots/subscriptions.png)
 
+## Discovery Modes
+
+No committed screenshot yet. This page shipped in `v0.20.0` with ListenBrainz, Release Radar, and Similar Artist Web runs, plus unavailable placeholders for Labels and Artist Relationships.
+
 ## Library Health
 
 ![Library Health](screenshots/library-health.png)

@@ -42,6 +42,25 @@ function maskSecrets(settings: Record<string, unknown>): SettingsResponse {
   return masked
 }
 
+function mergePreferenceUpdate(
+  current: Partial<Preferences> | null | undefined,
+  incoming: Partial<Preferences>,
+): Partial<Preferences> {
+  const merged: Partial<Preferences> = {
+    ...(current ?? {}),
+    ...incoming,
+  }
+
+  if (current?.scoringWeights && incoming.scoringWeights) {
+    merged.scoringWeights = {
+      ...current.scoringWeights,
+      ...incoming.scoringWeights,
+    }
+  }
+
+  return merged
+}
+
 /** Strip global connection fields that should not leak to non-admin users. */
 function stripForNonAdmin(settings: Record<string, unknown>): SettingsResponse {
   const stripped: SettingsResponse = {}
@@ -187,6 +206,10 @@ export function settingsRoutes(deps: AppDependencies) {
       c.get('authSkipped'),
       c.get('legacyTokenAuth'),
     )
+    const storedSettings =
+      Object.hasOwn(sanitized, 'preferences') || Object.hasOwn(sanitized, 'skipTlsVerify')
+        ? await deps.getSettings()
+        : null
 
     // Split fields into user-connection vs global
     const userUpdate: Record<string, string | null> = {}
@@ -200,6 +223,13 @@ export function settingsRoutes(deps: AppDependencies) {
         continue
       }
       globalFields[key] = val
+    }
+
+    if (globalFields.preferences && typeof globalFields.preferences === 'object') {
+      globalFields.preferences = mergePreferenceUpdate(
+        storedSettings?.preferences,
+        globalFields.preferences as Partial<Preferences>,
+      )
     }
 
     if (!isAdmin && Object.keys(globalFields).length > 0) {

@@ -8,7 +8,7 @@ cd digarr
 bun install
 ```
 
-The fastest way to get a dev environment running:
+Run `./scripts/dev-setup.sh` to start a dev environment:
 
 ```sh
 ./scripts/dev-setup.sh

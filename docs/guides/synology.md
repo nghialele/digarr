@@ -10,7 +10,7 @@
 
 ## DSM 7.2+ (Container Manager -- has Project support)
 
-Container Manager supports compose projects natively. This is the easiest path.
+Container Manager supports compose projects natively. Use it if you want a no-SSH setup.
 
 ### Option A: GUI
 
@@ -61,7 +61,7 @@ You can create containers individually with the Launch wizard.
 ### SSH with docker compose (recommended)
 
 The `docker compose` command works via SSH even though the GUI doesn't
-support it. This is the cleanest approach for DSM 7.1:
+support it. Use it on DSM 7.1 if you want the simpler setup path:
 
 ```sh
 sudo mkdir -p /volume1/docker/digarr && cd /volume1/docker/digarr

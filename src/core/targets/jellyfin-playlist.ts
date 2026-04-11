@@ -1,5 +1,6 @@
 import type { ServiceTestResult } from '@/core/types'
 import { errMsg } from '@/core/validation'
+import { pickBestTrackMatch } from './playlist-match'
 import type { DestinationTarget, PlaylistItem, PlaylistResult } from './types'
 
 export type JellyfinPlaylistConfig = {
@@ -59,19 +60,17 @@ export function createJellyfinPlaylistTarget(
         Items: Array<{ Id: string; Name: string; AlbumArtist?: string; Artists?: string[] }>
       }>(url, apiKey, `/Users/${userId}/Items?${params.toString()}`)
 
-      const items = res.Items ?? []
-      if (items.length === 0) return null
-
-      // Prefer exact match on both title and artist
-      const exact = items.find((item) => {
-        const titleMatch = item.Name.toLowerCase() === trackName.toLowerCase()
-        const artistMatch =
-          item.AlbumArtist?.toLowerCase() === artistName.toLowerCase() ||
-          (item.Artists ?? []).some((a) => a.toLowerCase() === artistName.toLowerCase())
-        return titleMatch && artistMatch
-      })
-
-      return (exact ?? items[0])?.Id ?? null
+      return pickBestTrackMatch(
+        (res.Items ?? []).map((item) => ({
+          id: item.Id,
+          title: item.Name,
+          artists: [item.AlbumArtist, ...(item.Artists ?? [])].filter((artist): artist is string =>
+            Boolean(artist),
+          ),
+        })),
+        artistName,
+        trackName,
+      )
     } catch {
       return null
     }

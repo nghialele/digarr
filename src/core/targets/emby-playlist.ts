@@ -1,5 +1,6 @@
 import type { ServiceTestResult } from '@/core/types'
 import { errMsg } from '@/core/validation'
+import { pickBestTrackMatch } from './playlist-match'
 import type { DestinationTarget, PlaylistItem, PlaylistResult } from './types'
 
 export type EmbyPlaylistConfig = {
@@ -34,22 +35,6 @@ export function createEmbyPlaylistTarget(
   targetId: number,
   config: EmbyPlaylistConfig,
 ): DestinationTarget {
-  function findBestMatch(
-    items: Array<{ Id: string; Name: string; AlbumArtist?: string; Artists?: string[] }>,
-    artistName: string,
-    trackName: string,
-  ): string | null {
-    const exact = items.find((item) => {
-      const titleMatch = item.Name.toLowerCase() === trackName.toLowerCase()
-      const artistMatch =
-        item.AlbumArtist?.toLowerCase() === artistName.toLowerCase() ||
-        (item.Artists ?? []).some((artist) => artist.toLowerCase() === artistName.toLowerCase())
-      return titleMatch && artistMatch
-    })
-
-    return (exact ?? items[0])?.Id ?? null
-  }
-
   return {
     id: `emby-playlist-${targetId}`,
     name: 'Emby Playlist',
@@ -73,7 +58,17 @@ export function createEmbyPlaylistTarget(
           }>(config.url, config.apiKey, `/Users/${config.userId}/Items?${params.toString()}`, {
             skipTlsVerify: config.skipTlsVerify,
           })
-          const matchId = findBestMatch(search.Items ?? [], item.artistName, item.trackName)
+          const matchId = pickBestTrackMatch(
+            (search.Items ?? []).map((result) => ({
+              id: result.Id,
+              title: result.Name,
+              artists: [result.AlbumArtist, ...(result.Artists ?? [])].filter(
+                (artist): artist is string => Boolean(artist),
+              ),
+            })),
+            item.artistName,
+            item.trackName,
+          )
           if (matchId) itemIds.push(matchId)
         }
 

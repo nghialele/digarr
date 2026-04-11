@@ -1,8 +1,6 @@
 import { Music, X } from 'lucide-react'
 import type { PreviewSource } from '@/web/hooks/use-preview'
 
-// Source label helpers
-
 const SOURCE_LABELS: Record<PreviewSource['type'], string> = {
   'spotify-embed': 'Spotify',
   'deezer-audio': 'Deezer',
@@ -16,8 +14,6 @@ type Props = {
   loading: boolean
   onStop: () => void
 }
-
-// PreviewPlayer
 
 /**
  * Global mini-player bar fixed to the bottom of the viewport.
@@ -36,7 +32,6 @@ export function PreviewPlayer({ playing, artistName, source, loading, onStop }: 
       aria-label="Preview player"
     >
       <div className="max-w-3xl mx-auto px-4 py-2">
-        {/* Info row */}
         <div className="flex items-center gap-3">
           <Music size={16} className="text-muted shrink-0" aria-hidden="true" />
 
@@ -67,7 +62,6 @@ export function PreviewPlayer({ playing, artistName, source, loading, onStop }: 
           </button>
         </div>
 
-        {/* Embed iframe */}
         {showIframe && (
           <div className="mt-2">
             <iframe

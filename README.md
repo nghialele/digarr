@@ -169,7 +169,7 @@ Admin tools available under Settings > Administration > Data Hygiene:
 
 ## Friends
 
-Other self-hosted music discovery projects worth checking out. Each one takes a different approach:
+Other self-hosted music discovery projects:
 
 | Project | Approach |
 |---------|----------|

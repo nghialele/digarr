@@ -96,7 +96,7 @@ export function createSimilarAdapter(
 
     async fetch(
       config: Record<string, unknown>,
-      _options?: { limit?: number },
+      options?: { limit?: number },
     ): Promise<AdapterResult> {
       const seeds = parseSeeds(config.seedArtists)
       if (seeds.length === 0) return { artists: [] }
@@ -141,8 +141,12 @@ export function createSimilarAdapter(
 
       const allResults = await Promise.all(calls)
       const artists = deduplicateByName(allResults.flat(), (a) => a)
+      const limitedArtists =
+        typeof options?.limit === 'number' && options.limit >= 0
+          ? artists.slice(0, options.limit)
+          : artists
 
-      return { artists }
+      return { artists: limitedArtists }
     },
   }
 }

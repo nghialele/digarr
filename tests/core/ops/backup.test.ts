@@ -19,7 +19,7 @@ function makeMockDb(tableData: Record<string, unknown[]> = {}): OpsDb {
 
 describe('getKeyFingerprint', () => {
   beforeEach(() => {
-    vi.resetModules()
+    initEncryption(undefined)
   })
 
   it('returns null when encryption is disabled', async () => {
@@ -134,8 +134,12 @@ function makeBackupFile(overrides: Partial<BackupFile> = {}): BackupFile {
   }
 }
 
-function makeMockUpsertDb(): OpsDb & { insertCalls: Record<string, unknown[][]> } {
+function makeMockUpsertDb(): OpsDb & {
+  insertCalls: Record<string, unknown[][]>
+  deleteCalls: string[]
+} {
   const insertCalls: Record<string, unknown[][]> = {}
+  const deleteCalls: string[] = []
   const insertFn = vi.fn().mockImplementation((table: unknown) => {
     const name = getTableName(table as Parameters<typeof getTableName>[0])
     return {
@@ -154,14 +158,23 @@ function makeMockUpsertDb(): OpsDb & { insertCalls: Record<string, unknown[][]> 
   })
   const db = {
     insertCalls,
+    deleteCalls,
     insert: insertFn,
+    delete: vi.fn().mockImplementation((table: unknown) => {
+      const name = getTableName(table as Parameters<typeof getTableName>[0])
+      deleteCalls.push(name)
+      return Promise.resolve()
+    }),
     select: selectFn,
     // Restore wraps everything in a transaction -- call the callback with `this`
     transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => Promise<void>) => {
       await cb(db)
     }),
   }
-  return db as unknown as OpsDb & { insertCalls: Record<string, unknown[][]> }
+  return db as unknown as OpsDb & {
+    insertCalls: Record<string, unknown[][]>
+    deleteCalls: string[]
+  }
 }
 
 describe('restoreBackup', () => {
@@ -234,5 +247,16 @@ describe('restoreBackup', () => {
 
     expect(result.tablesRestored.targets).toBeUndefined()
     expect(result.warnings).toHaveLength(0)
+  })
+
+  it('clears included tables before restoring to avoid stale rows surviving', async () => {
+    const db = makeMockUpsertDb()
+    const backup = makeBackupFile()
+    backup.data.targets = []
+
+    await restoreBackup(db, backup)
+
+    expect(db.deleteCalls).toContain('targets')
+    expect(db.deleteCalls).toContain('users')
   })
 })
