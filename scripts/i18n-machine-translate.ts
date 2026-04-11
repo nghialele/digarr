@@ -25,39 +25,39 @@ const baseUrl = process.env.TRANSLATION_BASE_URL?.trim() || undefined
 const apiKey = process.env.TRANSLATION_API_KEY?.trim() || undefined
 const model = process.env.TRANSLATION_MODEL?.trim() || 'gpt-4o-mini'
 
-if (!targetLocale) {
-  console.error('Usage: bun scripts/i18n-machine-translate.ts <locale> [--write]')
-  process.exit(1)
-}
-
-if (!SUPPORTED_LOCALES.includes(targetLocale as (typeof SUPPORTED_LOCALES)[number])) {
-  console.error(`Unsupported locale: ${targetLocale}`)
-  process.exit(1)
-}
-
-if (targetLocale === sourceLocale) {
-  console.error('Target locale must differ from the source locale')
-  process.exit(1)
-}
-
-if (!baseUrl) {
-  console.error('TRANSLATION_BASE_URL must be set for translation generation')
-  process.exit(1)
-}
-
-if (!model) {
-  console.error('TRANSLATION_MODEL must be set for translation generation')
-  process.exit(1)
-}
+const PLACEHOLDER_PATTERN = /\$\{[^}]+\}|\{\{[^}]+\}\}|\{[A-Za-z0-9_]+\}|%[sdif]/g
+const LINE_BREAK_PATTERN = /\r\n|\n|\r/g
+const PROTECTED_TERMS = [
+  'OpenAI-Compatible',
+  'Google Gemini',
+  'OpenRouter',
+  'LiteLLM',
+  'LocalAI',
+  'MusicBrainz',
+  'ListenBrainz',
+  'Last.fm',
+  'Anthropic',
+  'OpenAI',
+  'Lidarr',
+  'Jellyfin',
+  'Navidrome',
+  'Spotify',
+  'Discord',
+  'Deezer',
+  'Digarr',
+  'Groq',
+  'Gemini',
+  'Ollama',
+  'Emby',
+  'Plex',
+  'deezer',
+  'spotify',
+] as const
 
 const sourceMessages = getMessages(sourceLocale)
 const expectedKeys = Object.keys(sourceMessages)
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const outputPath = path.resolve(scriptDir, `../src/core/i18n/messages/${targetLocale}.ts`)
-
-function escapeTemplate(value: string): string {
-  return value.replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
-}
 
 function toExportName(locale: string): string {
   return locale.replace(/[^a-zA-Z0-9]/g, '')
@@ -87,11 +87,30 @@ function renderTypeScriptCatalog(locale: string, catalog: Record<string, string>
   ].join('\n')
 }
 
-async function translateCatalog(): Promise<Record<string, string>> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`
+function countExactMatches(value: string, term: string): number {
+  if (!value.includes(term)) return 0
 
-  const messages = [
+  let count = 0
+  let offset = 0
+  while (true) {
+    const index = value.indexOf(term, offset)
+    if (index === -1) break
+    count++
+    offset = index + term.length
+  }
+  return count
+}
+
+function listMatches(value: string, pattern: RegExp): string[] {
+  return value.match(pattern) ?? []
+}
+
+export function buildTranslationMessages(
+  sourceLocaleValue: string,
+  targetLocaleValue: string,
+  catalog: Record<string, string>,
+) {
+  return [
     {
       role: 'system' as const,
       content:
@@ -99,16 +118,60 @@ async function translateCatalog(): Promise<Record<string, string>> {
     },
     {
       role: 'user' as const,
-      content: escapeTemplate(
-        [
-          `Source locale: ${sourceLocale}`,
-          `Target locale: ${targetLocale}`,
-          'Translate this catalog:',
-          JSON.stringify(sourceMessages, null, 2),
-        ].join('\n\n'),
-      ),
+      content: [
+        `Source locale: ${sourceLocaleValue}`,
+        `Target locale: ${targetLocaleValue}`,
+        'Translate this catalog:',
+        JSON.stringify(catalog, null, 2),
+      ].join('\n\n'),
     },
   ]
+}
+
+export function validateTranslatedCatalog(
+  sourceCatalog: Record<string, string>,
+  translatedCatalog: Record<string, string>,
+): void {
+  const errors: string[] = []
+
+  for (const key of Object.keys(sourceCatalog)) {
+    const sourceValue = sourceCatalog[key]
+    const translatedValue = translatedCatalog[key]
+    if (translatedValue === undefined) continue
+
+    const sourcePlaceholders = listMatches(sourceValue, PLACEHOLDER_PATTERN)
+    const translatedPlaceholders = listMatches(translatedValue, PLACEHOLDER_PATTERN)
+    if (sourcePlaceholders.join('\u0000') !== translatedPlaceholders.join('\u0000')) {
+      errors.push(
+        `${key}: placeholder mismatch (${sourcePlaceholders.join(', ') || 'none'} vs ${translatedPlaceholders.join(', ') || 'none'})`,
+      )
+    }
+
+    const sourceLineBreaks = listMatches(sourceValue, LINE_BREAK_PATTERN)
+    const translatedLineBreaks = listMatches(translatedValue, LINE_BREAK_PATTERN)
+    if (sourceLineBreaks.join('\u0000') !== translatedLineBreaks.join('\u0000')) {
+      errors.push(`${key}: line break mismatch`)
+    }
+
+    for (const term of PROTECTED_TERMS) {
+      const sourceCount = countExactMatches(sourceValue, term)
+      if (sourceCount === 0) continue
+      const translatedCount = countExactMatches(translatedValue, term)
+      if (translatedCount !== sourceCount) {
+        errors.push(`${key}: protected term mismatch for ${term}`)
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Translated catalog failed validation (${errors.join('; ')})`)
+  }
+}
+
+async function translateCatalog(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`
+  const messages = buildTranslationMessages(sourceLocale, targetLocale!, sourceMessages)
 
   const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`, {
     method: 'POST',
@@ -158,24 +221,57 @@ async function translateCatalog(): Promise<Record<string, string>> {
     throw new Error(`Translated catalog failed validation (${parts.join('; ')})`)
   }
 
+  validateTranslatedCatalog(sourceMessages, catalog)
+
   return catalog
 }
 
-const translatedCatalog = await translateCatalog()
+export async function main(): Promise<void> {
+  if (!targetLocale) {
+    console.error('Usage: bun scripts/i18n-machine-translate.ts <locale> [--write]')
+    process.exit(1)
+  }
 
-if (!writeOutput) {
-  console.log(JSON.stringify(translatedCatalog, null, 2))
-  process.exit(0)
+  if (!SUPPORTED_LOCALES.includes(targetLocale as (typeof SUPPORTED_LOCALES)[number])) {
+    console.error(`Unsupported locale: ${targetLocale}`)
+    process.exit(1)
+  }
+
+  if (targetLocale === sourceLocale) {
+    console.error('Target locale must differ from the source locale')
+    process.exit(1)
+  }
+
+  if (!baseUrl) {
+    console.error('TRANSLATION_BASE_URL must be set for translation generation')
+    process.exit(1)
+  }
+
+  if (!model) {
+    console.error('TRANSLATION_MODEL must be set for translation generation')
+    process.exit(1)
+  }
+
+  const translatedCatalog = await translateCatalog()
+
+  if (!writeOutput) {
+    console.log(JSON.stringify(translatedCatalog, null, 2))
+    return
+  }
+
+  await mkdir(path.dirname(outputPath), { recursive: true })
+  const currentFile = await readFile(outputPath, 'utf8').catch(() => '')
+  const nextFile = renderTypeScriptCatalog(targetLocale, translatedCatalog)
+
+  if (currentFile === nextFile) {
+    console.log(`No changes for ${targetLocale}`)
+    return
+  }
+
+  await writeFile(outputPath, nextFile)
+  console.log(`Wrote ${outputPath}`)
 }
 
-await mkdir(path.dirname(outputPath), { recursive: true })
-const currentFile = await readFile(outputPath, 'utf8').catch(() => '')
-const nextFile = renderTypeScriptCatalog(targetLocale, translatedCatalog)
-
-if (currentFile === nextFile) {
-  console.log(`No changes for ${targetLocale}`)
-  process.exit(0)
+if (import.meta.main) {
+  await main()
 }
-
-await writeFile(outputPath, nextFile)
-console.log(`Wrote ${outputPath}`)

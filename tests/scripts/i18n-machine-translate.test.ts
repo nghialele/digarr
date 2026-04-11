@@ -1,0 +1,43 @@
+// @vitest-environment node
+
+import { describe, expect, it } from 'vitest'
+import { buildTranslationMessages, validateTranslatedCatalog } from '../../scripts/i18n-machine-translate'
+
+describe('i18n machine translation helpers', () => {
+  it('passes real source strings to the model without escaping them', () => {
+    const messages = buildTranslationMessages('en', 'fr', {
+      sample: 'Keep ${artist} in `code` form.\nSecond line.',
+    })
+
+    expect(messages[1]?.content).toContain('Keep ${artist} in `code` form.')
+    expect(messages[1]?.content).toContain('\\nSecond line.')
+    expect(messages[1]?.content).not.toContain('\\${artist}')
+    expect(messages[1]?.content).not.toContain('\\`code\\`')
+  })
+
+  it('rejects placeholder and line-break drift', () => {
+    expect(() =>
+      validateTranslatedCatalog(
+        {
+          sample: 'Hello ${name}\nLine two',
+        },
+        {
+          sample: 'Bonjour ${username} Line two',
+        },
+      ),
+    ).toThrow(/placeholder|line break/i)
+  })
+
+  it('rejects protected brand-term drift', () => {
+    expect(() =>
+      validateTranslatedCatalog(
+        {
+          sample: 'Digarr syncs with Lidarr and OpenAI-Compatible services.',
+        },
+        {
+          sample: 'Digar syncs with Lidarr and compatible AI services.',
+        },
+      ),
+    ).toThrow(/protected term/i)
+  })
+})
