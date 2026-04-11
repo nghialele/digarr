@@ -128,12 +128,27 @@ export function authRoutes(deps: AppDependencies) {
   router.patch('/api/auth/me/locale', async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Not authenticated' }, 401)
+    if (c.get('legacyTokenAuth')) {
+      return c.json({ error: 'Session authentication required' }, 403)
+    }
 
     const body = await c.req.json()
-    const preferredLocale =
-      body.preferredLocale === null ? null : normalizeLocale(body.preferredLocale)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return c.json({ error: 'preferredLocale must be a string or null' }, 400)
+    }
 
-    if (body.preferredLocale !== null && !preferredLocale) {
+    const { preferredLocale: rawPreferredLocale } = body as { preferredLocale?: unknown }
+    if (rawPreferredLocale !== null && typeof rawPreferredLocale !== 'string') {
+      return c.json({ error: 'preferredLocale must be a string or null' }, 400)
+    }
+
+    const user = await deps.getUserById(userId)
+    if (!user) return c.json({ error: 'User not found' }, 404)
+
+    const preferredLocale =
+      rawPreferredLocale === null ? null : normalizeLocale(rawPreferredLocale)
+
+    if (rawPreferredLocale !== null && !preferredLocale) {
       return c.json({ error: 'Unsupported locale' }, 400)
     }
 

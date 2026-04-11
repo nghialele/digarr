@@ -108,7 +108,7 @@ export type UserProfile = {
   id: number
   username: string
   isAdmin: boolean
-  preferredLocale?: string | null
+  preferredLocale: string | null
 }
 export async function getCurrentUser(): Promise<UserProfile | null> {
   const token = getStoredToken()
