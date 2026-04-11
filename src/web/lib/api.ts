@@ -1,6 +1,7 @@
 import type { DiscoveryAvailabilityResult } from '../../core/discovery-modes/availability'
 import type { DiscoveryConfigField } from '../../core/discovery-modes/types'
 import type { GenreInfo } from '../../core/genre/types'
+import { getRequestLocale } from './locale-storage'
 
 export type LibraryArtist = {
   id: number
@@ -53,6 +54,7 @@ export const AUTH_EXPIRED_EVENT = 'digarr:auth-expired'
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {}
+  headers['X-Digarr-Locale'] = getRequestLocale()
   // Skip Content-Type for FormData -- browser sets it with the correct boundary
   if (!(options?.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
@@ -115,7 +117,10 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
   if (!token) return null
   try {
     const res = await fetch(`${BASE}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Digarr-Locale': getRequestLocale(),
+      },
     })
     if (!res.ok) return null // Legacy token users have no userId -- don't trigger auth-expired
     return res.json() as Promise<UserProfile>
