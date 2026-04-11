@@ -9,10 +9,10 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-1300%2B_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1600%2B_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
-**Music discovery for your *arr stack.** Connect your listening sources, pick an AI provider, and Digarr turns that into a taste profile, a recommendation pipeline, and a queue you can actually work through. You can approve artists into Lidarr or playlist targets, run mood searches in plain English, launch targeted discovery modes, import Spotify Liked Songs to get started faster, schedule recurring discovery, generate playlists, and browse your library by genre. It is self-hosted, so the data stays with you.
+**Music discovery for your *arr stack.** Connect your listening sources, pick an AI provider, and Digarr turns that into a taste profile, a recommendation pipeline, and a queue you can actually work through. You can approve artists into Lidarr or playlist targets, run mood searches in plain English, launch targeted discovery modes, import Spotify Liked Songs to get started faster, schedule recurring discovery, generate playlists, browse your library by genre, and switch the UI and AI-assisted discovery output across 15 shipped languages. It is self-hosted, so the data stays with you.
 
 > [!WARNING]
 > **Beta software, working toward v1.0.** You can use it today, but expect rough edges. Releases can land quickly, sometimes several in a day, so check the [releases page](https://github.com/iuliandita/digarr/releases) and [CHANGELOG.md](CHANGELOG.md) before updating. If you run into something broken, [open an issue](https://github.com/iuliandita/digarr/issues) or send over a feature idea.
@@ -47,6 +47,9 @@ Build playlists from approved recommendations and send them to Navidrome, Jellyf
 ### Your AI, Your Choice
 Use Anthropic, OpenAI, Google Gemini, Ollama, or any OpenAI-compatible endpoint. Recommendation cards include a short explanation of why an artist made the cut.
 
+### Multilingual UI And AI Output
+Digarr now ships localized catalogs for 15 languages, a visible language switcher before and after login, persisted per-user locale preferences, and locale-aware AI reasoning for mood discovery, quick discover, and full scans.
+
 ### Lidarr Optional
 Digarr also works in pure discovery mode. If you connect Lidarr, approved artists are added with your chosen quality and metadata profiles. If you do not, you can still approve to Spotify playlists, Navidrome, Jellyfin, Emby, and Plex.
 
@@ -65,6 +68,7 @@ Search across Spotify, Deezer, MusicBrainz, TIDAL, and Bandcamp in one pass. Dig
 - **Genre deep dive:** browse by genre with Recommended, Trending, and Deep Cuts tabs
 - **Library sync and reconciliation:** background artist and album sync, per-source status, album sync coverage, unreconciled artist and album review, album coverage badges on recommendation cards, and 6 automated health checks with one-click fixes
 - **Analytics:** approval rates, genre trends, source effectiveness, score distribution, and time-to-act
+- **Multilingual UI:** 15 shipped locales, saved user language preference, localized auth/setup/high-traffic pages, and locale-aware AI reasoning
 - **Top tracks:** Deezer 30-second previews on recommendation cards with MusicBrainz fallback
 - **Decade filtering:** filter recommendations by era, from the 60s through the 20s+
 - **Music previews:** Spotify embeds, Deezer clips, and YouTube on recommendation cards
@@ -125,7 +129,7 @@ You can run the pipeline on a schedule, by hand, through subscriptions for targe
 
 ## Configuration
 
-Most day-to-day configuration lives in the web UI after initial setup. That includes connections, scoring weights, schedules, and preferences. If you connect Spotify, Settings > Connections includes a one-click `Import Liked Songs` action to seed recommendations for a faster first scan. Env-var auto-setup needs initial admin credentials plus an AI provider and model. Listening sources, Lidarr, and Emby can be added later in the UI or supplied during setup. See [`.env.example`](.env.example) for local development fallbacks and [`deploy/docker/.env.example`](deploy/docker/.env.example) for Compose deployments.
+Most day-to-day configuration lives in the web UI after initial setup. That includes connections, scoring weights, schedules, preferences, and the saved interface language. If you connect Spotify, Settings > Connections includes a one-click `Import Liked Songs` action to seed recommendations for a faster first scan. Env-var auto-setup needs initial admin credentials plus an AI provider and model. Listening sources, Lidarr, and Emby can be added later in the UI or supplied during setup. See [`.env.example`](.env.example) for local development fallbacks and [`deploy/docker/.env.example`](deploy/docker/.env.example) for Compose deployments.
 
 ---
 

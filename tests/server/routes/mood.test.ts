@@ -77,4 +77,88 @@ describe('POST /api/mood/discover', () => {
     })
     expect(res.status).toBe(400)
   })
+
+  it('passes responseLocale into the AI prompt builder', async () => {
+    const getRecommendations = vi.fn().mockResolvedValue([
+      {
+        artistName: 'Grouper',
+        reasoning: 'Ambient folk artist known for hazy textures.',
+        confidence: 0.87,
+        genres: ['ambient', 'drone'],
+        suggestedAlbum: 'Dragging a Dead Deer Up a Hill',
+      },
+    ])
+    const app = new Hono()
+    app.route(
+      '/',
+      moodRoutes(
+        makeDeps({
+          providerRegistry: {
+            create: vi.fn().mockResolvedValue({
+              getRecommendations,
+              testConnection: vi.fn(),
+            }),
+          } as unknown as MoodDeps['providerRegistry'],
+        }),
+      ),
+    )
+
+    await app.request('/api/mood/discover', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Digarr-Locale': 'es',
+      },
+      body: JSON.stringify({ query: 'jazz nocturno' }),
+    })
+
+    expect(getRecommendations).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responseLocale: 'es',
+        promptLocale: 'es',
+      }),
+    )
+  })
+
+  it('keeps responseLocale on the resolved UI locale when promptLocale differs', async () => {
+    const getRecommendations = vi.fn().mockResolvedValue([
+      {
+        artistName: 'Grouper',
+        reasoning: 'Ambient folk artist known for hazy textures.',
+        confidence: 0.87,
+        genres: ['ambient', 'drone'],
+        suggestedAlbum: 'Dragging a Dead Deer Up a Hill',
+      },
+    ])
+    const app = new Hono()
+    app.route(
+      '/',
+      moodRoutes(
+        makeDeps({
+          providerRegistry: {
+            create: vi.fn().mockResolvedValue({
+              getRecommendations,
+              testConnection: vi.fn(),
+            }),
+          } as unknown as MoodDeps['providerRegistry'],
+        }),
+      ),
+    )
+
+    await app.request('/api/mood/discover', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Digarr-Locale': 'fr',
+      },
+      body: JSON.stringify({ query: 'jazz nocturno' }),
+    })
+
+    expect(getRecommendations).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responseLocale: 'fr',
+        promptLocale: 'es',
+      }),
+    )
+  })
 })

@@ -4,6 +4,7 @@ import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
 import { createMusicinfoClient } from '@/core/clients/musicinfo'
 import { decryptField } from '@/core/crypto'
+import type { SupportedLocale } from '@/core/i18n/locales'
 import { sendWebhook } from '@/core/notifications'
 import { createDiscogsSource } from '@/core/plugins/discogs'
 import { createEmbySource } from '@/core/plugins/emby'
@@ -60,6 +61,8 @@ export interface PipelineDeps {
     settingsMode: 'easy' | 'advanced'
     providerPath: string[]
   }
+  responseLocale?: SupportedLocale
+  promptLocale?: SupportedLocale | null
   librarySync: {
     syncForUser: (
       userId: number,
@@ -247,7 +250,11 @@ export class PipelineOrchestrator extends EventEmitter {
       const feedbackHistory = await db.getFeedbackHistory()
 
       this.emit('progress', { stage: 'analyze', message: 'Building your taste profile...' })
-      const tasteProfile = await analyze(registry.all())
+      const tasteProfile = {
+        ...(await analyze(registry.all())),
+        responseLocale: deps.responseLocale,
+        promptLocale: deps.promptLocale ?? null,
+      }
       this.emit('progress', {
         stage: 'analyze',
         message: `Profiled ${tasteProfile.topArtists.length} top artists, ${tasteProfile.topGenres.length} genres`,

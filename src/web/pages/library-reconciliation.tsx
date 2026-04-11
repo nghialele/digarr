@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 import { LibraryUnreconciledAlbumRowComponent } from '../components/library-unreconciled-album-row'
 import { LibraryUnreconciledRowComponent } from '../components/library-unreconciled-row'
 import { getLibraryUnreconciled, getLibraryUnreconciledAlbums } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 const ALBUMS_PER_PAGE = 20
 
 export function LibraryReconciliationPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [albumPage, setAlbumPage] = useState(1)
   const { data, error, isError, isLoading } = useQuery({
@@ -51,32 +53,32 @@ export function LibraryReconciliationPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div className="space-y-1">
-        <h1 className="text-xl font-bold text-text">Unreconciled Artists</h1>
+        <h1 className="text-xl font-bold text-text">{t('libraryReconciliation.title')}</h1>
         <p className="text-sm text-muted">
           {isLoading
-            ? 'Loading unreconciled artists...'
-            : `${items.length} artists could not be automatically matched to MusicBrainz.`}
+            ? t('libraryReconciliation.loadingArtists')
+            : `${items.length} ${t('libraryReconciliation.artistsCouldNotBeMatched')}`}
         </p>
       </div>
 
       {isLoading && (
         <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-          Loading unreconciled artists...
+          {t('libraryReconciliation.loadingArtists')}
         </div>
       )}
 
       {isError && (
         <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center space-y-2">
-          <div className="text-sm text-text">Could not load unreconciled artists.</div>
+          <div className="text-sm text-text">{t('libraryReconciliation.couldNotLoadArtists')}</div>
           <div className="text-sm text-muted">
-            {error instanceof Error ? error.message : 'Unknown error'}
+            {error instanceof Error ? error.message : t('common.unknownError')}
           </div>
         </div>
       )}
 
       {!isLoading && !isError && items.length === 0 && (
         <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-          No unreconciled artists. Your library is fully matched.
+          {t('libraryReconciliation.noArtists')}
         </div>
       )}
 
@@ -100,32 +102,32 @@ export function LibraryReconciliationPage() {
 
       <section className="space-y-3">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-text">Unreconciled Albums</h2>
+          <h2 className="text-xl font-bold text-text">{t('libraryReconciliation.albumsTitle')}</h2>
           <p className="text-sm text-muted">
             {isAlbumLoading
-              ? 'Loading unreconciled albums...'
-              : `${albumTotal} albums could not be automatically matched to MusicBrainz.`}
+              ? t('libraryReconciliation.loadingAlbums')
+              : `${albumTotal} ${t('libraryReconciliation.albumsCouldNotBeMatched')}`}
           </p>
         </div>
 
         {isAlbumLoading && (
           <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-            Loading unreconciled albums...
+            {t('libraryReconciliation.loadingAlbums')}
           </div>
         )}
 
         {isAlbumError && (
           <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center space-y-2">
-            <div className="text-sm text-text">Could not load unreconciled albums.</div>
+            <div className="text-sm text-text">{t('libraryReconciliation.couldNotLoadAlbums')}</div>
             <div className="text-sm text-muted">
-              {albumError instanceof Error ? albumError.message : 'Unknown error'}
+              {albumError instanceof Error ? albumError.message : t('common.unknownError')}
             </div>
           </div>
         )}
 
         {!isAlbumLoading && !isAlbumError && albumItems.length === 0 && (
           <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-            No unreconciled albums.
+            {t('libraryReconciliation.noAlbums')}
           </div>
         )}
 
@@ -144,8 +146,9 @@ export function LibraryReconciliationPage() {
             {albumPageCount > 1 && (
               <div className="flex items-center justify-between gap-3 pt-2">
                 <div className="text-xs text-muted">
-                  Showing {albumPageStart + 1}-
-                  {Math.min(albumPageStart + ALBUMS_PER_PAGE, albumTotal)} of {albumTotal}
+                  {t('libraryReconciliation.showing')} {albumPageStart + 1}-
+                  {Math.min(albumPageStart + ALBUMS_PER_PAGE, albumTotal)}{' '}
+                  {t('libraryReconciliation.of')} {albumTotal}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -154,10 +157,10 @@ export function LibraryReconciliationPage() {
                     disabled={albumPage === 1}
                     className="px-2.5 py-1 text-xs font-medium text-text border border-border rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
                   >
-                    Previous
+                    {t('common.previous')}
                   </button>
                   <span className="text-xs text-muted tabular-nums">
-                    Page {albumPage} / {albumPageCount}
+                    {t('libraryReconciliation.page')} {albumPage} / {albumPageCount}
                   </span>
                   <button
                     type="button"
@@ -165,7 +168,7 @@ export function LibraryReconciliationPage() {
                     disabled={albumPage === albumPageCount}
                     className="px-2.5 py-1 text-xs font-medium text-text border border-border rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
                   >
-                    Next
+                    {t('common.next')}
                   </button>
                 </div>
               </div>

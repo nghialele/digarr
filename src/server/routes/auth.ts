@@ -1,14 +1,17 @@
 import { lookup } from 'node:dns/promises'
-import { Hono } from 'hono'
+import { type Context, Hono } from 'hono'
 import { envConfig } from '@/config/env'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { encryptField } from '@/core/crypto'
+import { normalizeLocale } from '@/core/i18n/locales'
+import { getMessages } from '@/core/i18n/messages'
 import { isPrivateIp, isPrivateUrl } from '@/core/notifications'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
 import { isHttpUrl } from '@/core/validation'
 import { updateUserPreferences } from '@/db/queries/users'
 import { mergePreferences, type Preferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
+import { resolveRequestLocale } from '@/server/locale'
 import type { HonoEnv } from '@/server/types'
 
 const ALLOWED_PREF_KEYS = new Set([
@@ -38,8 +41,17 @@ const SENSITIVE_PREF_KEYS = ['fanartApiKey'] as const
 export function authRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
 
+  const getRequestMessages = (c: Context<HonoEnv>) =>
+    getMessages(
+      resolveRequestLocale({
+        requestLocale: c.req.header('X-Digarr-Locale'),
+        acceptLanguage: c.req.header('Accept-Language'),
+      }),
+    )
+
   // Register a new user. First user becomes admin.
   router.post('/api/auth/register', async (c) => {
+    const messages = getRequestMessages(c)
     // Registration closed by default after first user. Set DIGARR_DISABLE_REGISTRATION=false to open.
     const userCount = await deps.getUserCount()
     if (userCount > 0 && envConfig.disableRegistration) {
@@ -56,7 +68,7 @@ export function authRoutes(deps: AppDependencies) {
     const { username, password } = body as { username?: string; password?: string }
 
     if (!username || !password) {
-      return c.json({ error: 'Username and password are required' }, 400)
+      return c.json({ error: messages['auth.credentialsRequired'] }, 400)
     }
     if (username.length < 2 || username.length > 50) {
       return c.json({ error: 'Username must be 2-50 characters' }, 400)
@@ -83,16 +95,17 @@ export function authRoutes(deps: AppDependencies) {
 
   // Login with username + password
   router.post('/api/auth/login', async (c) => {
+    const messages = getRequestMessages(c)
     const body = await c.req.json()
     const { username, password } = body as { username?: string; password?: string }
 
     if (!username || !password) {
-      return c.json({ error: 'Username and password are required' }, 400)
+      return c.json({ error: messages['auth.credentialsRequired'] }, 400)
     }
 
     const user = await deps.getUserByUsername(username)
     if (!user || !verifyPassword(password, user.passwordHash)) {
-      return c.json({ error: 'Invalid credentials' }, 401)
+      return c.json({ error: messages['auth.invalidCredentials'] }, 401)
     }
 
     const token = generateSessionToken()
@@ -122,6 +135,36 @@ export function authRoutes(deps: AppDependencies) {
       return c.json({ error: 'User not found' }, 404)
     }
     return c.json(user)
+  })
+
+  router.patch('/api/auth/me/locale', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) return c.json({ error: 'Not authenticated' }, 401)
+    if (c.get('legacyTokenAuth')) {
+      return c.json({ error: 'Session authentication required' }, 403)
+    }
+
+    const body = await c.req.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return c.json({ error: 'preferredLocale must be a string or null' }, 400)
+    }
+
+    const { preferredLocale: rawPreferredLocale } = body as { preferredLocale?: unknown }
+    if (rawPreferredLocale !== null && typeof rawPreferredLocale !== 'string') {
+      return c.json({ error: 'preferredLocale must be a string or null' }, 400)
+    }
+
+    const user = await deps.getUserById(userId)
+    if (!user) return c.json({ error: 'User not found' }, 404)
+
+    const preferredLocale = rawPreferredLocale === null ? null : normalizeLocale(rawPreferredLocale)
+
+    if (rawPreferredLocale !== null && !preferredLocale) {
+      return c.json({ error: 'Unsupported locale' }, 400)
+    }
+
+    await deps.updateUserPreferredLocale(userId, preferredLocale)
+    return c.json({ success: true, preferredLocale })
   })
 
   // Change password for the current session user (requires session auth, not legacy token)

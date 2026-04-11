@@ -1,6 +1,7 @@
 import type { DiscoveryAvailabilityResult } from '../../core/discovery-modes/availability'
 import type { DiscoveryConfigField } from '../../core/discovery-modes/types'
 import type { GenreInfo } from '../../core/genre/types'
+import { getRequestLocale } from './locale-storage'
 
 export type LibraryArtist = {
   id: number
@@ -53,6 +54,7 @@ export const AUTH_EXPIRED_EVENT = 'digarr:auth-expired'
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {}
+  headers['X-Digarr-Locale'] = getRequestLocale()
   // Skip Content-Type for FormData -- browser sets it with the correct boundary
   if (!(options?.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
@@ -104,13 +106,21 @@ export const registerUser = (username: string, password: string) =>
     method: 'POST',
     body: JSON.stringify({ username, password }),
   })
-export type UserProfile = { id: number; username: string; isAdmin: boolean }
+export type UserProfile = {
+  id: number
+  username: string
+  isAdmin: boolean
+  preferredLocale: string | null
+}
 export async function getCurrentUser(): Promise<UserProfile | null> {
   const token = getStoredToken()
   if (!token) return null
   try {
     const res = await fetch(`${BASE}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Digarr-Locale': getRequestLocale(),
+      },
     })
     if (!res.ok) return null // Legacy token users have no userId -- don't trigger auth-expired
     return res.json() as Promise<UserProfile>
@@ -122,6 +132,11 @@ export const changePassword = (currentPassword: string, newPassword: string) =>
   fetchApi<{ ok: boolean; token?: string }>('/auth/change-password', {
     method: 'POST',
     body: JSON.stringify({ currentPassword, newPassword }),
+  })
+export const updatePreferredLocale = (preferredLocale: string | null) =>
+  fetchApi<{ success: true; preferredLocale: string | null }>('/auth/me/locale', {
+    method: 'PATCH',
+    body: JSON.stringify({ preferredLocale }),
   })
 
 export const logoutUser = () => fetchApi<{ ok: boolean }>('/auth/logout', { method: 'POST' })
@@ -554,7 +569,10 @@ export async function exportRecommendations(
   const qs = query.toString() ? `?${query}` : ''
   const token = getStoredToken()
   const response = await fetch(`${BASE}/exports/${format}${qs}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-Digarr-Locale': getRequestLocale(),
+    },
   })
   if (!response.ok) throw new Error('Export failed')
   await downloadResponseBlob(
@@ -865,7 +883,10 @@ export async function exportPlaylistApi(
 ): Promise<void> {
   const token = getStoredToken()
   const response = await fetch(`${BASE}/playlists/${id}/export/${format}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-Digarr-Locale': getRequestLocale(),
+    },
   })
   if (!response.ok) throw new Error('Playlist export failed')
   await downloadResponseBlob(response, `playlist-${id}.${format}`)
@@ -889,7 +910,10 @@ export async function downloadBackup(includeCaches = false): Promise<void> {
   const qs = includeCaches ? '?includeCaches=true' : ''
   const res = await fetch(`${BASE}/admin/backup${qs}`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-Digarr-Locale': getRequestLocale(),
+    },
   })
   if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => ({})))
   await downloadResponseBlob(res, 'digarr-backup.json')

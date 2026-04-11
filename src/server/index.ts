@@ -8,6 +8,7 @@ import type { OidcService } from '@/core/auth/oidc'
 import type { DiscoveryModeRegistry } from '@/core/discovery-modes/registry'
 import type { DiscoveryModeRequest } from '@/core/discovery-modes/request'
 import type { GenreService } from '@/core/genre/service'
+import type { SupportedLocale } from '@/core/i18n/locales'
 import type { AlbumCoverage } from '@/core/library/album-coverage'
 import type { LibraryHealthService } from '@/core/library/health'
 import type { SkyHookWarmer } from '@/core/library/skyhook-warmer'
@@ -112,6 +113,7 @@ export type AppDependencies = {
   getUserById: (id: number) => Promise<UserPublic | null>
   getUserCount: () => Promise<number>
   updatePassword: (id: number, passwordHash: string) => Promise<void>
+  updateUserPreferredLocale: (id: number, preferredLocale: SupportedLocale | null) => Promise<void>
   // OIDC + user management
   getOidcService: () => Promise<OidcService | null>
   getUserByOidcSubject: (subject: string) => Promise<{ id: number; username: string } | null>
@@ -361,7 +363,11 @@ export function createApp(deps: AppDependencies) {
   }
   app.route(
     '/',
-    moodRoutes({ getSettings: deps.getSettings, providerRegistry: deps.providerRegistry }),
+    moodRoutes({
+      getSettings: deps.getSettings,
+      getUserById: deps.getUserById,
+      providerRegistry: deps.providerRegistry,
+    }),
   )
   app.route(
     '/',

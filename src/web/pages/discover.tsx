@@ -33,6 +33,7 @@ import {
   triggerPipeline,
   updateRecommendation,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 type FilterTab = 'all' | 'pending' | 'approved' | 'rejected'
 type ViewMode = 'grid' | 'list' | 'stack'
@@ -50,13 +51,6 @@ function getStoredViewMode(): ViewMode {
     // ignore
   }
   return 'grid'
-}
-
-const FILTER_LABELS: Record<FilterTab, string> = {
-  all: 'All',
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
 }
 
 const STATUS_PARAM: Record<FilterTab, string | undefined> = {
@@ -100,36 +94,34 @@ function SkeletonGrid() {
 // Empty state
 
 function EmptyState({ filter }: { filter: FilterTab }) {
+  const { t } = useI18n()
   if (filter === 'all') {
     return (
       <div className="py-16 text-center space-y-3">
-        <p className="text-muted text-sm">
-          No recommendations yet. Import some favorite artists or run your first scan to get
-          started.
-        </p>
+        <p className="text-muted text-sm">{t('discover.emptyAll')}</p>
         <div className="flex items-center justify-center gap-3">
           <Link
             to="/subscriptions"
             className="px-3 py-1.5 text-sm text-accent border border-accent/40 rounded-md hover:bg-accent/10 transition-colors"
           >
-            Import artists
+            {t('discover.importArtists')}
           </Link>
           <button
             type="button"
             onClick={() =>
               triggerPipeline()
-                .then(() => toast.success('Scan started -- check Dashboard for progress'))
+                .then(() => toast.success(t('discover.scanStarted')))
                 .catch((err) => {
                   const msg =
                     typeof err === 'object' && err !== null && 'message' in err
                       ? String(err.message)
                       : String(err)
-                  toast.error(msg.includes('409') ? 'Scan already running' : msg)
+                  toast.error(msg.includes('409') ? t('discover.scanAlreadyRunning') : msg)
                 })
             }
             className="px-3 py-1.5 text-sm bg-accent text-accent-fg rounded-md hover:opacity-90 transition-opacity"
           >
-            Run a scan
+            {t('discover.runScan')}
           </button>
         </div>
       </div>
@@ -139,17 +131,14 @@ function EmptyState({ filter }: { filter: FilterTab }) {
   if (filter === 'approved') {
     return (
       <div className="py-16 text-center">
-        <p className="text-muted text-sm">
-          You haven't approved any artists yet. Check the Pending tab to see what Digarr found for
-          you.
-        </p>
+        <p className="text-muted text-sm">{t('discover.emptyApproved')}</p>
       </div>
     )
   }
 
   const messages: Record<string, string> = {
-    pending: "No pending recommendations. You're all caught up.",
-    rejected: 'No rejected recommendations.',
+    pending: t('discover.emptyPending'),
+    rejected: t('discover.emptyRejected'),
   }
   return (
     <div className="py-16 text-center">
@@ -227,6 +216,7 @@ function StackIcon() {
 // Feedback insights
 
 function FeedbackInsights() {
+  const { t } = useI18n()
   const [genreRates, setGenreRates] = useState<
     Array<{ genre: string; rate: number; total: number }>
   >([])
@@ -247,7 +237,7 @@ function FeedbackInsights() {
         onClick={() => setOpen(!open)}
         className="text-xs text-muted hover:text-text transition-colors"
       >
-        {open ? 'Hide' : 'Show'} feedback insights
+        {open ? t('discover.hideFeedbackInsights') : t('discover.showFeedbackInsights')}
       </button>
       {open && genreRates.length > 0 && (
         <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -265,15 +255,15 @@ function FeedbackInsights() {
                   {Math.round(g.rate * 100)}%
                 </span>
               </div>
-              <div className="text-micro text-muted mt-0.5">{g.total} rated</div>
+              <div className="text-micro text-muted mt-0.5">
+                {g.total} {t('discover.rated')}
+              </div>
             </div>
           ))}
         </div>
       )}
       {open && genreRates.length === 0 && (
-        <p className="text-xs text-muted mt-2">
-          Not enough feedback data yet. Approve or reject more recommendations.
-        </p>
+        <p className="text-xs text-muted mt-2">{t('discover.notEnoughFeedback')}</p>
       )}
     </div>
   )
@@ -282,6 +272,7 @@ function FeedbackInsights() {
 // Export dropdown
 
 function ExportDropdown({ filter }: { filter?: string }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
 
@@ -289,9 +280,9 @@ function ExportDropdown({ filter }: { filter?: string }) {
     setExporting(format)
     try {
       await exportRecommendations(format, filter ? { status: filter } : undefined)
-      toast.success(`${format.toUpperCase()} exported`)
+      toast.success(`${format.toUpperCase()} ${t('discover.exported')}`)
     } catch {
-      toast.error('Export failed')
+      toast.error(t('discover.exportFailed'))
     } finally {
       setExporting(null)
       setOpen(false)
@@ -305,7 +296,7 @@ function ExportDropdown({ filter }: { filter?: string }) {
         onClick={() => setOpen((o) => !o)}
         className="px-3 py-1.5 bg-surface border border-border rounded text-sm text-muted hover:text-text transition-colors"
       >
-        Export
+        {t('discover.export')}
       </button>
       {open && (
         <>
@@ -326,7 +317,7 @@ function ExportDropdown({ filter }: { filter?: string }) {
                 disabled={exporting === fmt}
                 className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-bg transition-colors disabled:opacity-50"
               >
-                {exporting === fmt ? 'Exporting...' : fmt.toUpperCase()}
+                {exporting === fmt ? t('discover.exporting') : fmt.toUpperCase()}
               </button>
             ))}
           </div>
@@ -339,6 +330,7 @@ function ExportDropdown({ filter }: { filter?: string }) {
 // Discover page
 
 export function DiscoverPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<FilterTab>('pending')
   const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode)
@@ -381,7 +373,7 @@ export function DiscoverPage() {
     handlers: pullHandlers,
   } = usePullToRefresh(() => {
     refetch()
-    toast.info('Refreshing...')
+    toast.info(t('common.refreshing'))
   })
 
   function handleSetViewMode(mode: ViewMode) {
@@ -416,6 +408,12 @@ export function DiscoverPage() {
 
   const items = (data?.items ?? []) as Recommendation[]
   const total = data?.total ?? 0
+  const FILTER_LABELS: Record<FilterTab, string> = {
+    all: t('discover.all'),
+    pending: t('discover.pending'),
+    approved: t('discover.approved'),
+    rejected: t('discover.rejected'),
+  }
 
   // Warm status
 
@@ -465,9 +463,9 @@ export function DiscoverPage() {
       try {
         await approveToTarget(recId, targetId)
         refetch()
-        toast.success('Sent to target')
+        toast.success(t('dashboard.sentToTarget'))
       } catch {
-        toast.error('Failed to approve')
+        toast.error(t('dashboard.approveFailed'))
       } finally {
         setActingIds((prev) => {
           const next = new Set(prev)
@@ -476,7 +474,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, targets],
+    [refetch, t, targets],
   )
 
   // Undo toast
@@ -498,12 +496,12 @@ export function DiscoverPage() {
     setUndoEntry(null)
     try {
       await updateRecommendation(entry.id, { status: entry.prevStatus })
-      toast.success('Undone')
+      toast.success(t('discover.undone'))
       refetch()
     } catch {
-      toast.error('Undo failed')
+      toast.error(t('discover.undoFailed'))
     }
-  }, [undoEntry, refetch])
+  }, [undoEntry, refetch, t])
 
   // Count per filter for tab badges -- fetch all counts independently
   const { data: allCountData } = useQuery({
@@ -553,7 +551,7 @@ export function DiscoverPage() {
         showUndo({ id, prevStatus })
         refetch()
       } catch {
-        toast.error('Failed to approve')
+        toast.error(t('dashboard.approveFailed'))
       } finally {
         setActingIds((prev) => {
           const next = new Set(prev)
@@ -562,7 +560,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, showUndo, hasLidarrTarget],
+    [hasLidarrTarget, refetch, showUndo, t],
   )
 
   const handleApprove = useCallback(
@@ -574,11 +572,13 @@ export function DiscoverPage() {
         if (filter !== 'rejected') {
           showUndo({ id, prevStatus })
         } else {
-          toast.success('Restored to pending')
+          toast.success(t('discover.restoredToPending'))
         }
         refetch()
       } catch {
-        toast.error(filter === 'rejected' ? 'Failed to restore' : 'Failed to approve')
+        toast.error(
+          filter === 'rejected' ? t('discover.restoreFailed') : t('dashboard.approveFailed'),
+        )
       } finally {
         setActingIds((prev) => {
           const next = new Set(prev)
@@ -587,7 +587,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, filter, showUndo],
+    [filter, refetch, showUndo, t],
   )
 
   const handleReject = useCallback(
@@ -598,7 +598,7 @@ export function DiscoverPage() {
         showUndo({ id, prevStatus })
         refetch()
       } catch {
-        toast.error('Failed to reject')
+        toast.error(t('discover.rejectFailed'))
       } finally {
         setActingIds((prev) => {
           const next = new Set(prev)
@@ -607,17 +607,17 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, showUndo],
+    [refetch, showUndo, t],
   )
 
   async function handleRetry(id: number) {
     setActingIds((prev) => new Set([...prev, id]))
     try {
       await updateRecommendation(id, { status: 'approved' })
-      toast.success('Queued for retry')
+      toast.success(t('discover.queuedForRetry'))
       refetch()
     } catch {
-      toast.error('Retry failed')
+      toast.error(t('discover.retryFailed'))
     } finally {
       setActingIds((prev) => {
         const next = new Set(prev)
@@ -632,7 +632,7 @@ export function DiscoverPage() {
       (r) => r.score * 100 >= approveThreshold && r.status === 'pending',
     )
     if (eligible.length === 0) {
-      toast.info(`No pending recommendations above ${approveThreshold}%`)
+      toast.info(`${t('discover.noPendingAbove')} ${approveThreshold}%`)
       return
     }
     try {
@@ -640,10 +640,10 @@ export function DiscoverPage() {
         eligible.map((r) => r.id),
         'approve',
       )
-      toast.success(`Approved ${eligible.length} recommendations`)
+      toast.success(`${t('discover.approvedCount')} ${eligible.length}`)
       refetch()
     } catch {
-      toast.error('Bulk approve failed')
+      toast.error(t('discover.bulkApproveFailed'))
     }
   }
 
@@ -652,14 +652,14 @@ export function DiscoverPage() {
       const pending = await getRecommendations({ status: 'pending', limit: '10000' })
       const ids = (pending.items as Array<{ id: number }>).map((r) => r.id)
       if (ids.length === 0) {
-        toast.info('No pending recommendations to clear')
+        toast.info(t('discover.noPendingToClear'))
         return
       }
       await bulkAction(ids, 'reject')
-      toast.success(`Cleared ${ids.length} pending recommendations`)
+      toast.success(`${t('discover.clearedCount')} ${ids.length}`)
       refetch()
     } catch {
-      toast.error('Failed to clear recommendations')
+      toast.error(t('discover.clearFailed'))
     }
   }
 
@@ -695,11 +695,11 @@ export function DiscoverPage() {
     setBulkActing(true)
     try {
       await bulkAction([...checkedIds], 'approve')
-      toast.success(`Approved ${checkedIds.size} recommendations`)
+      toast.success(`${t('discover.approvedCount')} ${checkedIds.size}`)
       setCheckedIds(new Set())
       refetch()
     } catch {
-      toast.error('Bulk approve failed')
+      toast.error(t('discover.bulkApproveFailed'))
     } finally {
       setBulkActing(false)
     }
@@ -710,11 +710,11 @@ export function DiscoverPage() {
     setBulkActing(true)
     try {
       await bulkAction([...checkedIds], 'reject')
-      toast.success(`Rejected ${checkedIds.size} recommendations`)
+      toast.success(`${t('discover.rejectedCount')} ${checkedIds.size}`)
       setCheckedIds(new Set())
       refetch()
     } catch {
-      toast.error('Bulk reject failed')
+      toast.error(t('discover.bulkRejectFailed'))
     } finally {
       setBulkActing(false)
     }
@@ -785,10 +785,10 @@ export function DiscoverPage() {
   const handleRunDiscoveryMode = useCallback(
     async (body: Record<string, unknown>) => {
       await runDiscoveryMode(body)
-      toast.success('Discovery run started -- check Dashboard for progress')
+      toast.success(t('discover.discoveryRunStarted'))
       refetch()
     },
-    [refetch],
+    [refetch, t],
   )
 
   return (
@@ -803,7 +803,7 @@ export function DiscoverPage() {
           style={{ height: `${Math.min(pullY, PULL_THRESHOLD + 20)}px` }}
           aria-hidden="true"
         >
-          {pullY >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
+          {pullY >= PULL_THRESHOLD ? t('common.releaseToRefresh') : t('common.pullToRefresh')}
         </div>
       )}
 
@@ -851,9 +851,9 @@ export function DiscoverPage() {
             <div className="flex items-center gap-0.5 bg-surface border border-border rounded-lg p-1">
               {(
                 [
-                  { mode: 'grid' as ViewMode, Icon: GridIcon, label: 'Grid view' },
-                  { mode: 'list' as ViewMode, Icon: ListIcon, label: 'List view' },
-                  { mode: 'stack' as ViewMode, Icon: StackIcon, label: 'Stack view' },
+                  { mode: 'grid' as ViewMode, Icon: GridIcon, label: t('discover.viewGrid') },
+                  { mode: 'list' as ViewMode, Icon: ListIcon, label: t('discover.viewList') },
+                  { mode: 'stack' as ViewMode, Icon: StackIcon, label: t('discover.viewStack') },
                 ] as const
               ).map(({ mode, Icon, label }) => (
                 <button
@@ -878,7 +878,7 @@ export function DiscoverPage() {
                   value={approveThreshold}
                   onChange={(e) => setApproveThreshold(Number(e.target.value))}
                   className="bg-surface border border-border rounded text-sm text-text px-2 py-1.5"
-                  aria-label="Threshold percentage"
+                  aria-label={t('discover.thresholdPercentage')}
                 >
                   {APPROVE_THRESHOLD_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -892,7 +892,7 @@ export function DiscoverPage() {
                   disabled={pendingAboveThreshold === 0}
                   className="px-3 py-1.5 bg-approve/20 text-approve border border-approve/40 rounded text-sm font-medium hover:bg-approve/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Approve All Above
+                  {t('discover.approveAllAbove')}
                   {pendingAboveThreshold > 0 && (
                     <span className="ml-1.5 text-xs opacity-70">({pendingAboveThreshold})</span>
                   )}
@@ -901,15 +901,16 @@ export function DiscoverPage() {
                   type="button"
                   onClick={() => {
                     toast.promise(rescanArtists(), {
-                      loading: 'Refreshing artist data...',
-                      success: (r) => `Updated ${r.updated} of ${r.total} artists`,
-                      error: 'Rescan failed',
+                      loading: t('discover.refreshingArtistData'),
+                      success: (r) =>
+                        `${t('discover.updatedArtists')} ${r.updated} ${t('discover.of')} ${r.total}`,
+                      error: t('discover.rescanFailed'),
                     })
                     setTimeout(refetch, 3000)
                   }}
                   className="px-3 py-1.5 bg-surface border border-border rounded text-sm text-muted hover:text-text transition-colors"
                 >
-                  Refresh Data
+                  {t('discover.refreshData')}
                 </button>
                 <ExportDropdown filter={statusParam} />
                 <button
@@ -921,16 +922,16 @@ export function DiscoverPage() {
                       : 'bg-surface border-border text-muted hover:text-text'
                   }`}
                 >
-                  {bulkMode ? 'Cancel' : 'Select'}
+                  {bulkMode ? t('common.cancel') : t('discover.select')}
                 </button>
                 {filter === 'pending' && (
                   <button
                     type="button"
                     onClick={() => setShowClearAllConfirm(true)}
                     className="px-2 py-1 text-xs text-muted hover:text-red-400 transition-colors"
-                    title="Rejects all pending recommendations at once -- useful after reviewing a batch"
+                    title={t('discover.clearAllTitle')}
                   >
-                    Clear All
+                    {t('discover.clearAll')}
                   </button>
                 )}
               </>
@@ -974,7 +975,7 @@ export function DiscoverPage() {
               }}
               className="px-2 py-1 text-xs text-muted hover:text-text transition-colors"
             >
-              Clear
+              {t('common.clear')}
             </button>
           )}
         </div>
@@ -986,33 +987,33 @@ export function DiscoverPage() {
         {!bulkMode && viewMode !== 'stack' && (
           <>
             <p className="text-xs text-muted hidden sm:block mb-4">
-              Shortcuts: <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
-              navigate <kbd className="px-1 bg-surface border border-border rounded">a</kbd> approve{' '}
-              <kbd className="px-1 bg-surface border border-border rounded">r</kbd> reject{' '}
-              <kbd className="px-1 bg-surface border border-border rounded">d</kbd> expand{' '}
-              <kbd className="px-1 bg-surface border border-border rounded">?</kbd> shortcuts
+              {t('discover.shortcutsLabel')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
+              {t('discover.navigate')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">a</kbd>{' '}
+              {t('discover.shortcutApprove')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">r</kbd>{' '}
+              {t('discover.shortcutReject')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">d</kbd>{' '}
+              {t('discover.shortcutExpand')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">?</kbd>{' '}
+              {t('discover.shortcuts')}
             </p>
-            <p className="text-xs text-muted sm:hidden mb-4">
-              Swipe right to approve, left to reject
-            </p>
+            <p className="text-xs text-muted sm:hidden mb-4">{t('discover.swipeHint')}</p>
           </>
         )}
 
         <MoodPromptBar existingArtistNames={existingArtistNames} onQueued={refetch} />
 
         <Hint id="mood-bar-intro" type="inline" className="mb-2">
-          Tip: describe what you are in the mood for in plain English -- like "rainy day jazz" or
-          "upbeat 90s pop"
+          {t('discover.moodTip')}
         </Hint>
 
         {discoveryModes && discoveryModes.modes.length > 0 && (
           <section className="mb-6 space-y-4">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-text">Discovery Modes</h2>
-              <p className="text-sm text-muted">
-                Start a targeted discovery run with either a simple preset or the full advanced
-                form.
-              </p>
+              <h2 className="text-lg font-semibold text-text">{t('discover.discoveryModes')}</h2>
+              <p className="text-sm text-muted">{t('discover.discoveryModesDescription')}</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {discoveryModes.modes.map((mode) => (
@@ -1174,14 +1175,14 @@ export function DiscoverPage() {
             onClick={handleSelectAll}
             className="text-xs text-accent hover:underline"
           >
-            All
+            {t('common.all')}
           </button>
           <button
             type="button"
             onClick={handleDeselectAll}
             className="text-xs text-muted hover:text-text"
           >
-            None
+            {t('common.none')}
           </button>
           <div className="w-px h-4 bg-border" />
           <button
@@ -1206,13 +1207,13 @@ export function DiscoverPage() {
       {/* Undo toast */}
       {undoEntry && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 bg-surface border border-border rounded-lg shadow-lg text-sm text-text">
-          <span>Action applied.</span>
+          <span>{t('discover.actionApplied')}</span>
           <button
             type="button"
             onClick={handleUndo}
             className="text-accent font-medium hover:underline"
           >
-            Undo
+            {t('discover.undo')}
           </button>
           <button
             type="button"
@@ -1250,7 +1251,7 @@ export function DiscoverPage() {
             onClick={() => setPage((p) => p - 1)}
             className="px-3 py-1.5 text-sm bg-surface border border-border rounded text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Previous
+            {t('common.previous')}
           </button>
           <span className="text-sm text-muted tabular-nums">
             {page * PAGE_SIZE + 1}--{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
@@ -1261,7 +1262,7 @@ export function DiscoverPage() {
             onClick={() => setPage((p) => p + 1)}
             className="px-3 py-1.5 text-sm bg-surface border border-border rounded text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Next
+            {t('common.next')}
           </button>
         </div>
       )}
@@ -1272,13 +1273,13 @@ export function DiscoverPage() {
           type="button"
           onClick={() =>
             triggerPipeline()
-              .then(() => toast.success('Scan started -- check Dashboard for progress'))
+              .then(() => toast.success(t('discover.scanStarted')))
               .catch((err) => {
                 const msg = errMsg(err)
-                toast.error(msg.includes('409') ? 'Scan already running' : msg)
+                toast.error(msg.includes('409') ? t('discover.scanAlreadyRunning') : msg)
               })
           }
-          aria-label="Run Scan"
+          aria-label={t('app.runScan')}
           className="md:hidden fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-accent text-accent-fg shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
         >
           <svg
@@ -1317,10 +1318,10 @@ export function DiscoverPage() {
               } else {
                 await approveRecommendation(recId, overrides)
               }
-              toast.success('Added to Lidarr')
+              toast.success(t('dashboard.addedToLidarr'))
               refetch()
             } catch {
-              toast.error('Failed to add to Lidarr')
+              toast.error(t('dashboard.addToLidarrFailed'))
             } finally {
               setActingIds((prev) => {
                 const next = new Set(prev)
@@ -1358,9 +1359,9 @@ export function DiscoverPage() {
         })()}
       {showClearAllConfirm && (
         <ConfirmDialog
-          title="Reject all pending"
-          message="Reject all pending recommendations? This cannot be undone."
-          confirmLabel="Reject All"
+          title={t('discover.rejectAllPending')}
+          message={t('discover.rejectAllPendingMessage')}
+          confirmLabel={t('discover.rejectAll')}
           onConfirm={() => {
             setShowClearAllConfirm(false)
             handleClearAll()

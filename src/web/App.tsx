@@ -1,4 +1,4 @@
-import { QueryClientProvider, useQuery } from '@tanstack/react-query'
+import { QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3,
   ChevronDown,
@@ -20,12 +20,14 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
+import { normalizeLocale, type SupportedLocale } from '@/core/i18n/locales'
 import { errMsg } from '@/core/validation'
 import { VERSION } from '@/version'
 import { AuthGate } from './components/auth-gate'
 import { BottomNav } from './components/bottom-nav'
 import { ErrorBoundary } from './components/error-boundary'
 import { KeyboardShortcuts } from './components/keyboard-shortcuts'
+import { LanguageSwitcher } from './components/language-switcher'
 import { PreviewPlayer } from './components/preview-player'
 import { useClickOutside } from './hooks/use-click-outside'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
@@ -38,7 +40,9 @@ import {
   getSetupStatus,
   logoutUser,
   triggerPipeline,
+  updatePreferredLocale,
 } from './lib/api'
+import { useI18n } from './lib/i18n'
 import { PreviewContext } from './lib/preview-context'
 import { queryClient } from './lib/query-client'
 import {
@@ -76,6 +80,7 @@ if ('serviceWorker' in navigator) {
 // Mobile nav toggle
 
 function MobileMenuIcon({ open }: { open: boolean }) {
+  const { t } = useI18n()
   return (
     <svg
       className="w-6 h-6 text-text"
@@ -84,7 +89,7 @@ function MobileMenuIcon({ open }: { open: boolean }) {
       strokeWidth={2}
       viewBox="0 0 24 24"
       role="img"
-      aria-label={open ? 'Close menu' : 'Open menu'}
+      aria-label={open ? t('app.closeMenu') : t('app.openMenu')}
     >
       {open ? (
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -166,6 +171,7 @@ function ThemePicker({
   onModeChange: (m: Mode) => void
   onColorThemeChange: (t: ColorTheme) => void
 }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -179,10 +185,10 @@ function ThemePicker({
         type="button"
         onClick={() => setOpen(!open)}
         className="p-1.5 text-muted hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-        aria-label="Theme settings"
+        aria-label={t('app.themeSettings')}
         aria-expanded={open}
         aria-haspopup="menu"
-        title="Theme"
+        title={t('app.theme')}
       >
         <ModeIcon size={18} />
       </button>
@@ -191,9 +197,17 @@ function ThemePicker({
           role="menu"
           className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-50 py-1"
         >
-          <div className="px-3 py-1.5 text-micro uppercase tracking-wider text-muted">Mode</div>
+          <div className="px-3 py-1.5 text-micro uppercase tracking-wider text-muted">
+            {t('app.themeMode')}
+          </div>
           {(['dark', 'light', 'system'] as const).map((m) => {
             const Icon = m === 'dark' ? Moon : m === 'light' ? Sun : Monitor
+            const label =
+              m === 'dark'
+                ? t('app.themeModeDark')
+                : m === 'light'
+                  ? t('app.themeModeLight')
+                  : t('app.themeModeSystem')
             return (
               <button
                 key={m}
@@ -203,7 +217,7 @@ function ThemePicker({
                 className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-bg transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px] ${mode === m ? 'text-accent' : 'text-text'}`}
               >
                 <Icon size={14} />
-                <span className="capitalize">{m}</span>
+                <span>{label}</span>
               </button>
             )
           })}
@@ -212,7 +226,7 @@ function ThemePicker({
             {(['Editor', 'Streaming'] as const).map((group) => (
               <div key={group}>
                 <div className="px-3 py-1.5 text-micro uppercase tracking-wider text-muted sticky top-0 bg-surface">
-                  {group}
+                  {group === 'Editor' ? t('app.themeGroupEditor') : t('app.themeGroupStreaming')}
                 </div>
                 {COLOR_THEMES.filter((t) => t.group === group).map((t) => (
                   <button
@@ -236,6 +250,7 @@ function ThemePicker({
 }
 
 function UserMenu({ username }: { username: string }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -272,7 +287,7 @@ function UserMenu({ username }: { username: string }) {
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-bg transition-colors"
           >
             <Settings size={14} />
-            Settings
+            {t('app.userMenu.settings')}
           </NavLink>
           <button
             type="button"
@@ -280,7 +295,7 @@ function UserMenu({ username }: { username: string }) {
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-bg transition-colors"
           >
             <LogOut size={14} />
-            Log out
+            {t('app.userMenu.logout')}
           </button>
         </div>
       )}
@@ -294,6 +309,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [colorTheme, setColorThemeState] = useState<ColorTheme>(getStoredColorTheme)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const preview = usePreview()
+  const latestRequestedLocaleRef = useRef<SupportedLocale | null>(null)
+  const submittedPendingLocaleRef = useRef<SupportedLocale | null>(null)
+  const queryClient = useQueryClient()
+  const { locale, pendingLocale, setLocale, hydrateLocale, t } = useI18n()
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const { data: pipelineStatus } = useQuery({
     queryKey: ['pipelineStatus'],
@@ -301,8 +320,52 @@ function AppShell({ children }: { children: React.ReactNode }) {
     refetchInterval: (query) => (query.state.data?.running ? 3000 : 15000),
   })
   const pipelineRunning = pipelineStatus?.running ?? false
+  const localeMutation = useMutation({
+    mutationFn: updatePreferredLocale,
+    onSuccess: ({ preferredLocale }) => {
+      const normalizedPreferredLocale = normalizeLocale(preferredLocale)
+      if (
+        normalizedPreferredLocale &&
+        latestRequestedLocaleRef.current &&
+        normalizedPreferredLocale !== latestRequestedLocaleRef.current
+      ) {
+        return
+      }
+      queryClient.setQueryData(['currentUser'], (prev: typeof currentUser) =>
+        prev ? { ...prev, preferredLocale } : prev,
+      )
+    },
+  })
 
   useKeyboardShortcuts({ '?': () => setShortcutsOpen((v) => !v) })
+
+  useEffect(() => {
+    const preferredLocale = normalizeLocale(currentUser?.preferredLocale)
+    if (preferredLocale) {
+      hydrateLocale(preferredLocale)
+    }
+  }, [currentUser?.preferredLocale, hydrateLocale])
+
+  useEffect(() => {
+    if (!pendingLocale) {
+      submittedPendingLocaleRef.current = null
+      return
+    }
+
+    if (!currentUser) return
+
+    const preferredLocale = normalizeLocale(currentUser.preferredLocale)
+    if (preferredLocale === pendingLocale) {
+      submittedPendingLocaleRef.current = null
+      return
+    }
+
+    if (submittedPendingLocaleRef.current === pendingLocale) return
+
+    submittedPendingLocaleRef.current = pendingLocale
+    latestRequestedLocaleRef.current = pendingLocale
+    localeMutation.mutate(pendingLocale)
+  }, [currentUser, localeMutation, pendingLocale])
 
   function handleModeChange(m: Mode) {
     setModeState(m)
@@ -314,6 +377,15 @@ function AppShell({ children }: { children: React.ReactNode }) {
     setColorThemeState(t)
     setStoredColorTheme(t)
     applyTheme(t, mode)
+  }
+
+  function handleLocaleChange(nextLocale: SupportedLocale) {
+    latestRequestedLocaleRef.current = nextLocale
+    setLocale(nextLocale)
+    if (currentUser) {
+      submittedPendingLocaleRef.current = nextLocale
+      localeMutation.mutate(nextLocale)
+    }
   }
 
   // Listen for system preference changes when in system mode
@@ -343,7 +415,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
       }}
     >
       <div className="min-h-screen bg-bg">
-        <nav className="border-b border-border px-4 sm:px-6 py-3" aria-label="Main navigation">
+        <nav
+          className="border-b border-border px-4 sm:px-6 py-3"
+          aria-label={t('app.mainNavigation')}
+        >
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-6">
               <NavLink to="/" className="text-xl font-bold text-accent hover:opacity-90">
@@ -354,49 +429,66 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <NavLink to="/" end className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <LayoutDashboard size={14} aria-hidden="true" />
-                    Dashboard
+                    {t('nav.dashboard')}
                   </span>
                 </NavLink>
                 <NavLink to="/search" className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <Search size={14} aria-hidden="true" />
-                    Search
+                    {t('nav.search')}
                   </span>
                 </NavLink>
                 <NavDropdown
-                  label="Discover"
+                  label={t('nav.discover')}
                   icon={<Compass size={14} aria-hidden="true" />}
                   items={[
-                    { to: '/discover', label: 'Recommendations', icon: <Compass size={14} /> },
-                    { to: '/genres', label: 'Genres', icon: <Music size={14} /> },
-                    { to: '/subscriptions', label: 'Subscriptions', icon: <Monitor size={14} /> },
-                    { to: '/playlists', label: 'Playlists', icon: <ListMusic size={14} /> },
+                    {
+                      to: '/discover',
+                      label: t('nav.recommendations'),
+                      icon: <Compass size={14} />,
+                    },
+                    { to: '/genres', label: t('nav.genres'), icon: <Music size={14} /> },
+                    {
+                      to: '/subscriptions',
+                      label: t('nav.subscriptions'),
+                      icon: <Monitor size={14} />,
+                    },
+                    { to: '/playlists', label: t('nav.playlists'), icon: <ListMusic size={14} /> },
                   ]}
                 />
                 {currentUser?.isAdmin && (
                   <NavDropdown
-                    label="Library"
+                    label={t('nav.library')}
                     icon={<HeartPulse size={14} aria-hidden="true" />}
                     items={[
-                      { to: '/library/health', label: 'Health', icon: <HeartPulse size={14} /> },
+                      {
+                        to: '/library/health',
+                        label: t('nav.health'),
+                        icon: <HeartPulse size={14} />,
+                      },
                       {
                         to: '/library/reconciliation',
-                        label: 'Reconciliation',
+                        label: t('nav.reconciliation'),
                         icon: <RefreshCw size={14} />,
                       },
-                      { to: '/analytics', label: 'Analytics', icon: <BarChart3 size={14} /> },
+                      {
+                        to: '/analytics',
+                        label: t('nav.analytics'),
+                        icon: <BarChart3 size={14} />,
+                      },
                     ]}
                   />
                 )}
                 <NavLink to="/settings" className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <Settings size={14} aria-hidden="true" />
-                    Settings
+                    {t('nav.settings')}
                   </span>
                 </NavLink>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <LanguageSwitcher value={locale} onChange={handleLocaleChange} />
               <ThemePicker
                 mode={mode}
                 colorTheme={colorTheme}
@@ -409,10 +501,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 disabled={!!pipelineRunning}
                 onClick={() =>
                   triggerPipeline()
-                    .then(() => toast.success('Scan started -- check Dashboard for progress'))
+                    .then(() => toast.success(t('discover.scanStarted')))
                     .catch((err) => {
                       const msg = errMsg(err)
-                      toast.error(msg.includes('409') ? 'Scan already running' : msg)
+                      toast.error(msg.includes('409') ? t('discover.scanAlreadyRunning') : msg)
                     })
                 }
                 className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-60"
@@ -420,13 +512,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 {pipelineRunning ? (
                   <>
                     <RefreshCw size={14} className="animate-spin" />
-                    <span className="hidden sm:inline">Scanning...</span>
-                    <span className="sm:hidden">Scan</span>
+                    <span className="hidden sm:inline">{t('app.scanning')}</span>
+                    <span className="sm:hidden">{t('app.scan')}</span>
                   </>
                 ) : (
                   <>
-                    <span className="hidden sm:inline">Run Scan</span>
-                    <span className="sm:hidden">Scan</span>
+                    <span className="hidden sm:inline">{t('app.runScan')}</span>
+                    <span className="sm:hidden">{t('app.scan')}</span>
                   </>
                 )}
               </button>
@@ -435,7 +527,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
                 className="sm:hidden p-1"
-                aria-label="Toggle menu"
+                aria-label={t('app.toggleMenu')}
               >
                 <MobileMenuIcon open={menuOpen} />
               </button>
@@ -447,7 +539,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <NavLink to="/" end className={mobileNavLinkClass} onClick={() => setMenuOpen(false)}>
                 <span className="flex items-center gap-1.5">
                   <LayoutDashboard size={14} aria-hidden="true" />
-                  Dashboard
+                  {t('nav.dashboard')}
                 </span>
               </NavLink>
               <NavLink
@@ -457,7 +549,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Search size={14} aria-hidden="true" />
-                  Search
+                  {t('nav.search')}
                 </span>
               </NavLink>
               <NavLink
@@ -467,7 +559,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Compass size={14} aria-hidden="true" />
-                  Discover
+                  {t('nav.discover')}
                 </span>
               </NavLink>
               <NavLink
@@ -477,7 +569,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Music size={14} aria-hidden="true" />
-                  Genres
+                  {t('nav.genres')}
                 </span>
               </NavLink>
               <NavLink
@@ -487,7 +579,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <ListMusic size={14} aria-hidden="true" />
-                  Playlists
+                  {t('nav.playlists')}
                 </span>
               </NavLink>
               <NavLink
@@ -497,7 +589,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Monitor size={14} aria-hidden="true" />
-                  Subscriptions
+                  {t('nav.subscriptions')}
                 </span>
               </NavLink>
               {currentUser?.isAdmin && (
@@ -508,7 +600,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <HeartPulse size={14} aria-hidden="true" />
-                    Library
+                    {t('nav.library')}
                   </span>
                 </NavLink>
               )}
@@ -520,7 +612,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <RefreshCw size={14} aria-hidden="true" />
-                    Reconciliation
+                    {t('nav.reconciliation')}
                   </span>
                 </NavLink>
               )}
@@ -532,7 +624,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <BarChart3 size={14} aria-hidden="true" />
-                    Analytics
+                    {t('nav.analytics')}
                   </span>
                 </NavLink>
               )}
@@ -543,7 +635,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Settings size={14} aria-hidden="true" />
-                  Settings
+                  {t('nav.settings')}
                 </span>
               </NavLink>
               {currentUser?.isAdmin && (
@@ -554,7 +646,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <Users size={14} aria-hidden="true" />
-                    Users
+                    {t('nav.users')}
                   </span>
                 </NavLink>
               )}

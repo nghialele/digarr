@@ -3,7 +3,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nProvider } from '@/web/lib/i18n'
 import { PreviewContext } from '@/web/lib/preview-context'
 
 const noopPreview = {
@@ -20,9 +22,11 @@ function renderWithQuery(ui: ReactElement) {
     defaultOptions: { queries: { retry: false } },
   })
   return render(
-    <QueryClientProvider client={client}>
-      <PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>
-    </QueryClientProvider>,
+    <I18nProvider>
+      <QueryClientProvider client={client}>
+        <PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>
+      </QueryClientProvider>
+    </I18nProvider>,
   )
 }
 
@@ -124,6 +128,22 @@ import { DiscoverPage } from '@/web/pages/discover'
 describe('DiscoverPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    const storage = new Map<string, string>()
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn((key: string) => storage.get(key) ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+          storage.set(key, value)
+        }),
+        removeItem: vi.fn((key: string) => {
+          storage.delete(key)
+        }),
+        clear: vi.fn(() => {
+          storage.clear()
+        }),
+      },
+    })
     // sonner toast -- not rendered in jsdom, silence it
     vi.stubGlobal(
       'ResizeObserver',
@@ -286,5 +306,37 @@ describe('DiscoverPage', () => {
       // SP link for Spotify
       expect(screen.getByTitle('Spotify')).toBeInTheDocument()
     })
+  })
+
+  it('uses translated feedback insights copy in French', async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    setupMockApi()
+    renderWithQuery(<DiscoverPage />)
+
+    expect(await screen.findByRole('button', { name: 'Afficher les retours' })).toBeInTheDocument()
+  })
+
+  it('uses translated view switcher labels in French', async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    setupMockApi()
+    renderWithQuery(<DiscoverPage />)
+
+    expect(await screen.findByRole('button', { name: 'Vue en grille' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Vue en liste' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Vue empilée' })).toBeInTheDocument()
+  })
+
+  it('uses translated scan action copy in French', async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    mockGetRecommendations.mockResolvedValue({ items: [], total: 0 })
+    renderWithQuery(
+      <MemoryRouter>
+        <DiscoverPage />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Tout' }))
+
+    expect(await screen.findByText('Exécuter une analyse')).toBeInTheDocument()
   })
 })

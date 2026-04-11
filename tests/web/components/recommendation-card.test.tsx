@@ -4,6 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nProvider } from '@/web/lib/i18n'
+
+vi.mock('@/web/lib/locale-storage', () => ({
+  detectBrowserLocale: vi.fn(() => 'en'),
+  getStoredLocale: vi.fn(() => 'en'),
+  setStoredLocale: vi.fn(),
+}))
 
 vi.mock('@/web/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/web/lib/api')>()
@@ -34,9 +41,11 @@ const noopPreview = {
 function withPreview(ui: ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <QueryClientProvider client={queryClient}>
-      <PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>
-    </QueryClientProvider>,
+    <I18nProvider>
+      <QueryClientProvider client={queryClient}>
+        <PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>
+      </QueryClientProvider>
+    </I18nProvider>,
   )
 }
 

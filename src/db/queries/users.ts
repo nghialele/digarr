@@ -1,12 +1,15 @@
 import { count, eq } from 'drizzle-orm'
 import { decryptFields, encryptFields, SENSITIVE_USER_CONNECTIONS } from '@/core/crypto'
+import type { SupportedLocale } from '@/core/i18n/locales'
 import type { Database } from '@/db'
 import type { Preferences } from '@/db/schema'
 import { users } from '@/db/schema'
 
 type UserRow = typeof users.$inferSelect
 
-export type UserPublic = Omit<UserRow, 'passwordHash'>
+export type UserPublic = Omit<UserRow, 'passwordHash' | 'preferredLocale'> & {
+  preferredLocale?: UserRow['preferredLocale']
+}
 
 function toPublic(row: UserRow): UserPublic {
   const { passwordHash: _, ...rest } = row
@@ -62,6 +65,14 @@ export async function updateUserPreferences(
   preferences: Preferences,
 ): Promise<void> {
   await db.update(users).set({ preferences }).where(eq(users.id, userId))
+}
+
+export async function updateUserPreferredLocale(
+  db: Database,
+  id: number,
+  preferredLocale: SupportedLocale | null,
+): Promise<void> {
+  await db.update(users).set({ preferredLocale }).where(eq(users.id, id))
 }
 
 export async function listUsers(db: Database): Promise<UserPublic[]> {

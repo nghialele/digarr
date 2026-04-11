@@ -1,3 +1,5 @@
+import type { SupportedLocale } from '@/core/i18n/locales'
+
 export type TasteProfile = {
   topArtists: Array<{
     name: string
@@ -10,6 +12,8 @@ export type TasteProfile = {
     totalListens: number
     recentTrend: 'increasing' | 'stable' | 'decreasing'
   }
+  responseLocale?: SupportedLocale
+  promptLocale?: SupportedLocale | null
   _rawPrompt?: string
 }
 

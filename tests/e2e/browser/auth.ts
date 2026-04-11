@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from '@playwright/test'
+import type { SupportedLocale } from '@/core/i18n/locales'
 
 const E2E_ADMIN_USERNAME = 'setup-e2e'
 const E2E_ADMIN_PASSWORD = 'e2e-password-123'
@@ -40,7 +41,7 @@ async function loginOrRegister(request: APIRequestContext): Promise<string | nul
 
 export async function ensureAdminToken(
   request: APIRequestContext,
-  options: { completeSetup?: boolean } = {},
+  options: { completeSetup?: boolean; preferredLocale?: SupportedLocale | null } = {},
 ): Promise<string | null> {
   const token = await loginOrRegister(request)
   if (!token) return null
@@ -52,7 +53,20 @@ export async function ensureAdminToken(
   const me = (await meRes.json()) as { isAdmin?: boolean }
   if (!me.isAdmin) return null
 
-  if (!options.completeSetup) return token
+  const preferredLocale = options.preferredLocale ?? 'en'
+  const setLocale = async () => {
+    const localeRes = await request.patch('/api/auth/me/locale', {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        preferredLocale,
+      },
+    })
+    return localeRes.ok()
+  }
+
+  if (!options.completeSetup) {
+    return (await setLocale()) ? token : null
+  }
 
   const setupStatusRes = await request.get('/api/setup/status', {
     headers: { Authorization: `Bearer ${token}` },
@@ -71,6 +85,8 @@ export async function ensureAdminToken(
     if (!completeRes.ok() && completeRes.status() !== 409) return null
   }
 
+  if (!(await setLocale())) return null
+
   return token
 }
 
@@ -78,4 +94,18 @@ export async function installAuthToken(page: Page, token: string) {
   await page.addInitScript((value) => {
     window.localStorage.setItem('digarr-auth-token', value)
   }, token)
+}
+
+export async function installBrowserLocale(page: Page, locale: SupportedLocale) {
+  await page.addInitScript((value) => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      get: () => value,
+    })
+
+    Object.defineProperty(window.navigator, 'languages', {
+      configurable: true,
+      get: () => [value, 'en-US'],
+    })
+  }, locale)
 }

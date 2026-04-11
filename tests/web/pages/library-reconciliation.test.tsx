@@ -5,15 +5,18 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nProvider } from '@/web/lib/i18n'
 
 function renderWithQuery(ui: ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
-    <MemoryRouter>
-      <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-    </MemoryRouter>,
+    <I18nProvider>
+      <MemoryRouter>
+        <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+      </MemoryRouter>
+    </I18nProvider>,
   )
 }
 
@@ -92,6 +95,22 @@ const makeAlbumRow = (
 describe('LibraryReconciliationPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    const storage = new Map<string, string>()
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn((key: string) => storage.get(key) ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+          storage.set(key, value)
+        }),
+        removeItem: vi.fn((key: string) => {
+          storage.delete(key)
+        }),
+        clear: vi.fn(() => {
+          storage.clear()
+        }),
+      },
+    })
     mockGetLibraryUnreconciledAlbums.mockResolvedValue({ items: [] })
     mockRerunLibraryReconciler.mockResolvedValue({ ok: true })
   })
@@ -221,5 +240,18 @@ describe('LibraryReconciliationPage', () => {
         screen.getByText('No unreconciled artists. Your library is fully matched.'),
       ).toBeInTheDocument()
     })
+  })
+
+  it('uses translated empty-state pagination copy in French', async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    mockGetLibraryUnreconciled.mockResolvedValue({ items: [] })
+
+    renderWithQuery(<LibraryReconciliationPage />)
+
+    expect(
+      await screen.findByText(
+        'Aucun artiste non rapproche. Votre bibliotheque est entierement associee.',
+      ),
+    ).toBeInTheDocument()
   })
 })

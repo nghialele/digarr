@@ -2,47 +2,55 @@ import { Pencil, Play, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import type { MessageKey } from '@/core/i18n/messages/types'
 import {
   deletePlaylistApi,
   generatePlaylistApi,
   type PlaylistRow,
   updatePlaylistApi,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
+import { formatShortDate } from '../lib/intl'
 import { ConfirmDialog } from './confirm-dialog'
 
-function formatRelativeTime(dateStr: string | null): string {
-  if (!dateStr) return 'Never'
+function formatRelativeTime(locale: string, dateStr: string | null, neverLabel: string): string {
+  if (!dateStr) return neverLabel
   const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const minutes = Math.floor(diffMs / (1000 * 60))
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const diffMinutes = Math.round((Date.now() - date.getTime()) / 60_000)
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  if (Math.abs(diffMinutes) < 1) return formatter.format(0, 'second')
+  if (Math.abs(diffMinutes) < 60) return formatter.format(-diffMinutes, 'minute')
+  const diffHours = Math.round(diffMinutes / 60)
+  if (Math.abs(diffHours) < 24) return formatter.format(-diffHours, 'hour')
+  const diffDays = Math.round(diffHours / 24)
+  if (Math.abs(diffDays) < 30) return formatter.format(-diffDays, 'day')
+  return formatShortDate(locale as never, date)
 }
 
-function formatSchedule(cron: string | null): string {
-  if (!cron) return 'Manual'
+function formatSchedule(cron: string | null, t: (key: MessageKey) => string): string {
+  if (!cron) return t('common.manual')
   const NAMED: Record<string, string> = {
-    '0 0 * * *': 'Daily',
-    '0 8 * * 1': 'Every Monday',
-    '0 8 * * 0': 'Every Sunday',
-    '0 8 * * 1,4': 'Mon + Thu',
-    '0 8 1,15 * *': '1st + 15th',
-    '0 8 1 * *': 'Monthly',
+    '0 0 * * *': t('common.daily'),
+    '0 8 * * 1': t('common.everyMonday'),
+    '0 8 * * 0': t('common.everySunday'),
+    '0 8 * * 1,4': t('common.monThu'),
+    '0 8 1,15 * *': t('common.firstAndFifteenth'),
+    '0 8 1 * *': t('common.monthly'),
   }
   return NAMED[cron] ?? cron
 }
 
 const STRATEGY_BADGES: Record<string, { label: string; className: string }> = {
-  weekly_digest: { label: 'Weekly Digest', className: 'bg-blue-500/15 text-blue-400' },
-  genre_focus: { label: 'Genre Focus', className: 'bg-green-500/15 text-green-400' },
-  mood_mix: { label: 'Mood Mix', className: 'bg-purple-500/15 text-purple-400' },
-  rediscover: { label: 'Rediscover', className: 'bg-amber-500/15 text-amber-400' },
+  weekly_digest: {
+    label: 'playlist.strategyWeeklyDigest',
+    className: 'bg-blue-500/15 text-blue-400',
+  },
+  genre_focus: {
+    label: 'playlist.strategyGenreFocus',
+    className: 'bg-green-500/15 text-green-400',
+  },
+  mood_mix: { label: 'playlist.strategyMoodMix', className: 'bg-purple-500/15 text-purple-400' },
+  rediscover: { label: 'playlist.strategyRediscover', className: 'bg-amber-500/15 text-amber-400' },
 }
 
 // Toggle (inline switch)
@@ -85,6 +93,7 @@ type PlaylistCardProps = {
 }
 
 export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps) {
+  const { locale, t } = useI18n()
   const [generating, setGenerating] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const navigate = useNavigate()
@@ -98,10 +107,10 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
     setGenerating(true)
     try {
       await generatePlaylistApi(playlist.id)
-      toast.success(`Generating "${playlist.name}"...`)
+      toast.success(t('playlist.generatingNamed'))
       onRefetch()
     } catch {
-      toast.error('Failed to start generation')
+      toast.error(t('playlist.generateFailed'))
     } finally {
       setGenerating(false)
     }
@@ -112,17 +121,17 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
       await updatePlaylistApi(playlist.id, { enabled })
       onRefetch()
     } catch {
-      toast.error('Failed to update playlist')
+      toast.error(t('playlists.updateFailed'))
     }
   }
 
   async function handleDelete() {
     try {
       await deletePlaylistApi(playlist.id)
-      toast.success(`Deleted "${playlist.name}"`)
+      toast.success(t('playlist.deletedNamed'))
       onRefetch()
     } catch {
-      toast.error('Failed to delete playlist')
+      toast.error(t('playlist.deleteFailed'))
     }
   }
 
@@ -145,7 +154,7 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
         <span
           className={`shrink-0 text-micro-lg font-medium px-2 py-0.5 rounded-full ${badge.className}`}
         >
-          {badge.label}
+          {badge.label.startsWith('playlist.') ? t(badge.label as never) : badge.label}
         </span>
       </div>
 
@@ -153,17 +162,20 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
       <div className="space-y-1 text-xs text-muted">
         <div className="flex items-center gap-3">
           <span>
-            Schedule: <span className="text-text">{formatSchedule(playlist.schedule)}</span>
+            {t('common.schedule')}:{' '}
+            <span className="text-text">{formatSchedule(playlist.schedule, t)}</span>
           </span>
           {playlist.trackCount != null && (
             <span>
-              Tracks: <span className="text-text">{playlist.trackCount}</span>
+              {t('playlist.tracks')}: <span className="text-text">{playlist.trackCount}</span>
             </span>
           )}
         </div>
         <div>
-          Last generated:{' '}
-          <span className="text-text">{formatRelativeTime(playlist.lastGeneratedAt)}</span>
+          {t('playlist.lastGenerated')}:{' '}
+          <span className="text-text">
+            {formatRelativeTime(locale, playlist.lastGeneratedAt, t('common.never'))}
+          </span>
         </div>
       </div>
 
@@ -181,7 +193,7 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
             onClick={handleGenerate}
             disabled={generating}
             className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-accent/15 text-accent rounded hover:bg-accent/25 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-            title="Generate now"
+            title={t('playlist.generateNow')}
           >
             {generating ? (
               <svg
@@ -200,14 +212,14 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
             ) : (
               <Play size={12} aria-hidden="true" />
             )}
-            {generating ? 'Generating...' : 'Generate'}
+            {generating ? t('playlist.generating') : t('playlist.generate')}
           </button>
           <button
             type="button"
             onClick={onEdit}
             className="p-2 text-muted hover:text-text transition-colors"
-            title="Edit playlist"
-            aria-label="Edit playlist"
+            title={t('playlist.edit')}
+            aria-label={t('playlist.edit')}
           >
             <Pencil size={14} aria-hidden="true" />
           </button>
@@ -218,8 +230,8 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
               setShowDeleteConfirm(true)
             }}
             className="p-2 text-muted hover:text-reject transition-colors"
-            title="Delete playlist"
-            aria-label="Delete playlist"
+            title={t('playlist.delete')}
+            aria-label={t('playlist.delete')}
           >
             <Trash2 size={14} aria-hidden="true" />
           </button>
@@ -229,18 +241,18 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
         <Toggle
           checked={playlist.enabled}
           onChange={handleToggle}
-          label={playlist.enabled ? 'Disable playlist' : 'Enable playlist'}
+          label={playlist.enabled ? t('playlist.disable') : t('playlist.enable')}
         />
       </div>
 
       {!playlist.enabled && (
-        <p className="text-micro-lg text-muted/60 text-center -mt-1">Disabled</p>
+        <p className="text-micro-lg text-muted/60 text-center -mt-1">{t('common.disabled')}</p>
       )}
       {showDeleteConfirm && (
         <ConfirmDialog
-          title="Delete playlist"
-          message={`Delete "${playlist.name}"? This cannot be undone.`}
-          confirmLabel="Delete"
+          title={t('playlist.delete')}
+          message={t('playlist.deleteWarning')}
+          confirmLabel={t('playlist.delete')}
           onConfirm={() => {
             setShowDeleteConfirm(false)
             handleDelete()

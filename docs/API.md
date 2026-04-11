@@ -2,6 +2,8 @@
 
 All endpoints require authentication via `Authorization: Bearer <token>` header unless marked as public. Only `/api/pipeline/events` and `/api/preview/audio` also accept `?token=<token>` for SSE and `<audio>` clients that cannot send headers.
 
+Locale-aware routes accept `X-Digarr-Locale` to override the saved user locale for that request. If the header is absent, Digarr falls back to the saved user preference and then `Accept-Language`.
+
 Admin-only endpoints return 403 for non-admin users.
 
 ---
@@ -15,9 +17,20 @@ Admin-only endpoints return 403 for non-admin users.
 | POST | `/api/auth/logout` | Yes | Invalidate current session |
 | GET | `/api/auth/status` | No | Server auth status, OIDC config, version |
 | GET | `/api/auth/me` | Yes | Current user profile |
+| PATCH | `/api/auth/me/locale` | Yes | Update the saved user locale. Session auth only. |
 | POST | `/api/auth/change-password` | Yes | Change password. Invalidates all sessions. Rate limited: 5/min |
 | GET | `/api/auth/me/preferences` | Yes | Get merged user preferences |
 | PATCH | `/api/auth/me/preferences` | Yes | Update user preferences (partial merge) |
+
+**PATCH /api/auth/me/locale** body:
+```json
+{ "preferredLocale": "fr" }
+```
+
+Notes:
+- `preferredLocale` may be a supported locale string or `null`
+- Supported locales: `en`, `es`, `fr`, `de`, `pt-BR`, `it`, `nl`, `ro`, `pl`, `tr`, `uk`, `ru`, `ja`, `ko`, `zh-CN`
+- Legacy token auth is rejected with `403`; this route requires a session-authenticated user
 
 ### OIDC / OAuth
 
@@ -74,6 +87,11 @@ Setup validation rules:
 ```json
 { "artistName": "Radiohead" }
 ```
+
+Locale notes:
+- `POST /api/pipeline/run` and `POST /api/pipeline/quick-discover` honor `X-Digarr-Locale`
+- For authenticated users, the explicit request locale wins over the saved user locale for that request
+- AI responses follow the resolved UI locale; prompt-language detection is handled separately for freeform inputs
 
 ---
 
@@ -286,6 +304,10 @@ Discovery-mode subscription notes:
   ]
 }
 ```
+
+Locale notes:
+- `POST /api/mood/discover` honors `X-Digarr-Locale`
+- The response reasoning follows the resolved UI locale, while prompt-language detection uses the submitted mood text
 
 ---
 

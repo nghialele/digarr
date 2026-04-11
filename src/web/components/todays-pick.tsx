@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react'
 import { Fragment, useRef, useState } from 'react'
 import { useClickOutside } from '../hooks/use-click-outside'
 import { getAlbums } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 import { hueFromName } from '../lib/utils'
 import { Hint } from './hint'
 import { StreamingLinks } from './streaming-links'
@@ -47,6 +48,7 @@ export function TodaysPick({
   targets,
   onApproveToTarget,
 }: TodaysPickProps) {
+  const { t } = useI18n()
   const [imgError, setImgError] = useState(false)
   const [coverError, setCoverError] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -82,13 +84,13 @@ export function TodaysPick({
   if (!rec) {
     return (
       <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center text-center h-full">
-        <p className="text-muted text-sm mb-3">No pending recommendations</p>
+        <p className="text-muted text-sm mb-3">{t('todaysPick.noPending')}</p>
         <button
           type="button"
           onClick={onRunScan}
           className="px-4 py-2 bg-accent text-accent-fg rounded text-sm font-medium hover:bg-accent/90 transition-colors"
         >
-          Run Scan
+          {t('app.runScan')}
         </button>
       </div>
     )
@@ -155,11 +157,13 @@ export function TodaysPick({
         <div
           className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5"
           role="img"
-          aria-label={`Match score: ${scorePercent}%`}
+          aria-label={`${t('todaysPick.matchScore')}: ${scorePercent}%`}
         >
           <span className="text-accent text-xl font-bold leading-none">{scorePercent}</span>
           <span className="text-accent/70 text-xs font-semibold">%</span>
-          <span className="text-white/50 text-micro-sm ml-1 uppercase tracking-wider">match</span>
+          <span className="text-white/50 text-micro-sm ml-1 uppercase tracking-wider">
+            {t('todaysPick.match')}
+          </span>
         </div>
 
         {/* Artist name / logo */}
@@ -211,8 +215,7 @@ export function TodaysPick({
       {/* Hint above action buttons */}
       <div className="px-4 pt-2">
         <Hint id="todays-pick-skip-tip" type="inline">
-          Skip shows you the next artist without rejecting -- skipped artists will come back in
-          future scans.
+          {t('todaysPick.skipHint')}
         </Hint>
       </div>
 
@@ -223,15 +226,15 @@ export function TodaysPick({
           onClick={() => onReject(rec.id)}
           className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-reject/30 text-reject bg-reject/5 hover:bg-reject/15 transition-colors"
         >
-          Reject
+          {t('todaysPick.reject')}
         </button>
         <button
           type="button"
           onClick={() => onSkip(rec.id)}
           className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500/15 transition-colors"
-          title="Skip for now -- this artist will come back later"
+          title={t('todaysPick.skipTitle')}
         >
-          Skip
+          {t('todaysPick.skip')}
         </button>
         {actionableTargets.length > 1 ? (
           <div ref={dropdownRef} className="relative flex-1">
@@ -241,13 +244,13 @@ export function TodaysPick({
                 onClick={() => onApprove(rec.id)}
                 className="flex-1 py-2 text-sm font-medium text-center rounded-l-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
               >
-                Approve
+                {t('todaysPick.approve')}
               </button>
               <button
                 type="button"
                 onClick={() => setDropdownOpen((v) => !v)}
                 className="px-2 py-2 text-sm font-medium rounded-r-lg border border-l-0 border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
-                aria-label="Approve to specific target"
+                aria-label={t('todaysPick.approveSpecificTarget')}
               >
                 <ChevronDown size={14} />
               </button>
@@ -277,7 +280,7 @@ export function TodaysPick({
             onClick={() => onApprove(rec.id)}
             className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
           >
-            Approve
+            {t('todaysPick.approve')}
           </button>
         )}
       </div>

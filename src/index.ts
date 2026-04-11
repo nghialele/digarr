@@ -140,6 +140,7 @@ import {
   updatePassword,
   updateUser,
   updateUserConnections,
+  updateUserPreferredLocale,
 } from './db/queries/users'
 import {
   artists,
@@ -1009,6 +1010,8 @@ const app = createApp({
   getUserById: (id) => getUserById(db, id),
   getUserCount: () => getUserCount(db),
   updatePassword: (id, hash) => updatePassword(db, id, hash),
+  updateUserPreferredLocale: (id, preferredLocale) =>
+    updateUserPreferredLocale(db, id, preferredLocale),
   getOidcService,
   getUserByOidcSubject: (subject) => getUserByOidcSubject(db, subject),
   getUserByEmail: (email) => getUserByEmail(db, email),

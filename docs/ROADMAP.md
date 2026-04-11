@@ -1,12 +1,12 @@
 # Roadmap
 
-> Updated: 2026-04-11 | Current: v0.20.4
+> Updated: 2026-04-11 | Current: v0.21.0
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
 ## Where We Are
 
-All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, and Emby. Discovery mode expansion is partially shipped: manual and subscription flows are in place, and the currently runnable modes are ListenBrainz, Release Radar, and Similar Artist Web. Labels and Artist Relationships remain planned and are marked unavailable in the UI until they have real integrations. Current focus is download-target breadth and polish on the shipped media-server path.
+All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, and Emby. Multilingual support is now shipped too: the shell, setup/auth flows, key admin pages, and AI-assisted discovery can all follow the user's selected locale. Discovery mode expansion is still partially shipped: manual and subscription flows are in place, and the currently runnable modes are ListenBrainz, Release Radar, and Similar Artist Web. Labels and Artist Relationships remain planned and are marked unavailable in the UI until they have real integrations. Current focus is download-target breadth and polish on the shipped media-server and internationalization paths.
 
 ## v1 Goals
 
@@ -81,8 +81,6 @@ Good ideas with no timeline yet.
 - Taste DNA / shareable profile
 - Audition playlists ("try before you add")
 - Interactive API docs (Swagger/Scalar UI)
-- Multi-language UI (translated static strings, AI translation for dynamic content)
-
 ## Experiments
 
 Low confidence. Would build only with real demand.
@@ -102,7 +100,14 @@ Low confidence. Would build only with real demand.
 
 ## Recently Shipped
 
-### Unreleased
+### v0.21.0
+
+- Full multilingual UI support across 15 shipped locales
+- Visible pre-login and authenticated language switchers with persisted per-user locale preference
+- Localized auth/setup flows, high-traffic pages, and locale-aware AI reasoning for mood discovery, quick discover, and full scans
+- Translation maintenance scripts, strict locale-catalog completeness checks, and browser coverage for language switching
+
+### v0.20.3
 
 - Discovery modes on the Discover page, with runnable executors for ListenBrainz, Release Radar, and Similar Artist Web
 - Labels and Artist Relationships now marked unavailable until they have real implementations

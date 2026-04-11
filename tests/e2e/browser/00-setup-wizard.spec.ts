@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { ensureAdminToken, installAuthToken } from './auth'
+import { ensureAdminToken, installAuthToken, installBrowserLocale } from './auth'
 
 test.describe('Setup Wizard', () => {
   test('loads and shows mode selection', async ({ page }) => {
     const token = await ensureAdminToken(page.request)
     expect(token).toBeTruthy()
     if (!token) return
+    await installBrowserLocale(page, 'en')
     await installAuthToken(page, token)
     await page.goto('/')
 

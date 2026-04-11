@@ -2,12 +2,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import type { SupportedLocale } from '@/core/i18n/locales'
 import { errMsg } from '@/core/validation'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { AdministrationTab } from '../components/admin/administration-tab'
 import { CollapsibleSection } from '../components/collapsible-section'
 import { Field } from '../components/field'
 import { Hint } from '../components/hint'
+import { LanguageSwitcher } from '../components/language-switcher'
 import { ServiceCard } from '../components/service-card'
 import {
   AiProviderIcon,
@@ -52,6 +54,7 @@ import {
   updateSettings,
   updateUserPreferences,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 import { UserManagementPage } from './user-management'
 
 type Settings = {
@@ -1955,6 +1958,7 @@ function ScheduleTab({ settings }: { settings: Settings }) {
 }
 
 function AccountTab() {
+  const { locale, setLocale } = useI18n()
   const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -1999,6 +2003,10 @@ function AccountTab() {
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleLocaleChange(nextLocale: SupportedLocale) {
+    setLocale(nextLocale)
   }
 
   return (
@@ -2055,6 +2063,13 @@ function AccountTab() {
             {saving ? 'Changing...' : 'Change Password'}
           </Button>
         </form>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Language</h2>
+        <Field label="Language" id="preferred-locale">
+          <LanguageSwitcher value={locale} onChange={handleLocaleChange} />
+        </Field>
       </section>
 
       {(canInstall || showIosHint) && (

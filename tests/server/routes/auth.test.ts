@@ -1,9 +1,10 @@
 // @vitest-environment node
 
 import { EventEmitter } from 'node:events'
+import { Hono } from 'hono'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { hashPassword } from '@/core/auth'
-import { clearAllSessions } from '@/core/sessions'
+import { clearAllSessions, createSession } from '@/core/sessions'
 
 // Registration is closed by default (DIGARR_DISABLE_REGISTRATION defaults to true).
 // Override to false so registration tests can create users.
@@ -17,6 +18,8 @@ vi.mock('@/config/env', async (importOriginal) => {
 
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'
+import { authRoutes } from '@/server/routes/auth'
+import type { HonoEnv } from '@/server/types'
 
 function makeMockOrchestrator() {
   const emitter = new EventEmitter()
@@ -53,6 +56,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       username: data.username,
       isAdmin: data.isAdmin ?? false,
       preferences: null,
+      preferredLocale: null,
       email: null,
       oidcSubject: null,
       authProvider: 'local',
@@ -78,6 +82,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
       username: 'testuser',
       isAdmin: false,
       preferences: null,
+      preferredLocale: null,
       email: null,
       oidcSubject: null,
       authProvider: 'local',
@@ -99,6 +104,7 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     })),
     getUserCount: vi.fn(async () => 0),
     updatePassword: vi.fn(async () => {}),
+    updateUserPreferredLocale: vi.fn(async () => {}),
     genreService: {} as unknown as AppDependencies['genreService'],
     libraryHealth: {} as unknown as AppDependencies['libraryHealth'],
     librarySync: {} as unknown as AppDependencies['librarySync'],
@@ -159,6 +165,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  delete process.env.DIGARR_AUTH_TOKEN
   await clearAllSessions()
 })
 
@@ -169,6 +176,7 @@ describe('POST /api/auth/register', () => {
       username: data.username,
       isAdmin: true,
       preferences: null,
+      preferredLocale: null,
       email: null,
       oidcSubject: null,
       authProvider: 'local',
@@ -212,6 +220,7 @@ describe('POST /api/auth/register', () => {
       username: data.username,
       isAdmin: false,
       preferences: null,
+      preferredLocale: null,
       email: null,
       oidcSubject: null,
       authProvider: 'local',
@@ -361,6 +370,25 @@ describe('POST /api/auth/login', () => {
     })
     expect(res.status).toBe(400)
   })
+
+  it('localizes missing-credentials errors from the request locale', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Digarr-Locale': 'fr',
+      },
+      body: JSON.stringify({ username: '', password: '' }),
+    })
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual(
+      expect.objectContaining({
+        error: "Le nom d'utilisateur et le mot de passe sont requis",
+      }),
+    )
+  })
 })
 
 describe('session token authentication', () => {
@@ -462,6 +490,7 @@ describe('GET /api/auth/me', () => {
           username: 'testuser',
           isAdmin: false,
           preferences: null,
+          preferredLocale: null,
           email: null,
           oidcSubject: null,
           authProvider: 'local',
@@ -498,6 +527,138 @@ describe('GET /api/auth/me', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.username).toBe('testuser')
+  })
+
+  it('returns preferredLocale from /api/auth/me', async () => {
+    const app = createApp(
+      makeDeps({
+        getUserById: vi.fn(async () => ({
+          id: 1,
+          username: 'testuser',
+          isAdmin: false,
+          preferences: null,
+          preferredLocale: 'de',
+          email: null,
+          oidcSubject: null,
+          authProvider: 'local',
+          listenbrainzUsername: null,
+          listenbrainzToken: null,
+          lastfmUsername: null,
+          lastfmApiKey: null,
+          plexUrl: null,
+          plexToken: null,
+          jellyfinUrl: null,
+          jellyfinApiKey: null,
+          jellyfinUserId: null,
+          embyUrl: null,
+          embyApiKey: null,
+          embyUserId: null,
+          discogsToken: null,
+          discogsUsername: null,
+          createdAt: new Date(),
+        })),
+        getUserCount: vi.fn(async () => 1),
+      }),
+    )
+
+    await createSession(1, 'session-token')
+    const res = await app.request('/api/auth/me', {
+      headers: { Authorization: 'Bearer session-token' },
+    })
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual(expect.objectContaining({ preferredLocale: 'de' }))
+  })
+})
+
+describe('PATCH /api/auth/me/locale', () => {
+  it('updates preferred locale through PATCH /api/auth/me/locale', async () => {
+    const updateUserPreferredLocale = vi.fn(async () => {})
+    const app = createApp({
+      ...makeDeps({ getUserCount: vi.fn(async () => 1) }),
+      updateUserPreferredLocale,
+    } as AppDependencies)
+
+    await createSession(1, 'session-token')
+    const res = await app.request('/api/auth/me/locale', {
+      method: 'PATCH',
+      headers: {
+        Authorization: 'Bearer session-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ preferredLocale: 'es-MX' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(updateUserPreferredLocale).toHaveBeenCalledWith(1, 'es')
+  })
+
+  it('rejects legacy read-only token auth', async () => {
+    const app = new Hono<HonoEnv>()
+    app.use('*', async (c, next) => {
+      c.set('userId', 1)
+      c.set('legacyTokenAuth', true)
+      await next()
+    })
+    app.route('/', authRoutes(makeDeps()))
+
+    const res = await app.request('/api/auth/me/locale', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ preferredLocale: 'de' }),
+    })
+
+    expect(res.status).toBe(403)
+    await expect(res.json()).resolves.toEqual({ error: 'Session authentication required' })
+  })
+
+  it('returns 400 for non-string preferredLocale payloads', async () => {
+    const updateUserPreferredLocale = vi.fn(async () => {})
+    const app = createApp(
+      makeDeps({
+        updateUserPreferredLocale,
+        getUserCount: vi.fn(async () => 1),
+      }),
+    )
+
+    await createSession(1, 'session-token')
+    const res = await app.request('/api/auth/me/locale', {
+      method: 'PATCH',
+      headers: {
+        Authorization: 'Bearer session-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ preferredLocale: 123 }),
+    })
+
+    expect(res.status).toBe(400)
+    expect(updateUserPreferredLocale).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when the authenticated user no longer exists', async () => {
+    const updateUserPreferredLocale = vi.fn(async () => {})
+    const app = createApp(
+      makeDeps({
+        updateUserPreferredLocale,
+        getUserById: vi.fn(async () => null),
+        getUserCount: vi.fn(async () => 1),
+      }),
+    )
+
+    await createSession(1, 'session-token')
+    const res = await app.request('/api/auth/me/locale', {
+      method: 'PATCH',
+      headers: {
+        Authorization: 'Bearer session-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ preferredLocale: 'de' }),
+    })
+
+    expect(res.status).toBe(404)
+    expect(updateUserPreferredLocale).not.toHaveBeenCalled()
   })
 })
 

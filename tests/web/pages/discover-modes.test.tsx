@@ -4,7 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nProvider } from '@/web/lib/i18n'
 import { PreviewContext } from '@/web/lib/preview-context'
+
+vi.mock('@/web/lib/locale-storage', () => ({
+  detectBrowserLocale: vi.fn(() => 'en'),
+  getRequestLocale: vi.fn(() => 'en'),
+  getStoredLocale: vi.fn(() => 'en'),
+  setStoredLocale: vi.fn(),
+}))
 
 const toast = vi.hoisted(() => ({
   success: vi.fn(),
@@ -28,7 +36,9 @@ function renderWithQuery(ui: ReactElement) {
   })
   return render(
     <QueryClientProvider client={client}>
-      <PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>
+      <I18nProvider>
+        <PreviewContext.Provider value={noopPreview}>{ui}</PreviewContext.Provider>
+      </I18nProvider>
     </QueryClientProvider>,
   )
 }

@@ -4,13 +4,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nProvider } from '@/web/lib/i18n'
+
+vi.mock('@/web/lib/locale-storage', () => ({
+  detectBrowserLocale: vi.fn(() => 'en'),
+  getStoredLocale: vi.fn(() => 'en'),
+  setStoredLocale: vi.fn(),
+}))
 
 function createQueryWrapper() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    <I18nProvider>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </I18nProvider>
   )
 }
 

@@ -7,8 +7,10 @@ import { Hint } from '../components/hint'
 import { Input } from '../components/ui/input'
 import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import { getGenres, searchGenres, seedGenres } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 export function GenresPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -19,7 +21,7 @@ export function GenresPage() {
     handlers: pullHandlers,
   } = usePullToRefresh(() => {
     queryClient.invalidateQueries({ queryKey: ['genres'] })
-    toast.info('Refreshing...')
+    toast.info(t('common.refreshing'))
   })
 
   // Debounce search input ~300ms
@@ -50,12 +52,12 @@ export function GenresPage() {
     setSeeding(true)
     try {
       const result = await seedGenres()
-      toast.success(result.message ?? 'Genre seed started')
+      toast.success(result.message ?? t('genres.seedStarted'))
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['genres'] })
       }, 3000)
     } catch {
-      toast.error('Failed to seed genres')
+      toast.error(t('genres.seedFailed'))
     } finally {
       setSeeding(false)
     }
@@ -70,18 +72,18 @@ export function GenresPage() {
           style={{ height: `${Math.min(pullY, PULL_THRESHOLD + 20)}px` }}
           aria-hidden="true"
         >
-          {pullY >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
+          {pullY >= PULL_THRESHOLD ? t('common.releaseToRefresh') : t('common.pullToRefresh')}
         </div>
       )}
       {/* Header + search */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex-1">
-          <h1 className="text-lg font-semibold text-text">Genres</h1>
-          <p className="text-xs text-muted mt-0.5">Browse genres from your library</p>
+          <h1 className="text-lg font-semibold text-text">{t('genres.title')}</h1>
+          <p className="text-xs text-muted mt-0.5">{t('genres.subtitle')}</p>
         </div>
         <Input
           type="search"
-          placeholder="Search genres..."
+          placeholder={t('genres.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="sm:w-64"
@@ -89,21 +91,20 @@ export function GenresPage() {
       </div>
 
       <Hint id="genres-browse-tip" type="inline">
-        Browse genres from your library and recommendation history. Click a genre to see recommended
-        artists, trending discoveries, and hidden gems.
+        {t('genres.browseTip')}
       </Hint>
 
       {/* Empty state with seed button */}
       {isEmpty ? (
         <div className="py-16 text-center space-y-4">
-          <p className="text-muted text-sm">No genres in your library yet.</p>
+          <p className="text-muted text-sm">{t('genres.empty')}</p>
           <button
             type="button"
             onClick={handleSeed}
             disabled={seeding}
             className="px-4 py-2 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {seeding ? 'Seeding...' : 'Seed genres from your library'}
+            {seeding ? t('genres.seeding') : t('genres.seedFromLibrary')}
           </button>
         </div>
       ) : (
@@ -111,16 +112,23 @@ export function GenresPage() {
           {isSearching ? (
             <p className="text-xs text-muted">
               {searchLoading
-                ? 'Searching...'
-                : `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${debouncedQuery}"`}
+                ? t('common.searching')
+                : `${searchResults.length} ${
+                    searchResults.length === 1
+                      ? t('genres.resultSingular')
+                      : t('genres.resultPlural')
+                  } ${t('genres.forQuery')} "${debouncedQuery}"`}
             </p>
           ) : (
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-                Your Library Genres
+                {t('genres.libraryGenres')}
               </h2>
               {!loading && (
-                <span className="text-xs text-muted">{libraryGenres.length} genres</span>
+                <span className="text-xs text-muted">
+                  {libraryGenres.length}{' '}
+                  {libraryGenres.length === 1 ? t('genres.genreSingular') : t('genres.genrePlural')}
+                </span>
               )}
             </div>
           )}
@@ -133,8 +141,8 @@ export function GenresPage() {
         type="button"
         onClick={handleSeed}
         disabled={seeding}
-        aria-label={seeding ? 'Seeding...' : 'Seed genres'}
-        title={seeding ? 'Seeding...' : 'Seed genres from your library'}
+        aria-label={seeding ? t('genres.seeding') : t('genres.seed')}
+        title={seeding ? t('genres.seeding') : t('genres.seedFromLibrary')}
         className="md:hidden fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-accent text-accent-fg shadow-lg flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
         {seeding ? (

@@ -14,8 +14,10 @@ import {
   listUsers,
   updateUserAdmin,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 export function UserManagementPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<{
@@ -48,7 +50,7 @@ export function UserManagementPage() {
       createUserApi({ username: newUsername, password: newPassword, isAdmin: newIsAdmin }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast.success(`User "${newUsername}" created`)
+      toast.success(`${t('userManagement.userCreated')} "${newUsername}"`)
       setNewUsername('')
       setNewPassword('')
       setNewIsAdmin(false)
@@ -56,19 +58,19 @@ export function UserManagementPage() {
     },
     onError: (err) => {
       const msg = errMsg(err)
-      toast.error(msg.includes('409') ? 'Username already taken' : msg)
+      toast.error(msg.includes('409') ? t('userManagement.usernameTaken') : msg)
     },
   })
 
   if (usersQuery.isLoading) {
-    return <div className="p-8 text-muted">Loading users...</div>
+    return <div className="p-8 text-muted">{t('userManagement.loading')}</div>
   }
 
   if (usersQuery.error) {
     return (
       <div className="p-8 text-reject">
-        Failed to load users:{' '}
-        {usersQuery.error instanceof Error ? usersQuery.error.message : 'Unknown error'}
+        {t('userManagement.failedToLoad')}:{' '}
+        {usersQuery.error instanceof Error ? usersQuery.error.message : t('common.unknownError')}
       </div>
     )
   }
@@ -76,10 +78,10 @@ export function UserManagementPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text">User Management</h1>
+        <h1 className="text-2xl font-bold text-text">{t('userManagement.title')}</h1>
         <Button size="sm" onClick={() => setShowForm((v) => !v)}>
           <Plus size={14} className="mr-1" />
-          Add User
+          {t('userManagement.addUser')}
         </Button>
       </div>
 
@@ -91,18 +93,18 @@ export function UserManagementPage() {
           }}
           className="bg-surface border border-border rounded-lg p-4 space-y-3"
         >
-          <h2 className="text-sm font-semibold text-text">Create User</h2>
+          <h2 className="text-sm font-semibold text-text">{t('userManagement.createUser')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               type="text"
-              placeholder="Username (2-50 chars)"
+              placeholder={t('userManagement.usernamePlaceholder')}
               value={newUsername}
               onChange={(e) => setNewUsername(e.target.value)}
               autoFocus
             />
             <Input
               type="password"
-              placeholder="Password (min 8 chars)"
+              placeholder={t('userManagement.passwordPlaceholder')}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
@@ -114,26 +116,27 @@ export function UserManagementPage() {
               onChange={(e) => setNewIsAdmin(e.target.checked)}
               className="rounded border-border"
             />
-            Admin privileges
+            {t('userManagement.adminPrivileges')}
           </label>
           <div className="flex gap-2 justify-end">
             <Button type="button" size="sm" variant="outline" onClick={() => setShowForm(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" size="sm" disabled={createUser.isPending}>
-              {createUser.isPending ? 'Creating...' : 'Create'}
+              {createUser.isPending ? t('userManagement.creating') : t('common.create')}
             </Button>
           </div>
         </form>
       )}
 
       <Hint id="user-management-intro-tip" type="inline">
-        Each user has their own recommendations, preferences, and listening sources. Admins can
-        manage global settings.
+        {t('userManagement.introTip')}
       </Hint>
 
       <div className="space-y-2">
-        {usersQuery.data?.length === 0 && <p className="text-sm text-muted">No users found.</p>}
+        {usersQuery.data?.length === 0 && (
+          <p className="text-sm text-muted">{t('userManagement.noUsers')}</p>
+        )}
         {usersQuery.data?.map((user) => {
           const isSelf = currentUser?.id === user.id
           const isLastAdmin = user.isAdmin && adminCount <= 1
@@ -148,7 +151,7 @@ export function UserManagementPage() {
                 <div className="flex gap-2 mt-1">
                   {user.isAdmin && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent">
-                      admin
+                      {t('userManagement.adminBadge')}
                     </span>
                   )}
                   <span className="text-xs px-1.5 py-0.5 rounded bg-bg text-muted border border-border">
@@ -168,13 +171,13 @@ export function UserManagementPage() {
                   }
                   title={
                     isSelf && user.isAdmin
-                      ? "Can't remove your own admin role"
+                      ? t('userManagement.cannotRemoveOwnAdmin')
                       : isLastAdmin && user.isAdmin
-                        ? 'Last admin -- cannot remove'
+                        ? t('userManagement.lastAdminCannotRemove')
                         : undefined
                   }
                 >
-                  {user.isAdmin ? 'Remove admin' : 'Make admin'}
+                  {user.isAdmin ? t('userManagement.removeAdmin') : t('userManagement.makeAdmin')}
                 </Button>
                 <Button
                   size="sm"
@@ -183,13 +186,13 @@ export function UserManagementPage() {
                   disabled={deleteUser.isPending || isSelf || isLastAdmin}
                   title={
                     isSelf
-                      ? "Can't delete yourself"
+                      ? t('userManagement.cannotDeleteSelf')
                       : isLastAdmin
-                        ? 'Last admin -- cannot delete'
+                        ? t('userManagement.lastAdminCannotDelete')
                         : undefined
                   }
                 >
-                  Delete
+                  {t('common.delete')}
                 </Button>
               </div>
             </div>
@@ -198,9 +201,9 @@ export function UserManagementPage() {
       </div>
       {confirmDeleteUser && (
         <ConfirmDialog
-          title="Delete user"
-          message={`Delete user "${confirmDeleteUser.username}"? This cannot be undone.`}
-          confirmLabel="Delete"
+          title={t('userManagement.deleteUser')}
+          message={`${t('userManagement.deleteUserPrompt')} "${confirmDeleteUser.username}"? ${t('common.cannotBeUndone')}`}
+          confirmLabel={t('common.delete')}
           onConfirm={() => {
             deleteUser.mutate(confirmDeleteUser.id)
             setConfirmDeleteUser(null)

@@ -2,10 +2,12 @@ import { Compass, MonitorPlay } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Field } from '../components/field'
+import { LanguageSwitcher } from '../components/language-switcher'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
 import { completeSetup } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 type FormState = {
   lidarr: { url: string; apiKey: string; skipTlsVerify: boolean }
@@ -16,6 +18,7 @@ type FormState = {
 type SetupMode = 'lidarr' | 'emby' | 'discover'
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center justify-center gap-0 mb-8">
       {Array.from({ length: total }, (_, i) => {
@@ -42,7 +45,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2.5}
-                  aria-label="Step complete"
+                  aria-label={t('setup.stepComplete')}
                   role="img"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -68,13 +71,12 @@ function StepMode({
   mode: SetupMode | null
   onSelect: (m: SetupMode) => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-text">How do you manage music?</h2>
-        <p className="text-sm text-muted mt-1">
-          This determines how approved recommendations are handled.
-        </p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.howManageMusic')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.subtitle')}</p>
       </div>
       <div className="space-y-3">
         <button
@@ -91,9 +93,7 @@ function StepMode({
             <img src="/icons/lidarr.png" alt="" className="w-8 h-8" />
             <div>
               <span className="text-sm font-medium text-text">Lidarr</span>
-              <p className="text-xs text-muted mt-0.5">
-                Approved artists are added to Lidarr for automatic download
-              </p>
+              <p className="text-xs text-muted mt-0.5">{t('setup.lidarrModeDescription')}</p>
             </div>
           </div>
         </button>
@@ -113,9 +113,7 @@ function StepMode({
             </div>
             <div>
               <span className="text-sm font-medium text-text">Emby</span>
-              <p className="text-xs text-muted mt-0.5">
-                Sync your Emby library, use listening history for taste, and push playlists back.
-              </p>
+              <p className="text-xs text-muted mt-0.5">{t('setup.embyModeDescription')}</p>
             </div>
           </div>
         </button>
@@ -134,10 +132,8 @@ function StepMode({
               <Compass size={18} className="text-accent" />
             </div>
             <div>
-              <span className="text-sm font-medium text-text">Just discover</span>
-              <p className="text-xs text-muted mt-0.5">
-                Curate a personal list of recommendations. Export as JSON, CSV, or M3U.
-              </p>
+              <span className="text-sm font-medium text-text">{t('setup.discoveryOnlyLabel')}</span>
+              <p className="text-xs text-muted mt-0.5">{t('setup.discoveryModeDescription')}</p>
             </div>
           </div>
         </button>
@@ -155,13 +151,14 @@ function StepLidarr({
   onFormChange: (v: FormState['lidarr']) => void
   onContinue: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-text">Connect Lidarr</h2>
-        <p className="text-sm text-muted mt-1">Lidarr manages your music library and downloads.</p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.connectLidarr')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.lidarrDescription')}</p>
       </div>
-      <Field label="Lidarr URL" id="lidarr-url">
+      <Field label={t('setup.lidarrUrl')} id="lidarr-url">
         <Input
           id="lidarr-url"
           type="url"
@@ -177,23 +174,20 @@ function StepLidarr({
           onChange={(e) => onFormChange({ ...form, skipTlsVerify: e.target.checked })}
           className="rounded border-border"
         />
-        Skip TLS verification
+        {t('setup.skipTlsVerification')}
       </label>
-      <Field label="API Key" id="lidarr-apikey">
+      <Field label={t('setup.apiKey')} id="lidarr-apikey">
         <Input
           id="lidarr-apikey"
           type="password"
-          placeholder="Your Lidarr API key"
+          placeholder={t('setup.lidarrApiKeyPlaceholder')}
           value={form.apiKey}
           onChange={(e) => onFormChange({ ...form, apiKey: e.target.value })}
         />
       </Field>
-      <p className="text-xs text-muted">
-        Connection tests are available in Settings after setup. Continue once the URL and API key
-        look right.
-      </p>
+      <p className="text-xs text-muted">{t('setup.connectionTestsContinueLidarr')}</p>
       <Button onClick={onContinue} disabled={!form.url || !form.apiKey} className="w-full">
-        Continue
+        {t('common.continue')}
       </Button>
     </div>
   )
@@ -208,15 +202,14 @@ function StepEmby({
   onFormChange: (v: FormState['emby']) => void
   onContinue: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-text">Connect Emby</h2>
-        <p className="text-sm text-muted mt-1">
-          Emby powers library sync, taste signal, and playlist export.
-        </p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.connectEmby')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.embyDescription')}</p>
       </div>
-      <Field label="Emby URL" id="emby-url">
+      <Field label={t('setup.embyUrl')} id="emby-url">
         <Input
           id="emby-url"
           type="url"
@@ -225,36 +218,31 @@ function StepEmby({
           onChange={(e) => onFormChange({ ...form, url: e.target.value })}
         />
       </Field>
-      <Field label="API Key" id="emby-apikey">
+      <Field label={t('setup.apiKey')} id="emby-apikey">
         <Input
           id="emby-apikey"
           type="password"
-          placeholder="Your Emby API key"
+          placeholder={t('setup.embyApiKeyPlaceholder')}
           value={form.apiKey}
           onChange={(e) => onFormChange({ ...form, apiKey: e.target.value })}
         />
       </Field>
-      <Field label="User ID" id="emby-userid">
+      <Field label={t('setup.userId')} id="emby-userid">
         <Input
           id="emby-userid"
-          placeholder="Emby user ID"
+          placeholder={t('setup.embyUserIdPlaceholder')}
           value={form.userId}
           onChange={(e) => onFormChange({ ...form, userId: e.target.value })}
         />
-        <p className="text-xs text-muted mt-1">
-          Found under Emby Dashboard -&gt; Users -&gt; (select user). The URL contains the user ID.
-        </p>
+        <p className="text-xs text-muted mt-1">{t('setup.embyUserIdHelp')}</p>
       </Field>
-      <p className="text-xs text-muted">
-        Connection tests are available in Settings after setup. Continue once the URL, API key, and
-        user ID look right.
-      </p>
+      <p className="text-xs text-muted">{t('setup.connectionTestsContinueEmby')}</p>
       <Button
         onClick={onContinue}
         disabled={!form.url || !form.apiKey || !form.userId}
         className="w-full"
       >
-        Continue
+        {t('common.continue')}
       </Button>
     </div>
   )
@@ -269,25 +257,26 @@ function StepAi({
   onFormChange: (v: FormState['ai']) => void
   onContinue: () => void
 }) {
+  const { t } = useI18n()
   const needsApiKey = form.provider !== 'ollama' && form.provider !== 'openai-compatible'
   const apiKeyOptional = form.provider === 'openai-compatible'
   const needsBaseUrl = form.provider === 'ollama' || form.provider === 'openai-compatible'
 
   const modelSuggestions: Record<string, Array<{ value: string; label: string }>> = {
     anthropic: [
-      { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 (fast, cheapest)' },
-      { value: 'claude-sonnet-4-6', label: 'Sonnet 4.6 (balanced)' },
-      { value: 'claude-opus-4-6', label: 'Opus 4.6 (most capable)' },
+      { value: 'claude-haiku-4-5-20251001', label: t('setup.modelSuggestionAnthropicHaiku') },
+      { value: 'claude-sonnet-4-6', label: t('setup.modelSuggestionAnthropicSonnet') },
+      { value: 'claude-opus-4-6', label: t('setup.modelSuggestionAnthropicOpus') },
     ],
     openai: [
-      { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano (fast, cheapest)' },
-      { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini (balanced)' },
-      { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
+      { value: 'gpt-5.4-nano', label: t('setup.modelSuggestionOpenAiNano') },
+      { value: 'gpt-5.4-mini', label: t('setup.modelSuggestionOpenAiMini') },
+      { value: 'gpt-5.4', label: t('setup.modelSuggestionOpenAi') },
     ],
     gemini: [
-      { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (fast, preview)' },
-      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (stable)' },
-      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (most capable)' },
+      { value: 'gemini-3-flash-preview', label: t('setup.modelSuggestionGeminiFlashPreview') },
+      { value: 'gemini-2.5-flash', label: t('setup.modelSuggestionGeminiFlash') },
+      { value: 'gemini-2.5-pro', label: t('setup.modelSuggestionGeminiPro') },
     ],
     ollama: [
       { value: 'llama4', label: 'Llama 4' },
@@ -308,30 +297,28 @@ function StepAi({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-text">AI Provider</h2>
-        <p className="text-sm text-muted mt-1">Used to generate music recommendations. Required.</p>
-        <p className="text-xs text-muted mt-2">
-          You&apos;ll connect personal listening sources later in Settings after you log in.
-        </p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.aiProvider')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.aiDescription')}</p>
+        <p className="text-xs text-muted mt-2">{t('setup.listeningSourcesLater')}</p>
       </div>
-      <Field label="Provider" id="ai-provider">
+      <Field label={t('setup.provider')} id="ai-provider">
         <Select
           id="ai-provider"
           value={form.provider}
           onChange={(e) => onFormChange({ ...form, provider: e.target.value, model: '' })}
         >
-          <option value="anthropic">Anthropic</option>
-          <option value="openai">OpenAI</option>
-          <option value="gemini">Google Gemini</option>
-          <option value="ollama">Ollama (local)</option>
-          <option value="openai-compatible">OpenAI-Compatible</option>
+          <option value="anthropic">{t('setup.providerAnthropic')}</option>
+          <option value="openai">{t('setup.providerOpenAi')}</option>
+          <option value="gemini">{t('setup.providerGemini')}</option>
+          <option value="ollama">{t('setup.providerOllama')}</option>
+          <option value="openai-compatible">{t('setup.providerOpenAiCompatible')}</option>
         </Select>
       </Field>
-      <Field label="Model" id="ai-model">
+      <Field label={t('setup.model')} id="ai-model">
         <Input
           id="ai-model"
           list="ai-model-suggestions"
-          placeholder={suggestions[0]?.value ?? 'model-name'}
+          placeholder={suggestions[0]?.value ?? t('setup.modelPlaceholder')}
           value={form.model}
           onChange={(e) => onFormChange({ ...form, model: e.target.value })}
         />
@@ -349,7 +336,9 @@ function StepAi({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label htmlFor="ai-apikey" className="text-sm text-muted">
-              {apiKeyOptional ? 'API Key (optional)' : 'API Key'}
+              {apiKeyOptional
+                ? `${t('setup.apiKey')} (${t('common.optional')})`
+                : t('setup.apiKey')}
             </label>
             {link && (
               <a
@@ -358,7 +347,7 @@ function StepAi({
                 rel="noreferrer"
                 className="text-xs text-accent hover:underline"
               >
-                {link.label}
+                {t('setup.getApiKey')}
               </a>
             )}
           </div>
@@ -372,7 +361,7 @@ function StepAi({
         </div>
       )}
       {needsBaseUrl && (
-        <Field label="Base URL" id="ai-baseurl">
+        <Field label={t('setup.baseUrl')} id="ai-baseurl">
           <Input
             id="ai-baseurl"
             type="url"
@@ -387,21 +376,15 @@ function StepAi({
         </Field>
       )}
       {form.provider === 'openai-compatible' && (
-        <p className="text-xs text-muted">
-          Works with Groq, OpenRouter, LiteLLM, LocalAI, and any OpenAI-compatible endpoint. API key
-          is optional for local services.
-        </p>
+        <p className="text-xs text-muted">{t('setup.openAiCompatibleHint')}</p>
       )}
-      <p className="text-xs text-muted">
-        You can verify the provider from Settings after setup. Continue once the provider details
-        are filled in.
-      </p>
+      <p className="text-xs text-muted">{t('setup.verifyProviderLater')}</p>
       <Button
         onClick={onContinue}
         disabled={!form.model || (needsApiKey && !form.apiKey) || (needsBaseUrl && !form.baseUrl)}
         className="w-full"
       >
-        Continue
+        {t('common.continue')}
       </Button>
     </div>
   )
@@ -418,27 +401,26 @@ function StepDone({
   onStart: () => void
   starting: boolean
 }) {
+  const { t } = useI18n()
   const rows: { label: string; value: string }[] = []
   if (mode === 'lidarr') {
     rows.push({ label: 'Lidarr', value: form.lidarr.url })
   } else if (mode === 'emby') {
     rows.push({ label: 'Emby', value: form.emby.url })
   } else {
-    rows.push({ label: 'Mode', value: 'Discovery only' })
+    rows.push({ label: t('setup.mode'), value: t('setup.discoveryOnly') })
   }
   rows.push({
-    label: 'AI Provider',
+    label: t('setup.aiProvider'),
     value: `${form.ai.provider}${form.ai.model ? ` / ${form.ai.model}` : ''}`,
   })
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-text">Ready to go</h2>
-        <p className="text-sm text-muted mt-1">Here&apos;s what you&apos;ve configured:</p>
-        <p className="text-xs text-muted mt-2">
-          Personal listening sources are connected per user from Settings after setup.
-        </p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.readyTitle')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.readyDescription')}</p>
+        <p className="text-xs text-muted mt-2">{t('setup.personalSourcesAfterSetup')}</p>
       </div>
       <div className="rounded-lg border border-border bg-surface divide-y divide-border">
         {rows.map((row) => (
@@ -449,7 +431,7 @@ function StepDone({
         ))}
       </div>
       <Button onClick={onStart} disabled={starting} className="w-full" size="lg">
-        {starting ? 'Starting...' : 'Start Digging'}
+        {starting ? t('setup.starting') : t('setup.startDigging')}
       </Button>
     </div>
   )
@@ -462,6 +444,7 @@ const DEFAULT_FORM: FormState = {
 }
 
 export function SetupWizard({ onComplete }: { onComplete: () => void }) {
+  const { locale, setLocale, t } = useI18n()
   const [step, setStep] = useState(1)
   const [mode, setMode] = useState<SetupMode | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -496,7 +479,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       await completeSetup(config)
       onComplete()
     } catch {
-      toast.error('Setup failed -- please try again')
+      toast.error(t('setup.failed'))
       setStarting(false)
     }
   }
@@ -506,7 +489,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <span className="text-3xl font-bold text-accent">digarr</span>
-          <p className="text-muted text-sm mt-1">Initial setup</p>
+          <p className="text-muted text-sm mt-1">{t('setup.initialSetup')}</p>
         </div>
 
         <StepIndicator current={step} total={totalSteps} />
@@ -558,9 +541,13 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
             onClick={() => setStep((s) => s - 1)}
             className="mt-4 text-sm text-muted hover:text-text"
           >
-            &larr; Back
+            &larr; {t('setup.back')}
           </button>
         )}
+
+        <div className="mt-4 flex justify-center">
+          <LanguageSwitcher value={locale} onChange={setLocale} />
+        </div>
       </div>
     </div>
   )

@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, Music, Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import type { MessageKey } from '@/core/i18n/messages/types'
 import { useClickOutside } from '../hooks/use-click-outside'
 import { getArtistTopTracks } from '../lib/api'
 import { GENRE_COLORS } from '../lib/constants'
+import { useI18n } from '../lib/i18n'
 import { usePreviewContext } from '../lib/preview-context'
 import { cn, hueFromName } from '../lib/utils'
 import { ArtistThumb } from './artist-thumb'
@@ -78,23 +80,23 @@ function getSourceBadgeClass(sourceKey: string): string {
   return SUBSCRIPTION_COLORS[prefix] ?? 'bg-zinc-500/20 text-zinc-400'
 }
 
-function formatSourceLabel(sourceKey: string): string {
+function formatSourceLabel(sourceKey: string, t: (key: MessageKey) => string): string {
   const [type, detail] = sourceKey.split(':')
   switch (type) {
     case 'genre-subscription':
-      return `Genre: ${detail}`
+      return `${t('recommendation.sourceGenre')}: ${detail}`
     case 'similar-subscription':
-      return `Similar: ${detail}`
+      return `${t('recommendation.sourceSimilar')}: ${detail}`
     case 'spotify-playlist':
-      return 'Spotify Playlist'
+      return t('recommendation.sourceSpotifyPlaylist')
     case 'spotify-charts':
-      return 'Spotify Charts'
+      return t('recommendation.sourceSpotifyCharts')
     case 'lastfm-tag':
-      return `Last.fm: ${detail}`
+      return `${t('recommendation.sourceLastfm')}: ${detail}`
     case 'lastfm-charts':
-      return 'Last.fm Charts'
+      return t('recommendation.sourceLastfmCharts')
     case 'listenbrainz':
-      return 'ListenBrainz'
+      return t('recommendation.sourceListenBrainz')
     default:
       return sourceKey
   }
@@ -113,16 +115,19 @@ function StatusBadge({
   onRetry?: (id: number) => void
   id: number
 }) {
+  const { t } = useI18n()
   if (status === 'added_to_lidarr') {
-    return <span className="text-xs text-approve font-medium">Added to Lidarr</span>
+    return (
+      <span className="text-xs text-approve font-medium">{t('recommendation.addedToLidarr')}</span>
+    )
   }
   if (status === 'rejected') {
-    return <span className="text-xs text-reject font-medium">Rejected</span>
+    return <span className="text-xs text-reject font-medium">{t('recommendation.rejected')}</span>
   }
   if (status === 'add_failed') {
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-reject font-medium">Add Failed</span>
+        <span className="text-xs text-reject font-medium">{t('recommendation.addFailed')}</span>
         {lidarrError && (
           <span className="text-xs text-muted truncate max-w-[200px]" title={lidarrError}>
             {lidarrError}
@@ -134,7 +139,7 @@ function StatusBadge({
             onClick={() => onRetry(id)}
             className="text-xs text-accent hover:underline"
           >
-            Retry
+            {t('recommendation.retry')}
           </button>
         )}
       </div>
@@ -193,6 +198,7 @@ function ApproveDropdown({
   onApprove: (id: number) => void
   onApproveToTarget?: (recId: number, targetId: string) => void
 }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false), open)
@@ -210,7 +216,7 @@ function ApproveDropdown({
             onApprove(recId)
           }}
         >
-          Approve
+          {t('recommendation.approve')}
         </Button>
         <Button
           size="sm"
@@ -270,6 +276,7 @@ function ActionButtons({
   targets?: Array<{ id: number; type: string; name: string }>
   onApproveToTarget?: (recId: number, targetId: string) => void
 }) {
+  const { t } = useI18n()
   if (bulkMode) return null
 
   function stop(e: React.MouseEvent | React.KeyboardEvent) {
@@ -288,7 +295,7 @@ function ActionButtons({
             onReject(rec.id)
           }}
         >
-          Reject
+          {t('recommendation.reject')}
         </Button>
         {approveNode ??
           (targets && targets.length > 1 ? (
@@ -308,7 +315,7 @@ function ActionButtons({
                 onApprove(rec.id)
               }}
             >
-              Approve
+              {t('recommendation.approve')}
             </Button>
           ))}
       </div>
@@ -326,7 +333,7 @@ function ActionButtons({
             onReject(rec.id)
           }}
         >
-          Reject
+          {t('recommendation.reject')}
         </Button>
       </div>
     )
@@ -343,7 +350,7 @@ function ActionButtons({
             onApprove(rec.id)
           }}
         >
-          Restore
+          {t('recommendation.restore')}
         </Button>
       </div>
     )
@@ -352,6 +359,7 @@ function ActionButtons({
 }
 
 function TopTracks({ artistId }: { artistId: number }) {
+  const { t } = useI18n()
   const preview = usePreviewContext()
   const { data, isLoading } = useQuery({
     queryKey: ['top-tracks', artistId],
@@ -388,11 +396,11 @@ function TopTracks({ artistId }: { artistId: number }) {
     audio.onended = () => setPlayingUrl(null)
     audio.onerror = () => {
       setPlayingUrl(null)
-      toast.error('Audio preview not available')
+      toast.error(t('recommendation.audioUnavailable'))
     }
     audio.play().catch(() => {
       setPlayingUrl(null)
-      toast.error('Audio preview not available')
+      toast.error(t('recommendation.audioUnavailable'))
     })
     setPlayingUrl(previewUrl)
   }
@@ -424,7 +432,7 @@ function TopTracks({ artistId }: { artistId: number }) {
   if (isLoading) {
     return (
       <div className="space-y-2 mt-3">
-        <div className="text-xs font-medium text-muted">Top Tracks</div>
+        <div className="text-xs font-medium text-muted">{t('recommendation.topTracks')}</div>
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-4 bg-surface rounded animate-pulse w-3/4" />
         ))}
@@ -436,7 +444,7 @@ function TopTracks({ artistId }: { artistId: number }) {
 
   return (
     <div className="space-y-1.5 mt-3">
-      <div className="text-xs font-medium text-muted">Top Tracks</div>
+      <div className="text-xs font-medium text-muted">{t('recommendation.topTracks')}</div>
       {tracks.map((track) => (
         <div key={track.name} className="flex items-center gap-2 text-sm">
           {track.previewUrl ? (
@@ -447,7 +455,11 @@ function TopTracks({ artistId }: { artistId: number }) {
                 if (track.previewUrl) handlePlay(track.previewUrl)
               }}
               className="text-accent hover:text-accent/80 transition-colors shrink-0 w-4 text-center"
-              aria-label={playingUrl === track.previewUrl ? 'Stop preview' : 'Play preview'}
+              aria-label={
+                playingUrl === track.previewUrl
+                  ? t('recommendation.stopPreview')
+                  : t('recommendation.playPreview')
+              }
             >
               {playingUrl === track.previewUrl ? (
                 <Pause className="w-3 h-3" />
@@ -489,6 +501,7 @@ export function RecommendationCard({
   targets,
   onApproveToTarget,
 }: RecommendationCardProps) {
+  const { t } = useI18n()
   const preview = usePreviewContext()
   const pct = `${Math.round(rec.score * 100)}%`
   const isPending = rec.status === 'pending' || rec.status === 'approved'
@@ -532,7 +545,7 @@ export function RecommendationCard({
             checked={isChecked}
             onChange={() => onToggleSelect?.(rec.id)}
             className="w-4 h-4 accent-accent cursor-pointer"
-            aria-label={`Select ${rec.artist.name}`}
+            aria-label={`${t('recommendation.select')} ${rec.artist.name}`}
             tabIndex={-1}
           />
         </button>
@@ -548,7 +561,7 @@ export function RecommendationCard({
               e.stopPropagation()
               onReject(rec.id)
             }}
-            aria-label="Reject"
+            aria-label={t('recommendation.reject')}
           >
             <span className="w-8 h-8 rounded-full bg-surface/90 backdrop-blur-sm border border-reject/40 text-reject hover:bg-reject/30 transition-colors flex items-center justify-center shadow-lg">
               <svg
@@ -575,7 +588,7 @@ export function RecommendationCard({
               e.stopPropagation()
               onApprove(rec.id)
             }}
-            aria-label="Approve"
+            aria-label={t('recommendation.approve')}
           >
             <span className="w-8 h-8 rounded-full bg-surface/90 backdrop-blur-sm border border-approve/40 text-approve hover:bg-approve/30 transition-colors flex items-center justify-center shadow-lg">
               <svg
@@ -633,7 +646,8 @@ export function RecommendationCard({
                 )}
                 {rec.recommendedReleaseGroupTitle && (
                   <p className="text-xs text-muted mt-0.5">
-                    Start with: <span className="italic">{rec.recommendedReleaseGroupTitle}</span>
+                    {t('recommendation.startWith')}:{' '}
+                    <span className="italic">{rec.recommendedReleaseGroupTitle}</span>
                   </p>
                 )}
               </div>
@@ -641,17 +655,17 @@ export function RecommendationCard({
                 {warmStatus === 'warm' && (
                   <span
                     className="w-2 h-2 rounded-full bg-green-500"
-                    title="Metadata cached"
+                    title={t('recommendation.metadataCached')}
                     role="img"
-                    aria-label="Metadata cached"
+                    aria-label={t('recommendation.metadataCached')}
                   />
                 )}
                 {warmStatus === 'warming' && (
                   <span
                     className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"
-                    title="Warming cache..."
+                    title={t('recommendation.warmingCache')}
                     role="img"
-                    aria-label="Warming cache..."
+                    aria-label={t('recommendation.warmingCache')}
                   />
                 )}
                 <span className="bg-accent/20 text-accent text-xs font-semibold px-2 py-0.5 rounded">
@@ -672,7 +686,11 @@ export function RecommendationCard({
               {hasPreview && !bulkMode && (
                 <button
                   type="button"
-                  aria-label={artistIsPlaying ? 'Pause preview' : 'Play preview'}
+                  aria-label={
+                    artistIsPlaying
+                      ? t('recommendation.stopPreview')
+                      : t('recommendation.playPreview')
+                  }
                   onClick={handlePlayClick}
                   className="shrink-0 text-muted hover:text-text transition-colors"
                 >
@@ -718,8 +736,7 @@ export function RecommendationCard({
                 onApproveToTarget={onApproveToTarget}
               />
               <Hint id="rec-card-click-tip" type="inline">
-                Click on a recommendation to see albums, streaming links, and more. Swipe right to
-                approve on mobile.
+                {t('recommendation.clickHint')}
               </Hint>
             </>
           )}
@@ -754,7 +771,7 @@ export function RecommendationCard({
               <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5">
                 <span className="text-accent text-lg font-bold leading-none">{pct}</span>
                 <span className="text-white/50 text-micro-sm ml-1 uppercase tracking-wider">
-                  match
+                  {t('recommendation.match')}
                 </span>
               </div>
             </div>
@@ -768,14 +785,16 @@ export function RecommendationCard({
                 className="text-xs text-accent hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
-                View on MusicBrainz
+                {t('recommendation.viewOnMusicBrainz')}
               </a>
             </div>
 
             {/* Recommendation reasoning */}
             {rec.aiReasoning && (
               <div className="mx-4 border-l-2 border-accent bg-surface/50 px-3 py-2 rounded-r">
-                <p className="text-xs text-muted uppercase tracking-wide mb-1">Why this artist</p>
+                <p className="text-xs text-muted uppercase tracking-wide mb-1">
+                  {t('recommendation.whyThisArtist')}
+                </p>
                 <p className="text-sm text-text italic">{rec.aiReasoning}</p>
               </div>
             )}
@@ -788,7 +807,9 @@ export function RecommendationCard({
             {/* Per-source scores */}
             {rec.sources && Object.keys(rec.sources).length > 0 && (
               <div className="px-4">
-                <p className="text-xs text-muted uppercase tracking-wide mb-2">Source Scores</p>
+                <p className="text-xs text-muted uppercase tracking-wide mb-2">
+                  {t('recommendation.sourceScores')}
+                </p>
                 <div className="flex flex-wrap gap-3">
                   {Object.entries(rec.sources).map(([key, score]) => {
                     const classic = SOURCE_COLORS[key]
@@ -814,7 +835,7 @@ export function RecommendationCard({
                             getSourceBadgeClass(key),
                           )}
                         >
-                          {formatSourceLabel(key)}
+                          {formatSourceLabel(key, t)}
                         </span>
                         <span className="text-xs text-text font-medium">
                           {(score * 100).toFixed(0)}%
@@ -828,7 +849,9 @@ export function RecommendationCard({
 
             {/* Full streaming links with optional Spotify embed */}
             <div className="px-4">
-              <p className="text-xs text-muted uppercase tracking-wide mb-2">Streaming</p>
+              <p className="text-xs text-muted uppercase tracking-wide mb-2">
+                {t('recommendation.streaming')}
+              </p>
               <StreamingLinks
                 streamingUrls={rec.artist.streamingUrls}
                 artistName={rec.artist.name}

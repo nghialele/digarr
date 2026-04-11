@@ -1,4 +1,9 @@
+import { getLocaleLabel, type SupportedLocale } from '@/core/i18n/locales'
 import type { AiRecommendation, TasteProfile } from '@/core/types'
+
+function buildLanguageInstruction(locale?: SupportedLocale): string {
+  return locale ? `All reasoning fields must be written in ${getLocaleLabel(locale)}.\n` : ''
+}
 
 export function buildRecommendationPrompt(profile: TasteProfile): string {
   if (profile._rawPrompt) return profile._rawPrompt
@@ -15,8 +20,10 @@ export function buildRecommendationPrompt(profile: TasteProfile): string {
 
   const trend = profile.listeningPatterns.recentTrend
   const totalListens = profile.listeningPatterns.totalListens
+  const languageInstruction = buildLanguageInstruction(profile.responseLocale)
 
-  return `You are a music discovery expert. Based on the following listening profile, recommend 15-20 artists the listener has NOT heard yet but would likely enjoy.
+  return `You are a music discovery expert.
+${languageInstruction}Based on the following listening profile, recommend 15-20 artists the listener has NOT heard yet but would likely enjoy.
 
 ## Listening Profile
 
@@ -53,13 +60,19 @@ IMPORTANT: For each recommendation, verify that the reasoning accurately describ
 Provide 15-20 diverse recommendations. Prioritize lesser-known artists alongside some well-known ones. Do not include artists already in the listener's top artists list.`
 }
 
-export function buildMoodPrompt(query: string, excludeArtists: string[] = []): string {
+export function buildMoodPrompt(
+  query: string,
+  excludeArtists: string[] = [],
+  responseLocale?: SupportedLocale,
+): string {
   const exclusionClause =
     excludeArtists.length > 0
       ? `\n\nDo NOT recommend any of these artists (already in library): ${excludeArtists.join(', ')}`
       : ''
+  const languageInstruction = buildLanguageInstruction(responseLocale)
 
-  return `You are a music discovery expert. A listener described what they want to hear:
+  return `You are a music discovery expert.
+${languageInstruction}A listener described what they want to hear:
 
 "${query}"
 

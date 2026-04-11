@@ -3,6 +3,7 @@ import { Download, Pencil, Play } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import type { MessageKey } from '@/core/i18n/messages/types'
 import { Hint } from '../components/hint'
 import { Skeleton } from '../components/ui/skeleton'
 import {
@@ -12,47 +13,54 @@ import {
   type PlaylistRow,
   type PlaylistTrackRow,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
+import { formatShortDate } from '../lib/intl'
 
-function formatRelativeTime(dateStr: string | null): string {
-  if (!dateStr) return 'Never'
+function formatRelativeTime(locale: string, dateStr: string | null, neverLabel: string): string {
+  if (!dateStr) return neverLabel
   const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const minutes = Math.floor(diffMs / (1000 * 60))
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const diffMinutes = Math.round((date.getTime() - Date.now()) / 60_000)
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  if (Math.abs(diffMinutes) < 1) return formatter.format(0, 'second')
+  if (Math.abs(diffMinutes) < 60) return formatter.format(diffMinutes, 'minute')
+  const diffHours = Math.round(diffMinutes / 60)
+  if (Math.abs(diffHours) < 24) return formatter.format(diffHours, 'hour')
+  const diffDays = Math.round(diffHours / 24)
+  if (Math.abs(diffDays) < 30) return formatter.format(diffDays, 'day')
+  return formatShortDate(locale as never, date)
 }
 
-function formatSchedule(cron: string | null): string {
-  if (!cron) return 'Manual'
+function formatSchedule(cron: string | null, t: (key: MessageKey) => string): string {
+  if (!cron) return t('common.manual')
   const NAMED: Record<string, string> = {
-    '0 0 * * *': 'Daily',
-    '0 8 * * 1': 'Every Monday',
-    '0 8 * * 0': 'Every Sunday',
-    '0 8 * * 1,4': 'Mon + Thu',
-    '0 8 1,15 * *': '1st + 15th',
-    '0 8 1 * *': 'Monthly',
+    '0 0 * * *': t('common.daily'),
+    '0 8 * * 1': t('common.everyMonday'),
+    '0 8 * * 0': t('common.everySunday'),
+    '0 8 * * 1,4': t('common.monThu'),
+    '0 8 1,15 * *': t('common.firstAndFifteenth'),
+    '0 8 1 * *': t('common.monthly'),
   }
   return NAMED[cron] ?? cron
 }
 
 const STRATEGY_BADGES: Record<string, { label: string; className: string }> = {
-  weekly_digest: { label: 'Weekly Digest', className: 'bg-blue-500/15 text-blue-400' },
-  genre_focus: { label: 'Genre Focus', className: 'bg-green-500/15 text-green-400' },
-  mood_mix: { label: 'Mood Mix', className: 'bg-purple-500/15 text-purple-400' },
-  rediscover: { label: 'Rediscover', className: 'bg-amber-500/15 text-amber-400' },
+  weekly_digest: {
+    label: 'playlist.strategyWeeklyDigest',
+    className: 'bg-blue-500/15 text-blue-400',
+  },
+  genre_focus: {
+    label: 'playlist.strategyGenreFocus',
+    className: 'bg-green-500/15 text-green-400',
+  },
+  mood_mix: { label: 'playlist.strategyMoodMix', className: 'bg-purple-500/15 text-purple-400' },
+  rediscover: { label: 'playlist.strategyRediscover', className: 'bg-amber-500/15 text-amber-400' },
 }
 
 const SOURCE_BADGES: Record<string, { label: string; className: string }> = {
-  local: { label: 'local', className: 'bg-surface text-muted border border-border' },
-  spotify: { label: 'spotify', className: 'bg-green-500/15 text-green-400' },
-  deezer: { label: 'deezer', className: 'bg-purple-500/15 text-purple-400' },
-  musicbrainz: { label: 'musicbrainz', className: 'bg-blue-500/15 text-blue-400' },
+  local: { label: 'playlist.sourceLocal', className: 'bg-surface text-muted border border-border' },
+  spotify: { label: 'playlist.sourceSpotify', className: 'bg-green-500/15 text-green-400' },
+  deezer: { label: 'playlist.sourceDeezer', className: 'bg-purple-500/15 text-purple-400' },
+  musicbrainz: { label: 'playlist.sourceMusicbrainz', className: 'bg-blue-500/15 text-blue-400' },
 }
 
 function detectSource(track: PlaylistTrackRow): string {
@@ -89,6 +97,7 @@ function DetailSkeleton() {
 // Track row
 
 function TrackRow({ track, index }: { track: PlaylistTrackRow; index: number }) {
+  const { t } = useI18n()
   const source = detectSource(track)
   const badge =
     SOURCE_BADGES[source] ??
@@ -102,12 +111,14 @@ function TrackRow({ track, index }: { track: PlaylistTrackRow; index: number }) 
       <span className="w-6 text-right text-xs text-muted shrink-0">{index + 1}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-text truncate">
-          {track.trackName ?? <span className="text-muted italic">Unknown track</span>}
+          {track.trackName ?? (
+            <span className="text-muted italic">{t('playlist.unknownTrack')}</span>
+          )}
         </p>
         <p className="text-xs text-muted truncate">{track.artistName}</p>
       </div>
       <span className={`shrink-0 text-micro font-medium px-1.5 py-0.5 rounded ${badge.className}`}>
-        {badge.label}
+        {t(badge.label as never)}
       </span>
     </div>
   )
@@ -124,6 +135,7 @@ function PlaylistActions({
   onEdit: () => void
   onRefetch: () => void
 }) {
+  const { t } = useI18n()
   const [generating, setGenerating] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
 
@@ -131,10 +143,10 @@ function PlaylistActions({
     setGenerating(true)
     try {
       await generatePlaylistApi(playlist.id)
-      toast.success(`Generating "${playlist.name}"...`)
+      toast.success(t('playlist.generatingNamed'))
       onRefetch()
     } catch {
-      toast.error('Failed to start generation')
+      toast.error(t('playlist.generateFailed'))
     } finally {
       setGenerating(false)
     }
@@ -144,9 +156,9 @@ function PlaylistActions({
     setExporting(format)
     try {
       await exportPlaylistApi(playlist.id, format)
-      toast.success(`${format.toUpperCase()} downloaded`)
+      toast.success(`${format.toUpperCase()} ${t('playlist.downloaded')}`)
     } catch {
-      toast.error('Failed to download playlist')
+      toast.error(t('playlist.downloadFailed'))
     } finally {
       setExporting(null)
     }
@@ -177,7 +189,7 @@ function PlaylistActions({
         ) : (
           <Play size={14} aria-hidden="true" />
         )}
-        {generating ? 'Generating...' : 'Generate Now'}
+        {generating ? t('playlist.generating') : t('playlist.generate')}
       </button>
       {(['m3u', 'xspf'] as const).map((format) => (
         <button
@@ -188,7 +200,9 @@ function PlaylistActions({
           className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-md text-sm text-muted hover:text-text transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Download size={14} aria-hidden="true" />
-          {exporting === format ? 'Downloading...' : `Download ${format.toUpperCase()}`}
+          {exporting === format
+            ? t('playlist.downloading')
+            : `${t('playlist.download')} ${format.toUpperCase()}`}
         </button>
       ))}
       <button
@@ -197,7 +211,7 @@ function PlaylistActions({
         className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-md text-sm text-muted hover:text-text transition-colors"
       >
         <Pencil size={14} aria-hidden="true" />
-        Edit
+        {t('common.edit')}
       </button>
     </div>
   )
@@ -206,6 +220,7 @@ function PlaylistActions({
 // PlaylistDetailPage
 
 export function PlaylistDetailPage() {
+  const { locale, t } = useI18n()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const numId = Number(id)
@@ -231,10 +246,10 @@ export function PlaylistDetailPage() {
           onClick={() => navigate('/playlists')}
           className="text-sm text-muted hover:text-text transition-colors"
         >
-          &larr; Back to Playlists
+          &larr; {t('playlist.backToPlaylists')}
         </button>
         <div className="py-16 text-center">
-          <p className="text-muted text-sm">Playlist not found.</p>
+          <p className="text-muted text-sm">{t('playlist.notFound')}</p>
         </div>
       </div>
     )
@@ -254,7 +269,7 @@ export function PlaylistDetailPage() {
         onClick={() => navigate('/playlists')}
         className="text-sm text-muted hover:text-text transition-colors"
       >
-        &larr; Back to Playlists
+        &larr; {t('playlist.backToPlaylists')}
       </button>
 
       {/* Title + meta */}
@@ -264,30 +279,33 @@ export function PlaylistDetailPage() {
           <span
             className={`mt-0.5 text-micro-lg font-medium px-2 py-0.5 rounded-full ${badge.className}`}
           >
-            {badge.label}
+            {badge.label.startsWith('playlist.') ? t(badge.label as never) : badge.label}
           </span>
         </div>
         <div className="flex flex-wrap gap-4 text-xs text-muted">
           <span>
-            Schedule: <span className="text-text">{formatSchedule(playlist.schedule)}</span>
+            {t('common.schedule')}:{' '}
+            <span className="text-text">{formatSchedule(playlist.schedule, t)}</span>
           </span>
           <span>
-            Last generated:{' '}
-            <span className="text-text">{formatRelativeTime(playlist.lastGeneratedAt)}</span>
+            {t('playlist.lastGenerated')}:{' '}
+            <span className="text-text">
+              {formatRelativeTime(locale, playlist.lastGeneratedAt, t('common.never'))}
+            </span>
           </span>
           {playlist.trackCount != null && (
             <span>
-              Tracks: <span className="text-text">{playlist.trackCount}</span>
+              {t('playlist.tracks')}: <span className="text-text">{playlist.trackCount}</span>
             </span>
           )}
-          {!playlist.enabled && <span className="text-muted/60 italic">Disabled</span>}
+          {!playlist.enabled && (
+            <span className="text-muted/60 italic">{t('common.disabled')}</span>
+          )}
         </div>
       </div>
 
       <Hint id="playlist-detail-intro-tip" type="inline">
-        This playlist was generated from your approved recommendations. Click Generate Now to
-        refresh it with new picks, download it as M3U or XSPF, or add a playlist target to push
-        future runs to Navidrome, Jellyfin, or Plex automatically.
+        {t('playlist.detailHint')}
       </Hint>
 
       {/* Actions */}
@@ -296,14 +314,16 @@ export function PlaylistDetailPage() {
       {/* Track listing */}
       <div className="space-y-1">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs text-muted uppercase tracking-wide font-semibold">Tracks</p>
-          {tracks.length > 0 && <span className="text-xs text-muted">{tracks.length} total</span>}
+          <p className="text-xs text-muted uppercase tracking-wide font-semibold">
+            {t('playlist.tracks')}
+          </p>
+          {tracks.length > 0 && (
+            <span className="text-xs text-muted">{`${tracks.length} ${t('playlist.total')}`}</span>
+          )}
         </div>
         {tracks.length === 0 ? (
           <div className="py-12 text-center bg-surface border border-border rounded-lg">
-            <p className="text-muted text-sm">
-              No tracks yet. Generate the playlist to populate it.
-            </p>
+            <p className="text-muted text-sm">{t('playlist.noTracks')}</p>
           </div>
         ) : (
           <div className="bg-surface border border-border rounded-lg divide-y divide-border overflow-hidden">

@@ -40,6 +40,7 @@ function makeDeps() {
       username: 'test',
       isAdmin: false,
       preferences: null,
+      preferredLocale: null,
       email: null,
       oidcSubject: null,
       authProvider: 'local',
@@ -63,6 +64,7 @@ function makeDeps() {
     getUserById: vi.fn(async () => null),
     getUserCount: vi.fn(async () => 0),
     updatePassword: vi.fn(async () => {}),
+    updateUserPreferredLocale: vi.fn(async () => {}),
     genreService: {} as unknown as AppDependencies['genreService'],
     libraryHealth: {} as unknown as AppDependencies['libraryHealth'],
     librarySync: {} as unknown as AppDependencies['librarySync'],
@@ -138,7 +140,7 @@ describe('auth middleware', () => {
   describe('when DIGARR_AUTH_TOKEN is not set', () => {
     it('allows all requests through without auth', async () => {
       const app = await createAppWithAuth()
-      const res = await app.request('/api/settings')
+      const res = await app.request('/api/recommendations')
       // 200 or 404, but NOT 401
       expect(res.status).not.toBe(401)
     })

@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import type { MessageKey } from '@/core/i18n/messages/types'
 import { Hint } from '../components/hint'
 import { PlaylistCard } from '../components/playlist-card'
 import { PlaylistForm } from '../components/playlist-form'
@@ -15,48 +16,49 @@ import {
   type PlaylistRow,
   updatePlaylistApi,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
-const CRON_LABELS: Record<string, string> = {
-  '0 0 * * *': 'Daily',
-  '0 6 * * 1': 'Every Monday',
-  '0 8 * * 1': 'Every Monday',
-  '0 8 * * 0': 'Every Sunday',
-  '0 8 * * 1,4': 'Mon + Thu',
-  '0 8 1,15 * *': '1st + 15th',
-  '0 8 1 * *': 'Monthly',
+function getCronLabels(t: (key: MessageKey) => string): Record<string, string> {
+  return {
+    '0 0 * * *': t('common.daily'),
+    '0 6 * * 1': t('common.everyMonday'),
+    '0 8 * * 1': t('common.everyMonday'),
+    '0 8 * * 0': t('common.everySunday'),
+    '0 8 * * 1,4': t('common.monThu'),
+    '0 8 1,15 * *': t('common.firstAndFifteenth'),
+    '0 8 1 * *': t('common.monthly'),
+  }
 }
 
-function formatNextRun(nextRun: string): string {
+function formatNextRun(locale: string, nextRun: string): string {
   const date = new Date(nextRun)
-  const now = new Date()
-  const diffMs = date.getTime() - now.getTime()
-  if (diffMs < 0) return 'Overdue'
-  const hours = Math.floor(diffMs / (1000 * 60 * 60))
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-  if (hours > 24) {
-    const days = Math.floor(hours / 24)
-    return `Next generation in ${days}d`
-  }
-  if (hours > 0) return `Next generation in ${hours}h ${minutes}m`
-  return `Next generation in ${minutes}m`
+  const diffMinutes = Math.round((date.getTime() - Date.now()) / 60_000)
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  if (diffMinutes < 0) return formatter.format(diffMinutes, 'minute')
+  if (diffMinutes < 60) return formatter.format(diffMinutes, 'minute')
+  const diffHours = Math.round(diffMinutes / 60)
+  if (diffHours < 24) return formatter.format(diffHours, 'hour')
+  return formatter.format(Math.round(diffHours / 24), 'day')
 }
 
 function formatSchedulerSubtitle(info: {
+  locale: string
+  t: (key: MessageKey) => string
   nextRun: string | null
   cron: string | null
   enabled: boolean
 }): string {
   if (info.enabled && info.nextRun) {
-    return formatNextRun(info.nextRun)
+    return `${info.t('playlists.nextGeneration')} ${formatNextRun(info.locale, info.nextRun)}`
   }
   if (info.enabled && info.cron) {
-    const label = CRON_LABELS[info.cron] ?? info.cron
-    return `Scheduled: ${label}`
+    const label = getCronLabels(info.t)[info.cron] ?? info.cron
+    return `${info.t('playlists.scheduled')}: ${label}`
   }
   if (!info.enabled && info.cron) {
-    return 'Schedule paused'
+    return info.t('playlists.schedulePaused')
   }
-  return 'No schedule configured'
+  return info.t('playlists.noScheduleConfigured')
 }
 
 function SkeletonGrid() {
@@ -85,6 +87,7 @@ function SkeletonGrid() {
 // PlaylistsPage
 
 export function PlaylistsPage() {
+  const { locale, t } = useI18n()
   const queryClient = useQueryClient()
   const location = useLocation()
   const navigate = useNavigate()
@@ -140,15 +143,15 @@ export function PlaylistsPage() {
     try {
       if (formMode === 'edit' && editingPlaylist) {
         await updatePlaylistApi(editingPlaylist.id, data)
-        toast.success('Playlist updated')
+        toast.success(t('playlists.updated'))
       } else {
         await createPlaylistApi(data)
-        toast.success('Playlist created')
+        toast.success(t('playlists.created'))
       }
       closeForm()
       refetch()
     } catch {
-      toast.error(formMode === 'edit' ? 'Failed to update playlist' : 'Failed to create playlist')
+      toast.error(formMode === 'edit' ? t('playlists.updateFailed') : t('playlists.createFailed'))
     }
   }
 
@@ -159,11 +162,11 @@ export function PlaylistsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg font-semibold text-text">Playlists</h1>
+          <h1 className="text-lg font-semibold text-text">{t('playlists.title')}</h1>
           <p className="text-xs text-muted mt-0.5">
             {schedulerInfo
-              ? formatSchedulerSubtitle(schedulerInfo)
-              : 'Automatic music digest generation'}
+              ? formatSchedulerSubtitle({ ...schedulerInfo, locale, t })
+              : t('playlists.automaticDigestGeneration')}
           </p>
         </div>
         <button
@@ -172,7 +175,7 @@ export function PlaylistsPage() {
           className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 transition-opacity self-start sm:self-auto"
         >
           <Plus size={15} aria-hidden="true" />
-          Create Playlist
+          {t('playlists.create')}
         </button>
       </div>
 
@@ -181,28 +184,27 @@ export function PlaylistsPage() {
         <SkeletonGrid />
       ) : isEmpty ? (
         <div className="py-12 text-center space-y-4">
-          <p className="text-muted text-sm max-w-sm mx-auto">
-            No playlists yet. Create your first playlist to automatically receive curated music
-            digests.
-          </p>
+          <p className="text-muted text-sm max-w-sm mx-auto">{t('playlists.empty')}</p>
           <button
             type="button"
             onClick={openCreate}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus size={15} aria-hidden="true" />
-            Create Playlist
+            {t('playlists.create')}
           </button>
           <Hint id="playlists-empty-state" type="empty-state" className="max-w-sm mx-auto">
-            Playlists let Digarr automatically push curated digests to Jellyfin, Navidrome, or Plex
-            on a schedule. Connect a media server in Settings first.
+            {t('playlists.emptyHint')}
           </Hint>
         </div>
       ) : (
         <>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted">
-              {playlists.length} playlist{playlists.length !== 1 ? 's' : ''}
+              {playlists.length}{' '}
+              {playlists.length === 1
+                ? t('playlists.playlistSingular')
+                : t('playlists.playlistPlural')}
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

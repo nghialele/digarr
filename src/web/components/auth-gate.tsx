@@ -9,6 +9,8 @@ import {
   registerUser,
   setStoredToken,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
+import { LanguageSwitcher } from './language-switcher'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
@@ -130,6 +132,7 @@ function LoginForm({
   oidcEnabled?: boolean
   version?: string
 }) {
+  const { locale, setLocale, t } = useI18n()
   const [mode, setMode] = useState<'credentials' | 'token'>('credentials')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -141,7 +144,7 @@ function LoginForm({
     e.preventDefault()
     setError(null)
     if (!username.trim() || !password) {
-      setError('Username and password are required')
+      setError(t('auth.credentialsRequired'))
       return
     }
     setLoading(true)
@@ -149,7 +152,7 @@ function LoginForm({
       const res = await loginUser(username.trim(), password)
       onSuccess(res.token)
     } catch (err: unknown) {
-      setError(errMsg(err).includes('401') ? 'Invalid credentials' : 'Login failed')
+      setError(errMsg(err).includes('401') ? t('auth.invalidCredentials') : t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -159,7 +162,7 @@ function LoginForm({
     e.preventDefault()
     setError(null)
     if (!token.trim()) {
-      setError('Token is required')
+      setError(t('auth.tokenRequired'))
       return
     }
     // Verify the token against a protected endpoint
@@ -167,7 +170,7 @@ function LoginForm({
       headers: { Authorization: `Bearer ${token.trim()}` },
     })
     if (res.status === 401) {
-      setError('Invalid token')
+      setError(t('auth.invalidToken'))
       return
     }
     onSuccess(token.trim())
@@ -181,7 +184,7 @@ function LoginForm({
             <span className="text-accent">digarr</span>
           </CardTitle>
           <CardDescription>
-            {mode === 'credentials' ? 'Sign in with your account.' : 'Enter your access token.'}
+            {mode === 'credentials' ? t('auth.loginDescription') : t('auth.tokenDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -191,14 +194,14 @@ function LoginForm({
                 href="/api/auth/oidc/login"
                 className="block w-full text-center px-4 py-2 rounded bg-accent text-accent-fg font-medium hover:bg-accent/90"
               >
-                Sign in with SSO
+                {t('auth.signInWithSso')}
               </a>
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-bg px-2 text-muted">or</span>
+                  <span className="bg-bg px-2 text-muted">{t('auth.or')}</span>
                 </div>
               </div>
             </div>
@@ -208,7 +211,7 @@ function LoginForm({
               <div className="space-y-2">
                 <Input
                   type="text"
-                  placeholder="Username"
+                  placeholder={t('auth.username')}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoFocus
@@ -216,7 +219,7 @@ function LoginForm({
                 />
                 <Input
                   type="password"
-                  placeholder="Password"
+                  placeholder={t('auth.password')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
@@ -224,7 +227,7 @@ function LoginForm({
                 {error && <p className="text-sm text-reject">{error}</p>}
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? t('auth.signingIn') : t('auth.signIn')}
               </Button>
               <div className="flex items-center justify-between text-sm">
                 <button
@@ -232,7 +235,7 @@ function LoginForm({
                   onClick={onSwitchToRegister}
                   className="text-muted hover:text-text"
                 >
-                  Create account
+                  {t('auth.createAccount')}
                 </button>
                 <button
                   type="button"
@@ -242,7 +245,7 @@ function LoginForm({
                   }}
                   className="text-muted hover:text-text"
                 >
-                  Use access token
+                  {t('auth.useAccessToken')}
                 </button>
               </div>
             </form>
@@ -251,7 +254,7 @@ function LoginForm({
               <div className="space-y-2">
                 <Input
                   type="password"
-                  placeholder="Access token"
+                  placeholder={t('auth.accessToken')}
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   autoFocus
@@ -259,7 +262,7 @@ function LoginForm({
                 {error && <p className="text-sm text-reject">{error}</p>}
               </div>
               <Button type="submit" className="w-full">
-                Sign in
+                {t('auth.signIn')}
               </Button>
               <button
                 type="button"
@@ -269,10 +272,13 @@ function LoginForm({
                 }}
                 className="text-sm text-muted hover:text-text"
               >
-                Use username & password
+                {t('auth.useUsernamePassword')}
               </button>
             </form>
           )}
+          <div className="mt-4 flex justify-center">
+            <LanguageSwitcher value={locale} onChange={setLocale} />
+          </div>
         </CardContent>
       </Card>
       {version && <p className="text-xs text-muted mt-4 text-center">v{version}</p>}
@@ -291,6 +297,7 @@ function RegisterForm({
   onSwitchToLogin: () => void
   version?: string
 }) {
+  const { locale, setLocale, t } = useI18n()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -300,11 +307,11 @@ function RegisterForm({
     e.preventDefault()
     setError(null)
     if (!username.trim()) {
-      setError('Username is required')
+      setError(t('auth.usernameRequired'))
       return
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters')
+      setError(t('auth.passwordMinError'))
       return
     }
     setLoading(true)
@@ -314,9 +321,9 @@ function RegisterForm({
     } catch (err: unknown) {
       const msg = errMsg(err)
       if (msg.includes('409')) {
-        setError('Username already taken')
+        setError(t('auth.usernameTaken'))
       } else if (msg.includes('400')) {
-        setError('Invalid input')
+        setError(t('auth.invalidInput'))
       } else {
         setError(msg)
       }
@@ -332,14 +339,14 @@ function RegisterForm({
           <CardTitle>
             <span className="text-accent">digarr</span>
           </CardTitle>
-          <CardDescription>Create the first account to get started.</CardDescription>
+          <CardDescription>{t('auth.registerDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Input
                 type="text"
-                placeholder="Username"
+                placeholder={t('auth.username')}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
@@ -347,7 +354,7 @@ function RegisterForm({
               />
               <Input
                 type="password"
-                placeholder="Password (min 8 characters)"
+                placeholder={t('auth.passwordMin')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
@@ -355,16 +362,19 @@ function RegisterForm({
               {error && <p className="text-sm text-reject">{error}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
             </Button>
             <button
               type="button"
               onClick={onSwitchToLogin}
               className="text-sm text-muted hover:text-text"
             >
-              Already have an account? Sign in
+              {t('auth.alreadyHaveAccount')}
             </button>
           </form>
+          <div className="mt-4 flex justify-center">
+            <LanguageSwitcher value={locale} onChange={setLocale} />
+          </div>
         </CardContent>
       </Card>
       {version && <p className="text-xs text-muted mt-4 text-center">v{version}</p>}

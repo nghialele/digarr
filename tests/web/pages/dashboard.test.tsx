@@ -4,12 +4,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { I18nProvider } from '@/web/lib/i18n'
 
 function renderWithQuery(ui: ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(
+    <I18nProvider>
+      <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+    </I18nProvider>,
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -39,6 +44,8 @@ vi.mock('@/web/lib/api', () => ({
   updateRecommendation: vi.fn(),
   approveRecommendation: vi.fn().mockResolvedValue({}),
   approveToTarget: vi.fn().mockResolvedValue({}),
+  deletePlaylistApi: vi.fn(),
+  generatePlaylistApi: vi.fn(),
   listTargets: vi.fn().mockResolvedValue([]),
   getRecentListens: vi.fn(),
   getSubscriptions: vi.fn(),
@@ -52,6 +59,7 @@ vi.mock('@/web/lib/api', () => ({
   getPipelineStatus: vi.fn(),
   getStoredToken: vi.fn(() => null),
   getUserPreferences: vi.fn().mockResolvedValue({ dismissedHints: [] }),
+  updatePlaylistApi: vi.fn(),
   updateUserPreferences: vi.fn().mockResolvedValue({}),
   getCurrentUser: vi.fn().mockResolvedValue({ id: 1, username: 'admin', isAdmin: false }),
   getJobHealth: vi.fn().mockResolvedValue({
@@ -71,6 +79,7 @@ vi.mock('@/web/lib/hooks', async (importOriginal) => {
   }
 })
 
+import { PlaylistCard } from '@/web/components/playlist-card'
 import {
   getDashboardActivity,
   getDashboardTaste,
@@ -186,6 +195,22 @@ function setupMocks() {
 describe('Dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    const storage = new Map<string, string>()
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn((key: string) => storage.get(key) ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+          storage.set(key, value)
+        }),
+        removeItem: vi.fn((key: string) => {
+          storage.delete(key)
+        }),
+        clear: vi.fn(() => {
+          storage.clear()
+        }),
+      },
+    })
   })
 
   it("renders today's pick with artist name and score", async () => {
@@ -196,6 +221,14 @@ describe('Dashboard', () => {
       expect(screen.getByText('Sigur Ros')).toBeInTheDocument()
       expect(screen.getByText('85')).toBeInTheDocument()
     })
+  })
+
+  it("uses translated today's pick copy in French", async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    setupMocks()
+    renderWithQuery(<Dashboard />)
+
+    expect(await screen.findByText('Le choix du jour')).toBeInTheDocument()
   })
 
   it('renders listening activity', async () => {
@@ -255,6 +288,72 @@ describe('Dashboard', () => {
     await waitFor(() => {
       expect(screen.getByText('Run Scan')).toBeInTheDocument()
     })
+  })
+
+  it('formats playlist dates with the active locale helper', () => {
+    localStorage.setItem('digarr-locale', 'de')
+
+    renderWithQuery(
+      <PlaylistCard
+        playlist={{
+          id: 7,
+          userId: 1,
+          name: 'Weekend Mix',
+          strategy: 'weekly_digest',
+          schedule: '0 8 * * 1',
+          enabled: true,
+          targetIds: [],
+          trackCount: 18,
+          lastGeneratedAt: '2026-02-11T10:30:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          config: { size: 25, trackSourcePriority: ['local', 'spotify', 'deezer'] },
+        }}
+        onEdit={vi.fn()}
+        onRefetch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/11\./)).toBeInTheDocument()
+  })
+
+  it('uses translated dashboard section copy in French', async () => {
+    localStorage.setItem('digarr-locale', 'fr')
+    setupMocks()
+    mockGetSubscriptions.mockResolvedValue([] as never)
+
+    renderWithQuery(<Dashboard />)
+
+    expect(await screen.findByText('Abonnements')).toBeInTheDocument()
+    expect(screen.getByText('Commencer')).toBeInTheDocument()
+  })
+
+  it('localizes playlist card metadata labels in French', () => {
+    localStorage.setItem('digarr-locale', 'fr')
+
+    renderWithQuery(
+      <PlaylistCard
+        playlist={{
+          id: 8,
+          userId: 1,
+          name: 'Night Shift',
+          strategy: 'weekly_digest',
+          schedule: '0 0 * * *',
+          enabled: false,
+          targetIds: [],
+          trackCount: 12,
+          lastGeneratedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          config: { size: 25, trackSourcePriority: ['local', 'spotify', 'deezer'] },
+        }}
+        onEdit={vi.fn()}
+        onRefetch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Planification:')).toBeInTheDocument()
+    expect(screen.getByText('Quotidien')).toBeInTheDocument()
+    expect(screen.getByText('Jamais')).toBeInTheDocument()
+    expect(screen.getByText('Desactive')).toBeInTheDocument()
   })
 
   it('shows add_failed recommendations in Recently Approved', async () => {
