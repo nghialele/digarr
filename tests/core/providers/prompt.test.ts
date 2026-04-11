@@ -31,12 +31,22 @@ describe('buildRecommendationPrompt()', () => {
     expect(prompt).toContain('Do not confuse similarly-named artists')
     expect(prompt).toContain('reasoning accurately describes the EXACT artist')
   })
+
+  it('includes an explicit response language instruction when a locale is provided', () => {
+    const prompt = buildRecommendationPrompt({ ...sampleProfile, responseLocale: 'fr' })
+    expect(prompt).toContain('All reasoning fields must be written in Français.')
+  })
 })
 
 describe('buildMoodPrompt()', () => {
   it('includes name-description consistency warning', () => {
     const prompt = buildMoodPrompt('chill ambient vibes')
     expect(prompt).toContain('Do not confuse similarly-named artists')
+  })
+
+  it('includes an explicit response language instruction when a locale is provided', () => {
+    const prompt = buildMoodPrompt('jazz nocturno', [], 'es')
+    expect(prompt).toContain('All reasoning fields must be written in Español.')
   })
 })
 

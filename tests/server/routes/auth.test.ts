@@ -370,6 +370,25 @@ describe('POST /api/auth/login', () => {
     })
     expect(res.status).toBe(400)
   })
+
+  it('localizes missing-credentials errors from the request locale', async () => {
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Digarr-Locale': 'fr',
+      },
+      body: JSON.stringify({ username: '', password: '' }),
+    })
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual(
+      expect.objectContaining({
+        error: "Le nom d'utilisateur et le mot de passe sont requis",
+      }),
+    )
+  })
 })
 
 describe('session token authentication', () => {

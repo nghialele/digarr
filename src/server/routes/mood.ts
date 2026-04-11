@@ -1,11 +1,14 @@
 import { Hono } from 'hono'
 import { createLidarrClient } from '@/core/clients/lidarr'
+import { detectPromptLocale } from '@/core/i18n/prompt-locale'
 import { buildMoodPrompt } from '@/core/providers/prompt'
 import type { AiProviderRegistry } from '@/core/providers/registry'
+import { resolveRequestLocale } from '@/server/locale'
 import type { HonoEnv } from '@/server/types'
 
 export type MoodDeps = {
   getSettings: () => Promise<Record<string, unknown> | null>
+  getUserById?: (id: number) => Promise<{ preferredLocale?: string | null } | null>
   providerRegistry: AiProviderRegistry
 }
 
@@ -15,11 +18,12 @@ export function moodRoutes(deps: MoodDeps) {
   router.post('/api/mood/discover', async (c) => {
     const body = await c.req.json()
     const { query } = body as { query?: string }
+    const trimmedQuery = query?.trim()
 
-    if (!query?.trim()) {
+    if (!trimmedQuery) {
       return c.json({ error: 'query is required' }, 400)
     }
-    if (query.length > 500) {
+    if (trimmedQuery.length > 500) {
       return c.json({ error: 'query must be 500 characters or less' }, 400)
     }
 
@@ -39,11 +43,22 @@ export function moodRoutes(deps: MoodDeps) {
       baseUrl: aiBaseUrl ?? null,
     })
 
-    const prompt = buildMoodPrompt(query.trim())
+    const userId = c.get('userId')
+    const user = userId && deps.getUserById ? await deps.getUserById(userId) : null
+    const uiLocale = resolveRequestLocale({
+      userPreferredLocale: user?.preferredLocale,
+      requestLocale: c.req.header('X-Digarr-Locale'),
+      acceptLanguage: c.req.header('Accept-Language'),
+    })
+    const promptLocale = detectPromptLocale(trimmedQuery)
+    const responseLocale = promptLocale ?? uiLocale
+    const prompt = buildMoodPrompt(trimmedQuery, [], responseLocale)
     const recs = await provider.getRecommendations({
       topArtists: [],
       topGenres: [],
       listeningPatterns: { totalListens: 0, recentTrend: 'stable' },
+      responseLocale,
+      promptLocale,
       _rawPrompt: prompt,
     })
 

@@ -2,6 +2,26 @@
 
 import { EventEmitter } from 'node:events'
 import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/core/clients/musicbrainz', () => ({
+  createMusicBrainzClient: vi.fn(() => ({})),
+}))
+
+vi.mock('@/core/pipeline/resolve', () => ({
+  resolve: vi.fn(async () => []),
+}))
+
+vi.mock('@/core/pipeline/store', () => ({
+  store: vi.fn(async () => {}),
+}))
+
+vi.mock('@/db/queries/users', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/db/queries/users')>()
+  return {
+    ...original,
+    getUserConnections: vi.fn(async () => null),
+  }
+})
 import type { SettingsRow } from '@/db/queries/settings'
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'
@@ -201,5 +221,91 @@ describe('GET /api/pipeline/events', () => {
     const app = createApp(makeDeps())
     const res = await app.request('/api/pipeline/events')
     expect(res.headers.get('content-type')).toContain('text/event-stream')
+  })
+})
+
+describe('POST /api/pipeline/quick-discover', () => {
+  it('passes the resolved response locale into AI recommendations', async () => {
+    const getRecommendations = vi.fn().mockResolvedValue([])
+    const app = createApp(
+      makeDeps({
+        getUserCount: vi.fn(async () => 1),
+        getUserById: vi.fn(async () => ({
+          id: 1,
+          username: 'test',
+          isAdmin: false,
+          preferredLocale: 'de',
+          preferences: null,
+          email: null,
+          oidcSubject: null,
+          authProvider: 'local',
+          listenbrainzUsername: null,
+          listenbrainzToken: null,
+          lastfmUsername: null,
+          lastfmApiKey: null,
+          plexUrl: null,
+          plexToken: null,
+          jellyfinUrl: null,
+          jellyfinApiKey: null,
+          jellyfinUserId: null,
+          embyUrl: null,
+          embyApiKey: null,
+          embyUserId: null,
+          discogsToken: null,
+          discogsUsername: null,
+          createdAt: new Date(),
+        })),
+        providerRegistry: {
+          create: vi.fn().mockResolvedValue({
+            getRecommendations,
+            testConnection: vi.fn(),
+          }),
+          register: vi.fn(),
+          has: vi.fn().mockReturnValue(true),
+          availableIds: vi.fn().mockReturnValue(['anthropic', 'openai', 'ollama']),
+        } as unknown as AppDependencies['providerRegistry'],
+        getSettings: vi.fn(
+          async () =>
+            ({
+              id: 1,
+              lidarrUrl: null,
+              lidarrApiKey: null,
+              aiProvider: 'openai',
+              aiModel: 'gpt-4o-mini',
+              aiApiKey: 'test-key',
+              aiBaseUrl: null,
+              preferences: null,
+            }) as SettingsRow,
+        ),
+        storeDb: {
+          getExistingRecommendationMbids: vi.fn(async () => new Set<string>()),
+          getRejectedMbids: vi.fn(async () => new Set<string>()),
+          getFeedbackHistory: vi.fn(async () => new Map()),
+        } as unknown as AppDependencies['storeDb'],
+      }),
+    )
+
+    const { createSession } = await import('@/core/sessions')
+    await createSession(1, 'session-token')
+
+    const res = await app.request('/api/pipeline/quick-discover', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer session-token',
+        'Content-Type': 'application/json',
+        'X-Digarr-Locale': 'fr',
+      },
+      body: JSON.stringify({ artistName: 'Boards of Canada' }),
+    })
+
+    expect(res.status).toBe(200)
+    await vi.waitFor(() => {
+      expect(getRecommendations).toHaveBeenCalledWith(
+        expect.objectContaining({
+          responseLocale: 'de',
+          promptLocale: null,
+        }),
+      )
+    })
   })
 })

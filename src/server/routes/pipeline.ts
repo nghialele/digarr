@@ -6,6 +6,7 @@ import {
   buildDiscoveryModeExecutionContext,
   evaluateDiscoveryModeAvailability,
 } from '@/core/discovery-modes/availability'
+import { detectPromptLocale } from '@/core/i18n/prompt-locale'
 import type { DiscoveryModeRequest } from '@/core/discovery-modes/request'
 import { normalizeDiscoveryModeRequest } from '@/core/discovery-modes/request'
 import type { AutoApproveDeps } from '@/core/pipeline/auto-approve'
@@ -21,6 +22,7 @@ import { getUserConnections } from '@/db/queries/users'
 import { mergePreferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import { resolveUserPreferences } from '@/server/helpers/preferences'
+import { resolveRequestLocale } from '@/server/locale'
 import { createPipelineSSEStream } from '@/server/sse'
 import type { HonoEnv } from '@/server/types'
 
@@ -177,7 +179,8 @@ export function pipelineRoutes(deps: AppDependencies) {
 
     const body = await c.req.json()
     const { artistName } = body as { artistName: string }
-    if (!artistName) {
+    const trimmedArtistName = artistName?.trim()
+    if (!trimmedArtistName) {
       return c.json({ error: 'artistName is required' }, 400)
     }
 
@@ -187,9 +190,19 @@ export function pipelineRoutes(deps: AppDependencies) {
     }
 
     const quickDiscoverUserId = c.get('userId')
+    const quickDiscoverUser = quickDiscoverUserId
+      ? await deps.getUserById(quickDiscoverUserId)
+      : null
     const quickDiscoverUserConns = quickDiscoverUserId
       ? await getUserConnections(deps.db, quickDiscoverUserId)
       : null
+    const uiLocale = resolveRequestLocale({
+      userPreferredLocale: quickDiscoverUser?.preferredLocale,
+      requestLocale: c.req.header('X-Digarr-Locale'),
+      acceptLanguage: c.req.header('Accept-Language'),
+    })
+    const promptLocale = detectPromptLocale(trimmedArtistName)
+    const responseLocale = promptLocale ?? uiLocale
 
     const lastfmApiKey = quickDiscoverUserConns?.lastfmApiKey ?? null
     const lastfmUsername = quickDiscoverUserConns?.lastfmUsername ?? ''
@@ -203,7 +216,7 @@ export function pipelineRoutes(deps: AppDependencies) {
           jobId = await jobRecorder.start({
             type: 'quick_discover',
             userId: quickDiscoverUserId,
-            metadata: { seedArtist: artistName },
+            metadata: { seedArtist: trimmedArtistName },
           })
         } catch (err) {
           console.error('[quick-discover] Failed to record job start:', err)
@@ -228,7 +241,7 @@ export function pipelineRoutes(deps: AppDependencies) {
             await deps.storeDb.getExistingRecommendationMbids(quickDiscoverUserId)
           const seedDiscovered = [
             {
-              name: artistName,
+              name: trimmedArtistName,
               similarityScore: 1.0,
               aiReasoning: 'Directly added from mood discovery.',
               source: 'mood',
@@ -285,7 +298,7 @@ export function pipelineRoutes(deps: AppDependencies) {
         if (lastfmApiKey && lastfmApiKey !== '***') {
           const lfm = createLastFmClient(lastfmUsername, lastfmApiKey)
           try {
-            const similar = await lfm.getSimilarArtists(artistName)
+            const similar = await lfm.getSimilarArtists(trimmedArtistName)
             discovered.push(...similar)
           } catch (err: unknown) {
             console.warn('Last.fm similar artists lookup failed:', errMsg(err))
@@ -301,9 +314,13 @@ export function pipelineRoutes(deps: AppDependencies) {
               baseUrl: (settings.aiBaseUrl as string) ?? null,
             })
             const aiRecs = await provider.getRecommendations({
-              topArtists: [{ name: artistName, playCount: 100, source: 'listenbrainz' as const }],
+              topArtists: [
+                { name: trimmedArtistName, playCount: 100, source: 'listenbrainz' as const },
+              ],
               topGenres: [],
               listeningPatterns: { totalListens: 0, recentTrend: 'stable' as const },
+              responseLocale,
+              promptLocale,
             })
             for (const rec of aiRecs) {
               discovered.push({
@@ -321,7 +338,11 @@ export function pipelineRoutes(deps: AppDependencies) {
         if (discovered.length === 0) {
           if (jobId != null && jobRecorder) {
             await jobRecorder.complete(jobId, {
-              metadata: { seedArtist: artistName, artistsDiscovered: 0, artistsStored: 0 },
+              metadata: {
+                seedArtist: trimmedArtistName,
+                artistsDiscovered: 0,
+                artistsStored: 0,
+              },
             })
           }
           return
@@ -357,7 +378,7 @@ export function pipelineRoutes(deps: AppDependencies) {
         if (jobId != null && jobRecorder) {
           await jobRecorder.complete(jobId, {
             metadata: {
-              seedArtist: artistName,
+              seedArtist: trimmedArtistName,
               artistsDiscovered: discovered.length,
               artistsStored: filtered.length,
             },
@@ -372,7 +393,7 @@ export function pipelineRoutes(deps: AppDependencies) {
     })()
 
     return c.json({
-      message: `Finding artists similar to ${artistName}...`,
+      message: `Finding artists similar to ${trimmedArtistName}...`,
     })
   })
 

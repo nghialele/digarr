@@ -1,8 +1,9 @@
 import { lookup } from 'node:dns/promises'
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { envConfig } from '@/config/env'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { encryptField } from '@/core/crypto'
+import { getMessages } from '@/core/i18n/messages'
 import { normalizeLocale } from '@/core/i18n/locales'
 import { isPrivateIp, isPrivateUrl } from '@/core/notifications'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
@@ -10,6 +11,7 @@ import { isHttpUrl } from '@/core/validation'
 import { updateUserPreferences } from '@/db/queries/users'
 import { mergePreferences, type Preferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
+import { resolveRequestLocale } from '@/server/locale'
 import type { HonoEnv } from '@/server/types'
 
 const ALLOWED_PREF_KEYS = new Set([
@@ -39,8 +41,17 @@ const SENSITIVE_PREF_KEYS = ['fanartApiKey'] as const
 export function authRoutes(deps: AppDependencies) {
   const router = new Hono<HonoEnv>()
 
+  const getRequestMessages = (c: Context<HonoEnv>) =>
+    getMessages(
+      resolveRequestLocale({
+        requestLocale: c.req.header('X-Digarr-Locale'),
+        acceptLanguage: c.req.header('Accept-Language'),
+      }),
+    )
+
   // Register a new user. First user becomes admin.
   router.post('/api/auth/register', async (c) => {
+    const messages = getRequestMessages(c)
     // Registration closed by default after first user. Set DIGARR_DISABLE_REGISTRATION=false to open.
     const userCount = await deps.getUserCount()
     if (userCount > 0 && envConfig.disableRegistration) {
@@ -57,7 +68,7 @@ export function authRoutes(deps: AppDependencies) {
     const { username, password } = body as { username?: string; password?: string }
 
     if (!username || !password) {
-      return c.json({ error: 'Username and password are required' }, 400)
+      return c.json({ error: messages['auth.credentialsRequired'] }, 400)
     }
     if (username.length < 2 || username.length > 50) {
       return c.json({ error: 'Username must be 2-50 characters' }, 400)
@@ -84,16 +95,17 @@ export function authRoutes(deps: AppDependencies) {
 
   // Login with username + password
   router.post('/api/auth/login', async (c) => {
+    const messages = getRequestMessages(c)
     const body = await c.req.json()
     const { username, password } = body as { username?: string; password?: string }
 
     if (!username || !password) {
-      return c.json({ error: 'Username and password are required' }, 400)
+      return c.json({ error: messages['auth.credentialsRequired'] }, 400)
     }
 
     const user = await deps.getUserByUsername(username)
     if (!user || !verifyPassword(password, user.passwordHash)) {
-      return c.json({ error: 'Invalid credentials' }, 401)
+      return c.json({ error: messages['auth.invalidCredentials'] }, 401)
     }
 
     const token = generateSessionToken()

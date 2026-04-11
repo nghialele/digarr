@@ -363,7 +363,11 @@ export function createApp(deps: AppDependencies) {
   }
   app.route(
     '/',
-    moodRoutes({ getSettings: deps.getSettings, providerRegistry: deps.providerRegistry }),
+    moodRoutes({
+      getSettings: deps.getSettings,
+      getUserById: deps.getUserById,
+      providerRegistry: deps.providerRegistry,
+    }),
   )
   app.route(
     '/',
