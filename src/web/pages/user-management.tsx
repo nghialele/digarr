@@ -14,8 +14,10 @@ import {
   listUsers,
   updateUserAdmin,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 export function UserManagementPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<{
@@ -76,10 +78,10 @@ export function UserManagementPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text">User Management</h1>
+        <h1 className="text-2xl font-bold text-text">{t('userManagement.title')}</h1>
         <Button size="sm" onClick={() => setShowForm((v) => !v)}>
           <Plus size={14} className="mr-1" />
-          Add User
+          {t('userManagement.addUser')}
         </Button>
       </div>
 

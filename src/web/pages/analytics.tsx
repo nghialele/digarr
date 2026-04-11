@@ -18,15 +18,15 @@ import {
   type ScoreBucket,
   type TimeToAct,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
+import { formatDate, formatDateTime } from '../lib/intl'
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+function formatAnalyticsDate(locale: string, dateStr: string): string {
+  return formatDateTime(locale as never, dateStr)
+}
+
+function formatAnalyticsShortDate(locale: string, dateStr: string): string {
+  return formatDate(locale as never, dateStr, { month: 'short', day: 'numeric' })
 }
 
 function pct(value: number): string {
@@ -47,9 +47,11 @@ const PAGE_SIZE = 10
 function BatchHistoryTable({
   batches,
   loading,
+  locale,
 }: {
   batches: AnalyticsBatch[] | null
   loading: boolean
+  locale: string
 }) {
   const [page, setPage] = useState(0)
 
@@ -91,7 +93,7 @@ function BatchHistoryTable({
           <tbody className="divide-y divide-border">
             {visible.map((b) => (
               <tr key={b.id} className="hover:bg-bg/50 transition-colors">
-                <td className="px-4 py-2.5 text-text">{formatDate(b.createdAt)}</td>
+                <td className="px-4 py-2.5 text-text">{formatAnalyticsDate(locale, b.createdAt)}</td>
                 <td className="px-4 py-2.5">{statusBadge(b.status)}</td>
                 <td className="px-4 py-2.5 text-right text-text">{b.total}</td>
                 <td className="px-4 py-2.5 text-right text-approve">{b.approved}</td>
@@ -133,6 +135,7 @@ function BatchHistoryTable({
 }
 
 function DiscoveryChart({ batches }: { batches: AnalyticsBatch[] }) {
+  const { locale } = useI18n()
   const recent = batches.slice(0, 20).reverse()
   const maxTotal = Math.max(...recent.map((b) => b.total), 1)
   const firstDate = recent[0]?.createdAt
@@ -148,7 +151,7 @@ function DiscoveryChart({ batches }: { batches: AnalyticsBatch[] }) {
             <div
               key={b.id}
               className="flex-1 flex flex-col justify-end group relative"
-              title={`${formatDate(b.createdAt)}: ${b.total} recs (${b.approved} approved)`}
+              title={`${formatAnalyticsDate(locale, b.createdAt)}: ${b.total} recs (${b.approved} approved)`}
             >
               <div
                 className="w-full rounded-t bg-accent/30"
@@ -160,8 +163,8 @@ function DiscoveryChart({ batches }: { batches: AnalyticsBatch[] }) {
         })}
       </div>
       <div className="flex justify-between mt-2 text-micro text-muted">
-        <span>{firstDate ? formatDate(firstDate).split(',')[0] : ''}</span>
-        <span>{lastDate ? formatDate(lastDate).split(',')[0] : ''}</span>
+        <span>{firstDate ? formatAnalyticsShortDate(locale, firstDate) : ''}</span>
+        <span>{lastDate ? formatAnalyticsShortDate(locale, lastDate) : ''}</span>
       </div>
     </div>
   )
@@ -291,6 +294,7 @@ function ScoreDistribution({ buckets }: { buckets: ScoreBucket[] }) {
 }
 
 function ApprovalTrendChart({ trend }: { trend: ApprovalTrend[] }) {
+  const { locale } = useI18n()
   if (trend.length < 2) return null
   const recent = trend.slice(-20)
   const firstDate = recent[0]?.createdAt
@@ -331,14 +335,14 @@ function ApprovalTrendChart({ trend }: { trend: ApprovalTrend[] }) {
               fill="var(--color-approve)"
               vectorEffect="non-scaling-stroke"
             >
-              <title>{`${formatDate(t.createdAt).split(',')[0]}: ${pct(t.approvalRate)}`}</title>
+              <title>{`${formatAnalyticsShortDate(locale, t.createdAt)}: ${pct(t.approvalRate)}`}</title>
             </circle>
           )
         })}
       </svg>
       <div className="flex justify-between mt-1.5 text-micro text-muted">
-        <span>{firstDate ? formatDate(firstDate).split(',')[0] : ''}</span>
-        <span>{lastDate ? formatDate(lastDate).split(',')[0] : ''}</span>
+        <span>{firstDate ? formatAnalyticsShortDate(locale, firstDate) : ''}</span>
+        <span>{lastDate ? formatAnalyticsShortDate(locale, lastDate) : ''}</span>
       </div>
     </div>
   )
@@ -372,6 +376,7 @@ function TimeToActCards({ data }: { data: TimeToAct[] }) {
 }
 
 export function AnalyticsPage() {
+  const { locale } = useI18n()
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: getAnalyticsOverview,
@@ -455,7 +460,7 @@ export function AnalyticsPage() {
       {/* Batch history */}
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Batch History</h2>
-        <BatchHistoryTable batches={batches ?? null} loading={batchesLoading} />
+        <BatchHistoryTable batches={batches ?? null} loading={batchesLoading} locale={locale} />
       </div>
 
       {/* Score distribution + Approval trend + Time to act */}

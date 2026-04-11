@@ -8,9 +8,11 @@ import {
   type PlaylistRow,
   updatePlaylistApi,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
+import { formatShortDate } from '../lib/intl'
 import { ConfirmDialog } from './confirm-dialog'
 
-function formatRelativeTime(dateStr: string | null): string {
+function formatRelativeTime(locale: string, dateStr: string | null): string {
   if (!dateStr) return 'Never'
   const date = new Date(dateStr)
   const now = new Date()
@@ -22,7 +24,7 @@ function formatRelativeTime(dateStr: string | null): string {
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   if (days < 30) return `${days}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return formatShortDate(locale as never, date)
 }
 
 function formatSchedule(cron: string | null): string {
@@ -85,6 +87,7 @@ type PlaylistCardProps = {
 }
 
 export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps) {
+  const { locale, t } = useI18n()
   const [generating, setGenerating] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const navigate = useNavigate()
@@ -157,13 +160,13 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
           </span>
           {playlist.trackCount != null && (
             <span>
-              Tracks: <span className="text-text">{playlist.trackCount}</span>
+              {t('playlist.tracks')}: <span className="text-text">{playlist.trackCount}</span>
             </span>
           )}
         </div>
         <div>
-          Last generated:{' '}
-          <span className="text-text">{formatRelativeTime(playlist.lastGeneratedAt)}</span>
+          {t('playlist.lastGenerated')}:{' '}
+          <span className="text-text">{formatRelativeTime(locale, playlist.lastGeneratedAt)}</span>
         </div>
       </div>
 
@@ -200,7 +203,7 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
             ) : (
               <Play size={12} aria-hidden="true" />
             )}
-            {generating ? 'Generating...' : 'Generate'}
+            {generating ? t('playlist.generating') : t('playlist.generate')}
           </button>
           <button
             type="button"
@@ -234,7 +237,7 @@ export function PlaylistCard({ playlist, onEdit, onRefetch }: PlaylistCardProps)
       </div>
 
       {!playlist.enabled && (
-        <p className="text-micro-lg text-muted/60 text-center -mt-1">Disabled</p>
+        <p className="text-micro-lg text-muted/60 text-center -mt-1">{t('common.disabled')}</p>
       )}
       {showDeleteConfirm && (
         <ConfirmDialog

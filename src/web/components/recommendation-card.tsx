@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useClickOutside } from '../hooks/use-click-outside'
 import { getArtistTopTracks } from '../lib/api'
 import { GENRE_COLORS } from '../lib/constants'
+import { useI18n } from '../lib/i18n'
 import { usePreviewContext } from '../lib/preview-context'
 import { cn, hueFromName } from '../lib/utils'
 import { ArtistThumb } from './artist-thumb'
@@ -113,16 +114,17 @@ function StatusBadge({
   onRetry?: (id: number) => void
   id: number
 }) {
+  const { t } = useI18n()
   if (status === 'added_to_lidarr') {
-    return <span className="text-xs text-approve font-medium">Added to Lidarr</span>
+    return <span className="text-xs text-approve font-medium">{t('recommendation.addedToLidarr')}</span>
   }
   if (status === 'rejected') {
-    return <span className="text-xs text-reject font-medium">Rejected</span>
+    return <span className="text-xs text-reject font-medium">{t('recommendation.rejected')}</span>
   }
   if (status === 'add_failed') {
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-reject font-medium">Add Failed</span>
+        <span className="text-xs text-reject font-medium">{t('recommendation.addFailed')}</span>
         {lidarrError && (
           <span className="text-xs text-muted truncate max-w-[200px]" title={lidarrError}>
             {lidarrError}
@@ -134,7 +136,7 @@ function StatusBadge({
             onClick={() => onRetry(id)}
             className="text-xs text-accent hover:underline"
           >
-            Retry
+            {t('recommendation.retry')}
           </button>
         )}
       </div>
@@ -193,6 +195,7 @@ function ApproveDropdown({
   onApprove: (id: number) => void
   onApproveToTarget?: (recId: number, targetId: string) => void
 }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, () => setOpen(false), open)
@@ -210,7 +213,7 @@ function ApproveDropdown({
             onApprove(recId)
           }}
         >
-          Approve
+          {t('recommendation.approve')}
         </Button>
         <Button
           size="sm"
@@ -270,6 +273,7 @@ function ActionButtons({
   targets?: Array<{ id: number; type: string; name: string }>
   onApproveToTarget?: (recId: number, targetId: string) => void
 }) {
+  const { t } = useI18n()
   if (bulkMode) return null
 
   function stop(e: React.MouseEvent | React.KeyboardEvent) {
@@ -288,7 +292,7 @@ function ActionButtons({
             onReject(rec.id)
           }}
         >
-          Reject
+          {t('recommendation.reject')}
         </Button>
         {approveNode ??
           (targets && targets.length > 1 ? (
@@ -308,7 +312,7 @@ function ActionButtons({
                 onApprove(rec.id)
               }}
             >
-              Approve
+              {t('recommendation.approve')}
             </Button>
           ))}
       </div>
@@ -326,7 +330,7 @@ function ActionButtons({
             onReject(rec.id)
           }}
         >
-          Reject
+          {t('recommendation.reject')}
         </Button>
       </div>
     )
@@ -343,7 +347,7 @@ function ActionButtons({
             onApprove(rec.id)
           }}
         >
-          Restore
+          {t('recommendation.restore')}
         </Button>
       </div>
     )
@@ -352,6 +356,7 @@ function ActionButtons({
 }
 
 function TopTracks({ artistId }: { artistId: number }) {
+  const { t } = useI18n()
   const preview = usePreviewContext()
   const { data, isLoading } = useQuery({
     queryKey: ['top-tracks', artistId],
@@ -388,11 +393,11 @@ function TopTracks({ artistId }: { artistId: number }) {
     audio.onended = () => setPlayingUrl(null)
     audio.onerror = () => {
       setPlayingUrl(null)
-      toast.error('Audio preview not available')
+      toast.error(t('recommendation.audioUnavailable'))
     }
     audio.play().catch(() => {
       setPlayingUrl(null)
-      toast.error('Audio preview not available')
+      toast.error(t('recommendation.audioUnavailable'))
     })
     setPlayingUrl(previewUrl)
   }
@@ -424,7 +429,7 @@ function TopTracks({ artistId }: { artistId: number }) {
   if (isLoading) {
     return (
       <div className="space-y-2 mt-3">
-        <div className="text-xs font-medium text-muted">Top Tracks</div>
+        <div className="text-xs font-medium text-muted">{t('recommendation.topTracks')}</div>
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-4 bg-surface rounded animate-pulse w-3/4" />
         ))}
@@ -436,7 +441,7 @@ function TopTracks({ artistId }: { artistId: number }) {
 
   return (
     <div className="space-y-1.5 mt-3">
-      <div className="text-xs font-medium text-muted">Top Tracks</div>
+      <div className="text-xs font-medium text-muted">{t('recommendation.topTracks')}</div>
       {tracks.map((track) => (
         <div key={track.name} className="flex items-center gap-2 text-sm">
           {track.previewUrl ? (
@@ -447,7 +452,11 @@ function TopTracks({ artistId }: { artistId: number }) {
                 if (track.previewUrl) handlePlay(track.previewUrl)
               }}
               className="text-accent hover:text-accent/80 transition-colors shrink-0 w-4 text-center"
-              aria-label={playingUrl === track.previewUrl ? 'Stop preview' : 'Play preview'}
+              aria-label={
+                playingUrl === track.previewUrl
+                  ? t('recommendation.stopPreview')
+                  : t('recommendation.playPreview')
+              }
             >
               {playingUrl === track.previewUrl ? (
                 <Pause className="w-3 h-3" />

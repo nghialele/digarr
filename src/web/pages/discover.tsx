@@ -33,6 +33,7 @@ import {
   triggerPipeline,
   updateRecommendation,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 type FilterTab = 'all' | 'pending' | 'approved' | 'rejected'
 type ViewMode = 'grid' | 'list' | 'stack'
@@ -50,13 +51,6 @@ function getStoredViewMode(): ViewMode {
     // ignore
   }
   return 'grid'
-}
-
-const FILTER_LABELS: Record<FilterTab, string> = {
-  all: 'All',
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
 }
 
 const STATUS_PARAM: Record<FilterTab, string | undefined> = {
@@ -100,19 +94,19 @@ function SkeletonGrid() {
 // Empty state
 
 function EmptyState({ filter }: { filter: FilterTab }) {
+  const { t } = useI18n()
   if (filter === 'all') {
     return (
       <div className="py-16 text-center space-y-3">
         <p className="text-muted text-sm">
-          No recommendations yet. Import some favorite artists or run your first scan to get
-          started.
+          {t('discover.emptyAll')}
         </p>
         <div className="flex items-center justify-center gap-3">
           <Link
             to="/subscriptions"
             className="px-3 py-1.5 text-sm text-accent border border-accent/40 rounded-md hover:bg-accent/10 transition-colors"
           >
-            Import artists
+            {t('discover.importArtists')}
           </Link>
           <button
             type="button"
@@ -129,7 +123,7 @@ function EmptyState({ filter }: { filter: FilterTab }) {
             }
             className="px-3 py-1.5 text-sm bg-accent text-accent-fg rounded-md hover:opacity-90 transition-opacity"
           >
-            Run a scan
+            {t('discover.runScan')}
           </button>
         </div>
       </div>
@@ -140,16 +134,15 @@ function EmptyState({ filter }: { filter: FilterTab }) {
     return (
       <div className="py-16 text-center">
         <p className="text-muted text-sm">
-          You haven't approved any artists yet. Check the Pending tab to see what Digarr found for
-          you.
+          {t('discover.emptyApproved')}
         </p>
       </div>
     )
   }
 
   const messages: Record<string, string> = {
-    pending: "No pending recommendations. You're all caught up.",
-    rejected: 'No rejected recommendations.',
+    pending: t('discover.emptyPending'),
+    rejected: t('discover.emptyRejected'),
   }
   return (
     <div className="py-16 text-center">
@@ -282,6 +275,7 @@ function FeedbackInsights() {
 // Export dropdown
 
 function ExportDropdown({ filter }: { filter?: string }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
 
@@ -305,7 +299,7 @@ function ExportDropdown({ filter }: { filter?: string }) {
         onClick={() => setOpen((o) => !o)}
         className="px-3 py-1.5 bg-surface border border-border rounded text-sm text-muted hover:text-text transition-colors"
       >
-        Export
+        {t('discover.export')}
       </button>
       {open && (
         <>
@@ -326,7 +320,7 @@ function ExportDropdown({ filter }: { filter?: string }) {
                 disabled={exporting === fmt}
                 className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-bg transition-colors disabled:opacity-50"
               >
-                {exporting === fmt ? 'Exporting...' : fmt.toUpperCase()}
+                {exporting === fmt ? t('discover.exporting') : fmt.toUpperCase()}
               </button>
             ))}
           </div>
@@ -339,6 +333,7 @@ function ExportDropdown({ filter }: { filter?: string }) {
 // Discover page
 
 export function DiscoverPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<FilterTab>('pending')
   const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode)
@@ -416,6 +411,12 @@ export function DiscoverPage() {
 
   const items = (data?.items ?? []) as Recommendation[]
   const total = data?.total ?? 0
+  const FILTER_LABELS: Record<FilterTab, string> = {
+    all: t('discover.all'),
+    pending: t('discover.pending'),
+    approved: t('discover.approved'),
+    rejected: t('discover.rejected'),
+  }
 
   // Warm status
 

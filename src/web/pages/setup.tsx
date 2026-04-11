@@ -70,13 +70,12 @@ function StepMode({
   mode: SetupMode | null
   onSelect: (m: SetupMode) => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-text">How do you manage music?</h2>
-        <p className="text-sm text-muted mt-1">
-          This determines how approved recommendations are handled.
-        </p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.howManageMusic')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.subtitle')}</p>
       </div>
       <div className="space-y-3">
         <button
@@ -93,9 +92,7 @@ function StepMode({
             <img src="/icons/lidarr.png" alt="" className="w-8 h-8" />
             <div>
               <span className="text-sm font-medium text-text">Lidarr</span>
-              <p className="text-xs text-muted mt-0.5">
-                Approved artists are added to Lidarr for automatic download
-              </p>
+              <p className="text-xs text-muted mt-0.5">{t('setup.lidarrModeDescription')}</p>
             </div>
           </div>
         </button>
@@ -115,9 +112,7 @@ function StepMode({
             </div>
             <div>
               <span className="text-sm font-medium text-text">Emby</span>
-              <p className="text-xs text-muted mt-0.5">
-                Sync your Emby library, use listening history for taste, and push playlists back.
-              </p>
+              <p className="text-xs text-muted mt-0.5">{t('setup.embyModeDescription')}</p>
             </div>
           </div>
         </button>
@@ -136,7 +131,7 @@ function StepMode({
               <Compass size={18} className="text-accent" />
             </div>
             <div>
-              <span className="text-sm font-medium text-text">Just discover</span>
+              <span className="text-sm font-medium text-text">{t('setup.discoveryOnlyLabel')}</span>
               <p className="text-xs text-muted mt-0.5">
                 Curate a personal list of recommendations. Export as JSON, CSV, or M3U.
               </p>
@@ -157,13 +152,14 @@ function StepLidarr({
   onFormChange: (v: FormState['lidarr']) => void
   onContinue: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-text">Connect Lidarr</h2>
-        <p className="text-sm text-muted mt-1">Lidarr manages your music library and downloads.</p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.connectLidarr')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.lidarrDescription')}</p>
       </div>
-      <Field label="Lidarr URL" id="lidarr-url">
+      <Field label={t('setup.lidarrUrl')} id="lidarr-url">
         <Input
           id="lidarr-url"
           type="url"
@@ -179,9 +175,9 @@ function StepLidarr({
           onChange={(e) => onFormChange({ ...form, skipTlsVerify: e.target.checked })}
           className="rounded border-border"
         />
-        Skip TLS verification
+        {t('setup.skipTlsVerification')}
       </label>
-      <Field label="API Key" id="lidarr-apikey">
+      <Field label={t('setup.apiKey')} id="lidarr-apikey">
         <Input
           id="lidarr-apikey"
           type="password"
@@ -195,7 +191,7 @@ function StepLidarr({
         look right.
       </p>
       <Button onClick={onContinue} disabled={!form.url || !form.apiKey} className="w-full">
-        Continue
+        {t('common.continue')}
       </Button>
     </div>
   )
@@ -210,15 +206,14 @@ function StepEmby({
   onFormChange: (v: FormState['emby']) => void
   onContinue: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-text">Connect Emby</h2>
-        <p className="text-sm text-muted mt-1">
-          Emby powers library sync, taste signal, and playlist export.
-        </p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.connectEmby')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.embyDescription')}</p>
       </div>
-      <Field label="Emby URL" id="emby-url">
+      <Field label={t('setup.embyUrl')} id="emby-url">
         <Input
           id="emby-url"
           type="url"
@@ -227,7 +222,7 @@ function StepEmby({
           onChange={(e) => onFormChange({ ...form, url: e.target.value })}
         />
       </Field>
-      <Field label="API Key" id="emby-apikey">
+      <Field label={t('setup.apiKey')} id="emby-apikey">
         <Input
           id="emby-apikey"
           type="password"
@@ -236,7 +231,7 @@ function StepEmby({
           onChange={(e) => onFormChange({ ...form, apiKey: e.target.value })}
         />
       </Field>
-      <Field label="User ID" id="emby-userid">
+      <Field label={t('setup.userId')} id="emby-userid">
         <Input
           id="emby-userid"
           placeholder="Emby user ID"
@@ -256,7 +251,7 @@ function StepEmby({
         disabled={!form.url || !form.apiKey || !form.userId}
         className="w-full"
       >
-        Continue
+        {t('common.continue')}
       </Button>
     </div>
   )
@@ -271,6 +266,7 @@ function StepAi({
   onFormChange: (v: FormState['ai']) => void
   onContinue: () => void
 }) {
+  const { t } = useI18n()
   const needsApiKey = form.provider !== 'ollama' && form.provider !== 'openai-compatible'
   const apiKeyOptional = form.provider === 'openai-compatible'
   const needsBaseUrl = form.provider === 'ollama' || form.provider === 'openai-compatible'
@@ -310,13 +306,13 @@ function StepAi({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-text">AI Provider</h2>
-        <p className="text-sm text-muted mt-1">Used to generate music recommendations. Required.</p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.aiProvider')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.aiDescription')}</p>
         <p className="text-xs text-muted mt-2">
           You&apos;ll connect personal listening sources later in Settings after you log in.
         </p>
       </div>
-      <Field label="Provider" id="ai-provider">
+      <Field label={t('setup.provider')} id="ai-provider">
         <Select
           id="ai-provider"
           value={form.provider}
@@ -329,7 +325,7 @@ function StepAi({
           <option value="openai-compatible">OpenAI-Compatible</option>
         </Select>
       </Field>
-      <Field label="Model" id="ai-model">
+      <Field label={t('setup.model')} id="ai-model">
         <Input
           id="ai-model"
           list="ai-model-suggestions"
@@ -351,7 +347,7 @@ function StepAi({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label htmlFor="ai-apikey" className="text-sm text-muted">
-              {apiKeyOptional ? 'API Key (optional)' : 'API Key'}
+              {apiKeyOptional ? `${t('setup.apiKey')} (${t('common.optional')})` : t('setup.apiKey')}
             </label>
             {link && (
               <a
@@ -360,7 +356,7 @@ function StepAi({
                 rel="noreferrer"
                 className="text-xs text-accent hover:underline"
               >
-                {link.label}
+                {t('setup.getApiKey')}
               </a>
             )}
           </div>
@@ -374,7 +370,7 @@ function StepAi({
         </div>
       )}
       {needsBaseUrl && (
-        <Field label="Base URL" id="ai-baseurl">
+        <Field label={t('setup.baseUrl')} id="ai-baseurl">
           <Input
             id="ai-baseurl"
             type="url"
@@ -403,7 +399,7 @@ function StepAi({
         disabled={!form.model || (needsApiKey && !form.apiKey) || (needsBaseUrl && !form.baseUrl)}
         className="w-full"
       >
-        Continue
+        {t('common.continue')}
       </Button>
     </div>
   )
@@ -420,24 +416,25 @@ function StepDone({
   onStart: () => void
   starting: boolean
 }) {
+  const { t } = useI18n()
   const rows: { label: string; value: string }[] = []
   if (mode === 'lidarr') {
     rows.push({ label: 'Lidarr', value: form.lidarr.url })
   } else if (mode === 'emby') {
     rows.push({ label: 'Emby', value: form.emby.url })
   } else {
-    rows.push({ label: 'Mode', value: 'Discovery only' })
+    rows.push({ label: t('setup.mode'), value: t('setup.discoveryOnly') })
   }
   rows.push({
-    label: 'AI Provider',
+    label: t('setup.aiProvider'),
     value: `${form.ai.provider}${form.ai.model ? ` / ${form.ai.model}` : ''}`,
   })
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-text">Ready to go</h2>
-        <p className="text-sm text-muted mt-1">Here&apos;s what you&apos;ve configured:</p>
+        <h2 className="text-xl font-semibold text-text">{t('setup.readyTitle')}</h2>
+        <p className="text-sm text-muted mt-1">{t('setup.readyDescription')}</p>
         <p className="text-xs text-muted mt-2">
           Personal listening sources are connected per user from Settings after setup.
         </p>
@@ -451,7 +448,7 @@ function StepDone({
         ))}
       </div>
       <Button onClick={onStart} disabled={starting} className="w-full" size="lg">
-        {starting ? 'Starting...' : 'Start Digging'}
+        {starting ? t('setup.starting') : t('setup.startDigging')}
       </Button>
     </div>
   )
@@ -464,7 +461,7 @@ const DEFAULT_FORM: FormState = {
 }
 
 export function SetupWizard({ onComplete }: { onComplete: () => void }) {
-  const { locale, setLocale } = useI18n()
+  const { locale, setLocale, t } = useI18n()
   const [step, setStep] = useState(1)
   const [mode, setMode] = useState<SetupMode | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -509,7 +506,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <span className="text-3xl font-bold text-accent">digarr</span>
-          <p className="text-muted text-sm mt-1">Initial setup</p>
+          <p className="text-muted text-sm mt-1">{t('setup.initialSetup')}</p>
         </div>
 
         <StepIndicator current={step} total={totalSteps} />
@@ -561,7 +558,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
             onClick={() => setStep((s) => s - 1)}
             className="mt-4 text-sm text-muted hover:text-text"
           >
-            &larr; Back
+            &larr; {t('setup.back')}
           </button>
         )}
 

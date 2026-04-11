@@ -32,6 +32,7 @@ import {
   triggerPipeline,
   updateRecommendation,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 function relativeTime(dateStr: string | Date): string {
   const ms = Date.now() - new Date(dateStr).getTime()
@@ -284,6 +285,7 @@ function ActivityFeed({
 }
 
 export function Dashboard() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [skippedIds, setSkippedIds] = useState<Set<number>>(new Set())
   const [actedIds, setActedIds] = useState<Set<number>>(new Set())
@@ -484,7 +486,7 @@ export function Dashboard() {
       {/* Today's Pick + Recently Approved */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <SectionHeader title="Today's Pick" linkText="Discover" linkTo="/discover" />
+          <SectionHeader title={t('dashboard.todaysPick')} linkText={t('dashboard.discover')} linkTo="/discover" />
           <TodaysPick
             rec={currentPick}
             loading={pickLoading}
@@ -501,7 +503,7 @@ export function Dashboard() {
           />
         </div>
         <div>
-          <SectionHeader title="Recently Approved" linkText="View all" linkTo="/discover" />
+          <SectionHeader title={t('dashboard.recentlyApproved')} linkText={t('dashboard.viewAll')} linkTo="/discover" />
           <RecentlyApproved recs={approvedRecs} loading={approvedLoading} />
         </div>
       </div>

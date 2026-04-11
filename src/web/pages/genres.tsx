@@ -7,8 +7,10 @@ import { Hint } from '../components/hint'
 import { Input } from '../components/ui/input'
 import { usePullToRefresh } from '../hooks/use-pull-to-refresh'
 import { getGenres, searchGenres, seedGenres } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 export function GenresPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -76,12 +78,12 @@ export function GenresPage() {
       {/* Header + search */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex-1">
-          <h1 className="text-lg font-semibold text-text">Genres</h1>
-          <p className="text-xs text-muted mt-0.5">Browse genres from your library</p>
+          <h1 className="text-lg font-semibold text-text">{t('genres.title')}</h1>
+          <p className="text-xs text-muted mt-0.5">{t('genres.subtitle')}</p>
         </div>
         <Input
           type="search"
-          placeholder="Search genres..."
+          placeholder={t('genres.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="sm:w-64"
@@ -117,7 +119,7 @@ export function GenresPage() {
           ) : (
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-                Your Library Genres
+                {t('genres.libraryGenres')}
               </h2>
               {!loading && (
                 <span className="text-xs text-muted">{libraryGenres.length} genres</span>

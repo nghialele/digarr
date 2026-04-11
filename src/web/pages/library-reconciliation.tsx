@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 import { LibraryUnreconciledAlbumRowComponent } from '../components/library-unreconciled-album-row'
 import { LibraryUnreconciledRowComponent } from '../components/library-unreconciled-row'
 import { getLibraryUnreconciled, getLibraryUnreconciledAlbums } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 const ALBUMS_PER_PAGE = 20
 
 export function LibraryReconciliationPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [albumPage, setAlbumPage] = useState(1)
   const { data, error, isError, isLoading } = useQuery({
@@ -51,7 +53,7 @@ export function LibraryReconciliationPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div className="space-y-1">
-        <h1 className="text-xl font-bold text-text">Unreconciled Artists</h1>
+        <h1 className="text-xl font-bold text-text">{t('libraryReconciliation.title')}</h1>
         <p className="text-sm text-muted">
           {isLoading
             ? 'Loading unreconciled artists...'
@@ -100,7 +102,7 @@ export function LibraryReconciliationPage() {
 
       <section className="space-y-3">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-text">Unreconciled Albums</h2>
+          <h2 className="text-xl font-bold text-text">{t('libraryReconciliation.albumsTitle')}</h2>
           <p className="text-sm text-muted">
             {isAlbumLoading
               ? 'Loading unreconciled albums...'

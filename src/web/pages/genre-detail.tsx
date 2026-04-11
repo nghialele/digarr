@@ -7,6 +7,7 @@ import { Hint } from '../components/hint'
 import { Skeleton } from '../components/ui/skeleton'
 import type { GenreArtist, LibraryArtist } from '../lib/api'
 import { getGenre, getGenreArtists, quickDiscover, warmArtists } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 import { usePreviewContext } from '../lib/preview-context'
 
 type GenreDetail = GenreInfo & { subGenres: GenreInfo[]; libraryArtists: LibraryArtist[] }
@@ -184,6 +185,7 @@ function DetailSkeleton() {
 // Genre detail page
 
 export function GenreDetailPage() {
+  const { t } = useI18n()
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<DetailTab>('library')
@@ -222,7 +224,7 @@ export function GenreDetailPage() {
           onClick={() => navigate('/genres')}
           className="text-sm text-muted hover:text-text transition-colors"
         >
-          &larr; Back to Genres
+          &larr; {t('genreDetail.backToGenres')}
         </button>
         <div className="py-16 text-center">
           <p className="text-muted text-sm">Genre not found.</p>
@@ -239,7 +241,7 @@ export function GenreDetailPage() {
         onClick={() => navigate('/genres')}
         className="text-sm text-muted hover:text-text transition-colors"
       >
-        &larr; Back to Genres
+        &larr; {t('genreDetail.backToGenres')}
       </button>
 
       {/* Title */}
@@ -345,7 +347,7 @@ export function GenreDetailPage() {
           onClick={() => navigate(`/subscriptions?genre=${encodeURIComponent(data.name)}`)}
           className="px-4 py-2 bg-surface border border-border rounded-md text-sm text-muted hover:text-text hover:border-accent/60 transition-colors"
         >
-          Create Subscription
+          {t('genreDetail.createSubscription')}
         </button>
       </div>
     </div>

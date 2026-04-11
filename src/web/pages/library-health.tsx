@@ -17,6 +17,7 @@ import {
   type LibraryStats,
   scanLibraryHealth,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 // Checks where the fix is a Lidarr background task (refresh/search),
 // not an immediate DB write. These need longer delay before rescan.
@@ -63,6 +64,7 @@ function StatsSkeleton() {
 // LibraryHealthPage
 
 export function LibraryHealthPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [fixingIds, setFixingIds] = useState<Set<string>>(new Set())
   const rescanTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -143,7 +145,7 @@ export function LibraryHealthPage() {
     <div className="p-6 space-y-8 max-w-6xl mx-auto">
       {/* Page title */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-text">Library Health</h1>
+        <h1 className="text-xl font-bold text-text">{t('libraryHealth.title')}</h1>
         <button
           type="button"
           onClick={() => rescanMutation.mutate()}

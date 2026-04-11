@@ -80,6 +80,7 @@ if ('serviceWorker' in navigator) {
 // Mobile nav toggle
 
 function MobileMenuIcon({ open }: { open: boolean }) {
+  const { t } = useI18n()
   return (
     <svg
       className="w-6 h-6 text-text"
@@ -88,7 +89,7 @@ function MobileMenuIcon({ open }: { open: boolean }) {
       strokeWidth={2}
       viewBox="0 0 24 24"
       role="img"
-      aria-label={open ? 'Close menu' : 'Open menu'}
+      aria-label={open ? t('app.closeMenu') : t('app.openMenu')}
     >
       {open ? (
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -170,6 +171,7 @@ function ThemePicker({
   onModeChange: (m: Mode) => void
   onColorThemeChange: (t: ColorTheme) => void
 }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -183,10 +185,10 @@ function ThemePicker({
         type="button"
         onClick={() => setOpen(!open)}
         className="p-1.5 text-muted hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-        aria-label="Theme settings"
+        aria-label={t('app.themeSettings')}
         aria-expanded={open}
         aria-haspopup="menu"
-        title="Theme"
+        title={t('app.theme')}
       >
         <ModeIcon size={18} />
       </button>
@@ -240,6 +242,7 @@ function ThemePicker({
 }
 
 function UserMenu({ username }: { username: string }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -276,7 +279,7 @@ function UserMenu({ username }: { username: string }) {
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-bg transition-colors"
           >
             <Settings size={14} />
-            Settings
+            {t('app.userMenu.settings')}
           </NavLink>
           <button
             type="button"
@@ -284,7 +287,7 @@ function UserMenu({ username }: { username: string }) {
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-bg transition-colors"
           >
             <LogOut size={14} />
-            Log out
+            {t('app.userMenu.logout')}
           </button>
         </div>
       )}
@@ -301,7 +304,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const latestRequestedLocaleRef = useRef<SupportedLocale | null>(null)
   const submittedPendingLocaleRef = useRef<SupportedLocale | null>(null)
   const queryClient = useQueryClient()
-  const { locale, pendingLocale, setLocale, hydrateLocale } = useI18n()
+  const { locale, pendingLocale, setLocale, hydrateLocale, t } = useI18n()
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const { data: pipelineStatus } = useQuery({
     queryKey: ['pipelineStatus'],
@@ -415,44 +418,44 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <NavLink to="/" end className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <LayoutDashboard size={14} aria-hidden="true" />
-                    Dashboard
+                    {t('nav.dashboard')}
                   </span>
                 </NavLink>
                 <NavLink to="/search" className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <Search size={14} aria-hidden="true" />
-                    Search
+                    {t('nav.search')}
                   </span>
                 </NavLink>
                 <NavDropdown
-                  label="Discover"
+                  label={t('nav.discover')}
                   icon={<Compass size={14} aria-hidden="true" />}
                   items={[
-                    { to: '/discover', label: 'Recommendations', icon: <Compass size={14} /> },
-                    { to: '/genres', label: 'Genres', icon: <Music size={14} /> },
-                    { to: '/subscriptions', label: 'Subscriptions', icon: <Monitor size={14} /> },
-                    { to: '/playlists', label: 'Playlists', icon: <ListMusic size={14} /> },
+                    { to: '/discover', label: t('nav.recommendations'), icon: <Compass size={14} /> },
+                    { to: '/genres', label: t('nav.genres'), icon: <Music size={14} /> },
+                    { to: '/subscriptions', label: t('nav.subscriptions'), icon: <Monitor size={14} /> },
+                    { to: '/playlists', label: t('nav.playlists'), icon: <ListMusic size={14} /> },
                   ]}
                 />
                 {currentUser?.isAdmin && (
                   <NavDropdown
-                    label="Library"
+                    label={t('nav.library')}
                     icon={<HeartPulse size={14} aria-hidden="true" />}
                     items={[
-                      { to: '/library/health', label: 'Health', icon: <HeartPulse size={14} /> },
+                      { to: '/library/health', label: t('nav.health'), icon: <HeartPulse size={14} /> },
                       {
                         to: '/library/reconciliation',
-                        label: 'Reconciliation',
+                        label: t('nav.reconciliation'),
                         icon: <RefreshCw size={14} />,
                       },
-                      { to: '/analytics', label: 'Analytics', icon: <BarChart3 size={14} /> },
+                      { to: '/analytics', label: t('nav.analytics'), icon: <BarChart3 size={14} /> },
                     ]}
                   />
                 )}
                 <NavLink to="/settings" className={navLinkClass}>
                   <span className="flex items-center gap-1">
                     <Settings size={14} aria-hidden="true" />
-                    Settings
+                    {t('nav.settings')}
                   </span>
                 </NavLink>
               </div>
@@ -482,13 +485,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 {pipelineRunning ? (
                   <>
                     <RefreshCw size={14} className="animate-spin" />
-                    <span className="hidden sm:inline">Scanning...</span>
-                    <span className="sm:hidden">Scan</span>
+                    <span className="hidden sm:inline">{t('app.scanning')}</span>
+                    <span className="sm:hidden">{t('app.scan')}</span>
                   </>
                 ) : (
                   <>
-                    <span className="hidden sm:inline">Run Scan</span>
-                    <span className="sm:hidden">Scan</span>
+                    <span className="hidden sm:inline">{t('app.runScan')}</span>
+                    <span className="sm:hidden">{t('app.scan')}</span>
                   </>
                 )}
               </button>
@@ -509,7 +512,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <NavLink to="/" end className={mobileNavLinkClass} onClick={() => setMenuOpen(false)}>
                 <span className="flex items-center gap-1.5">
                   <LayoutDashboard size={14} aria-hidden="true" />
-                  Dashboard
+                  {t('nav.dashboard')}
                 </span>
               </NavLink>
               <NavLink
@@ -519,7 +522,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Search size={14} aria-hidden="true" />
-                  Search
+                  {t('nav.search')}
                 </span>
               </NavLink>
               <NavLink
@@ -529,7 +532,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Compass size={14} aria-hidden="true" />
-                  Discover
+                  {t('nav.discover')}
                 </span>
               </NavLink>
               <NavLink
@@ -539,7 +542,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Music size={14} aria-hidden="true" />
-                  Genres
+                  {t('nav.genres')}
                 </span>
               </NavLink>
               <NavLink
@@ -549,7 +552,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <ListMusic size={14} aria-hidden="true" />
-                  Playlists
+                  {t('nav.playlists')}
                 </span>
               </NavLink>
               <NavLink
@@ -559,7 +562,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Monitor size={14} aria-hidden="true" />
-                  Subscriptions
+                  {t('nav.subscriptions')}
                 </span>
               </NavLink>
               {currentUser?.isAdmin && (
@@ -570,7 +573,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <HeartPulse size={14} aria-hidden="true" />
-                    Library
+                    {t('nav.library')}
                   </span>
                 </NavLink>
               )}
@@ -582,7 +585,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <RefreshCw size={14} aria-hidden="true" />
-                    Reconciliation
+                    {t('nav.reconciliation')}
                   </span>
                 </NavLink>
               )}
@@ -594,7 +597,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <BarChart3 size={14} aria-hidden="true" />
-                    Analytics
+                    {t('nav.analytics')}
                   </span>
                 </NavLink>
               )}
@@ -605,7 +608,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Settings size={14} aria-hidden="true" />
-                  Settings
+                  {t('nav.settings')}
                 </span>
               </NavLink>
               {currentUser?.isAdmin && (
@@ -616,7 +619,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <Users size={14} aria-hidden="true" />
-                    Users
+                    {t('nav.users')}
                   </span>
                 </NavLink>
               )}

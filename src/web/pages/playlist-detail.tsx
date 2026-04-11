@@ -12,8 +12,10 @@ import {
   type PlaylistRow,
   type PlaylistTrackRow,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
+import { formatShortDate } from '../lib/intl'
 
-function formatRelativeTime(dateStr: string | null): string {
+function formatRelativeTime(locale: string, dateStr: string | null): string {
   if (!dateStr) return 'Never'
   const date = new Date(dateStr)
   const now = new Date()
@@ -25,7 +27,7 @@ function formatRelativeTime(dateStr: string | null): string {
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   if (days < 30) return `${days}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return formatShortDate(locale as never, date)
 }
 
 function formatSchedule(cron: string | null): string {
@@ -124,6 +126,7 @@ function PlaylistActions({
   onEdit: () => void
   onRefetch: () => void
 }) {
+  const { t } = useI18n()
   const [generating, setGenerating] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
 
@@ -177,7 +180,7 @@ function PlaylistActions({
         ) : (
           <Play size={14} aria-hidden="true" />
         )}
-        {generating ? 'Generating...' : 'Generate Now'}
+        {generating ? t('playlist.generating') : t('playlist.generate')}
       </button>
       {(['m3u', 'xspf'] as const).map((format) => (
         <button
@@ -197,7 +200,7 @@ function PlaylistActions({
         className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-md text-sm text-muted hover:text-text transition-colors"
       >
         <Pencil size={14} aria-hidden="true" />
-        Edit
+        {t('common.edit')}
       </button>
     </div>
   )
@@ -206,6 +209,7 @@ function PlaylistActions({
 // PlaylistDetailPage
 
 export function PlaylistDetailPage() {
+  const { locale, t } = useI18n()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const numId = Number(id)
@@ -231,10 +235,10 @@ export function PlaylistDetailPage() {
           onClick={() => navigate('/playlists')}
           className="text-sm text-muted hover:text-text transition-colors"
         >
-          &larr; Back to Playlists
+          &larr; {t('playlist.backToPlaylists')}
         </button>
         <div className="py-16 text-center">
-          <p className="text-muted text-sm">Playlist not found.</p>
+          <p className="text-muted text-sm">{t('playlist.notFound')}</p>
         </div>
       </div>
     )
@@ -254,7 +258,7 @@ export function PlaylistDetailPage() {
         onClick={() => navigate('/playlists')}
         className="text-sm text-muted hover:text-text transition-colors"
       >
-        &larr; Back to Playlists
+        &larr; {t('playlist.backToPlaylists')}
       </button>
 
       {/* Title + meta */}
@@ -272,12 +276,12 @@ export function PlaylistDetailPage() {
             Schedule: <span className="text-text">{formatSchedule(playlist.schedule)}</span>
           </span>
           <span>
-            Last generated:{' '}
-            <span className="text-text">{formatRelativeTime(playlist.lastGeneratedAt)}</span>
+            {t('playlist.lastGenerated')}:{' '}
+            <span className="text-text">{formatRelativeTime(locale, playlist.lastGeneratedAt)}</span>
           </span>
           {playlist.trackCount != null && (
             <span>
-              Tracks: <span className="text-text">{playlist.trackCount}</span>
+              {t('playlist.tracks')}: <span className="text-text">{playlist.trackCount}</span>
             </span>
           )}
           {!playlist.enabled && <span className="text-muted/60 italic">Disabled</span>}

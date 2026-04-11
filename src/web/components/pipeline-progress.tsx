@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { getPipelineStatus } from '../lib/api'
 import { useSSE } from '../lib/hooks'
+import { useI18n } from '../lib/i18n'
 
 type SSEProgress = {
   stage: string
@@ -61,6 +62,7 @@ export function PipelineProgress({
   onComplete?: () => void
   isFirstScan?: boolean
 }) {
+  const { t } = useI18n()
   const { data: status } = useQuery({
     queryKey: ['pipelineStatus'],
     queryFn: getPipelineStatus,
@@ -152,7 +154,7 @@ export function PipelineProgress({
       {/* Header */}
       {isFirstScan && stage !== 'complete' && (
         <div className="space-y-1">
-          <p className="text-sm font-medium text-text">Running your first scan</p>
+          <p className="text-sm font-medium text-text">{t('pipeline.runningFirstScan')}</p>
           <p className="text-xs text-muted">
             Digarr is analyzing your music taste and finding artists you might like. This usually
             takes 2-5 minutes on the first run.

@@ -15,6 +15,7 @@ import {
   type PlaylistRow,
   updatePlaylistApi,
 } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 const CRON_LABELS: Record<string, string> = {
   '0 0 * * *': 'Daily',
@@ -85,6 +86,7 @@ function SkeletonGrid() {
 // PlaylistsPage
 
 export function PlaylistsPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const location = useLocation()
   const navigate = useNavigate()
@@ -159,7 +161,7 @@ export function PlaylistsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg font-semibold text-text">Playlists</h1>
+          <h1 className="text-lg font-semibold text-text">{t('playlists.title')}</h1>
           <p className="text-xs text-muted mt-0.5">
             {schedulerInfo
               ? formatSchedulerSubtitle(schedulerInfo)
@@ -172,7 +174,7 @@ export function PlaylistsPage() {
           className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 transition-opacity self-start sm:self-auto"
         >
           <Plus size={15} aria-hidden="true" />
-          Create Playlist
+          {t('playlists.create')}
         </button>
       </div>
 
@@ -182,8 +184,7 @@ export function PlaylistsPage() {
       ) : isEmpty ? (
         <div className="py-12 text-center space-y-4">
           <p className="text-muted text-sm max-w-sm mx-auto">
-            No playlists yet. Create your first playlist to automatically receive curated music
-            digests.
+            {t('playlists.empty')}
           </p>
           <button
             type="button"
@@ -191,7 +192,7 @@ export function PlaylistsPage() {
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus size={15} aria-hidden="true" />
-            Create Playlist
+            {t('playlists.create')}
           </button>
           <Hint id="playlists-empty-state" type="empty-state" className="max-w-sm mx-auto">
             Playlists let Digarr automatically push curated digests to Jellyfin, Navidrome, or Plex

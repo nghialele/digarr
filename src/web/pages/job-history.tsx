@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { JobRunRow } from '../components/job-run-row'
 import { listJobs } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 const TABS = [
   { key: '', label: 'All' },
@@ -15,6 +16,7 @@ const TABS = [
 const PAGE_SIZE = 50
 
 export default function JobHistoryPage() {
+  const { t } = useI18n()
   const [type, setType] = useState('')
   const [offset, setOffset] = useState(0)
 
@@ -26,7 +28,7 @@ export default function JobHistoryPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4">
-      <h1 className="text-xl font-bold text-text">Job History</h1>
+      <h1 className="text-xl font-bold text-text">{t('jobHistory.title')}</h1>
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((tab) => (

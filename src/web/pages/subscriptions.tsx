@@ -34,15 +34,12 @@ import {
   updateSubscriptionApi,
 } from '../lib/api'
 import { formatDuration } from '../lib/format-time'
+import { useI18n } from '../lib/i18n'
+import { formatShortDateTime } from '../lib/intl'
 
-function formatDate(dateStr: string | null): string {
+function formatDate(locale: string, dateStr: string | null): string {
   if (!dateStr) return 'Never'
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatShortDateTime(locale as never, dateStr)
 }
 
 function formatRelative(dateStr: string | null): string {
@@ -68,6 +65,7 @@ function runStatus(run: SubscriptionRun): { label: string; className: string } {
 // RunHistoryPanel
 
 function RunHistoryPanel({ subscriptionId }: { subscriptionId: number }) {
+  const { locale } = useI18n()
   const { data: runs, isLoading } = useQuery({
     queryKey: ['subscription-runs', subscriptionId],
     queryFn: () => getSubscriptionRuns(subscriptionId),
@@ -108,7 +106,7 @@ function RunHistoryPanel({ subscriptionId }: { subscriptionId: number }) {
             const status = runStatus(run)
             return (
               <tr key={run.id} className="hover:bg-bg/50 transition-colors">
-                <td className="px-2 py-1.5 text-text">{formatDate(run.startedAt)}</td>
+                <td className="px-2 py-1.5 text-text">{formatDate(locale, run.startedAt)}</td>
                 <td className="px-2 py-1.5 text-muted">{formatDuration(run.durationMs)}</td>
                 <td className="px-2 py-1.5 text-right text-text">
                   {(run.metadata?.artistsFound as number) ?? 0}
@@ -153,6 +151,7 @@ function SubscriptionCard({
   onToggle: () => void
   onRunNow: () => void
 }) {
+  const { locale } = useI18n()
   const [expanded, setExpanded] = useState(false)
 
   const sourceLabel = (() => {
@@ -212,7 +211,7 @@ function SubscriptionCard({
               </span>
             )}
             <span>
-              Last: <span className="text-text">{formatDate(sub.lastRunAt)}</span>
+              Last: <span className="text-text">{formatDate(locale, sub.lastRunAt)}</span>
               {sub.lastResultCount != null && (
                 <span className={`ml-1 ${sub.lastResultCount > 0 ? 'text-approve' : 'text-muted'}`}>
                   ({sub.lastResultCount} found)
@@ -286,6 +285,7 @@ function SubscriptionCard({
 // SubscriptionsPage
 
 export default function SubscriptionsPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const prefillGenre = searchParams.get('genre')
@@ -426,7 +426,7 @@ export default function SubscriptionsPage() {
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-text">Subscriptions</h1>
+        <h1 className="text-xl font-bold text-text">{t('subscriptions.title')}</h1>
         <div className="flex items-center gap-2">
           {subscriptions && subscriptions.length > 0 && (
             <>
@@ -436,7 +436,7 @@ export default function SubscriptionsPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted border border-border rounded-md hover:text-text hover:border-accent/40 transition-colors"
               >
                 <LayoutGrid size={14} />
-                Presets
+                {t('subscriptions.presets')}
               </button>
               <button
                 type="button"
@@ -445,7 +445,7 @@ export default function SubscriptionsPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted border border-border rounded-md hover:text-text hover:border-accent/40 disabled:opacity-60 transition-colors"
               >
                 {anyEnabled ? <Pause size={14} /> : <Play size={14} />}
-                {anyEnabled ? 'Pause All' : 'Resume All'}
+                {anyEnabled ? t('subscriptions.pauseAll') : t('subscriptions.resumeAll')}
               </button>
             </>
           )}
@@ -455,7 +455,7 @@ export default function SubscriptionsPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus size={14} />
-            New
+            {t('subscriptions.new')}
           </button>
         </div>
       </div>
