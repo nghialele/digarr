@@ -13,7 +13,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { envConfig } from '../src/config/env'
 import { SUPPORTED_LOCALES } from '../src/core/i18n/locales'
 import { getMessages } from '../src/core/i18n/messages'
 
@@ -22,9 +21,9 @@ const targetLocale = args.find((arg) => !arg.startsWith('-'))
 const writeOutput = args.includes('--write')
 const sourceLocale = 'en'
 
-const baseUrl = envConfig.aiBaseUrl
-const apiKey = envConfig.aiApiKey
-const model = envConfig.aiModel
+const baseUrl = process.env.TRANSLATION_BASE_URL?.trim() || undefined
+const apiKey = process.env.TRANSLATION_API_KEY?.trim() || undefined
+const model = process.env.TRANSLATION_MODEL?.trim() || 'gpt-4o-mini'
 
 if (!targetLocale) {
   console.error('Usage: bun scripts/i18n-machine-translate.ts <locale> [--write]')
@@ -41,8 +40,13 @@ if (targetLocale === sourceLocale) {
   process.exit(1)
 }
 
-if (!baseUrl || !model) {
-  console.error('AI_BASE_URL and AI_MODEL must be set for translation generation')
+if (!baseUrl) {
+  console.error('TRANSLATION_BASE_URL must be set for translation generation')
+  process.exit(1)
+}
+
+if (!model) {
+  console.error('TRANSLATION_MODEL must be set for translation generation')
   process.exit(1)
 }
 
@@ -91,7 +95,7 @@ async function translateCatalog(): Promise<Record<string, string>> {
     {
       role: 'system' as const,
       content:
-        'Translate the provided JSON object into the target language. Return JSON only, with the exact same keys, no markdown, no commentary, and preserve placeholders, punctuation, and line breaks.',
+        'Translate the provided JSON object into the target language. Return JSON only, with the exact same keys, no markdown, no commentary, and preserve placeholders, punctuation, line breaks, artist names, and product names exactly.',
     },
     {
       role: 'user' as const,
