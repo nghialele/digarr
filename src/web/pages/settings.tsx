@@ -1,9 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { errMsg } from '@/core/validation'
-import { normalizeLocale, type SupportedLocale } from '@/core/i18n/locales'
+import { type SupportedLocale } from '@/core/i18n/locales'
 import { DEFAULT_PREFERENCES, type Preferences } from '@/db/schema'
 import { AdministrationTab } from '../components/admin/administration-tab'
 import { CollapsibleSection } from '../components/collapsible-section'
@@ -51,7 +51,6 @@ import {
   testService,
   testTargetApi,
   testWebhook,
-  updatePreferredLocale,
   updateSettings,
   updateUserPreferences,
 } from '../lib/api'
@@ -1959,8 +1958,6 @@ function ScheduleTab({ settings }: { settings: Settings }) {
 }
 
 function AccountTab() {
-  const queryClient = useQueryClient()
-  const latestRequestedLocaleRef = useRef<SupportedLocale | null>(null)
   const { locale, setLocale } = useI18n()
   const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: getCurrentUser })
   const [currentPassword, setCurrentPassword] = useState('')
@@ -1968,22 +1965,6 @@ function AccountTab() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const { canInstall, showIosHint, promptInstall, dismiss } = useInstallPrompt()
-  const localeMutation = useMutation({
-    mutationFn: updatePreferredLocale,
-    onSuccess: ({ preferredLocale }) => {
-      const normalizedPreferredLocale = normalizeLocale(preferredLocale)
-      if (
-        normalizedPreferredLocale &&
-        latestRequestedLocaleRef.current &&
-        normalizedPreferredLocale !== latestRequestedLocaleRef.current
-      ) {
-        return
-      }
-      queryClient.setQueryData(['currentUser'], (prev: typeof user) =>
-        prev ? { ...prev, preferredLocale } : prev,
-      )
-    },
-  })
 
   async function handleLogout() {
     try {
@@ -2025,11 +2006,7 @@ function AccountTab() {
   }
 
   function handleLocaleChange(nextLocale: SupportedLocale) {
-    latestRequestedLocaleRef.current = nextLocale
     setLocale(nextLocale)
-    if (user) {
-      localeMutation.mutate(nextLocale)
-    }
   }
 
   return (

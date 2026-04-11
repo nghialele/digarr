@@ -319,9 +319,8 @@ describe('SettingsPage', () => {
     expect(await screen.findByLabelText('Language')).toBeInTheDocument()
   })
 
-  it('persists account locale changes and updates the current user cache', async () => {
+  it('keeps account locale changes local when rendered without the app shell owner', async () => {
     setupMocks()
-    mockUpdatePreferredLocale.mockResolvedValue({ success: true, preferredLocale: 'de' })
     const { client } = renderWithQuery(<SettingsPage />)
 
     await waitFor(() => {
@@ -333,18 +332,13 @@ describe('SettingsPage', () => {
     const switcher = await screen.findByLabelText('Language')
     fireEvent.change(switcher, { target: { value: 'de' } })
 
-    await waitFor(() => {
-      expect(mockUpdatePreferredLocale.mock.calls[0]?.[0]).toBe('de')
-    })
-    await waitFor(() => {
-      expect(screen.getByLabelText('Language')).toHaveValue('de')
-    })
-
+    expect(screen.getByLabelText('Language')).toHaveValue('de')
+    expect(mockUpdatePreferredLocale).not.toHaveBeenCalled()
     expect(client.getQueryData(['currentUser'])).toEqual({
       id: 1,
       username: 'admin',
       isAdmin: true,
-      preferredLocale: 'de',
+      preferredLocale: 'en',
     })
   })
 })

@@ -18,17 +18,58 @@ vi.mock('@/web/lib/locale-storage', () => ({
 vi.mock('@/web/lib/api', () => ({
   AUTH_EXPIRED_EVENT: 'digarr:auth-expired',
   clearStoredToken: vi.fn(),
+  changePassword: vi.fn().mockResolvedValue({ ok: true }),
+  createTargetApi: vi.fn(),
+  deleteTargetApi: vi.fn().mockResolvedValue(undefined),
+  disconnectOAuth: vi.fn().mockResolvedValue(undefined),
   getAuthStatus: vi.fn(),
   getCurrentUser: vi.fn(),
+  getLidarrMetadataProfiles: vi.fn().mockResolvedValue([]),
+  getLidarrProfiles: vi.fn().mockResolvedValue([]),
+  getLidarrRootFolders: vi.fn().mockResolvedValue([]),
+  getOAuthStatus: vi.fn().mockResolvedValue({ connected: false, scopes: null }),
   getPipelineStatus: vi.fn(),
+  getSettings: vi.fn().mockResolvedValue({
+    lidarrUrl: 'http://localhost:8686',
+    lidarrApiKey: '***',
+    preferences: { scoreThreshold: 0.5 },
+    setupComplete: true,
+  }),
   getSetupStatus: vi.fn(),
   getStoredToken: vi.fn(),
+  getUserPreferences: vi.fn().mockResolvedValue({
+    scoreThreshold: 0.5,
+    scoringWeights: {
+      consensus: 0.3,
+      similarity: 0.25,
+      genreOverlap: 0.2,
+      aiConfidence: 0.15,
+      feedbackBoost: 0.1,
+      popularity: 0,
+    },
+    rejectionCooldownDays: 90,
+    topArtistsLimit: 30,
+    librarySeedRatio: 0.3,
+  }),
+  importSpotifyLikedSongs: vi.fn().mockResolvedValue({
+    message: 'started',
+    subscriptionId: 1,
+    created: true,
+  }),
+  importSpotifyPlaylist: vi.fn(),
+  initiateOAuth: vi.fn().mockResolvedValue({ authUrl: '' }),
+  listTargets: vi.fn().mockResolvedValue([]),
   loginUser: vi.fn(),
   logoutUser: vi.fn(),
   registerUser: vi.fn(),
   setStoredToken: vi.fn(),
+  testService: vi.fn(),
+  testTargetApi: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+  testWebhook: vi.fn(),
   triggerPipeline: vi.fn(),
   updatePreferredLocale: vi.fn(),
+  updateSettings: vi.fn(),
+  updateUserPreferences: vi.fn().mockResolvedValue({ success: true }),
 }))
 
 vi.mock('sonner', () => ({
@@ -96,7 +137,7 @@ vi.mock('@/web/pages/playlist-detail', () => ({
 }))
 vi.mock('@/web/pages/playlists', () => ({ PlaylistsPage: () => <div>playlists</div> }))
 vi.mock('@/web/pages/search', () => ({ SearchPage: () => <div>search</div> }))
-vi.mock('@/web/pages/settings', () => ({ SettingsPage: () => <div>settings</div> }))
+vi.mock('@/web/pages/settings', async (importOriginal) => importOriginal())
 vi.mock('@/web/pages/setup', () => ({ SetupWizard: () => <div>setup</div> }))
 vi.mock('@/web/pages/subscriptions', () => ({ default: () => <div>subscriptions</div> }))
 vi.mock('@/web/pages/user-management', () => ({
