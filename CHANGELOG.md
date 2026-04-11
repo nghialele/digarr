@@ -2,6 +2,24 @@
 
 All notable user-facing changes are documented here.
 
+## v0.21.0 - 2026-04-11
+
+### Added
+
+- Full multilingual UI support across 15 shipped locales, with visible language switchers before and after login
+- Persisted per-user locale preference plus localized auth, setup, dashboard, discover, settings, analytics, subscriptions, and library surfaces
+- Translation maintenance tooling and browser coverage for language switching and localized flows
+
+### Fixed
+
+- Manual full scans now propagate the resolved UI locale into AI discovery, so generated reasoning matches the active interface language
+- Interactive discovery requests now prefer the explicit request locale over stale saved locale state, so immediate language switches do not leak old-language AI output
+
+### Changed
+
+- AI-assisted discovery now separates `promptLocale` from `responseLocale`, so mood and quick-discover prompts can stay language-aware while the returned reasoning follows the selected UI locale
+- Translation catalogs are now explicit and complete per locale instead of silently inheriting missing keys from English
+
 ## v0.20.4 - 2026-04-11
 
 ### Fixed
