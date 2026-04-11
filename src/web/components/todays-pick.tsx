@@ -157,11 +157,13 @@ export function TodaysPick({
         <div
           className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-baseline gap-0.5"
           role="img"
-          aria-label={`Match score: ${scorePercent}%`}
+          aria-label={`${t('todaysPick.matchScore')}: ${scorePercent}%`}
         >
           <span className="text-accent text-xl font-bold leading-none">{scorePercent}</span>
           <span className="text-accent/70 text-xs font-semibold">%</span>
-          <span className="text-white/50 text-micro-sm ml-1 uppercase tracking-wider">match</span>
+          <span className="text-white/50 text-micro-sm ml-1 uppercase tracking-wider">
+            {t('todaysPick.match')}
+          </span>
         </div>
 
         {/* Artist name / logo */}
@@ -213,8 +215,7 @@ export function TodaysPick({
       {/* Hint above action buttons */}
       <div className="px-4 pt-2">
         <Hint id="todays-pick-skip-tip" type="inline">
-          Skip shows you the next artist without rejecting -- skipped artists will come back in
-          future scans.
+          {t('todaysPick.skipHint')}
         </Hint>
       </div>
 
@@ -231,7 +232,7 @@ export function TodaysPick({
           type="button"
           onClick={() => onSkip(rec.id)}
           className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500/15 transition-colors"
-          title="Skip for now -- this artist will come back later"
+          title={t('todaysPick.skipTitle')}
         >
           {t('todaysPick.skip')}
         </button>
@@ -243,7 +244,7 @@ export function TodaysPick({
                 onClick={() => onApprove(rec.id)}
                 className="flex-1 py-2 text-sm font-medium text-center rounded-l-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
               >
-                Approve
+                {t('todaysPick.approve')}
               </button>
               <button
                 type="button"

@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import type { MessageKey } from '@/core/i18n/messages/types'
 import { ConfirmDialog } from '../components/confirm-dialog'
 import { Hint } from '../components/hint'
 import { ImportArtists } from '../components/import-artists'
@@ -37,35 +38,48 @@ import { formatDuration } from '../lib/format-time'
 import { useI18n } from '../lib/i18n'
 import { formatShortDateTime } from '../lib/intl'
 
-function formatDate(locale: string, dateStr: string | null): string {
-  if (!dateStr) return 'Never'
+function formatDate(
+  locale: string,
+  t: (key: MessageKey) => string,
+  dateStr: string | null,
+): string {
+  if (!dateStr) return t('common.never')
   return formatShortDateTime(locale as never, dateStr)
 }
 
-function formatRelative(dateStr: string | null): string {
-  if (!dateStr) return 'N/A'
+function formatRelative(
+  locale: string,
+  t: (key: MessageKey) => string,
+  dateStr: string | null,
+): string {
+  if (!dateStr) return t('common.notAvailable')
   const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = date.getTime() - now.getTime()
-  if (diffMs < 0) return 'overdue'
-  const hours = Math.floor(diffMs / (1000 * 60 * 60))
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-  if (hours > 24) return `${Math.floor(hours / 24)}d`
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
+  const diffMinutes = Math.round((date.getTime() - Date.now()) / 60_000)
+  if (diffMinutes < 0) return t('common.overdue')
+
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  if (diffMinutes < 60) return formatter.format(diffMinutes, 'minute')
+
+  const diffHours = Math.round(diffMinutes / 60)
+  if (diffHours < 24) return formatter.format(diffHours, 'hour')
+
+  return formatter.format(Math.round(diffHours / 24), 'day')
 }
 
-function runStatus(run: SubscriptionRun): { label: string; className: string } {
-  if (run.status === 'failed' || run.error) return { label: 'Failed', className: 'text-reject' }
-  if (run.status === 'running') return { label: 'Running', className: 'text-accent' }
-  if (run.status === 'stuck') return { label: 'Stuck', className: 'text-amber-500' }
-  return { label: 'Done', className: 'text-approve' }
+function runStatus(
+  run: SubscriptionRun,
+  t: (key: MessageKey) => string,
+): { label: string; className: string } {
+  if (run.status === 'failed' || run.error) return { label: t('common.failed'), className: 'text-reject' }
+  if (run.status === 'running') return { label: t('common.running'), className: 'text-accent' }
+  if (run.status === 'stuck') return { label: t('common.stuck'), className: 'text-amber-500' }
+  return { label: t('common.done'), className: 'text-approve' }
 }
 
 // RunHistoryPanel
 
 function RunHistoryPanel({ subscriptionId }: { subscriptionId: number }) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const { data: runs, isLoading } = useQuery({
     queryKey: ['subscription-runs', subscriptionId],
     queryFn: () => getSubscriptionRuns(subscriptionId),
@@ -84,7 +98,7 @@ function RunHistoryPanel({ subscriptionId }: { subscriptionId: number }) {
   if (!runs || runs.length === 0) {
     return (
       <div className="px-4 pb-4">
-        <p className="text-sm text-muted">No runs yet.</p>
+        <p className="text-sm text-muted">{t('subscriptions.runHistory.empty')}</p>
       </div>
     )
   }
@@ -94,19 +108,19 @@ function RunHistoryPanel({ subscriptionId }: { subscriptionId: number }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-muted text-xs uppercase tracking-wide">
-            <th className="text-left px-2 py-1.5 font-medium">Started</th>
-            <th className="text-left px-2 py-1.5 font-medium">Duration</th>
-            <th className="text-right px-2 py-1.5 font-medium">Found</th>
-            <th className="text-right px-2 py-1.5 font-medium">New</th>
-            <th className="text-left px-2 py-1.5 font-medium">Status</th>
+            <th className="text-left px-2 py-1.5 font-medium">{t('common.date')}</th>
+            <th className="text-left px-2 py-1.5 font-medium">{t('common.duration')}</th>
+            <th className="text-right px-2 py-1.5 font-medium">{t('common.found')}</th>
+            <th className="text-right px-2 py-1.5 font-medium">{t('common.new')}</th>
+            <th className="text-left px-2 py-1.5 font-medium">{t('common.status')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {runs.map((run) => {
-            const status = runStatus(run)
+            const status = runStatus(run, t)
             return (
               <tr key={run.id} className="hover:bg-bg/50 transition-colors">
-                <td className="px-2 py-1.5 text-text">{formatDate(locale, run.startedAt)}</td>
+                <td className="px-2 py-1.5 text-text">{formatDate(locale, t, run.startedAt)}</td>
                 <td className="px-2 py-1.5 text-muted">{formatDuration(run.durationMs)}</td>
                 <td className="px-2 py-1.5 text-right text-text">
                   {(run.metadata?.artistsFound as number) ?? 0}
@@ -151,7 +165,7 @@ function SubscriptionCard({
   onToggle: () => void
   onRunNow: () => void
 }) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const [expanded, setExpanded] = useState(false)
 
   const sourceLabel = (() => {
@@ -163,13 +177,13 @@ function SubscriptionCard({
     }
     if (sub.sourceType === 'lastfm-tag') return (cfg.tag as string) ?? null
     if (sub.sourceType === 'listenbrainz') return (cfg.feedType as string) ?? null
-    if (sub.sourceType === 'spotify-liked-songs') return 'Liked Songs'
+    if (sub.sourceType === 'spotify-liked-songs') return t('subscriptions.likedSongs')
     if (sub.sourceType === 'spotify-playlist') return (cfg.playlistName as string) ?? null
     if (sub.sourceType === 'discovery-mode') return (cfg.modeId as string) ?? null
     return null
   })()
 
-  const actionLabel = 'Add to recommendations'
+  const actionLabel = t('subscriptions.addToRecommendations')
 
   return (
     <div className="bg-surface border border-border rounded-lg">
@@ -180,7 +194,9 @@ function SubscriptionCard({
           type="button"
           onClick={() => setExpanded(!expanded)}
           className="mt-0.5 text-muted hover:text-text transition-colors shrink-0"
-          aria-label={expanded ? 'Collapse run history' : 'Expand run history'}
+          aria-label={
+            expanded ? t('subscriptions.collapseRunHistory') : t('subscriptions.expandRunHistory')
+          }
         >
           {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>
@@ -207,20 +223,22 @@ function SubscriptionCard({
           <div className="flex items-center gap-3 text-xs text-muted flex-wrap">
             {nextRun && (
               <span>
-                Next: <span className="text-text">{formatRelative(nextRun)}</span>
+                {t('subscriptions.nextRun')}{' '}
+                <span className="text-text">{formatRelative(locale, t, nextRun)}</span>
               </span>
             )}
             <span>
-              Last: <span className="text-text">{formatDate(locale, sub.lastRunAt)}</span>
+              {t('subscriptions.lastRun')}{' '}
+              <span className="text-text">{formatDate(locale, t, sub.lastRunAt)}</span>
               {sub.lastResultCount != null && (
                 <span className={`ml-1 ${sub.lastResultCount > 0 ? 'text-approve' : 'text-muted'}`}>
-                  ({sub.lastResultCount} found)
+                  ({sub.lastResultCount} {t('common.found').toLowerCase()})
                 </span>
               )}
             </span>
             {sub.lastError && (
               <span className="text-reject" title={sub.lastError}>
-                Error
+                {t('subscriptions.error')}
               </span>
             )}
           </div>
@@ -233,7 +251,9 @@ function SubscriptionCard({
           className={`shrink-0 w-10 h-5 rounded-full transition-colors relative ${
             sub.enabled ? 'bg-approve' : 'bg-border'
           }`}
-          aria-label={sub.enabled ? 'Disable subscription' : 'Enable subscription'}
+          aria-label={
+            sub.enabled ? t('subscriptions.disableSubscription') : t('subscriptions.enableSubscription')
+          }
         >
           <span
             className={`absolute top-0.5 w-4 h-4 rounded-full bg-bg transition-transform ${
@@ -248,7 +268,7 @@ function SubscriptionCard({
             type="button"
             onClick={onRunNow}
             className="p-1.5 text-muted hover:text-accent transition-colors"
-            title="Run now"
+            title={t('subscriptions.runNow')}
           >
             <Play size={14} />
           </button>
@@ -264,7 +284,7 @@ function SubscriptionCard({
             type="button"
             onClick={onDelete}
             className="p-1.5 text-muted hover:text-reject transition-colors"
-            title="Delete"
+            title={t('common.delete')}
           >
             <Trash2 size={14} />
           </button>
@@ -367,36 +387,36 @@ export default function SubscriptionsPage() {
       updateSubscriptionApi(id, { enabled }),
     onSuccess: () => {
       invalidate()
-      toast.success('Subscription updated')
+      toast.success(t('subscriptions.updated'))
     },
-    onError: () => toast.error('Failed to toggle subscription'),
+    onError: () => toast.error(t('subscriptions.toggleFailed')),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteSubscriptionApi(id),
     onSuccess: () => {
       invalidate()
-      toast.success('Subscription deleted')
+      toast.success(t('subscriptions.deleted'))
     },
-    onError: () => toast.error('Failed to delete subscription'),
+    onError: () => toast.error(t('subscriptions.deleteFailed')),
   })
 
   const runNowMutation = useMutation({
     mutationFn: (id: number) => triggerSubscriptionRun(id),
     onSuccess: () => {
       invalidate()
-      toast.success('Run triggered')
+      toast.success(t('subscriptions.runTriggered'))
     },
-    onError: () => toast.error('Failed to trigger run'),
+    onError: () => toast.error(t('subscriptions.runTriggerFailed')),
   })
 
   const bulkMutation = useMutation({
     mutationFn: (enabled: boolean) => bulkToggleSubscriptions(enabled),
     onSuccess: (_data, enabled) => {
       invalidate()
-      toast.success(enabled ? 'All subscriptions resumed' : 'All subscriptions paused')
+      toast.success(enabled ? t('subscriptions.allResumed') : t('subscriptions.allPaused'))
     },
-    onError: () => toast.error('Failed to update subscriptions'),
+    onError: () => toast.error(t('subscriptions.updateFailed')),
   })
 
   // Form handlers
@@ -404,14 +424,14 @@ export default function SubscriptionsPage() {
     await createSubscriptionApi(data)
     invalidate()
     setShowForm(null)
-    toast.success('Subscription created')
+    toast.success(t('subscriptions.created'))
   }
 
   const handleEdit = async (subId: number, data: SubscriptionFormData) => {
     await updateSubscriptionApi(subId, data)
     invalidate()
     setShowForm(null)
-    toast.success('Subscription updated')
+    toast.success(t('subscriptions.updated'))
   }
 
   // Next run helper
@@ -461,8 +481,7 @@ export default function SubscriptionsPage() {
       </div>
 
       <Hint id="subscriptions-intro-tip" type="spotlight">
-        Subscriptions automatically discover new artists on a schedule. Create a genre or
-        similar-artist subscription to grow your library while you sleep.
+        {t('subscriptions.introTip')}
       </Hint>
 
       <ImportArtists
@@ -493,23 +512,18 @@ export default function SubscriptionsPage() {
       {/* Empty state */}
       {!isLoading && subscriptions && subscriptions.length === 0 && (
         <div className="space-y-4">
-          <p className="text-sm text-muted">
-            Import your favorite artists to get started, or set up automatic discovery to keep
-            finding new music.
-          </p>
+          <p className="text-sm text-muted">{t('subscriptions.emptyDescription')}</p>
           {subscriptionMode === 'ai-only' && !showPresets ? (
             <div className="bg-surface border border-border rounded-lg px-4 py-12 text-center space-y-3">
-              <p className="text-sm font-medium text-text">AI-only mode</p>
-              <p className="text-xs text-muted">
-                Discovery runs on the pipeline schedule with no external feed subscriptions.
-              </p>
+              <p className="text-sm font-medium text-text">{t('subscriptions.aiOnlyMode')}</p>
+              <p className="text-xs text-muted">{t('subscriptions.aiOnlyDescription')}</p>
               <button
                 type="button"
                 onClick={() => setShowPresets(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted border border-border rounded-md hover:text-text hover:border-accent/40 transition-colors"
               >
                 <LayoutGrid size={14} />
-                Switch to a preset
+                {t('subscriptions.switchToPreset')}
               </button>
             </div>
           ) : (
@@ -531,13 +545,13 @@ export default function SubscriptionsPage() {
       {!isLoading && subscriptions && subscriptions.length > 0 && showPresets && (
         <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-text">Add from presets</p>
+            <p className="text-sm font-medium text-text">{t('subscriptions.addFromPresets')}</p>
             <button
               type="button"
               onClick={() => setShowPresets(false)}
               className="text-xs text-muted hover:text-text transition-colors"
             >
-              Close
+              {t('common.close')}
             </button>
           </div>
           <SubscriptionPresets
@@ -610,9 +624,9 @@ export default function SubscriptionsPage() {
       )}
       {confirmDeleteSub && (
         <ConfirmDialog
-          title="Delete subscription"
-          message={`Delete "${confirmDeleteSub.name}"? This cannot be undone.`}
-          confirmLabel="Delete"
+          title={t('subscriptions.deleteSubscription')}
+          message={`${t('subscriptions.deleteSubscriptionPrompt')} "${confirmDeleteSub.name}"? ${t('common.cannotBeUndone')}`}
+          confirmLabel={t('common.delete')}
           onConfirm={() => {
             deleteMutation.mutate(confirmDeleteSub.id)
             setConfirmDeleteSub(null)

@@ -54,7 +54,7 @@ describe('SetupWizard', () => {
     fireEvent.change(screen.getByLabelText('API Key'), {
       target: { value: 'secret' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    fireEvent.click(screen.getByRole('button', { name: /continue|continuer/i }))
   }
 
   it('moves to AI setup after continuing past Lidarr details', async () => {
@@ -128,5 +128,18 @@ describe('SetupWizard', () => {
         /Vous connecterez vos sources d ecoute personnelles plus tard dans les parametres/i,
       ),
     ).toBeInTheDocument()
+  })
+
+  it('uses translated AI model suggestion labels in French', async () => {
+    mockGetStoredLocale.mockReturnValue('fr')
+    renderSetupWizard()
+
+    fireEvent.click(screen.getByRole('button', { name: /lidarr/i }))
+    await screen.findByText('Connect Lidarr')
+    await fillAndContinueLidarr()
+
+    await screen.findByText('Fournisseur IA')
+    expect(screen.getByText('Haiku 4.5 (rapide, moins cher)')).toBeInTheDocument()
+    expect(screen.getByText('Sonnet 4.6 (equilibre)')).toBeInTheDocument()
   })
 })

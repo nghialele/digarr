@@ -272,19 +272,19 @@ function StepAi({
 
   const modelSuggestions: Record<string, Array<{ value: string; label: string }>> = {
     anthropic: [
-      { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 (fast, cheapest)' },
-      { value: 'claude-sonnet-4-6', label: 'Sonnet 4.6 (balanced)' },
-      { value: 'claude-opus-4-6', label: 'Opus 4.6 (most capable)' },
+      { value: 'claude-haiku-4-5-20251001', label: t('setup.modelSuggestionAnthropicHaiku') },
+      { value: 'claude-sonnet-4-6', label: t('setup.modelSuggestionAnthropicSonnet') },
+      { value: 'claude-opus-4-6', label: t('setup.modelSuggestionAnthropicOpus') },
     ],
     openai: [
-      { value: 'gpt-5.4-nano', label: 'GPT-5.4 Nano (fast, cheapest)' },
-      { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini (balanced)' },
-      { value: 'gpt-5.4', label: 'GPT-5.4 (most capable)' },
+      { value: 'gpt-5.4-nano', label: t('setup.modelSuggestionOpenAiNano') },
+      { value: 'gpt-5.4-mini', label: t('setup.modelSuggestionOpenAiMini') },
+      { value: 'gpt-5.4', label: t('setup.modelSuggestionOpenAi') },
     ],
     gemini: [
-      { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (fast, preview)' },
-      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (stable)' },
-      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (most capable)' },
+      { value: 'gemini-3-flash-preview', label: t('setup.modelSuggestionGeminiFlashPreview') },
+      { value: 'gemini-2.5-flash', label: t('setup.modelSuggestionGeminiFlash') },
+      { value: 'gemini-2.5-pro', label: t('setup.modelSuggestionGeminiPro') },
     ],
     ollama: [
       { value: 'llama4', label: 'Llama 4' },

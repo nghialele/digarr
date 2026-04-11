@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/core/i18n/messages/types'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { getPipelineStatus } from '../lib/api'
@@ -13,32 +14,31 @@ type SSEProgress = {
 
 const STAGES = ['collect', 'analyze', 'discover', 'resolve', 'score', 'filter', 'store', 'complete']
 
-const STAGE_LABELS: Record<string, string> = {
-  collect: 'Reading library',
-  analyze: 'Building taste profile',
-  discover: 'Finding new artists',
-  resolve: 'Looking up metadata',
-  score: 'Ranking matches',
-  filter: 'Removing duplicates',
-  store: 'Saving results',
-  complete: 'Done',
+const STAGE_LABELS: Record<string, MessageKey> = {
+  collect: 'pipeline.stage.collect',
+  analyze: 'pipeline.stage.analyze',
+  discover: 'pipeline.stage.discover',
+  resolve: 'pipeline.stage.resolve',
+  score: 'pipeline.stage.score',
+  filter: 'pipeline.stage.filter',
+  store: 'pipeline.stage.store',
+  complete: 'pipeline.stage.complete',
 }
 
-const STAGE_DESCRIPTIONS: Record<string, string> = {
-  collect: 'Checking which artists you already have',
-  analyze: 'Learning your music preferences from your library and listening history',
-  discover: 'Asking for recommendations based on your taste',
-  resolve: 'Fetching artist details, genres, and images',
-  score: 'Scoring how well each artist matches your taste',
-  filter: "Filtering out artists you've already seen",
-  store: 'Saving your new recommendations',
-  complete: 'Your new recommendations are ready to explore!',
+const STAGE_DESCRIPTIONS: Record<string, MessageKey> = {
+  collect: 'pipeline.description.collect',
+  analyze: 'pipeline.description.analyze',
+  discover: 'pipeline.description.discover',
+  resolve: 'pipeline.description.resolve',
+  score: 'pipeline.description.score',
+  filter: 'pipeline.description.filter',
+  store: 'pipeline.description.store',
+  complete: 'pipeline.description.complete',
 }
 
-const FIRST_SCAN_DESCRIPTIONS: Record<string, string> = {
+const FIRST_SCAN_DESCRIPTIONS: Record<string, MessageKey> = {
   ...STAGE_DESCRIPTIONS,
-  complete:
-    'Your first recommendations are ready! Head to the Discover page to see what Digarr found.',
+  complete: 'pipeline.firstScanComplete',
 }
 
 function stageIndex(stage: string): number {
@@ -85,9 +85,9 @@ export function PipelineProgress({
   const stage = progress?.stage ?? (status?.running ? (status.stage ?? 'collect') : null)
   const stageIdx = stage ? stageIndex(stage) : 0
   const pct = stage ? Math.round(((stageIdx + 1) / STAGES.length) * 100) : 0
-  const label = stage ? (STAGE_LABELS[stage] ?? stage) : ''
+  const label = stage ? (STAGE_LABELS[stage] ? t(STAGE_LABELS[stage]) : stage) : ''
   const descriptions = isFirstScan ? FIRST_SCAN_DESCRIPTIONS : STAGE_DESCRIPTIONS
-  const description = stage ? (descriptions[stage] ?? '') : ''
+  const description = stage ? (descriptions[stage] ? t(descriptions[stage]) : '') : ''
 
   const current = progress?.current
   const total = progress?.total
@@ -155,10 +155,7 @@ export function PipelineProgress({
       {isFirstScan && stage !== 'complete' && (
         <div className="space-y-1">
           <p className="text-sm font-medium text-text">{t('pipeline.runningFirstScan')}</p>
-          <p className="text-xs text-muted">
-            Digarr is analyzing your music taste and finding artists you might like. This usually
-            takes 2-5 minutes on the first run.
-          </p>
+          <p className="text-xs text-muted">{t('pipeline.firstScanDescription')}</p>
         </div>
       )}
 
@@ -172,7 +169,7 @@ export function PipelineProgress({
         </div>
         <div className="flex items-center gap-3 text-xs text-muted">
           {startedRef.current && stage !== 'complete' && (
-            <span>Running for {formatElapsed(elapsed)}</span>
+            <span>{t('pipeline.runningFor')} {formatElapsed(elapsed)}</span>
           )}
           {current !== undefined && total !== undefined && (
             <span>
@@ -201,7 +198,7 @@ export function PipelineProgress({
 
       {/* Stall warning */}
       {stalled && stage !== 'complete' && (
-        <p className="text-xs text-muted italic">This is taking longer than usual -- hang tight</p>
+        <p className="text-xs text-muted italic">{t('pipeline.stalled')}</p>
       )}
 
       {/* SSE message */}

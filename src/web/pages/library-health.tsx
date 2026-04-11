@@ -97,6 +97,11 @@ export function LibraryHealthPage() {
     [rescanMutation],
   )
 
+  const artistLabel = useCallback(
+    (count: number) => (count === 1 ? t('libraryHealth.artistSingular') : t('libraryHealth.artistPlural')),
+    [t],
+  )
+
   const handleFix = useCallback(
     async (checkId: string) => {
       setFixingIds((prev) => new Set(prev).add(checkId))
@@ -107,21 +112,24 @@ export function LibraryHealthPage() {
         if (data.failed === 0) {
           if (isDeferred) {
             toast.success(
-              `Triggered action for ${data.completed} artist${data.completed !== 1 ? 's' : ''} -- re-scanning in 30s to verify`,
+              `${t('libraryHealth.triggeredActionFor')} ${data.completed} ${artistLabel(data.completed)} -- ${t('libraryHealth.rescanningSoon')}`,
             )
           } else {
-            toast.success(`Updated ${data.completed} artist${data.completed !== 1 ? 's' : ''}`)
+            toast.success(`${t('libraryHealth.updated')} ${data.completed} ${artistLabel(data.completed)}`)
           }
         } else {
-          toast.warning(`Processed ${data.completed}, failed ${data.failed} of ${data.total}`, {
+          toast.warning(
+            `${t('libraryHealth.processed')} ${data.completed}, ${t('common.failed').toLowerCase()} ${data.failed} ${t('common.of')} ${data.total}`,
+            {
             description: data.errors.slice(0, 3).join('; '),
-          })
+            },
+          )
         }
 
         queryClient.invalidateQueries({ queryKey: ['library', 'health'] })
         scheduleRescan(isDeferred ? RESCAN_DELAY_DEFERRED : RESCAN_DELAY_IMMEDIATE)
       } catch {
-        toast.error('Fix failed -- check Lidarr connection')
+        toast.error(t('libraryHealth.fixFailed'))
       } finally {
         setFixingIds((prev) => {
           const next = new Set(prev)
@@ -130,7 +138,7 @@ export function LibraryHealthPage() {
         })
       }
     },
-    [queryClient, scheduleRescan],
+    [artistLabel, queryClient, scheduleRescan, t],
   )
 
   const scanning = healthQuery.data?.scanning ?? false
@@ -153,23 +161,21 @@ export function LibraryHealthPage() {
           className="flex items-center gap-2 px-3 py-1.5 bg-accent text-accent-fg rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           <RefreshCw size={14} className={scanning ? 'animate-spin' : undefined} />
-          {scanning ? 'Scanning...' : 'Re-scan'}
+          {scanning ? t('app.scanning') : t('libraryHealth.rescan')}
         </button>
       </div>
 
       <LibraryFirstSyncBanner />
 
       <Hint id="library-health-intro-tip" type="inline">
-        Library health checks your Lidarr library for common issues like missing metadata,
-        unmonitored artists, or genre gaps. Run a scan to see what needs attention.
+        {t('libraryHealth.introTip')}
       </Hint>
 
       {/* Scanning indicator */}
       {scanning && (
         <div className="bg-accent/10 border border-accent/30 rounded-lg px-4 py-3 text-sm text-accent flex items-center gap-2">
           <RefreshCw size={14} className="animate-spin shrink-0" />
-          Scanning library health -- this may take several minutes for large libraries. Results will
-          appear when complete.
+          {t('libraryHealth.scanningBanner')}
         </div>
       )}
 
@@ -177,7 +183,7 @@ export function LibraryHealthPage() {
       {pendingRescan && !scanning && (
         <div className="bg-surface border border-border rounded-lg px-4 py-2.5 text-xs text-muted flex items-center gap-2">
           <RefreshCw size={12} className="shrink-0" />
-          Auto re-scan scheduled to verify fix results...
+          {t('libraryHealth.pendingRescan')}
         </div>
       )}
 
@@ -187,7 +193,7 @@ export function LibraryHealthPage() {
           <ChecksSkeleton />
         ) : checks.length === 0 && !scanning ? (
           <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-            No health checks available. Run a scan to inspect your library.
+            {t('libraryHealth.noChecks')}
           </div>
         ) : checks.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -213,7 +219,7 @@ export function LibraryHealthPage() {
       {/* Library stats */}
       <div className="space-y-4">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-          Library Statistics
+          {t('libraryHealth.statisticsTitle')}
         </h2>
         {statsQuery.isLoading ? (
           <StatsSkeleton />
@@ -221,7 +227,7 @@ export function LibraryHealthPage() {
           <LibraryStatsDisplay stats={stats} />
         ) : (
           <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-            Library statistics unavailable. Check your Lidarr connection in Settings.
+            {t('libraryHealth.statisticsUnavailable')}
           </div>
         )}
       </div>

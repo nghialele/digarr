@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import type { MessageKey } from '@/core/i18n/messages/types'
 import { Hint } from '../components/hint'
 import { StatCard } from '../components/stat-card'
 import { Skeleton } from '../components/ui/skeleton'
@@ -33,13 +34,18 @@ function pct(value: number): string {
   return `${Math.round(value * 100)}%`
 }
 
-function statusBadge(status: string) {
+function statusBadge(status: string, t: (key: MessageKey) => string) {
   const colors: Record<string, string> = {
     completed: 'text-approve',
     running: 'text-accent',
     failed: 'text-reject',
   }
-  return <span className={`text-xs font-medium ${colors[status] ?? 'text-muted'}`}>{status}</span>
+  const labels: Record<string, string> = {
+    completed: t('analytics.statusCompleted'),
+    running: t('common.running'),
+    failed: t('common.failed'),
+  }
+  return <span className={`text-xs font-medium ${colors[status] ?? 'text-muted'}`}>{labels[status] ?? status}</span>
 }
 
 const PAGE_SIZE = 10
@@ -53,6 +59,7 @@ function BatchHistoryTable({
   loading: boolean
   locale: string
 }) {
+  const { t } = useI18n()
   const [page, setPage] = useState(0)
 
   if (loading) {
@@ -68,7 +75,7 @@ function BatchHistoryTable({
   if (!batches || batches.length === 0) {
     return (
       <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-        No batches yet. Run a scan to generate recommendations.
+        {t('analytics.noBatchesYet')}
       </div>
     )
   }
@@ -82,19 +89,19 @@ function BatchHistoryTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-muted text-xs uppercase tracking-wide">
-              <th className="text-left px-4 py-2.5 font-medium">Date</th>
-              <th className="text-left px-4 py-2.5 font-medium">Status</th>
-              <th className="text-right px-4 py-2.5 font-medium">Total</th>
-              <th className="text-right px-4 py-2.5 font-medium">Approved</th>
-              <th className="text-right px-4 py-2.5 font-medium">Rejected</th>
-              <th className="text-right px-4 py-2.5 font-medium">Pending</th>
+              <th className="text-left px-4 py-2.5 font-medium">{t('common.date')}</th>
+              <th className="text-left px-4 py-2.5 font-medium">{t('common.status')}</th>
+              <th className="text-right px-4 py-2.5 font-medium">{t('common.total')}</th>
+              <th className="text-right px-4 py-2.5 font-medium">{t('discover.approved')}</th>
+              <th className="text-right px-4 py-2.5 font-medium">{t('discover.rejected')}</th>
+              <th className="text-right px-4 py-2.5 font-medium">{t('discover.pending')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {visible.map((b) => (
               <tr key={b.id} className="hover:bg-bg/50 transition-colors">
                 <td className="px-4 py-2.5 text-text">{formatAnalyticsDate(locale, b.createdAt)}</td>
-                <td className="px-4 py-2.5">{statusBadge(b.status)}</td>
+                <td className="px-4 py-2.5">{statusBadge(b.status, t)}</td>
                 <td className="px-4 py-2.5 text-right text-text">{b.total}</td>
                 <td className="px-4 py-2.5 text-right text-approve">{b.approved}</td>
                 <td className="px-4 py-2.5 text-right text-reject">{b.rejected}</td>
@@ -117,7 +124,7 @@ function BatchHistoryTable({
               onClick={() => setPage((p) => p - 1)}
               className="px-2 py-1 rounded bg-surface border border-border hover:border-accent/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              Prev
+              {t('common.previous')}
             </button>
             <button
               type="button"
@@ -125,7 +132,7 @@ function BatchHistoryTable({
               onClick={() => setPage((p) => p + 1)}
               className="px-2 py-1 rounded bg-surface border border-border hover:border-accent/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              Next
+              {t('common.next')}
             </button>
           </div>
         </div>
@@ -135,7 +142,7 @@ function BatchHistoryTable({
 }
 
 function DiscoveryChart({ batches }: { batches: AnalyticsBatch[] }) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const recent = batches.slice(0, 20).reverse()
   const maxTotal = Math.max(...recent.map((b) => b.total), 1)
   const firstDate = recent[0]?.createdAt
@@ -151,7 +158,7 @@ function DiscoveryChart({ batches }: { batches: AnalyticsBatch[] }) {
             <div
               key={b.id}
               className="flex-1 flex flex-col justify-end group relative"
-              title={`${formatAnalyticsDate(locale, b.createdAt)}: ${b.total} recs (${b.approved} approved)`}
+              title={`${formatAnalyticsDate(locale, b.createdAt)}: ${b.total} ${t('analytics.recommendationsShort')} (${b.approved} ${t('analytics.approvedShort')})`}
             >
               <div
                 className="w-full rounded-t bg-accent/30"
@@ -177,6 +184,7 @@ function GenreBreakdown({
   genres: AnalyticsGenre[] | null
   loading: boolean
 }) {
+  const { t } = useI18n()
   if (loading) {
     return (
       <div className="space-y-3">
@@ -190,7 +198,7 @@ function GenreBreakdown({
   if (!genres || genres.length === 0) {
     return (
       <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-        No genre data available yet.
+        {t('analytics.noGenreData')}
       </div>
     )
   }
@@ -209,7 +217,7 @@ function GenreBreakdown({
             />
           </div>
           <span className="text-xs text-muted w-20 text-right shrink-0">
-            {pct(g.approvalRate)} of {g.count}
+            {pct(g.approvalRate)} {t('common.of')} {g.count}
           </span>
         </div>
       ))}
@@ -224,6 +232,7 @@ function SourceScores({
   sources: AnalyticsSource[] | null
   loading: boolean
 }) {
+  const { t } = useI18n()
   if (loading) {
     return (
       <div className="space-y-3">
@@ -237,7 +246,7 @@ function SourceScores({
   if (!sources || sources.length === 0) {
     return (
       <div className="bg-surface border border-border rounded-lg px-4 py-8 text-center text-muted text-sm">
-        No source data available yet.
+        {t('analytics.noSourceData')}
       </div>
     )
   }
@@ -256,7 +265,7 @@ function SourceScores({
             />
           </div>
           <span className="text-xs text-muted w-28 text-right shrink-0">
-            {pct(s.approvalRate)} / avg {Math.round(s.avgScore * 100)}
+            {pct(s.approvalRate)} / {t('analytics.avg')} {Math.round(s.avgScore * 100)}
           </span>
         </div>
       ))}
@@ -265,6 +274,7 @@ function SourceScores({
 }
 
 function ScoreDistribution({ buckets }: { buckets: ScoreBucket[] }) {
+  const { t } = useI18n()
   const maxCount = Math.max(...buckets.map((b) => b.count), 1)
   return (
     <div className="bg-surface border border-border rounded-lg p-4">
@@ -275,7 +285,7 @@ function ScoreDistribution({ buckets }: { buckets: ScoreBucket[] }) {
             <div
               key={b.bucket}
               className="flex-1 h-full flex flex-col justify-end"
-              title={`${b.bucket}: ${b.count} recs`}
+              title={`${b.bucket}: ${b.count} ${t('analytics.recommendationsShort')}`}
             >
               <div className="w-full rounded-t bg-accent" style={{ height: `${h}%` }} />
             </div>
@@ -294,7 +304,7 @@ function ScoreDistribution({ buckets }: { buckets: ScoreBucket[] }) {
 }
 
 function ApprovalTrendChart({ trend }: { trend: ApprovalTrend[] }) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   if (trend.length < 2) return null
   const recent = trend.slice(-20)
   const firstDate = recent[0]?.createdAt
@@ -314,7 +324,7 @@ function ApprovalTrendChart({ trend }: { trend: ApprovalTrend[] }) {
         preserveAspectRatio="none"
         className="w-full h-24"
         role="img"
-        aria-label="Approval rate trend chart"
+        aria-label={t('analytics.approvalRateTrendChart')}
       >
         <polyline
           points={points}
@@ -349,6 +359,7 @@ function ApprovalTrendChart({ trend }: { trend: ApprovalTrend[] }) {
 }
 
 function TimeToActCards({ data }: { data: TimeToAct[] }) {
+  const { t } = useI18n()
   const approved = data.find((d) => d.status === 'approved')
   const rejected = data.find((d) => d.status === 'rejected')
 
@@ -362,21 +373,21 @@ function TimeToActCards({ data }: { data: TimeToAct[] }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
-        <p className="text-xs text-muted">Avg time to approve</p>
+        <p className="text-xs text-muted">{t('analytics.avgTimeToApprove')}</p>
         <p className="text-xl font-bold text-approve">{fmt(approved?.avgDays)}</p>
-        {approved && <p className="text-xs text-muted">{approved.count} approvals</p>}
+        {approved && <p className="text-xs text-muted">{approved.count} {t('analytics.approvals')}</p>}
       </div>
       <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
-        <p className="text-xs text-muted">Avg time to reject</p>
+        <p className="text-xs text-muted">{t('analytics.avgTimeToReject')}</p>
         <p className="text-xl font-bold text-reject">{fmt(rejected?.avgDays)}</p>
-        {rejected && <p className="text-xs text-muted">{rejected.count} rejections</p>}
+        {rejected && <p className="text-xs text-muted">{rejected.count} {t('analytics.rejections')}</p>}
       </div>
     </div>
   )
 }
 
 export function AnalyticsPage() {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: getAnalyticsOverview,
@@ -409,30 +420,29 @@ export function AnalyticsPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <Hint id="analytics-intro-tip" type="inline">
-        Track how your discovery pipeline performs over time. Higher approval rates mean Digarr is
-        learning your taste well.
+        {t('analytics.introTip')}
       </Hint>
 
       {/* Overview cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
-          label="Total Recs"
+          label={t('analytics.totalRecs')}
           value={overviewLoading ? '--' : (overview?.totalRecs ?? 0)}
           loading={overviewLoading}
         />
         <StatCard
-          label="Approval Rate"
+          label={t('analytics.approvalRate')}
           value={overviewLoading ? '--' : pct(overview?.approvalRate ?? 0)}
           loading={overviewLoading}
         />
         <StatCard
-          label="Avg Score"
+          label={t('analytics.avgScore')}
           value={overviewLoading ? '--' : Math.round((overview?.avgScore ?? 0) * 100)}
-          subValue="out of 100"
+          subValue={t('analytics.outOf100')}
           loading={overviewLoading}
         />
         <StatCard
-          label="Total Batches"
+          label={t('analytics.totalBatches')}
           value={overviewLoading ? '--' : (overview?.totalBatches ?? 0)}
           loading={overviewLoading}
         />
@@ -441,25 +451,25 @@ export function AnalyticsPage() {
       {/* Discovery over time chart */}
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-          Discovery Over Time
+          {t('analytics.discoveryOverTime')}
         </h2>
         {batches && batches.length > 0 ? (
           <>
-            <p className="text-xs text-muted -mt-2">Recommendations per batch (green = approved)</p>
+            <p className="text-xs text-muted -mt-2">{t('analytics.recommendationsPerBatch')}</p>
             <DiscoveryChart batches={batches} />
           </>
         ) : (
           <div className="bg-surface border border-border rounded-lg p-6 text-center">
-            <p className="text-sm text-muted">
-              No discovery batches yet. Run a scan to see your history here.
-            </p>
+            <p className="text-sm text-muted">{t('analytics.noDiscoveryBatches')}</p>
           </div>
         )}
       </div>
 
       {/* Batch history */}
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Batch History</h2>
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+          {t('analytics.batchHistory')}
+        </h2>
         <BatchHistoryTable batches={batches ?? null} loading={batchesLoading} locale={locale} />
       </div>
 
@@ -467,7 +477,7 @@ export function AnalyticsPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
         <div className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-            Score Distribution
+            {t('analytics.scoreDistribution')}
           </h2>
           {scoreDist && scoreDist.length > 0 ? (
             <div className="flex-1">
@@ -475,13 +485,13 @@ export function AnalyticsPage() {
             </div>
           ) : (
             <div className="flex-1 bg-surface border border-border rounded-lg p-6 text-center flex items-center justify-center">
-              <p className="text-sm text-muted">No score data yet</p>
+              <p className="text-sm text-muted">{t('analytics.noScoreData')}</p>
             </div>
           )}
         </div>
         <div className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-            Approval Rate Trend
+            {t('analytics.approvalRateTrend')}
           </h2>
           {trend && trend.length > 1 ? (
             <div className="flex-1">
@@ -489,21 +499,21 @@ export function AnalyticsPage() {
             </div>
           ) : (
             <div className="flex-1 bg-surface border border-border rounded-lg p-6 text-center flex items-center justify-center">
-              <p className="text-sm text-muted">Need 2+ batches to show trend</p>
+              <p className="text-sm text-muted">{t('analytics.needMoreBatches')}</p>
             </div>
           )}
         </div>
         <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">Time to Act</h2>
+          <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
+            {t('analytics.timeToAct')}
+          </h2>
           {timeToAct && timeToAct.length > 0 ? (
             <div className="flex-1">
               <TimeToActCards data={timeToAct} />
             </div>
           ) : (
             <div className="flex-1 bg-surface border border-border rounded-lg p-6 text-center flex items-center justify-center">
-              <p className="text-sm text-muted">
-                Approve or reject recommendations to see timing data
-              </p>
+              <p className="text-sm text-muted">{t('analytics.noTimingData')}</p>
             </div>
           )}
         </div>
@@ -513,13 +523,13 @@ export function AnalyticsPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-            Top Genres by Approval Rate
+            {t('analytics.topGenresByApprovalRate')}
           </h2>
           <GenreBreakdown genres={genres ?? null} loading={genresLoading} />
         </div>
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-text uppercase tracking-wide">
-            Source Effectiveness
+            {t('analytics.sourceEffectiveness')}
           </h2>
           <SourceScores sources={sources ?? null} loading={sourcesLoading} />
         </div>
