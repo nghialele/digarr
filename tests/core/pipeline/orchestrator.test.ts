@@ -299,6 +299,33 @@ describe('PipelineOrchestrator', () => {
     expect(order).toEqual(['analyze', 'discover', 'resolve', 'score', 'filter', 'store'])
   })
 
+  it('passes response and prompt locales from pipeline deps into AI discovery', async () => {
+    const db = makeDb()
+
+    await orchestrator.run({
+      db,
+      settings: defaultSettings,
+      providerRegistry,
+      librarySync: { syncForUser },
+      userId: 1,
+      responseLocale: 'fr',
+      promptLocale: 'es',
+    })
+
+    expect(mockDiscover).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...tasteProfile,
+        responseLocale: 'fr',
+        promptLocale: 'es',
+      }),
+      expect.anything(),
+      expect.any(Number),
+      expect.anything(),
+      expect.any(Number),
+      expect.anything(),
+    )
+  })
+
   it('emits progress events for each stage', async () => {
     const db = makeDb()
     const stages: string[] = []

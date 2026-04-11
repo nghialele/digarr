@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { EventEmitter } from 'node:events'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/core/clients/musicbrainz', () => ({
   createMusicBrainzClient: vi.fn(() => ({})),
@@ -26,6 +26,17 @@ vi.mock('@/db/queries/users', async (importOriginal) => {
 import type { SettingsRow } from '@/db/queries/settings'
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'
+
+beforeEach(async () => {
+  vi.clearAllMocks()
+  const { clearAllSessions } = await import('@/core/sessions')
+  await clearAllSessions()
+})
+
+afterEach(async () => {
+  const { clearAllSessions } = await import('@/core/sessions')
+  await clearAllSessions()
+})
 
 function makeMockOrchestrator(isRunning = false) {
   const emitter = new EventEmitter()
@@ -184,6 +195,60 @@ describe('POST /api/pipeline/run', () => {
     const res = await app.request('/api/pipeline/run', { method: 'POST' })
     expect(res.status).toBe(400)
   })
+
+  it('passes the resolved response locale into manual pipeline runs', async () => {
+    const orchestrator = makeMockOrchestrator(false) as unknown as AppDependencies['orchestrator']
+    const app = createApp(
+      makeDeps({
+        orchestrator,
+        getUserCount: vi.fn(async () => 1),
+        getUserById: vi.fn(async () => ({
+          id: 1,
+          username: 'test',
+          isAdmin: false,
+          preferredLocale: 'de',
+          preferences: null,
+          email: null,
+          oidcSubject: null,
+          authProvider: 'local',
+          listenbrainzUsername: null,
+          listenbrainzToken: null,
+          lastfmUsername: null,
+          lastfmApiKey: null,
+          plexUrl: null,
+          plexToken: null,
+          jellyfinUrl: null,
+          jellyfinApiKey: null,
+          jellyfinUserId: null,
+          embyUrl: null,
+          embyApiKey: null,
+          embyUserId: null,
+          discogsToken: null,
+          discogsUsername: null,
+          createdAt: new Date(),
+        })),
+      }),
+    )
+
+    const { createSession } = await import('@/core/sessions')
+    await createSession(1, 'session-token')
+
+    const res = await app.request('/api/pipeline/run', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer session-token',
+        'X-Digarr-Locale': 'fr',
+      },
+    })
+
+    expect(res.status).toBe(202)
+    expect(orchestrator.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responseLocale: 'fr',
+        promptLocale: null,
+      }),
+    )
+  })
 })
 
 describe('GET /api/pipeline/status', () => {
@@ -303,7 +368,7 @@ describe('POST /api/pipeline/quick-discover', () => {
     await vi.waitFor(() => {
       expect(getRecommendations).toHaveBeenCalledWith(
         expect.objectContaining({
-          responseLocale: 'de',
+          responseLocale: 'fr',
           promptLocale: null,
         }),
       )
@@ -387,7 +452,7 @@ describe('POST /api/pipeline/quick-discover', () => {
     await vi.waitFor(() => {
       expect(getRecommendations).toHaveBeenCalledWith(
         expect.objectContaining({
-          responseLocale: 'de',
+          responseLocale: 'fr',
           promptLocale: null,
         }),
       )
@@ -471,7 +536,7 @@ describe('POST /api/pipeline/quick-discover', () => {
     await vi.waitFor(() => {
       expect(getRecommendations).toHaveBeenCalledWith(
         expect.objectContaining({
-          responseLocale: 'de',
+          responseLocale: 'fr',
           promptLocale: 'es',
         }),
       )

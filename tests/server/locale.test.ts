@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { resolveRequestLocale } from '@/server/locale'
 
 describe('resolveRequestLocale', () => {
-  it('prefers the user locale over request headers', () => {
+  it('prefers the explicit request locale over the saved user locale', () => {
     expect(
       resolveRequestLocale({
         userPreferredLocale: 'de',
         requestLocale: 'fr',
         acceptLanguage: 'es-ES,es;q=0.9',
       }),
-    ).toBe('de')
+    ).toBe('fr')
   })
 
   it('falls back to Accept-Language when explicit request locale is absent', () => {

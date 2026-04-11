@@ -48,7 +48,13 @@ export function pipelineRoutes(deps: AppDependencies) {
     }
 
     const userId = c.get('userId')
+    const user = userId ? await deps.getUserById(userId) : null
     const userConnections = userId ? await getUserConnections(deps.db, userId) : null
+    const responseLocale = resolveRequestLocale({
+      userPreferredLocale: user?.preferredLocale,
+      requestLocale: c.req.header('X-Digarr-Locale'),
+      acceptLanguage: c.req.header('Accept-Language'),
+    })
 
     // Resolve Spotify OAuth token if connected
     let spotifyAccessToken: string | null = null
@@ -61,7 +67,11 @@ export function pipelineRoutes(deps: AppDependencies) {
     }
 
     // Read per-user preferences, fallback to global
-    const userPreferences = await resolveUserPreferences(deps.db, settings.preferences, userId)
+    const userPreferences = await resolveUserPreferences(
+      async () => user,
+      settings.preferences,
+      userId,
+    )
 
     // Build auto-approve deps -- closures capture userId for per-user target lookup
     const autoApproveDeps: AutoApproveDeps = {
@@ -97,6 +107,8 @@ export function pipelineRoutes(deps: AppDependencies) {
         autoApproveDeps,
         jobRecorder: deps.jobRecorder,
         trigger: 'manual',
+        responseLocale,
+        promptLocale: null,
       } as unknown as PipelineDeps)
       .catch((err: unknown) => {
         console.error('Pipeline run failed:', err)
@@ -350,7 +362,7 @@ export function pipelineRoutes(deps: AppDependencies) {
 
         // Read per-user preferences for quick-discover, fallback to global
         const qdPreferences = await resolveUserPreferences(
-          deps.db,
+          async () => quickDiscoverUser,
           settings.preferences,
           quickDiscoverUserId,
         )

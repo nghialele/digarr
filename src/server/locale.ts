@@ -30,8 +30,8 @@ export function resolveRequestLocale(input: {
   acceptLanguage?: string | null
 }): SupportedLocale {
   return (
-    normalizeLocale(input.userPreferredLocale) ??
     normalizeLocale(input.requestLocale) ??
+    normalizeLocale(input.userPreferredLocale) ??
     parseAcceptLanguage(input.acceptLanguage) ??
     DEFAULT_LOCALE
   )
