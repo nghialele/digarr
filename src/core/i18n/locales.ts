@@ -70,7 +70,7 @@ export function normalizeLocale(input?: string | null): SupportedLocale | null {
   const exactMatch = LOCALE_ALIASES[normalized]
   if (exactMatch) return exactMatch
 
-  const baseLanguage = normalized.split(/[-_]/, 1)[0] ?? normalized
+  const baseLanguage = normalized.split(/[-_]/, 1)[0]
   if (baseLanguage !== normalized) {
     return LOCALE_ALIASES[baseLanguage] ?? null
   }
