@@ -1,8 +1,4 @@
-import {
-  DEFAULT_LOCALE,
-  normalizeLocale,
-  type SupportedLocale,
-} from '@/core/i18n/locales'
+import { DEFAULT_LOCALE, normalizeLocale, type SupportedLocale } from '@/core/i18n/locales'
 
 export function parseAcceptLanguage(input?: string | null): SupportedLocale | null {
   const value = input?.trim()

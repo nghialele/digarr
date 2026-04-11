@@ -22,6 +22,7 @@ vi.mock('@/db/queries/users', async (importOriginal) => {
     getUserConnections: vi.fn(async () => null),
   }
 })
+
 import type { SettingsRow } from '@/db/queries/settings'
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'

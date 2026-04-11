@@ -276,8 +276,7 @@ export const en = {
   'discover.refreshingArtistData': 'Refreshing artist data...',
   'discover.rejectAll': 'Reject All',
   'discover.rejectAllPending': 'Reject all pending',
-  'discover.rejectAllPendingMessage':
-    'Reject all pending recommendations? This cannot be undone.',
+  'discover.rejectAllPendingMessage': 'Reject all pending recommendations? This cannot be undone.',
   'discover.rejectFailed': 'Failed to reject',
   'discover.rejectedCount': 'Rejected',
   'discover.rescanFailed': 'Rescan failed',
@@ -326,8 +325,7 @@ export const en = {
   'genreDetail.tabRecommended': 'Recommended',
   'genreDetail.tabRecommendedDescription': 'Artists you approved that match this genre',
   'genreDetail.tabTrending': 'Trending',
-  'genreDetail.tabTrendingDescription':
-    'Recently discovered artists in this genre (last 30 days)',
+  'genreDetail.tabTrendingDescription': 'Recently discovered artists in this genre (last 30 days)',
   'genres.browseTip':
     'Browse genres from your library and recommendation history. Click a genre to see recommended artists, trending discoveries, and hidden gems.',
   'genres.empty': 'No genres in your library yet.',

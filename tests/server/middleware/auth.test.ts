@@ -140,7 +140,7 @@ describe('auth middleware', () => {
   describe('when DIGARR_AUTH_TOKEN is not set', () => {
     it('allows all requests through without auth', async () => {
       const app = await createAppWithAuth()
-      const res = await app.request('/api/settings')
+      const res = await app.request('/api/recommendations')
       // 200 or 404, but NOT 401
       expect(res.status).not.toBe(401)
     })

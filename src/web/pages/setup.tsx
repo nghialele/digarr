@@ -1,8 +1,8 @@
 import { Compass, MonitorPlay } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { LanguageSwitcher } from '../components/language-switcher'
 import { Field } from '../components/field'
+import { LanguageSwitcher } from '../components/language-switcher'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select } from '../components/ui/select'
@@ -133,9 +133,7 @@ function StepMode({
             </div>
             <div>
               <span className="text-sm font-medium text-text">{t('setup.discoveryOnlyLabel')}</span>
-              <p className="text-xs text-muted mt-0.5">
-                {t('setup.discoveryModeDescription')}
-              </p>
+              <p className="text-xs text-muted mt-0.5">{t('setup.discoveryModeDescription')}</p>
             </div>
           </div>
         </button>
@@ -187,9 +185,7 @@ function StepLidarr({
           onChange={(e) => onFormChange({ ...form, apiKey: e.target.value })}
         />
       </Field>
-      <p className="text-xs text-muted">
-        {t('setup.connectionTestsContinueLidarr')}
-      </p>
+      <p className="text-xs text-muted">{t('setup.connectionTestsContinueLidarr')}</p>
       <Button onClick={onContinue} disabled={!form.url || !form.apiKey} className="w-full">
         {t('common.continue')}
       </Button>
@@ -238,13 +234,9 @@ function StepEmby({
           value={form.userId}
           onChange={(e) => onFormChange({ ...form, userId: e.target.value })}
         />
-        <p className="text-xs text-muted mt-1">
-          {t('setup.embyUserIdHelp')}
-        </p>
+        <p className="text-xs text-muted mt-1">{t('setup.embyUserIdHelp')}</p>
       </Field>
-      <p className="text-xs text-muted">
-        {t('setup.connectionTestsContinueEmby')}
-      </p>
+      <p className="text-xs text-muted">{t('setup.connectionTestsContinueEmby')}</p>
       <Button
         onClick={onContinue}
         disabled={!form.url || !form.apiKey || !form.userId}
@@ -344,7 +336,9 @@ function StepAi({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label htmlFor="ai-apikey" className="text-sm text-muted">
-              {apiKeyOptional ? `${t('setup.apiKey')} (${t('common.optional')})` : t('setup.apiKey')}
+              {apiKeyOptional
+                ? `${t('setup.apiKey')} (${t('common.optional')})`
+                : t('setup.apiKey')}
             </label>
             {link && (
               <a

@@ -98,9 +98,7 @@ function EmptyState({ filter }: { filter: FilterTab }) {
   if (filter === 'all') {
     return (
       <div className="py-16 text-center space-y-3">
-        <p className="text-muted text-sm">
-          {t('discover.emptyAll')}
-        </p>
+        <p className="text-muted text-sm">{t('discover.emptyAll')}</p>
         <div className="flex items-center justify-center gap-3">
           <Link
             to="/subscriptions"
@@ -133,9 +131,7 @@ function EmptyState({ filter }: { filter: FilterTab }) {
   if (filter === 'approved') {
     return (
       <div className="py-16 text-center">
-        <p className="text-muted text-sm">
-          {t('discover.emptyApproved')}
-        </p>
+        <p className="text-muted text-sm">{t('discover.emptyApproved')}</p>
       </div>
     )
   }
@@ -478,7 +474,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, targets],
+    [refetch, t, targets],
   )
 
   // Undo toast
@@ -505,7 +501,7 @@ export function DiscoverPage() {
     } catch {
       toast.error(t('discover.undoFailed'))
     }
-  }, [undoEntry, refetch])
+  }, [undoEntry, refetch, t])
 
   // Count per filter for tab badges -- fetch all counts independently
   const { data: allCountData } = useQuery({
@@ -564,7 +560,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, showUndo, hasLidarrTarget],
+    [hasLidarrTarget, refetch, showUndo, t],
   )
 
   const handleApprove = useCallback(
@@ -591,7 +587,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, filter, showUndo],
+    [filter, refetch, showUndo, t],
   )
 
   const handleReject = useCallback(
@@ -611,7 +607,7 @@ export function DiscoverPage() {
         })
       }
     },
-    [refetch, showUndo],
+    [refetch, showUndo, t],
   )
 
   async function handleRetry(id: number) {
@@ -792,7 +788,7 @@ export function DiscoverPage() {
       toast.success(t('discover.discoveryRunStarted'))
       refetch()
     },
-    [refetch],
+    [refetch, t],
   )
 
   return (
@@ -993,15 +989,17 @@ export function DiscoverPage() {
             <p className="text-xs text-muted hidden sm:block mb-4">
               {t('discover.shortcutsLabel')}{' '}
               <kbd className="px-1 bg-surface border border-border rounded">j/k</kbd>{' '}
-              {t('discover.navigate')} <kbd className="px-1 bg-surface border border-border rounded">a</kbd>{' '}
-              {t('discover.shortcutApprove')} <kbd className="px-1 bg-surface border border-border rounded">r</kbd>{' '}
-              {t('discover.shortcutReject')} <kbd className="px-1 bg-surface border border-border rounded">d</kbd>{' '}
-              {t('discover.shortcutExpand')} <kbd className="px-1 bg-surface border border-border rounded">?</kbd>{' '}
+              {t('discover.navigate')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">a</kbd>{' '}
+              {t('discover.shortcutApprove')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">r</kbd>{' '}
+              {t('discover.shortcutReject')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">d</kbd>{' '}
+              {t('discover.shortcutExpand')}{' '}
+              <kbd className="px-1 bg-surface border border-border rounded">?</kbd>{' '}
               {t('discover.shortcuts')}
             </p>
-            <p className="text-xs text-muted sm:hidden mb-4">
-              {t('discover.swipeHint')}
-            </p>
+            <p className="text-xs text-muted sm:hidden mb-4">{t('discover.swipeHint')}</p>
           </>
         )}
 

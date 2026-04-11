@@ -1,6 +1,6 @@
-import type { MessageKey } from '@/core/i18n/messages/types'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
+import type { MessageKey } from '@/core/i18n/messages/types'
 import { getPipelineStatus } from '../lib/api'
 import { useSSE } from '../lib/hooks'
 import { useI18n } from '../lib/i18n'
@@ -169,7 +169,9 @@ export function PipelineProgress({
         </div>
         <div className="flex items-center gap-3 text-xs text-muted">
           {startedRef.current && stage !== 'complete' && (
-            <span>{t('pipeline.runningFor')} {formatElapsed(elapsed)}</span>
+            <span>
+              {t('pipeline.runningFor')} {formatElapsed(elapsed)}
+            </span>
           )}
           {current !== undefined && total !== undefined && (
             <span>

@@ -114,7 +114,9 @@ export function GenresPage() {
               {searchLoading
                 ? t('common.searching')
                 : `${searchResults.length} ${
-                    searchResults.length === 1 ? t('genres.resultSingular') : t('genres.resultPlural')
+                    searchResults.length === 1
+                      ? t('genres.resultSingular')
+                      : t('genres.resultPlural')
                   } ${t('genres.forQuery')} "${debouncedQuery}"`}
             </p>
           ) : (

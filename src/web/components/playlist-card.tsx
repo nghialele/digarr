@@ -41,8 +41,14 @@ function formatSchedule(cron: string | null, t: (key: MessageKey) => string): st
 }
 
 const STRATEGY_BADGES: Record<string, { label: string; className: string }> = {
-  weekly_digest: { label: 'playlist.strategyWeeklyDigest', className: 'bg-blue-500/15 text-blue-400' },
-  genre_focus: { label: 'playlist.strategyGenreFocus', className: 'bg-green-500/15 text-green-400' },
+  weekly_digest: {
+    label: 'playlist.strategyWeeklyDigest',
+    className: 'bg-blue-500/15 text-blue-400',
+  },
+  genre_focus: {
+    label: 'playlist.strategyGenreFocus',
+    className: 'bg-green-500/15 text-green-400',
+  },
   mood_mix: { label: 'playlist.strategyMoodMix', className: 'bg-purple-500/15 text-purple-400' },
   rediscover: { label: 'playlist.strategyRediscover', className: 'bg-amber-500/15 text-amber-400' },
 }

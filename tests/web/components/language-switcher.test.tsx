@@ -4,8 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AuthGate } from '@/web/components/auth-gate'
 import { App } from '@/web/App'
+import { AuthGate } from '@/web/components/auth-gate'
 import { I18nProvider } from '@/web/lib/i18n'
 
 vi.mock('@/web/lib/locale-storage', () => ({

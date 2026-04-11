@@ -161,16 +161,16 @@ vi.mock('@/web/lib/hooks', async (importOriginal) => {
 
 import {
   getAuthStatus,
-  getPipelineStatus,
+  getCurrentUser,
   getLidarrMetadataProfiles,
   getLidarrProfiles,
   getLidarrRootFolders,
   getOAuthStatus,
-  getCurrentUser,
+  getPipelineStatus,
   getSettings,
+  getStoredToken,
   importSpotifyLikedSongs,
   testService,
-  getStoredToken,
   updatePreferredLocale,
   updateSettings,
 } from '@/web/lib/api'

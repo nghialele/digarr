@@ -45,7 +45,11 @@ function statusBadge(status: string, t: (key: MessageKey) => string) {
     running: t('common.running'),
     failed: t('common.failed'),
   }
-  return <span className={`text-xs font-medium ${colors[status] ?? 'text-muted'}`}>{labels[status] ?? status}</span>
+  return (
+    <span className={`text-xs font-medium ${colors[status] ?? 'text-muted'}`}>
+      {labels[status] ?? status}
+    </span>
+  )
 }
 
 const PAGE_SIZE = 10
@@ -100,7 +104,9 @@ function BatchHistoryTable({
           <tbody className="divide-y divide-border">
             {visible.map((b) => (
               <tr key={b.id} className="hover:bg-bg/50 transition-colors">
-                <td className="px-4 py-2.5 text-text">{formatAnalyticsDate(locale, b.createdAt)}</td>
+                <td className="px-4 py-2.5 text-text">
+                  {formatAnalyticsDate(locale, b.createdAt)}
+                </td>
                 <td className="px-4 py-2.5">{statusBadge(b.status, t)}</td>
                 <td className="px-4 py-2.5 text-right text-text">{b.total}</td>
                 <td className="px-4 py-2.5 text-right text-approve">{b.approved}</td>
@@ -375,12 +381,20 @@ function TimeToActCards({ data }: { data: TimeToAct[] }) {
       <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
         <p className="text-xs text-muted">{t('analytics.avgTimeToApprove')}</p>
         <p className="text-xl font-bold text-approve">{fmt(approved?.avgDays)}</p>
-        {approved && <p className="text-xs text-muted">{approved.count} {t('analytics.approvals')}</p>}
+        {approved && (
+          <p className="text-xs text-muted">
+            {approved.count} {t('analytics.approvals')}
+          </p>
+        )}
       </div>
       <div className="bg-surface border border-border rounded-lg p-4 space-y-1">
         <p className="text-xs text-muted">{t('analytics.avgTimeToReject')}</p>
         <p className="text-xl font-bold text-reject">{fmt(rejected?.avgDays)}</p>
-        {rejected && <p className="text-xs text-muted">{rejected.count} {t('analytics.rejections')}</p>}
+        {rejected && (
+          <p className="text-xs text-muted">
+            {rejected.count} {t('analytics.rejections')}
+          </p>
+        )}
       </div>
     </div>
   )

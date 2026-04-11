@@ -184,9 +184,7 @@ export function PlaylistsPage() {
         <SkeletonGrid />
       ) : isEmpty ? (
         <div className="py-12 text-center space-y-4">
-          <p className="text-muted text-sm max-w-sm mx-auto">
-            {t('playlists.empty')}
-          </p>
+          <p className="text-muted text-sm max-w-sm mx-auto">{t('playlists.empty')}</p>
           <button
             type="button"
             onClick={openCreate}
@@ -204,7 +202,9 @@ export function PlaylistsPage() {
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted">
               {playlists.length}{' '}
-              {playlists.length === 1 ? t('playlists.playlistSingular') : t('playlists.playlistPlural')}
+              {playlists.length === 1
+                ? t('playlists.playlistSingular')
+                : t('playlists.playlistPlural')}
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

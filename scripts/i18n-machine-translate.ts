@@ -79,13 +79,10 @@ function extractJson(text: string): string {
 
 function renderTypeScriptCatalog(locale: string, catalog: Record<string, string>): string {
   const exportName = toExportName(locale)
-  const entries = expectedKeys.map((key) => `  ${JSON.stringify(key)}: ${JSON.stringify(catalog[key])},`)
-  return [
-    `export const ${exportName} = {`,
-    ...entries,
-    '} as const',
-    '',
-  ].join('\n')
+  const entries = expectedKeys.map(
+    (key) => `  ${JSON.stringify(key)}: ${JSON.stringify(catalog[key])},`,
+  )
+  return [`export const ${exportName} = {`, ...entries, '} as const', ''].join('\n')
 }
 
 export function buildChatCompletionsUrl(baseUrlValue: string): string {
@@ -144,7 +141,7 @@ export function validateTranslatedCatalog(
   for (const key of Object.keys(sourceCatalog)) {
     const sourceValue = sourceCatalog[key]
     const translatedValue = translatedCatalog[key]
-    if (translatedValue === undefined) continue
+    if (sourceValue === undefined || translatedValue === undefined) continue
 
     const sourcePlaceholders = listMatches(sourceValue, PLACEHOLDER_PATTERN)
     const translatedPlaceholders = listMatches(translatedValue, PLACEHOLDER_PATTERN)
@@ -175,10 +172,18 @@ export function validateTranslatedCatalog(
   }
 }
 
-async function translateCatalog(): Promise<Record<string, string>> {
+async function translateCatalog({
+  baseUrl,
+  model,
+  targetLocale,
+}: {
+  baseUrl: string
+  model: string
+  targetLocale: string
+}): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`
-  const messages = buildTranslationMessages(sourceLocale, targetLocale!, sourceMessages)
+  const messages = buildTranslationMessages(sourceLocale, targetLocale, sourceMessages)
 
   const res = await fetch(buildChatCompletionsUrl(baseUrl), {
     method: 'POST',
@@ -259,7 +264,7 @@ export async function main(): Promise<void> {
     process.exit(1)
   }
 
-  const translatedCatalog = await translateCatalog()
+  const translatedCatalog = await translateCatalog({ baseUrl, model, targetLocale })
 
   if (!writeOutput) {
     console.log(JSON.stringify(translatedCatalog, null, 2))

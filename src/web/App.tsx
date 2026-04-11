@@ -20,9 +20,9 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
+import { normalizeLocale, type SupportedLocale } from '@/core/i18n/locales'
 import { errMsg } from '@/core/validation'
 import { VERSION } from '@/version'
-import { normalizeLocale, type SupportedLocale } from '@/core/i18n/locales'
 import { AuthGate } from './components/auth-gate'
 import { BottomNav } from './components/bottom-nav'
 import { ErrorBoundary } from './components/error-boundary'
@@ -442,9 +442,17 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   label={t('nav.discover')}
                   icon={<Compass size={14} aria-hidden="true" />}
                   items={[
-                    { to: '/discover', label: t('nav.recommendations'), icon: <Compass size={14} /> },
+                    {
+                      to: '/discover',
+                      label: t('nav.recommendations'),
+                      icon: <Compass size={14} />,
+                    },
                     { to: '/genres', label: t('nav.genres'), icon: <Music size={14} /> },
-                    { to: '/subscriptions', label: t('nav.subscriptions'), icon: <Monitor size={14} /> },
+                    {
+                      to: '/subscriptions',
+                      label: t('nav.subscriptions'),
+                      icon: <Monitor size={14} />,
+                    },
                     { to: '/playlists', label: t('nav.playlists'), icon: <ListMusic size={14} /> },
                   ]}
                 />
@@ -453,13 +461,21 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     label={t('nav.library')}
                     icon={<HeartPulse size={14} aria-hidden="true" />}
                     items={[
-                      { to: '/library/health', label: t('nav.health'), icon: <HeartPulse size={14} /> },
+                      {
+                        to: '/library/health',
+                        label: t('nav.health'),
+                        icon: <HeartPulse size={14} />,
+                      },
                       {
                         to: '/library/reconciliation',
                         label: t('nav.reconciliation'),
                         icon: <RefreshCw size={14} />,
                       },
-                      { to: '/analytics', label: t('nav.analytics'), icon: <BarChart3 size={14} /> },
+                      {
+                        to: '/analytics',
+                        label: t('nav.analytics'),
+                        icon: <BarChart3 size={14} />,
+                      },
                     ]}
                   />
                 )}

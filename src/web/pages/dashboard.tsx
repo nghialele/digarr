@@ -498,7 +498,11 @@ export function Dashboard() {
       {/* Today's Pick + Recently Approved */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <SectionHeader title={t('dashboard.todaysPick')} linkText={t('dashboard.discover')} linkTo="/discover" />
+          <SectionHeader
+            title={t('dashboard.todaysPick')}
+            linkText={t('dashboard.discover')}
+            linkTo="/discover"
+          />
           <TodaysPick
             rec={currentPick}
             loading={pickLoading}
@@ -515,7 +519,11 @@ export function Dashboard() {
           />
         </div>
         <div>
-          <SectionHeader title={t('dashboard.recentlyApproved')} linkText={t('dashboard.viewAll')} linkTo="/discover" />
+          <SectionHeader
+            title={t('dashboard.recentlyApproved')}
+            linkText={t('dashboard.viewAll')}
+            linkTo="/discover"
+          />
           <RecentlyApproved recs={approvedRecs} loading={approvedLoading} />
         </div>
       </div>

@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from '@playwright/test'
+import type { SupportedLocale } from '@/core/i18n/locales'
 
 const E2E_ADMIN_USERNAME = 'setup-e2e'
 const E2E_ADMIN_PASSWORD = 'e2e-password-123'
@@ -78,4 +79,18 @@ export async function installAuthToken(page: Page, token: string) {
   await page.addInitScript((value) => {
     window.localStorage.setItem('digarr-auth-token', value)
   }, token)
+}
+
+export async function installBrowserLocale(page: Page, locale: SupportedLocale) {
+  await page.addInitScript((value) => {
+    Object.defineProperty(window.navigator, 'language', {
+      configurable: true,
+      get: () => value,
+    })
+
+    Object.defineProperty(window.navigator, 'languages', {
+      configurable: true,
+      get: () => [value, 'en-US'],
+    })
+  }, locale)
 }

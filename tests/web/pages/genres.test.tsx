@@ -66,7 +66,11 @@ describe('GenresPage', () => {
 
     renderWithQuery(<GenresPage />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Initialiser les genres depuis votre bibliotheque' }))
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Initialiser les genres depuis votre bibliotheque',
+      }),
+    )
 
     await waitFor(() => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Initialisation des genres lancee')
@@ -78,7 +82,11 @@ describe('GenresPage', () => {
 
     renderWithQuery(<GenresPage />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Initialiser les genres depuis votre bibliotheque' }))
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Initialiser les genres depuis votre bibliotheque',
+      }),
+    )
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith("Echec de l'initialisation des genres")

@@ -9,24 +9,27 @@ import {
 
 describe('i18n machine translation helpers', () => {
   it('passes real source strings to the model without escaping them', () => {
+    const artistPlaceholder = '${artist}'
     const messages = buildTranslationMessages('en', 'fr', {
-      sample: 'Keep ${artist} in `code` form.\nSecond line.',
+      sample: `Keep ${artistPlaceholder} in \`code\` form.\nSecond line.`,
     })
 
-    expect(messages[1]?.content).toContain('Keep ${artist} in `code` form.')
+    expect(messages[1]?.content).toContain(`Keep ${artistPlaceholder} in \`code\` form.`)
     expect(messages[1]?.content).toContain('\\nSecond line.')
-    expect(messages[1]?.content).not.toContain('\\${artist}')
+    expect(messages[1]?.content).not.toContain(`\\${artistPlaceholder}`)
     expect(messages[1]?.content).not.toContain('\\`code\\`')
   })
 
   it('rejects placeholder and line-break drift', () => {
+    const namePlaceholder = '${name}'
+    const usernamePlaceholder = '${username}'
     expect(() =>
       validateTranslatedCatalog(
         {
-          sample: 'Hello ${name}\nLine two',
+          sample: `Hello ${namePlaceholder}\nLine two`,
         },
         {
-          sample: 'Bonjour ${username} Line two',
+          sample: `Bonjour ${usernamePlaceholder} Line two`,
         },
       ),
     ).toThrow(/placeholder|line break/i)
@@ -46,8 +49,14 @@ describe('i18n machine translation helpers', () => {
   })
 
   it('accepts OpenAI-style base urls with or without /v1', () => {
-    expect(buildChatCompletionsUrl('https://api.openai.com')).toBe('https://api.openai.com/v1/chat/completions')
-    expect(buildChatCompletionsUrl('https://api.openai.com/v1')).toBe('https://api.openai.com/v1/chat/completions')
-    expect(buildChatCompletionsUrl('https://api.openai.com/v1/')).toBe('https://api.openai.com/v1/chat/completions')
+    expect(buildChatCompletionsUrl('https://api.openai.com')).toBe(
+      'https://api.openai.com/v1/chat/completions',
+    )
+    expect(buildChatCompletionsUrl('https://api.openai.com/v1')).toBe(
+      'https://api.openai.com/v1/chat/completions',
+    )
+    expect(buildChatCompletionsUrl('https://api.openai.com/v1/')).toBe(
+      'https://api.openai.com/v1/chat/completions',
+    )
   })
 })

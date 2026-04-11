@@ -249,7 +249,9 @@ describe('LibraryReconciliationPage', () => {
     renderWithQuery(<LibraryReconciliationPage />)
 
     expect(
-      await screen.findByText('Aucun artiste non rapproche. Votre bibliotheque est entierement associee.'),
+      await screen.findByText(
+        'Aucun artiste non rapproche. Votre bibliotheque est entierement associee.',
+      ),
     ).toBeInTheDocument()
   })
 })

@@ -14,9 +14,9 @@ import { ptBR } from '@/core/i18n/messages/pt-BR'
 import { ro } from '@/core/i18n/messages/ro'
 import { ru } from '@/core/i18n/messages/ru'
 import { tr } from '@/core/i18n/messages/tr'
+import type { MessageCatalog } from '@/core/i18n/messages/types'
 import { uk } from '@/core/i18n/messages/uk'
 import { zhCN } from '@/core/i18n/messages/zh-CN'
-import type { MessageCatalog } from '@/core/i18n/messages/types'
 import { formatDate, formatDateTime, formatShortDate, formatShortDateTime } from '@/web/lib/intl'
 
 const rawCatalogs: Record<SupportedLocale, MessageCatalog> = {

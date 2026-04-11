@@ -5,6 +5,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DiscoveryModeResponse } from '@/web/lib/api'
+import { I18nProvider } from '@/web/lib/i18n'
+
+vi.mock('@/web/lib/locale-storage', () => ({
+  detectBrowserLocale: vi.fn(() => 'en'),
+  getRequestLocale: vi.fn(() => 'en'),
+  getStoredLocale: vi.fn(() => 'en'),
+  setStoredLocale: vi.fn(),
+}))
 
 type SubscriptionFormMockProps = {
   discoveryModes?: DiscoveryModeResponse[]
@@ -122,7 +130,9 @@ function renderPage() {
 
   return render(
     <QueryClientProvider client={client}>
-      <SubscriptionsPage />
+      <I18nProvider>
+        <SubscriptionsPage />
+      </I18nProvider>
     </QueryClientProvider>,
   )
 }

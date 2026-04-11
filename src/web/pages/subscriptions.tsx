@@ -70,7 +70,8 @@ function runStatus(
   run: SubscriptionRun,
   t: (key: MessageKey) => string,
 ): { label: string; className: string } {
-  if (run.status === 'failed' || run.error) return { label: t('common.failed'), className: 'text-reject' }
+  if (run.status === 'failed' || run.error)
+    return { label: t('common.failed'), className: 'text-reject' }
   if (run.status === 'running') return { label: t('common.running'), className: 'text-accent' }
   if (run.status === 'stuck') return { label: t('common.stuck'), className: 'text-amber-500' }
   return { label: t('common.done'), className: 'text-approve' }
@@ -252,7 +253,9 @@ function SubscriptionCard({
             sub.enabled ? 'bg-approve' : 'bg-border'
           }`}
           aria-label={
-            sub.enabled ? t('subscriptions.disableSubscription') : t('subscriptions.enableSubscription')
+            sub.enabled
+              ? t('subscriptions.disableSubscription')
+              : t('subscriptions.enableSubscription')
           }
         >
           <span

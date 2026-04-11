@@ -84,7 +84,9 @@ function GenreArtistCard({ artist }: { artist: GenreArtist }) {
                 : preview.play(artist.mbid, artist.name, artist.streamingUrls ?? null)
             }
             className="w-7 h-7 flex items-center justify-center rounded-full border border-border text-muted hover:text-accent hover:border-accent/60 transition-colors"
-            aria-label={isPlaying ? t('recommendation.stopPreview') : t('recommendation.playPreview')}
+            aria-label={
+              isPlaying ? t('recommendation.stopPreview') : t('recommendation.playPreview')
+            }
           >
             {isPlaying ? (
               <svg
@@ -118,7 +120,11 @@ function GenreArtistCard({ artist }: { artist: GenreArtist }) {
           onClick={handleQuickDiscover}
           className="px-2 py-1 text-xs rounded border border-border text-muted hover:text-text hover:border-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {queued ? t('genreDetail.inQueue') : discovering ? t('common.loadingEllipsis') : t('genreDetail.queue')}
+          {queued
+            ? t('genreDetail.inQueue')
+            : discovering
+              ? t('common.loadingEllipsis')
+              : t('genreDetail.queue')}
         </button>
       </div>
     </div>
@@ -250,7 +256,10 @@ export function GenreDetailPage() {
       <div>
         <h1 className="text-2xl font-bold text-text">{data.name}</h1>
         <p className="text-sm text-muted mt-1">
-          {data.libraryArtists.length} {data.libraryArtists.length === 1 ? t('genreDetail.artistSingular') : t('genreDetail.artistPlural')}{' '}
+          {data.libraryArtists.length}{' '}
+          {data.libraryArtists.length === 1
+            ? t('genreDetail.artistSingular')
+            : t('genreDetail.artistPlural')}{' '}
           {t('genreDetail.inYourLibrary')}
         </p>
       </div>
@@ -316,7 +325,9 @@ export function GenreDetailPage() {
             <div className="space-y-2">
               <p className="text-xs text-muted">
                 {data.libraryArtists.length}{' '}
-                {data.libraryArtists.length === 1 ? t('genreDetail.artistSingular') : t('genreDetail.artistPlural')}{' '}
+                {data.libraryArtists.length === 1
+                  ? t('genreDetail.artistSingular')
+                  : t('genreDetail.artistPlural')}{' '}
                 {t('genreDetail.inYourLibrary')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -336,7 +347,9 @@ export function GenreDetailPage() {
           <div className="space-y-2">
             <p className="text-xs text-muted">
               {genreArtistsData.artists.length}{' '}
-              {genreArtistsData.artists.length === 1 ? t('genreDetail.artistSingular') : t('genreDetail.artistPlural')}
+              {genreArtistsData.artists.length === 1
+                ? t('genreDetail.artistSingular')
+                : t('genreDetail.artistPlural')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {genreArtistsData.artists.map((artist) => (

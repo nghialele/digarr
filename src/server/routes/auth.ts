@@ -1,10 +1,10 @@
 import { lookup } from 'node:dns/promises'
-import { Hono, type Context } from 'hono'
+import { type Context, Hono } from 'hono'
 import { envConfig } from '@/config/env'
 import { generateSessionToken, hashPassword, verifyPassword } from '@/core/auth'
 import { encryptField } from '@/core/crypto'
-import { getMessages } from '@/core/i18n/messages'
 import { normalizeLocale } from '@/core/i18n/locales'
+import { getMessages } from '@/core/i18n/messages'
 import { isPrivateIp, isPrivateUrl } from '@/core/notifications'
 import { clearUserSessions, createSession, deleteSession } from '@/core/sessions'
 import { isHttpUrl } from '@/core/validation'
@@ -157,8 +157,7 @@ export function authRoutes(deps: AppDependencies) {
     const user = await deps.getUserById(userId)
     if (!user) return c.json({ error: 'User not found' }, 404)
 
-    const preferredLocale =
-      rawPreferredLocale === null ? null : normalizeLocale(rawPreferredLocale)
+    const preferredLocale = rawPreferredLocale === null ? null : normalizeLocale(rawPreferredLocale)
 
     if (rawPreferredLocale !== null && !preferredLocale) {
       return c.json({ error: 'Unsupported locale' }, 400)

@@ -79,6 +79,7 @@ vi.mock('@/web/lib/hooks', async (importOriginal) => {
   }
 })
 
+import { PlaylistCard } from '@/web/components/playlist-card'
 import {
   getDashboardActivity,
   getDashboardTaste,
@@ -88,7 +89,6 @@ import {
   getSchedulerInfo,
   getSubscriptions,
 } from '@/web/lib/api'
-import { PlaylistCard } from '@/web/components/playlist-card'
 import { Dashboard } from '@/web/pages/dashboard'
 
 const mockGetRecommendations = vi.mocked(getRecommendations)

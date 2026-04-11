@@ -44,8 +44,14 @@ function formatSchedule(cron: string | null, t: (key: MessageKey) => string): st
 }
 
 const STRATEGY_BADGES: Record<string, { label: string; className: string }> = {
-  weekly_digest: { label: 'playlist.strategyWeeklyDigest', className: 'bg-blue-500/15 text-blue-400' },
-  genre_focus: { label: 'playlist.strategyGenreFocus', className: 'bg-green-500/15 text-green-400' },
+  weekly_digest: {
+    label: 'playlist.strategyWeeklyDigest',
+    className: 'bg-blue-500/15 text-blue-400',
+  },
+  genre_focus: {
+    label: 'playlist.strategyGenreFocus',
+    className: 'bg-green-500/15 text-green-400',
+  },
   mood_mix: { label: 'playlist.strategyMoodMix', className: 'bg-purple-500/15 text-purple-400' },
   rediscover: { label: 'playlist.strategyRediscover', className: 'bg-amber-500/15 text-amber-400' },
 }
@@ -105,7 +111,9 @@ function TrackRow({ track, index }: { track: PlaylistTrackRow; index: number }) 
       <span className="w-6 text-right text-xs text-muted shrink-0">{index + 1}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-text truncate">
-          {track.trackName ?? <span className="text-muted italic">{t('playlist.unknownTrack')}</span>}
+          {track.trackName ?? (
+            <span className="text-muted italic">{t('playlist.unknownTrack')}</span>
+          )}
         </p>
         <p className="text-xs text-muted truncate">{track.artistName}</p>
       </div>
@@ -290,7 +298,9 @@ export function PlaylistDetailPage() {
               {t('playlist.tracks')}: <span className="text-text">{playlist.trackCount}</span>
             </span>
           )}
-          {!playlist.enabled && <span className="text-muted/60 italic">{t('common.disabled')}</span>}
+          {!playlist.enabled && (
+            <span className="text-muted/60 italic">{t('common.disabled')}</span>
+          )}
         </div>
       </div>
 

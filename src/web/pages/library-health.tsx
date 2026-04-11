@@ -98,7 +98,8 @@ export function LibraryHealthPage() {
   )
 
   const artistLabel = useCallback(
-    (count: number) => (count === 1 ? t('libraryHealth.artistSingular') : t('libraryHealth.artistPlural')),
+    (count: number) =>
+      count === 1 ? t('libraryHealth.artistSingular') : t('libraryHealth.artistPlural'),
     [t],
   )
 
@@ -115,7 +116,9 @@ export function LibraryHealthPage() {
               `${t('libraryHealth.triggeredActionFor')} ${data.completed} ${artistLabel(data.completed)} -- ${t('libraryHealth.rescanningSoon')}`,
             )
           } else {
-            toast.success(`${t('libraryHealth.updated')} ${data.completed} ${artistLabel(data.completed)}`)
+            toast.success(
+              `${t('libraryHealth.updated')} ${data.completed} ${artistLabel(data.completed)}`,
+            )
           }
         } else {
           toast.warning(

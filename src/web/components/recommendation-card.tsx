@@ -117,7 +117,9 @@ function StatusBadge({
 }) {
   const { t } = useI18n()
   if (status === 'added_to_lidarr') {
-    return <span className="text-xs text-approve font-medium">{t('recommendation.addedToLidarr')}</span>
+    return (
+      <span className="text-xs text-approve font-medium">{t('recommendation.addedToLidarr')}</span>
+    )
   }
   if (status === 'rejected') {
     return <span className="text-xs text-reject font-medium">{t('recommendation.rejected')}</span>
@@ -685,7 +687,9 @@ export function RecommendationCard({
                 <button
                   type="button"
                   aria-label={
-                    artistIsPlaying ? t('recommendation.stopPreview') : t('recommendation.playPreview')
+                    artistIsPlaying
+                      ? t('recommendation.stopPreview')
+                      : t('recommendation.playPreview')
                   }
                   onClick={handlePlayClick}
                   className="shrink-0 text-muted hover:text-text transition-colors"

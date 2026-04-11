@@ -22,8 +22,8 @@ vi.mock('sonner', () => ({
   },
 }))
 
-import { SetupWizard } from '@/web/pages/setup'
 import { getStoredLocale } from '@/web/lib/locale-storage'
+import { SetupWizard } from '@/web/pages/setup'
 
 const mockGetStoredLocale = vi.mocked(getStoredLocale)
 

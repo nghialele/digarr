@@ -147,8 +147,8 @@ export function LibraryReconciliationPage() {
               <div className="flex items-center justify-between gap-3 pt-2">
                 <div className="text-xs text-muted">
                   {t('libraryReconciliation.showing')} {albumPageStart + 1}-
-                  {Math.min(albumPageStart + ALBUMS_PER_PAGE, albumTotal)} {t('libraryReconciliation.of')}{' '}
-                  {albumTotal}
+                  {Math.min(albumPageStart + ALBUMS_PER_PAGE, albumTotal)}{' '}
+                  {t('libraryReconciliation.of')} {albumTotal}
                 </div>
                 <div className="flex items-center gap-2">
                   <button

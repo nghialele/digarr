@@ -6,9 +6,9 @@ import {
   buildDiscoveryModeExecutionContext,
   evaluateDiscoveryModeAvailability,
 } from '@/core/discovery-modes/availability'
-import { detectPromptLocale } from '@/core/i18n/prompt-locale'
 import type { DiscoveryModeRequest } from '@/core/discovery-modes/request'
 import { normalizeDiscoveryModeRequest } from '@/core/discovery-modes/request'
+import { detectPromptLocale } from '@/core/i18n/prompt-locale'
 import type { AutoApproveDeps } from '@/core/pipeline/auto-approve'
 import { filter } from '@/core/pipeline/filter'
 import type { PipelineDeps } from '@/core/pipeline/orchestrator'

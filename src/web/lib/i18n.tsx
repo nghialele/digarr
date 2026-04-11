@@ -28,25 +28,31 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     setLocaleState(nextLocale)
   }, [])
 
-  const hydrateLocale = useCallback((nextLocale: SupportedLocale | null) => {
-    if (!nextLocale) return
-    if (pendingLocale && pendingLocale !== nextLocale) return
+  const hydrateLocale = useCallback(
+    (nextLocale: SupportedLocale | null) => {
+      if (!nextLocale) return
+      if (pendingLocale && pendingLocale !== nextLocale) return
 
-    if (pendingLocale === nextLocale) {
-      setPendingLocale(null)
-    }
+      if (pendingLocale === nextLocale) {
+        setPendingLocale(null)
+      }
 
-    setStoredLocale(nextLocale)
-    setLocaleState((currentLocale) => (currentLocale === nextLocale ? currentLocale : nextLocale))
-  }, [pendingLocale])
+      setStoredLocale(nextLocale)
+      setLocaleState((currentLocale) => (currentLocale === nextLocale ? currentLocale : nextLocale))
+    },
+    [pendingLocale],
+  )
 
-  const value: I18nValue = useMemo(() => ({
-    locale,
-    pendingLocale,
-    setLocale,
-    hydrateLocale,
-    t: (key) => messages[key] ?? getMessages(DEFAULT_LOCALE)[key] ?? key,
-  }), [hydrateLocale, locale, messages, pendingLocale, setLocale])
+  const value: I18nValue = useMemo(
+    () => ({
+      locale,
+      pendingLocale,
+      setLocale,
+      hydrateLocale,
+      t: (key) => messages[key] ?? getMessages(DEFAULT_LOCALE)[key] ?? key,
+    }),
+    [hydrateLocale, locale, messages, pendingLocale, setLocale],
+  )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }
