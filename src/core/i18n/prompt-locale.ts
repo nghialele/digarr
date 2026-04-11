@@ -24,6 +24,9 @@ export function detectPromptLocale(input?: string | null): SupportedLocale | nul
 
   if (!LATIN_RE.test(value)) return null
 
+  const latinTokens = value.split(/\s+/u).filter(Boolean)
+  if (latinTokens.length < 2) return null
+
   if (ES_STRONG_SIGNALS.some((pattern) => pattern.test(value))) return 'es'
 
   const weakSignalCount = ES_WEAK_SIGNALS.reduce((count, pattern) => {

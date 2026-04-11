@@ -14,6 +14,10 @@ describe('detectPromptLocale', () => {
     expect(detectPromptLocale('jazz nocturno')).toBe('es')
   })
 
+  it('returns null for ambiguous single-token latin-script prompts', () => {
+    expect(detectPromptLocale('mañana')).toBeNull()
+  })
+
   it('returns null for ambiguous latin-script prompts', () => {
     expect(detectPromptLocale('sad jazz for rain')).toBeNull()
   })
