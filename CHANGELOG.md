@@ -2,6 +2,16 @@
 
 All notable user-facing changes are documented here.
 
+## v0.23.0 - 2026-04-12
+
+### Added
+
+- Artist Radio discovery mode seeded from any artist via ListenBrainz radio API
+- User Radio discovery mode that generates radio from a user's top listened artist
+- Similar Users (Deep) discovery mode that samples top artists from taste-matched ListenBrainz users
+- Artist Radio and Similar Users subscription feed types for scheduled ListenBrainz discovery
+- Renamed existing Similar Users mode to Similar Users (Quick) for clarity
+
 ## v0.22.0 - 2026-04-12
 
 ### Added

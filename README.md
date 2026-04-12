@@ -9,7 +9,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-1630%2B_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1650%2B_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Music discovery for your *arr stack.** Connect your listening sources, pick an AI provider, and Digarr turns that into a taste profile, a recommendation pipeline, and a queue you can actually work through. You can approve artists into Lidarr or playlist targets, run mood searches in plain English, launch targeted discovery modes, import Spotify Liked Songs to get started faster, schedule recurring discovery, generate playlists, browse your library by genre, and switch the UI and AI-assisted discovery output across 15 shipped languages. It is self-hosted, so the data stays with you.
@@ -39,7 +39,7 @@ Digarr takes signals from up to 7 sources, runs them through an AI-assisted pipe
 Type "something like Boards of Canada but darker" or "upbeat 90s pop for a road trip" and Digarr turns that into a result set. You do not have to translate the idea into filters first.
 
 ### Discovery Modes
-Run focused discovery flows for the currently shipped modes: ListenBrainz, Release Radar, and Similar Artist Web. Labels and Artist Relationships stay visible in the UI so you can see what is planned, but they are marked unavailable and rejected server-side until they have real implementations. Available discovery modes can be saved as subscriptions, and those subscriptions now reuse the same provider/fallback path as the manual run you configured.
+Run focused discovery flows for the currently shipped modes: ListenBrainz (Artist Radio, User Radio, Similar Users Quick and Deep), Release Radar, and Similar Artist Web. Labels and Artist Relationships stay visible in the UI so you can see what is planned, but they are marked unavailable and rejected server-side until they have real implementations. Available discovery modes can be saved as subscriptions, and those subscriptions now reuse the same provider/fallback path as the manual run you configured.
 
 ### Auto-Playlists
 Build playlists from approved recommendations and send them to Navidrome, Jellyfin, Emby, Plex, or Spotify, or export them as M3U/XSPF. The built-in playlist types are Weekly Digest, Genre Focus, Mood Mix, and Rediscover.
@@ -63,7 +63,7 @@ Search across Spotify, Deezer, MusicBrainz, TIDAL, and Bandcamp in one pass. Dig
 - **8 data sources:** ListenBrainz, Last.fm, Spotify (OAuth), Deezer (OAuth), Plex, Jellyfin, Emby, and Discogs
 - **Smart scoring:** weighted composite scoring across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity
 - **Auto-approve:** send high-scoring recommendations to your targets automatically
-- **Discovery modes:** manual and subscription flows for ListenBrainz, Release Radar, and Similar Artist Web, with unavailable planned modes exposed in metadata but blocked from execution until they ship
+- **Discovery modes:** manual and subscription flows for ListenBrainz (Artist Radio, User Radio, Similar Users Quick/Deep), Release Radar, and Similar Artist Web, with unavailable planned modes exposed in metadata but blocked from execution until they ship
 - **Subscriptions:** scheduled discovery from discovery modes, Spotify Liked Songs, playlists and charts, Deezer favorites, followed artists and Flow, Last.fm tags and charts, ListenBrainz feeds, genre searches, and similar-artist seeds
 - **Genre deep dive:** browse by genre with Recommended, Trending, and Deep Cuts tabs
 - **Library sync and reconciliation:** background artist and album sync, per-source status, album sync coverage, unreconciled artist and album review, album coverage badges on recommendation cards, and 6 automated health checks with one-click fixes
@@ -85,7 +85,7 @@ Connect external services to unlock discovery feeds, library sync, playlist expo
 
 | Service | Discovery | Subscriptions | Library Sync | Playlist Export | Import |
 |---------|-----------|--------------|-------------|----------------|--------|
-| ListenBrainz | Radio (Artist, Tag, User), Similar Users | Weekly Jams, Fresh Releases, Artist Radio, Tag Radio, Similar Users | - | - | - |
+| ListenBrainz | Artist Radio, User Radio, Similar Users (Quick), Similar Users (Deep) | Weekly Jams, Fresh Releases, Artist Radio, Similar Users | - | - | - |
 | Spotify | - | Liked Songs, Charts, Playlist | - | Yes | Playlist |
 | Deezer | - | Favorites, Followed, Flow | - | - | Favorites, Followed, Playlists |
 | Last.fm | - | Charts, Tag Radio | - | - | - |

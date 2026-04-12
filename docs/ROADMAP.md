@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-12 | Current: v0.22.0
+> Updated: 2026-04-12 | Current: v0.23.0
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -37,7 +37,7 @@ Committed direction, roughly in priority order.
 ### Discovery
 
 - Deezer favorites import
-- Deeper ListenBrainz integration (radio, fresh releases, stronger similar-users coverage)
+- ~~Deeper ListenBrainz integration (radio, similar-users coverage)~~ shipped in v0.23.0; tag radio deferred (LB API returns recordings, needs MB resolution)
 - Label-catalog discovery mode implementation
 - Artist-relationship discovery mode implementation
 
@@ -99,6 +99,12 @@ Low confidence. Would build only with real demand.
 - Native mobile apps (Android/iOS) -- PWA is already installable; native value is mostly reliable push notifications
 
 ## Recently Shipped
+
+### v0.23.0
+
+- Deeper ListenBrainz radio discovery: Artist Radio, User Radio, and Similar Users (Deep) modes
+- Artist Radio and Similar Users subscription feed types for scheduled LB discovery
+- Existing Similar Users mode renamed to Similar Users (Quick)
 
 ### v0.22.0
 
