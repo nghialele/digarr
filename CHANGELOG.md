@@ -2,6 +2,13 @@
 
 All notable user-facing changes are documented here.
 
+## v0.24.4 - 2026-04-12
+
+### Fixed
+
+- Discovery mode cards, field labels, availability notices, and monitoring options now use the active locale across all shipped languages
+- Job and system health "last run" relative times now follow the active locale instead of always showing English `ago`
+
 ## v0.24.3 - 2026-04-12
 
 ### Fixed
