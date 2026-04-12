@@ -4,6 +4,8 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.25.0 - 2026-04-13
+
 ### Added
 
 - Settings > Targets now supports creating `slskd` download targets, including an optional linked Lidarr target for combined approvals
