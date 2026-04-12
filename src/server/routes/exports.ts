@@ -28,6 +28,15 @@ const EXPORTERS: Record<string, (recs: ExportableRecommendation[]) => string> = 
   xspf: exportToXspf,
 }
 
+function parseOptionalInteger(value: string | undefined, field: string): number | undefined {
+  if (!value) return undefined
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed)) {
+    throw new Error(`Invalid ${field}: ${value}`)
+  }
+  return parsed
+}
+
 export function exportRoutes(deps: ExportDeps) {
   const router = new Hono<HonoEnv>()
 
@@ -39,11 +48,17 @@ export function exportRoutes(deps: ExportDeps) {
 
     const userId = c.get('userId')
     const query = c.req.query()
+    let batchId: number | undefined
+    try {
+      batchId = parseOptionalInteger(query.batchId, 'batchId')
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400)
+    }
     const filters: ListRecommendationsFilters = {
       userId,
       limit: 10000, // Export all matching
       status: query.status,
-      batchId: query.batchId ? Number(query.batchId) : undefined,
+      batchId,
     }
 
     const result = await deps.listRecommendations(filters)

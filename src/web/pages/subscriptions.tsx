@@ -77,8 +77,6 @@ function runStatus(
   return { label: t('common.done'), className: 'text-approve' }
 }
 
-// RunHistoryPanel
-
 function RunHistoryPanel({ subscriptionId }: { subscriptionId: number }) {
   const { locale, t } = useI18n()
   const { data: runs, isLoading } = useQuery({
@@ -149,8 +147,6 @@ function RunHistoryPanel({ subscriptionId }: { subscriptionId: number }) {
   )
 }
 
-// SubscriptionCard
-
 function SubscriptionCard({
   sub,
   nextRun,
@@ -188,9 +184,7 @@ function SubscriptionCard({
 
   return (
     <div className="bg-surface border border-border rounded-lg">
-      {/* Header */}
       <div className="p-4 flex items-start gap-3">
-        {/* Expand chevron */}
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}

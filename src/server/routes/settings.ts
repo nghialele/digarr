@@ -1,8 +1,9 @@
+import { lookup } from 'node:dns/promises'
 import { Hono } from 'hono'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
-import { sendWebhook } from '@/core/notifications'
+import { isPrivateIp, isPrivateUrl, sendWebhook } from '@/core/notifications'
 import { errMsg, isHttpUrl } from '@/core/validation'
 import { getUserConnections, updateUserConnections } from '@/db/queries/users'
 import type { Preferences } from '@/db/schema'
@@ -59,6 +60,32 @@ function mergePreferenceUpdate(
   }
 
   return merged
+}
+
+async function validatePublicServiceUrl(
+  url: string,
+  label: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!isHttpUrl(url)) {
+    return { ok: false, message: `${label} must start with http:// or https://` }
+  }
+  if (isCloudMetadata(url)) {
+    return { ok: false, message: 'Cloud metadata endpoints are not allowed' }
+  }
+  if (isPrivateUrl(url)) {
+    return { ok: false, message: `${label} must not point to a private or internal address` }
+  }
+
+  try {
+    const { address } = await lookup(new URL(url).hostname)
+    if (isPrivateIp(address)) {
+      return { ok: false, message: `${label} resolves to a private/internal IP` }
+    }
+  } catch {
+    return { ok: false, message: `Could not resolve ${label.toLowerCase()} hostname` }
+  }
+
+  return { ok: true }
 }
 
 /** Strip global connection fields that should not leak to non-admin users. */
@@ -238,6 +265,22 @@ export function settingsRoutes(deps: AppDependencies) {
       return c.json({ error: 'Admin access required to modify global settings' }, 403)
     }
 
+    if (!isAdmin) {
+      for (const [field, label] of [
+        ['plexUrl', 'Plex URL'],
+        ['jellyfinUrl', 'Jellyfin URL'],
+        ['embyUrl', 'Emby URL'],
+      ] as const) {
+        const url = userUpdate[field]
+        if (typeof url === 'string' && url) {
+          const validation = await validatePublicServiceUrl(url, label)
+          if (!validation.ok) {
+            return c.json({ error: validation.message }, 400)
+          }
+        }
+      }
+    }
+
     if (userId && Object.keys(userUpdate).length > 0) {
       await updateUserConnections(deps.db, userId, userUpdate)
     }
@@ -279,25 +322,10 @@ export function settingsRoutes(deps: AppDependencies) {
   router.post('/api/settings/test/:service', async (c) => {
     const service = c.req.param('service')
     const body = await c.req.json()
-
-    // SSRF mitigation: reject non-HTTP URLs before they reach service clients
-    for (const field of ['url', 'baseUrl'] as const) {
-      const val = (body as Record<string, unknown>)[field]
-      if (typeof val === 'string' && val && !isHttpUrl(val)) {
-        return c.json({ success: false, message: 'URL must start with http:// or https://' }, 400)
-      }
-      if (typeof val === 'string' && val && isCloudMetadata(val)) {
-        return c.json({ success: false, message: 'Cloud metadata endpoints are not allowed' }, 400)
-      }
-    }
-
-    // Fall back to stored credentials when the request sends empty keys
-    const stored = await deps.getSettings()
     const testUserId = c.get('userId')
-    const userConns = testUserId ? await getUserConnections(deps.db, testUserId) : null
 
-    // Admin-only services: lidarr, ai -- only enforced when user sessions are active
-    if (testUserId && (service === 'lidarr' || service === 'ai')) {
+    // Admin-only services: lidarr, ai, oidc -- only enforced when user sessions are active
+    if (testUserId && (service === 'lidarr' || service === 'ai' || service === 'oidc')) {
       const isAdmin = await resolveAdmin(
         testUserId,
         deps.getUserById,
@@ -308,6 +336,10 @@ export function settingsRoutes(deps: AppDependencies) {
         return c.json({ success: false, message: 'Admin access required' }, 403)
       }
     }
+
+    // Fall back to stored credentials when the request sends empty keys
+    const stored = await deps.getSettings()
+    const userConns = testUserId ? await getUserConnections(deps.db, testUserId) : null
 
     switch (service) {
       case 'lidarr': {
@@ -437,17 +469,11 @@ export function settingsRoutes(deps: AppDependencies) {
         const issuerUrl = body.issuerUrl || (stored?.oidcIssuerUrl as string) || ''
         const clientId = body.clientId || (stored?.oidcClientId as string) || ''
         const clientSecret = body.clientSecret || (stored?.oidcClientSecret as string) || ''
-        if (issuerUrl && !isHttpUrl(issuerUrl)) {
-          return c.json(
-            { success: false, message: 'Issuer URL must start with http:// or https://' },
-            400,
-          )
-        }
-        if (issuerUrl && isCloudMetadata(issuerUrl)) {
-          return c.json(
-            { success: false, message: 'Cloud metadata endpoints are not allowed' },
-            400,
-          )
+        if (issuerUrl) {
+          const validation = await validatePublicServiceUrl(issuerUrl, 'OIDC issuer URL')
+          if (!validation.ok) {
+            return c.json({ success: false, message: validation.message }, 400)
+          }
         }
         if (!issuerUrl || !clientId) {
           return c.json({ success: false, message: 'Issuer URL and Client ID are required' })

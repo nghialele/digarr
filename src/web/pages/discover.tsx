@@ -91,8 +91,6 @@ function SkeletonGrid() {
   )
 }
 
-// Empty state
-
 function EmptyState({ filter }: { filter: FilterTab }) {
   const { t } = useI18n()
   if (filter === 'all') {
@@ -146,8 +144,6 @@ function EmptyState({ filter }: { filter: FilterTab }) {
     </div>
   )
 }
-
-// View mode icons (inline SVG)
 
 function GridIcon() {
   return (
@@ -212,8 +208,6 @@ function StackIcon() {
     </svg>
   )
 }
-
-// Feedback insights
 
 function FeedbackInsights() {
   const { t } = useI18n()

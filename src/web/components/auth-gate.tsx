@@ -24,6 +24,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [version, setVersion] = useState<string>()
 
   useEffect(() => {
+    async function validateToken(token: string): Promise<boolean> {
+      const res = await fetch('/api/auth/validate', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      return res.ok
+    }
+
     async function checkAuth() {
       try {
         // Handle OIDC callback -- token or error passed in URL fragment (#)
@@ -64,11 +71,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
         const stored = getStoredToken()
         if (stored) {
-          // Verify stored token against a protected endpoint
-          const res = await fetch('/api/setup/status', {
-            headers: { Authorization: `Bearer ${stored}` },
-          })
-          if (res.ok) {
+          if (await validateToken(stored)) {
             setState('authenticated')
             return
           }
@@ -165,8 +168,7 @@ function LoginForm({
       setError(t('auth.tokenRequired'))
       return
     }
-    // Verify the token against a protected endpoint
-    const res = await fetch('/api/setup/status', {
+    const res = await fetch('/api/auth/validate', {
       headers: { Authorization: `Bearer ${token.trim()}` },
     })
     if (res.status === 401) {

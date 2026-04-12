@@ -71,8 +71,6 @@ function detectSource(track: PlaylistTrackRow): string {
   return 'local'
 }
 
-// Skeleton loader
-
 function DetailSkeleton() {
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
@@ -93,8 +91,6 @@ function DetailSkeleton() {
     </div>
   )
 }
-
-// Track row
 
 function TrackRow({ track, index }: { track: PlaylistTrackRow; index: number }) {
   const { t } = useI18n()
@@ -123,8 +119,6 @@ function TrackRow({ track, index }: { track: PlaylistTrackRow; index: number }) 
     </div>
   )
 }
-
-// Header actions
 
 function PlaylistActions({
   playlist,

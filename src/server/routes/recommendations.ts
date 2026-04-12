@@ -15,6 +15,15 @@ type ApproveResult = {
   lidarrError?: string
 }
 
+function parseOptionalInteger(value: string | undefined, field: string): number | undefined {
+  if (value === undefined) return undefined
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed)) {
+    throw new Error(`Invalid ${field}: ${value}`)
+  }
+  return parsed
+}
+
 /** Shared approve-to-target logic used by both single and bulk approve. */
 async function approveToTargets(
   artist: { mbid: string; name: string },
@@ -131,9 +140,15 @@ export function recommendationRoutes(deps: AppDependencies) {
   router.get('/api/recommendations', async (c) => {
     const query = c.req.query()
     const userId = c.get('userId')
+    let batchId: number | undefined
+    try {
+      batchId = parseOptionalInteger(query.batchId, 'batchId')
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400)
+    }
     const filters = {
       status: query.status,
-      batchId: query.batchId !== undefined ? Number(query.batchId) : undefined,
+      batchId,
       userId,
       decades: query.decades || undefined,
       sort: query.sort as 'score_desc' | 'score_asc' | 'created_desc' | 'acted_on_desc' | undefined,
@@ -209,6 +224,12 @@ export function recommendationRoutes(deps: AppDependencies) {
 
       const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
       const effectiveTargets = targetId ? targets.filter((t) => t.id === targetId) : targets
+      if (targetId && effectiveTargets.length === 0) {
+        return c.json({ error: `Unknown targetId: ${targetId}` }, 400)
+      }
+      if (targetId && !effectiveTargets.some((t) => t.capabilities?.includes('addArtist'))) {
+        return c.json({ error: `Target does not support artist approval: ${targetId}` }, 400)
+      }
 
       // Pre-warm SkyHook if any Lidarr target exists
       if (
@@ -298,6 +319,12 @@ export function recommendationRoutes(deps: AppDependencies) {
     // Approve: route through targets
     const targets = userId ? await deps.getEnabledTargetsForUser(userId) : []
     const effectiveTargets = targetId ? targets.filter((t) => t.id === targetId) : targets
+    if (targetId && effectiveTargets.length === 0) {
+      return c.json({ error: `Unknown targetId: ${targetId}` }, 400)
+    }
+    if (targetId && !effectiveTargets.some((t) => t.capabilities?.includes('addArtist'))) {
+      return c.json({ error: `Target does not support artist approval: ${targetId}` }, 400)
+    }
 
     const addOptions = await buildAddOptions(deps, userId, {
       qualityProfileId: qpOverride,

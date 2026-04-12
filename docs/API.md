@@ -17,6 +17,7 @@ Admin-only endpoints return 403 for non-admin users.
 | POST | `/api/auth/logout` | Yes | Invalidate current session |
 | GET | `/api/auth/status` | No | Server auth status, OIDC config, version |
 | GET | `/api/auth/me` | Yes | Current user profile |
+| GET | `/api/auth/validate` | Yes | Lightweight token/session validity check. Returns `204` when valid |
 | PATCH | `/api/auth/me/locale` | Yes | Update the saved user locale. Session auth only. |
 | POST | `/api/auth/change-password` | Yes | Change password. Invalidates all sessions. Rate limited: 5/min |
 | GET | `/api/auth/me/preferences` | Yes | Get merged user preferences |
@@ -56,6 +57,8 @@ Setup validation rules:
 - `aiProvider` and `aiModel` are required
 - Lidarr is optional, but `lidarrUrl` and `lidarrApiKey` must be provided together when used
 - Emby is optional, but `embyUrl`, `embyApiKey`, and `embyUserId` must be provided together when used
+- When Lidarr is provided during setup, Digarr auto-creates the default Lidarr target for the first user
+- When Emby is provided during setup, Digarr stores the per-user Emby connection and auto-creates an Emby playlist target
 
 **POST /api/setup/complete** body:
 ```json

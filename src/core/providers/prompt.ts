@@ -157,3 +157,17 @@ export function parseRecommendationResponse(text: string): AiRecommendation[] {
       suggestedAlbum: typeof item.suggestedAlbum === 'string' ? item.suggestedAlbum : undefined,
     }))
 }
+
+export function unwrapRecommendationArrayPayload(text: string): string {
+  try {
+    const parsed: unknown = JSON.parse(text)
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return text
+    }
+
+    const wrappedArray = Object.values(parsed as Record<string, unknown>).find(Array.isArray)
+    return wrappedArray ? JSON.stringify(wrappedArray) : text
+  } catch {
+    return text
+  }
+}
