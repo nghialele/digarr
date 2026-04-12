@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-11 | Current: v0.21.0
+> Updated: 2026-04-12 | Current: v0.22.0
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -99,6 +99,12 @@ Low confidence. Would build only with real demand.
 - Native mobile apps (Android/iOS) -- PWA is already installable; native value is mostly reliable push notifications
 
 ## Recently Shipped
+
+### v0.22.0
+
+- Deezer OAuth2 connect flow and four authenticated data sources (favorites, followed, Flow, playlists)
+- Deezer subscription adapter for scheduled discovery from Deezer feeds
+- Integration capabilities table on Settings and README
 
 ### v0.21.0
 

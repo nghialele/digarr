@@ -9,7 +9,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-1600%2B_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1630%2B_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Music discovery for your *arr stack.** Connect your listening sources, pick an AI provider, and Digarr turns that into a taste profile, a recommendation pipeline, and a queue you can actually work through. You can approve artists into Lidarr or playlist targets, run mood searches in plain English, launch targeted discovery modes, import Spotify Liked Songs to get started faster, schedule recurring discovery, generate playlists, browse your library by genre, and switch the UI and AI-assisted discovery output across 15 shipped languages. It is self-hosted, so the data stays with you.
@@ -60,11 +60,11 @@ Search across Spotify, Deezer, MusicBrainz, TIDAL, and Bandcamp in one pass. Dig
 
 ## Features
 
-- **7 data sources:** ListenBrainz, Last.fm, Spotify (OAuth), Plex, Jellyfin, Emby, and Discogs
+- **8 data sources:** ListenBrainz, Last.fm, Spotify (OAuth), Deezer (OAuth), Plex, Jellyfin, Emby, and Discogs
 - **Smart scoring:** weighted composite scoring across consensus, similarity, genre overlap, AI confidence, feedback learning, and popularity
 - **Auto-approve:** send high-scoring recommendations to your targets automatically
 - **Discovery modes:** manual and subscription flows for ListenBrainz, Release Radar, and Similar Artist Web, with unavailable planned modes exposed in metadata but blocked from execution until they ship
-- **Subscriptions:** scheduled discovery from discovery modes, Spotify Liked Songs, playlists and charts, Last.fm tags and charts, ListenBrainz feeds, genre searches, and similar-artist seeds
+- **Subscriptions:** scheduled discovery from discovery modes, Spotify Liked Songs, playlists and charts, Deezer favorites, followed artists and Flow, Last.fm tags and charts, ListenBrainz feeds, genre searches, and similar-artist seeds
 - **Genre deep dive:** browse by genre with Recommended, Trending, and Deep Cuts tabs
 - **Library sync and reconciliation:** background artist and album sync, per-source status, album sync coverage, unreconciled artist and album review, album coverage badges on recommendation cards, and 6 automated health checks with one-click fixes
 - **Analytics:** approval rates, genre trends, source effectiveness, score distribution, and time-to-act

@@ -2,6 +2,17 @@
 
 All notable user-facing changes are documented here.
 
+## v0.22.0 - 2026-04-12
+
+### Added
+
+- Deezer OAuth2 connect flow with server-side credentials (DEEZER_APP_ID / DEEZER_APP_SECRET)
+- Authenticated Deezer data sources: favorites, followed artists, Flow recommendations, and playlist import
+- Deezer subscription adapter with four feed types for scheduled discovery
+- One-click import buttons for Deezer favorites and followed artists on the Settings page
+- Integration capabilities table on the Settings Connections tab and in the README
+- 19 new i18n keys across all 15 locales for Deezer UI and subscription feeds
+
 ## v0.21.1 - 2026-04-12
 
 ### Fixed
