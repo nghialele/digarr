@@ -63,6 +63,8 @@ TypeScript strict mode is enforced. No `any` -- use `unknown`, generics, or prop
 ```sh
 bun run lint
 bun run typecheck
+bun run test:api-routes
+bun run i18n:check
 bun run test         # run once
 bun run test:watch   # watch mode
 bun run test:e2e     # Playwright browser tests (needs dev servers running)
@@ -77,11 +79,11 @@ For route, workflow, or UI changes, run `bun run test:e2e` before opening a PR. 
 
 ## Submitting a PR
 
-1. Fork and create a branch: `git checkout -b feat/my-thing`
+1. Create a branch from `main`: `git checkout -b feat/my-thing`
 2. Make your changes, keeping commits focused
-3. Confirm `lint`, `typecheck`, and `test` all pass
+3. Confirm `bun run lint`, `bun run typecheck`, `bun run test`, `bun run test:api-routes`, and `bun run i18n:check` all pass
 4. Run `bun run test:e2e` if your change affects routes, workflows, or UI behavior
-5. Open a PR against `main` -- fill in the template
+5. Open a PR against `main` and fill in the template
 6. A maintainer will review; be ready to iterate
 
 ---

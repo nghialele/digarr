@@ -1,7 +1,11 @@
 import OpenAI from 'openai'
 import type { AiRecommendation, TasteProfile } from '@/core/types'
 import { errMsg } from '@/core/validation'
-import { buildRecommendationPrompt, parseRecommendationResponse } from './prompt'
+import {
+  buildRecommendationPrompt,
+  parseRecommendationResponse,
+  unwrapRecommendationArrayPayload,
+} from './prompt'
 import type { RecommendationProvider } from './types'
 
 const DEFAULT_MODEL = 'gpt-5.4-mini'
@@ -36,23 +40,7 @@ export class OpenAIProvider implements RecommendationProvider {
       throw new Error('Empty response from OpenAI API')
     }
 
-    // OpenAI json_object mode returns a JSON object; check for wrapped array
-    let textToParse = content
-    try {
-      const parsed: unknown = JSON.parse(content)
-      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        const obj = parsed as Record<string, unknown>
-        // Look for the array key (commonly "recommendations" or first array-valued key)
-        const arrayKey = Object.keys(obj).find((k) => Array.isArray(obj[k]))
-        if (arrayKey) {
-          textToParse = JSON.stringify(obj[arrayKey])
-        }
-      }
-    } catch {
-      // Fall through to parseRecommendationResponse which handles various formats
-    }
-
-    return parseRecommendationResponse(textToParse)
+    return parseRecommendationResponse(unwrapRecommendationArrayPayload(content))
   }
 
   async testConnection(): Promise<{ success: boolean; message: string }> {

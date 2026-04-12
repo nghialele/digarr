@@ -2,6 +2,20 @@
 
 All notable user-facing changes are documented here.
 
+## v0.24.3 - 2026-04-12
+
+### Fixed
+
+- Stored API tokens are now validated against an authenticated auth endpoint instead of the public setup status route
+- Recommendation approval and export routes now reject invalid `batchId` values, and approval to an unknown target now returns a clear `400` instead of a false success
+- Non-admin users can no longer save private or internal Plex, Jellyfin, or Emby URLs that would later be used for server-side requests
+- OIDC connection tests are now admin-only and reject private or internal issuer URLs
+
+### Changed
+
+- OpenAI and OpenAI-compatible providers now share the same wrapped JSON response unwrapping helper
+- README, API docs, contributing notes, and screenshots were refreshed to match the current setup and integration surface
+
 ## v0.24.2 - 2026-04-12
 
 ### Fixed

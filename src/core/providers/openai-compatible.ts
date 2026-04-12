@@ -1,6 +1,10 @@
 import type { AiRecommendation, TasteProfile } from '@/core/types'
 import { errMsg } from '@/core/validation'
-import { buildRecommendationPrompt, parseRecommendationResponse } from './prompt'
+import {
+  buildRecommendationPrompt,
+  parseRecommendationResponse,
+  unwrapRecommendationArrayPayload,
+} from './prompt'
 import type { RecommendationProvider } from './types'
 
 export class OpenAICompatibleProvider implements RecommendationProvider {
@@ -46,21 +50,7 @@ export class OpenAICompatibleProvider implements RecommendationProvider {
       }
       const text = data.choices?.[0]?.message?.content
       if (!text) throw new Error('Empty response')
-
-      // OpenAI-compatible endpoints may wrap arrays in objects
-      let parsed: unknown
-      try {
-        parsed = JSON.parse(text)
-      } catch {
-        return parseRecommendationResponse(text)
-      }
-
-      if (Array.isArray(parsed)) {
-        return parseRecommendationResponse(text)
-      }
-      const values = Object.values(parsed as Record<string, unknown>)
-      const arr = values.find(Array.isArray)
-      return parseRecommendationResponse(arr ? JSON.stringify(arr) : text)
+      return parseRecommendationResponse(unwrapRecommendationArrayPayload(text))
     } finally {
       clearTimeout(timer)
     }

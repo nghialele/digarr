@@ -269,7 +269,8 @@ function SourceScores({
   return (
     <div className="bg-surface border border-border rounded-lg p-4 space-y-2.5">
       {sources.map((s) => {
-        const label = SOURCE_LABELS[s.source] ? t(SOURCE_LABELS[s.source]!) : s.source
+        const sourceLabelKey = SOURCE_LABELS[s.source]
+        const label = sourceLabelKey ? t(sourceLabelKey) : s.source
         return (
           <div key={s.source} className="flex items-center gap-3">
             <span className="w-28 text-sm text-text truncate shrink-0" title={label}>

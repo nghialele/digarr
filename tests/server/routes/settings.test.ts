@@ -1,9 +1,14 @@
 // @vitest-environment node
+import { lookup } from 'node:dns/promises'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearAllSessions, createSession } from '@/core/sessions'
 import type { SettingsRow } from '@/db/queries/settings'
 import type { AppDependencies } from '@/server'
 import { createApp } from '@/server'
+
+vi.mock('node:dns/promises', () => ({
+  lookup: vi.fn(),
+}))
 
 // The real ListenBrainz and Last.fm clients hit public APIs when testConnection()
 // is called. Those network round-trips collide with vitest's 5s default timeout
@@ -410,6 +415,75 @@ describe('PATCH /api/settings', () => {
     })
     expect(res.status).toBe(403)
   })
+
+  it('rejects private media-server URLs for non-admin users', async () => {
+    await clearAllSessions()
+    await createSession(7, 'user-session-token')
+
+    const dbWithUpdate = {
+      execute: vi.fn(async () => []),
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => Promise.resolve()),
+        })),
+      })),
+      select: vi.fn(() => ({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([]),
+      })),
+    } as unknown as AppDependencies['db']
+
+    const app = createApp(
+      makeDeps({
+        db: dbWithUpdate,
+        getUserCount: vi.fn(async () => 1),
+        getUserById: vi.fn(async () => ({
+          id: 7,
+          username: 'user7',
+          isAdmin: false,
+          preferences: null,
+          email: null,
+          oidcSubject: null,
+          authProvider: 'local',
+          listenbrainzUsername: null,
+          listenbrainzToken: null,
+          lastfmUsername: null,
+          lastfmApiKey: null,
+          plexUrl: null,
+          plexToken: null,
+          jellyfinUrl: null,
+          jellyfinApiKey: null,
+          jellyfinUserId: null,
+          embyUrl: null,
+          embyApiKey: null,
+          embyUserId: null,
+          discogsToken: null,
+          discogsUsername: null,
+          createdAt: new Date(),
+        })),
+      }),
+    )
+
+    const res = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer user-session-token',
+      },
+      body: JSON.stringify({
+        embyUrl: 'http://127.0.0.1:8096',
+        embyApiKey: 'secret',
+        embyUserId: 'user-1',
+      }),
+    })
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: 'Emby URL must not point to a private or internal address',
+    })
+    expect(dbWithUpdate.update).not.toHaveBeenCalled()
+  })
 })
 
 describe('POST /api/settings/test/:service', () => {
@@ -489,6 +563,79 @@ describe('POST /api/settings/test/:service', () => {
       body: JSON.stringify({ url: 'http://lidarr:8686', apiKey: 'key' }),
     })
     expect(res.status).toBe(403)
+  })
+
+  it('requires admin access for OIDC connection tests', async () => {
+    await clearAllSessions()
+    await createSession(7, 'non-admin-oidc-token')
+
+    const app = createApp(
+      makeDeps({
+        getUserCount: vi.fn(async () => 1),
+        getUserById: vi.fn(async () => ({
+          id: 7,
+          username: 'user7',
+          isAdmin: false,
+          preferences: null,
+          email: null,
+          oidcSubject: null,
+          authProvider: 'local',
+          listenbrainzUsername: null,
+          listenbrainzToken: null,
+          lastfmUsername: null,
+          lastfmApiKey: null,
+          plexUrl: null,
+          plexToken: null,
+          jellyfinUrl: null,
+          jellyfinApiKey: null,
+          jellyfinUserId: null,
+          embyUrl: null,
+          embyApiKey: null,
+          embyUserId: null,
+          discogsToken: null,
+          discogsUsername: null,
+          createdAt: new Date(),
+        })),
+      }),
+    )
+
+    const res = await app.request('/api/settings/test/oidc', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer non-admin-oidc-token',
+      },
+      body: JSON.stringify({
+        issuerUrl: 'https://issuer.example',
+        clientId: 'client-id',
+      }),
+    })
+
+    expect(res.status).toBe(403)
+    await expect(res.json()).resolves.toEqual({
+      success: false,
+      message: 'Admin access required',
+    })
+  })
+
+  it('rejects OIDC issuers that resolve to private IPs', async () => {
+    vi.mocked(lookup).mockResolvedValue({ address: '127.0.0.1', family: 4 })
+
+    const app = createApp(makeDeps())
+    const res = await app.request('/api/settings/test/oidc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        issuerUrl: 'https://oidc.example',
+        clientId: 'client-id',
+      }),
+    })
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      success: false,
+      message: 'OIDC issuer URL resolves to a private/internal IP',
+    })
   })
 })
 

@@ -36,7 +36,7 @@ All screenshots use the Youtarr theme.
 
 ## Discovery Modes
 
-No committed screenshot yet. This page shipped in `v0.20.0` with ListenBrainz, Release Radar, and Similar Artist Web runs, plus unavailable placeholders for Labels and Artist Relationships.
+No committed screenshot yet. This page now includes ListenBrainz Artist Radio, User Radio, Tag Radio, Similar Users Quick/Deep, plus Release Radar and Similar Artist Web. Labels and Artist Relationships still appear as unavailable placeholders until those modes ship.
 
 ## Library Health
 

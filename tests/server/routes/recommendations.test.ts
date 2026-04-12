@@ -240,6 +240,15 @@ describe('GET /api/recommendations', () => {
       expect.objectContaining({ status: 'pending', limit: 5, offset: 10 }),
     )
   })
+
+  it('returns 400 for an invalid batchId filter', async () => {
+    const listRecommendations = vi.fn(async () => ({ items: [], total: 0 }))
+    const app = createApp(makeDeps({ listRecommendations }))
+    const res = await app.request('/api/recommendations?batchId=not-a-number')
+
+    expect(res.status).toBe(400)
+    expect(listRecommendations).not.toHaveBeenCalled()
+  })
 })
 
 describe('GET /api/recommendations/:id', () => {
@@ -410,6 +419,31 @@ describe('PATCH /api/recommendations/:id', () => {
       }),
     )
   })
+
+  it('returns 400 when targetId does not match an enabled target', async () => {
+    const app = createApp(
+      makeDeps({
+        getEnabledTargetsForUser: vi.fn().mockResolvedValue([
+          {
+            id: 'lidarr-1',
+            name: 'Lidarr',
+            type: 'lidarr',
+            capabilities: ['addArtist'],
+            addArtist: vi.fn(),
+          },
+        ]),
+      }),
+    )
+
+    const res = await app.request('/api/recommendations/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+      body: JSON.stringify({ status: 'approved', targetId: 'missing-target' }),
+    })
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: 'Unknown targetId: missing-target' })
+  })
 })
 
 describe('POST /api/recommendations/bulk', () => {
@@ -447,6 +481,31 @@ describe('POST /api/recommendations/bulk', () => {
       body: JSON.stringify({ ids: [], action: 'reject' }),
     })
     expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when bulk approve targetId does not match an enabled target', async () => {
+    const app = createApp(
+      makeDeps({
+        getEnabledTargetsForUser: vi.fn().mockResolvedValue([
+          {
+            id: 'lidarr-1',
+            name: 'Lidarr',
+            type: 'lidarr',
+            capabilities: ['addArtist'],
+            addArtist: vi.fn(),
+          },
+        ]),
+      }),
+    )
+
+    const res = await app.request('/api/recommendations/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+      body: JSON.stringify({ ids: [1], action: 'approve', targetId: 'missing-target' }),
+    })
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: 'Unknown targetId: missing-target' })
   })
 })
 

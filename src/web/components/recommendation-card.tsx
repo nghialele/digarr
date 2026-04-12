@@ -56,8 +56,6 @@ type RecommendationCardProps = {
   onApproveToTarget?: (recId: number, targetId: string) => void
 }
 
-// Source dot config
-
 const SOURCE_COLORS: Record<string, { label: string; color: string }> = {
   listenbrainz: { label: 'LB', color: 'var(--color-svc-listenbrainz)' },
   lastfm: { label: 'LFM', color: 'var(--color-svc-lastfm)' },
@@ -101,8 +99,6 @@ function formatSourceLabel(sourceKey: string, t: (key: MessageKey) => string): s
       return sourceKey
   }
 }
-
-// Status display
 
 function StatusBadge({
   status,
@@ -148,8 +144,6 @@ function StatusBadge({
   return null
 }
 
-// Genre pills
-
 function GenrePills({
   genres,
   max = 4,
@@ -182,8 +176,6 @@ function GenrePills({
     </div>
   )
 }
-
-// Target-aware approve dropdown
 
 import { canApproveArtistToTarget, TargetIcon, targetActionLabel } from './target-utils'
 

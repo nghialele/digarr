@@ -3,14 +3,10 @@ import type { ServiceTestResult } from '@/core/types'
 export type LibrarySourceCapability = 'listArtists' | 'listAlbums'
 
 export type LibraryArtist = {
-  /** Plex ratingKey, Jellyfin Item ID, Lidarr id (as a string) */
   sourceArtistId: string
   name: string
-  /** Populated when the source has a native MBID for this artist */
   mbid?: string
-  /** Raw genres from the source -- no reconciliation */
   genres?: string[]
-  /** Optional: source-reported album titles for Step 5 disambiguation */
   knownAlbumTitles?: string[]
 }
 
@@ -18,7 +14,6 @@ export type LibraryAlbum = {
   sourceAlbumId: string
   sourceArtistId: string
   title: string
-  /** Album release-group MBID if the source has it */
   mbid?: string
   releaseYear?: number
   primaryType?: 'Album' | 'EP' | 'Single' | 'Compilation' | 'Live' | 'Other'
@@ -38,11 +33,9 @@ export type LibraryAlbum = {
 export type MbidQuality = 'high' | 'low'
 
 export interface LibrarySource {
-  /** 'lidarr' | 'plex' | 'jellyfin' | 'emby' */
   id: string
   name: string
   capabilities: LibrarySourceCapability[]
-  /** null = global config, non-null = per-user */
   userId: number | null
   mbidQuality: MbidQuality
   listArtists(): Promise<LibraryArtist[]>

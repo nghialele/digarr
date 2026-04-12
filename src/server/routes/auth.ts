@@ -137,6 +137,14 @@ export function authRoutes(deps: AppDependencies) {
     return c.json(user)
   })
 
+  router.get('/api/auth/validate', (c) => {
+    const userId = c.get('userId')
+    if (!userId) {
+      return c.json({ error: 'Not authenticated' }, 401)
+    }
+    return c.body(null, 204)
+  })
+
   router.patch('/api/auth/me/locale', async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Not authenticated' }, 401)

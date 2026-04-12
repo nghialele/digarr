@@ -101,4 +101,12 @@ describe('export routes', () => {
       expect.objectContaining({ batchId: 5 }),
     )
   })
+
+  it('returns 400 for an invalid batchId filter', async () => {
+    const app = createTestApp()
+    const res = await app.request('/api/exports/json?batchId=not-a-number')
+
+    expect(res.status).toBe(400)
+    expect(mockDeps.listRecommendations).not.toHaveBeenCalled()
+  })
 })

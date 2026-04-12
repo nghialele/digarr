@@ -571,6 +571,25 @@ describe('GET /api/auth/me', () => {
   })
 })
 
+describe('GET /api/auth/validate', () => {
+  it('returns 204 for a valid session token', async () => {
+    const app = createApp(makeDeps({ getUserCount: vi.fn(async () => 1) }))
+
+    await createSession(1, 'session-token')
+    const res = await app.request('/api/auth/validate', {
+      headers: { Authorization: 'Bearer session-token' },
+    })
+
+    expect(res.status).toBe(204)
+  })
+
+  it('returns 401 when unauthenticated', async () => {
+    const app = createApp(makeDeps({ getUserCount: vi.fn(async () => 1) }))
+    const res = await app.request('/api/auth/validate')
+    expect(res.status).toBe(401)
+  })
+})
+
 describe('PATCH /api/auth/me/locale', () => {
   it('updates preferred locale through PATCH /api/auth/me/locale', async () => {
     const updateUserPreferredLocale = vi.fn(async () => {})

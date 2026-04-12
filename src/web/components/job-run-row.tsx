@@ -49,6 +49,8 @@ function jobStats(job: JobRun, t: (key: MessageKey) => string): string {
 export function JobRunRow({ job }: { job: JobRun }) {
   const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
+  const typeLabelKey = TYPE_LABEL_KEYS[job.type]
+  const metadata = job.metadata ?? {}
 
   const statusColor =
     job.status === 'completed'
@@ -84,7 +86,7 @@ export function JobRunRow({ job }: { job: JobRun }) {
                   : '~'}
           </span>
           <span className="text-sm font-medium text-text">
-            {TYPE_LABEL_KEYS[job.type] ? t(TYPE_LABEL_KEYS[job.type]!) : job.type}
+            {typeLabelKey ? t(typeLabelKey) : job.type}
           </span>
           <span className="text-sm text-muted">{jobDescription(job, t)}</span>
           {job.status === 'stuck' && (
@@ -154,11 +156,11 @@ export function JobRunRow({ job }: { job: JobRun }) {
               </div>
             </div>
           )}
-          {Object.keys(job.metadata).length > 0 && (
+          {Object.keys(metadata).length > 0 && (
             <div>
               <strong className="text-muted">{t('jobHistory.metadataLabel')}</strong>
               <pre className="mt-1 overflow-auto rounded bg-surface-alt p-2 text-xs">
-                {JSON.stringify(job.metadata, null, 2)}
+                {JSON.stringify(metadata, null, 2)}
               </pre>
             </div>
           )}
