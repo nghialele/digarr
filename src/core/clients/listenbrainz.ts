@@ -19,6 +19,14 @@ export type SimilarArtist = {
   score: number
 }
 
+export type RadioMode = 'easy' | 'medium' | 'hard'
+
+export type RadioArtist = {
+  name: string
+  mbid: string
+  score: number
+}
+
 // Raw LB response shapes
 type LbTopArtistsResponse = {
   payload: {
@@ -48,6 +56,41 @@ type LbRadioRecording = {
 }
 
 type LbRadioResponse = Record<string, LbRadioRecording[]>
+
+type LbSimilarUser = {
+  user_name: string
+  similarity: number
+}
+
+type LbSimilarUsersResponse = {
+  payload: LbSimilarUser[]
+}
+
+export type SimilarUser = {
+  username: string
+  similarity: number
+}
+
+function extractRadioArtists(res: LbRadioResponse, excludeMbid?: string): RadioArtist[] {
+  const seen = new Set<string>()
+  const artists: RadioArtist[] = []
+  let position = 0
+  for (const recordings of Object.values(res)) {
+    for (const rec of recordings) {
+      if (excludeMbid && rec.similar_artist_mbid === excludeMbid) continue
+      if (seen.has(rec.similar_artist_mbid)) continue
+      seen.add(rec.similar_artist_mbid)
+      position++
+      artists.push({
+        name: rec.similar_artist_name,
+        mbid: rec.similar_artist_mbid,
+        // Position-based decay: ~0.97 for first result, floors at 0.3 (reached at position 24)
+        score: Math.max(0.3, 1 - position * 0.03),
+      })
+    }
+  }
+  return artists
+}
 
 export function createListenBrainzClient(username: string, token: string) {
   const http = createHttpClient({
@@ -103,6 +146,53 @@ export function createListenBrainzClient(username: string, token: string) {
     return artists
   }
 
+  async function getArtistRadio(mbid: string, mode: RadioMode = 'medium'): Promise<RadioArtist[]> {
+    const params = new URLSearchParams({
+      mode,
+      max_similar_artists: '25',
+      max_recordings_per_artist: '2',
+      pop_begin: '0',
+      pop_end: '100',
+    })
+    const res = await http.get<LbRadioResponse>(`/1/lb-radio/artist/${mbid}?${params.toString()}`)
+    return extractRadioArtists(res, mbid)
+  }
+
+  // No direct user radio endpoint exists in the LB API. Instead, get the
+  // user's top artist and run artist radio seeded from it.
+  async function getUserRadio(
+    targetUsername: string,
+    mode: RadioMode = 'medium',
+  ): Promise<RadioArtist[]> {
+    const topArtists = await getTopArtistsForUser(targetUsername, 'month')
+    const seed = topArtists.find((a) => a.mbid)
+    if (!seed?.mbid) return []
+    return getArtistRadio(seed.mbid, mode)
+  }
+
+  async function getSimilarUsers(): Promise<SimilarUser[]> {
+    const res = await http.get<LbSimilarUsersResponse>(`/1/user/${username}/similar-users`)
+    return (res.payload ?? []).map((u) => ({
+      username: u.user_name,
+      similarity: u.similarity,
+    }))
+  }
+
+  async function getTopArtistsForUser(
+    targetUsername: string,
+    range: ListenBrainzRange,
+  ): Promise<TopArtist[]> {
+    const res = await http.get<LbTopArtistsResponse>(
+      `/1/stats/user/${targetUsername}/artists?range=${range}`,
+    )
+    return res.payload.artists.map((a) => ({
+      name: a.artist_name,
+      mbid: a.artist_mbid || undefined,
+      playCount: a.listen_count,
+      source: 'listenbrainz' as const,
+    }))
+  }
+
   async function testConnection(): Promise<ServiceTestResult> {
     try {
       const count = await getListenCount()
@@ -121,6 +211,10 @@ export function createListenBrainzClient(username: string, token: string) {
     getListenCount,
     getListeningActivity,
     getSimilarArtists,
+    getArtistRadio,
+    getUserRadio,
+    getSimilarUsers,
+    getTopArtistsForUser,
     testConnection,
   }
 }
