@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import {
   type AnyPgColumn,
   boolean,
@@ -233,6 +234,56 @@ export const targets = pgTable(
   (table) => ({
     userIdx: index('targets_user_id_idx').on(table.userId),
     typeIdx: index('targets_type_idx').on(table.type),
+  }),
+)
+
+export const SLSKD_ACTIVE_JOB_STATES = [
+  'pending',
+  'searching',
+  'queued',
+  'downloading',
+  'import_pending',
+] as const
+
+export const slskdJobs = pgTable(
+  'slskd_jobs',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    targetId: integer('target_id')
+      .references(() => targets.id, { onDelete: 'cascade' })
+      .notNull(),
+    recommendationId: integer('recommendation_id').references(() => recommendations.id, {
+      onDelete: 'set null',
+    }),
+    sourceType: text('source_type').notNull(),
+    workKey: text('work_key').notNull(),
+    artistMbid: uuid('artist_mbid').notNull(),
+    artistName: text('artist_name').notNull(),
+    releaseGroupMbid: text('release_group_mbid'),
+    releaseTitle: text('release_title').notNull(),
+    lidarrArtistId: integer('lidarr_artist_id'),
+    lidarrAlbumId: integer('lidarr_album_id'),
+    state: text('state').notNull().default('pending'),
+    confidence: real('confidence'),
+    slskdSearchId: text('slskd_search_id'),
+    slskdQueueId: text('slskd_queue_id'),
+    slskdDownloadId: text('slskd_download_id'),
+    selectedResult: jsonb('selected_result').$type<Record<string, unknown> | null>(),
+    lastError: text('last_error'),
+    attempts: integer('attempts').notNull().default(0),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    activeWorkKeyIdx: uniqueIndex('slskd_jobs_active_work_key_idx')
+      .on(table.workKey)
+      .where(
+        sql`${table.state} in ('pending', 'searching', 'queued', 'downloading', 'import_pending')`,
+      ),
+    stateIdx: index('slskd_jobs_state_idx').on(table.state),
+    userStateIdx: index('slskd_jobs_user_state_idx').on(table.userId, table.state),
   }),
 )
 
