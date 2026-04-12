@@ -2,6 +2,13 @@
 
 All notable user-facing changes are documented here.
 
+## v0.24.2 - 2026-04-12
+
+### Fixed
+
+- Translate all remaining hardcoded English strings across 12 UI areas (settings admin, search reasons, mood bar, genre cards, service status, job history, album coverage, integration table, analytics sources)
+- Add proper translations for all 89 new keys across all 15 supported languages
+
 ## v0.24.0 - 2026-04-12
 
 ### Added
