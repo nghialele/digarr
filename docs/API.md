@@ -195,11 +195,15 @@ Locale notes:
 | POST | `/api/subscriptions/import/spotify-liked-songs` | Yes | Create/reuse the helper Spotify Liked Songs subscription and trigger an import run (202) |
 | POST | `/api/subscriptions/import/spotify-playlist` | Yes | Import from a Spotify playlist (accepts URL, URI, or bare ID). Returns 202. |
 | POST | `/api/subscriptions/import/csv` | Yes | Upload CSV of artist names (multipart form, field: `file`, max 1MB, 500 artists). Returns 202. |
+| POST | `/api/subscriptions/import/deezer-favorites` | Yes | Create/reuse Deezer Favorites subscription and trigger import (202) |
+| POST | `/api/subscriptions/import/deezer-followed` | Yes | Create/reuse Deezer Followed Artists subscription and trigger import (202) |
+| GET | `/api/subscriptions/import/deezer-playlists` | Yes | List user's Deezer playlists |
+| POST | `/api/subscriptions/import/deezer-playlists` | Yes | Import from a Deezer playlist (202) |
 | GET | `/api/subscriptions/adapter-types` | Yes | Available adapter types with config schemas |
 | GET | `/api/subscriptions/scheduler` | Yes | Scheduler job status |
 | POST | `/api/subscriptions/bulk-toggle` | Yes | Enable/disable all subscriptions |
 
-**Adapter types**: `genre`, `similar`, `discovery-mode`, `spotify-liked-songs`, `spotify-playlist`, `spotify-charts`, `lastfm-tag`, `lastfm-charts`, `listenbrainz`, `csv-import`
+**Adapter types**: `genre`, `similar`, `discovery-mode`, `spotify-liked-songs`, `spotify-playlist`, `spotify-charts`, `deezer-favorites`, `deezer-followed`, `deezer-flow`, `deezer-playlists`, `lastfm-tag`, `lastfm-charts`, `listenbrainz`, `csv-import`
 
 **POST /api/subscriptions** body:
 ```json

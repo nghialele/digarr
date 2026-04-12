@@ -6,7 +6,7 @@
 
 ## Where We Are
 
-All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, and Emby. Multilingual support is now shipped too: the shell, setup/auth flows, key admin pages, and AI-assisted discovery can all follow the user's selected locale. Discovery mode expansion is still partially shipped: manual and subscription flows are in place, and the currently runnable modes are ListenBrainz, Release Radar, and Similar Artist Web. Labels and Artist Relationships remain planned and are marked unavailable in the UI until they have real integrations. Current focus is download-target breadth and polish on the shipped media-server and internationalization paths.
+All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, and Emby. Multilingual support is fully shipped: all UI strings are translated across 15 locales, and AI-assisted discovery output follows the user's selected language. Deezer OAuth connect with four authenticated data sources (favorites, followed, Flow, playlists) shipped in v0.22.0. Discovery mode expansion is nearly complete: the currently runnable modes are ListenBrainz (Artist Radio, User Radio, Tag Radio, Similar Users Quick/Deep), Release Radar, and Similar Artist Web. Labels and Artist Relationships remain planned and are marked unavailable in the UI until they have real integrations. Current focus is download-target breadth and the remaining two discovery modes.
 
 ## v1 Goals
 
@@ -36,8 +36,8 @@ Committed direction, roughly in priority order.
 
 ### Discovery
 
-- Deezer favorites import
-- ~~Deeper ListenBrainz integration (radio, similar-users coverage)~~ shipped in v0.23.0; tag radio deferred (LB API returns recordings, needs MB resolution)
+- ~~Deezer favorites import~~ shipped in v0.22.0 (OAuth connect + favorites, followed, Flow, playlists)
+- ~~Deeper ListenBrainz integration (radio, similar-users coverage)~~ shipped in v0.23.0; ~~tag radio~~ shipped in v0.24.0 (with recording-artist cache for MB resolution)
 - Label-catalog discovery mode implementation
 - Artist-relationship discovery mode implementation
 
@@ -99,6 +99,13 @@ Low confidence. Would build only with real demand.
 - Native mobile apps (Android/iOS) -- PWA is already installable; native value is mostly reliable push notifications
 
 ## Recently Shipped
+
+### v0.24.0 -- v0.24.2
+
+- Tag Radio discovery mode via ListenBrainz radio (multiple tags, per-tag weights, raw LB syntax, popularity filtering)
+- Tag Radio subscription feed for recurring tag-based discovery
+- Recording-artist cache for MusicBrainz recording-to-artist lookups
+- Full i18n coverage: all remaining hardcoded English strings translated across 15 locales
 
 ### v0.23.0
 

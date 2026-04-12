@@ -9,6 +9,12 @@ All notable user-facing changes are documented here.
 - Translate all remaining hardcoded English strings across 12 UI areas (settings admin, search reasons, mood bar, genre cards, service status, job history, album coverage, integration table, analytics sources)
 - Add proper translations for all 89 new keys across all 15 supported languages
 
+## v0.24.1 - 2026-04-12
+
+### Fixed
+
+- Translate all hardcoded English strings across the main UI surfaces (navigation, dashboard, discover, settings, analytics, job history, playlists, subscriptions, setup wizard, search, genre detail, library health, user management)
+
 ## v0.24.0 - 2026-04-12
 
 ### Added

@@ -9,7 +9,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](deploy/docker/)
-[![Tests](https://img.shields.io/badge/tests-1650%2B_passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1676%2B_passing-brightgreen)]()
 [![Release](https://img.shields.io/github/v/tag/iuliandita/digarr?label=release)](https://github.com/iuliandita/digarr/releases)
 
 **Music discovery for your *arr stack.** Connect your listening sources, pick an AI provider, and Digarr turns that into a taste profile, a recommendation pipeline, and a queue you can actually work through. You can approve artists into Lidarr or playlist targets, run mood searches in plain English, launch targeted discovery modes, import Spotify Liked Songs to get started faster, schedule recurring discovery, generate playlists, browse your library by genre, and switch the UI and AI-assisted discovery output across 15 shipped languages. It is self-hosted, so the data stays with you.
@@ -85,9 +85,9 @@ Connect external services to unlock discovery feeds, library sync, playlist expo
 
 | Service | Discovery | Subscriptions | Library Sync | Playlist Export | Import |
 |---------|-----------|--------------|-------------|----------------|--------|
-| ListenBrainz | Artist Radio, User Radio, Similar Users (Quick), Similar Users (Deep) | Weekly Jams, Fresh Releases, Artist Radio, Similar Users | - | - | - |
-| Spotify | - | Liked Songs, Charts, Playlist | - | Yes | Playlist |
-| Deezer | - | Favorites, Followed, Flow | - | - | Favorites, Followed, Playlists |
+| ListenBrainz | Artist Radio, User Radio, Tag Radio, Similar Users (Quick), Similar Users (Deep) | Weekly Jams, Fresh Releases, Artist Radio, Tag Radio, Similar Users | - | - | - |
+| Spotify | - | Liked Songs, Charts, Playlists | - | Yes | Playlist |
+| Deezer | - | Favorites, Followed, Flow, Playlists | - | - | Favorites, Followed, Playlists |
 | Last.fm | - | Charts, Tag Radio | - | - | - |
 | Lidarr | - | - | Artists, Albums | - | - |
 | Plex | - | - | Artists, Albums | Yes | - |
@@ -137,7 +137,7 @@ You can run the pipeline on a schedule, by hand, through subscriptions for targe
 | Service | Required | Purpose |
 |---------|----------|---------|
 | **Lidarr** | Optional | Music library management + auto-download |
-| **Listening source** | Optional | ListenBrainz, Last.fm, Spotify, Plex, Jellyfin, Emby, or Discogs |
+| **Listening source** | Optional | ListenBrainz, Last.fm, Spotify, Deezer, Plex, Jellyfin, Emby, or Discogs |
 | **AI Provider** | Yes | Anthropic, OpenAI, Gemini, Ollama, or any compatible endpoint |
 | **PostgreSQL** | Yes | Data storage (included in Docker Compose) |
 
