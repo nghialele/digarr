@@ -1,5 +1,7 @@
 import { Cron } from 'croner'
 import { Hono } from 'hono'
+import { createDeezerUserClient } from '@/core/clients/deezer-user'
+import { resolveDeezerToken } from '@/core/deezer-auth'
 import {
   buildDiscoveryModeExecutionContext,
   evaluateDiscoveryModeAvailability,
@@ -488,6 +490,173 @@ export function subscriptionRoutes(deps: AppDependencies) {
     return c.json(
       {
         message: 'Spotify playlist import started',
+        subscriptionId: subscription.id,
+        created: !existing,
+      },
+      202,
+    )
+  })
+
+  router.post('/api/subscriptions/import/deezer-favorites', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const deezerToken = await getOAuthToken(deps.db, userId, 'deezer')
+    if (!deezerToken || deezerToken.accessToken.startsWith('pending:')) {
+      return c.json({ error: 'Deezer is not connected' }, 400)
+    }
+
+    const existingSubs = await deps.subscriptionQueries.getSubscriptionsByUser(userId)
+    const existing = existingSubs.find(
+      (sub) =>
+        sub.sourceType === 'deezer' &&
+        (sub.sourceConfig as Record<string, unknown>).feedType === 'favorites',
+    )
+
+    const subscription =
+      existing ??
+      (await deps.subscriptionQueries.createSubscription({
+        name: 'Deezer Favorites',
+        userId,
+        sourceType: 'deezer',
+        sourceProvider: 'deezer',
+        sourceConfig: { feedType: 'favorites' },
+        cron: '0 6 * * 1',
+        enabled: false,
+        maxArtistsPerRun: 100,
+        action: 'add_to_recommendations',
+        scoringWeightPreset: 'default',
+      }))
+
+    deps.runSubscription(subscription.id).catch((err: unknown) => {
+      console.error('Deezer favorites import failed:', err)
+    })
+
+    return c.json(
+      {
+        message: 'Deezer Favorites import started',
+        subscriptionId: subscription.id,
+        created: !existing,
+      },
+      202,
+    )
+  })
+
+  router.post('/api/subscriptions/import/deezer-followed', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const deezerToken = await getOAuthToken(deps.db, userId, 'deezer')
+    if (!deezerToken || deezerToken.accessToken.startsWith('pending:')) {
+      return c.json({ error: 'Deezer is not connected' }, 400)
+    }
+
+    const existingSubs = await deps.subscriptionQueries.getSubscriptionsByUser(userId)
+    const existing = existingSubs.find(
+      (sub) =>
+        sub.sourceType === 'deezer' &&
+        (sub.sourceConfig as Record<string, unknown>).feedType === 'followed',
+    )
+
+    const subscription =
+      existing ??
+      (await deps.subscriptionQueries.createSubscription({
+        name: 'Deezer Followed Artists',
+        userId,
+        sourceType: 'deezer',
+        sourceProvider: 'deezer',
+        sourceConfig: { feedType: 'followed' },
+        cron: '0 6 * * 1',
+        enabled: false,
+        maxArtistsPerRun: 100,
+        action: 'add_to_recommendations',
+        scoringWeightPreset: 'default',
+      }))
+
+    deps.runSubscription(subscription.id).catch((err: unknown) => {
+      console.error('Deezer followed artists import failed:', err)
+    })
+
+    return c.json(
+      {
+        message: 'Deezer Followed Artists import started',
+        subscriptionId: subscription.id,
+        created: !existing,
+      },
+      202,
+    )
+  })
+
+  router.get('/api/subscriptions/import/deezer-playlists', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    let accessToken: string
+    try {
+      accessToken = await resolveDeezerToken(deps.db, userId)
+    } catch {
+      return c.json({ error: 'Deezer is not connected' }, 400)
+    }
+    const client = createDeezerUserClient(accessToken)
+    const playlists = await client.getPlaylists()
+
+    return c.json({ playlists })
+  })
+
+  router.post('/api/subscriptions/import/deezer-playlists', async (c) => {
+    const userId = c.get('userId')
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const deezerToken = await getOAuthToken(deps.db, userId, 'deezer')
+    if (!deezerToken || deezerToken.accessToken.startsWith('pending:')) {
+      return c.json({ error: 'Deezer is not connected' }, 400)
+    }
+
+    const body = await c.req.json()
+    const playlistIds = (body as Record<string, unknown>).playlistIds
+    if (!Array.isArray(playlistIds) || playlistIds.length === 0) {
+      return c.json({ error: 'playlistIds must be a non-empty array' }, 400)
+    }
+
+    const existingSubs = await deps.subscriptionQueries.getSubscriptionsByUser(userId)
+    const playlistIdsStr = (playlistIds as number[]).join(',')
+    const existing = existingSubs.find(
+      (sub) =>
+        sub.sourceType === 'deezer' &&
+        (sub.sourceConfig as Record<string, unknown>).feedType === 'playlists' &&
+        (sub.sourceConfig as Record<string, unknown>).playlistIds === playlistIdsStr,
+    )
+
+    const subscription =
+      existing ??
+      (await deps.subscriptionQueries.createSubscription({
+        name: 'Deezer Playlist Import',
+        userId,
+        sourceType: 'deezer',
+        sourceProvider: 'deezer',
+        sourceConfig: { feedType: 'playlists', playlistIds: playlistIdsStr },
+        cron: '0 6 * * 1',
+        enabled: false,
+        maxArtistsPerRun: 100,
+        action: 'add_to_recommendations',
+        scoringWeightPreset: 'default',
+      }))
+
+    deps.runSubscription(subscription.id).catch((err: unknown) => {
+      console.error('Deezer playlist import failed:', err)
+    })
+
+    return c.json(
+      {
+        message: 'Deezer Playlist import started',
         subscriptionId: subscription.id,
         created: !existing,
       },
