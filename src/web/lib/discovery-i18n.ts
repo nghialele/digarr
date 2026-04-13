@@ -34,8 +34,8 @@ const REASON_KEY_ALIASES: Record<string, MessageKey> = {
   'Connect a listening source first.': 'discoveryMode.reason.connectListeningSource',
   'Connect ListenBrainz or Last.fm to use this mode.':
     'discoveryMode.reason.connectListenBrainzOrLastfm',
+  'This mode is not implemented yet.': 'discoveryMode.reason.notImplementedYet',
   'Using fallback providers for release discovery.': 'discoveryMode.reason.releaseRadarFallback',
-  'This mode is not shipped yet.': 'discoveryMode.notShippedYet',
 }
 
 function normalizeModeId(modeId: string): string {
@@ -98,7 +98,8 @@ export function translateDiscoveryOption(
 export function translateDiscoveryReason(t: Translate, reason?: string | null): string | null {
   if (!reason) return null
   const key = REASON_KEY_ALIASES[reason]
-  return key ? t(key) : reason
+  if (!key) return reason
+  return translateKnownKey(t, key) ?? reason
 }
 
 export function buildDiscoveryFieldRequiredMessage(

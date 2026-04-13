@@ -46,8 +46,6 @@ vi.mock('@/web/lib/api', () => ({
   listTargets: vi.fn().mockResolvedValue([]),
   exportRecommendations: vi.fn(),
   getUserPreferences: vi.fn().mockResolvedValue({}),
-  getDiscoveryModes: vi.fn().mockResolvedValue({ modes: [] }),
-  runDiscoveryMode: vi.fn(),
   getLidarrProfiles: vi.fn().mockResolvedValue([{ id: 1, name: 'Any' }]),
   getLidarrMetadataProfiles: vi.fn().mockResolvedValue([{ id: 1, name: 'Standard' }]),
   getLidarrRootFolders: vi.fn().mockResolvedValue([{ id: 1, path: '/music', freeSpace: 0 }]),
@@ -169,6 +167,18 @@ describe('DiscoverPage', () => {
     })
 
     expect(screen.getByText('78%')).toBeInTheDocument()
+  })
+
+  it('keeps the recommendation workspace free of discovery mode cards', async () => {
+    setupMockApi()
+    renderWithQuery(<DiscoverPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Artist')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('heading', { name: 'Discovery Modes' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Run discovery' })).not.toBeInTheDocument()
   })
 
   it('shows skeleton cards while loading', () => {

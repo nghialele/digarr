@@ -58,6 +58,7 @@ import {
 import { AnalyticsPage } from './pages/analytics'
 import { Dashboard } from './pages/dashboard'
 import { DiscoverPage } from './pages/discover'
+import { DiscoveryModesPage } from './pages/discovery-modes'
 import { GenreDetailPage } from './pages/genre-detail'
 import { GenresPage } from './pages/genres'
 import JobHistoryPage from './pages/job-history'
@@ -109,7 +110,7 @@ function NavDropdown({
 }: {
   label: string
   icon: React.ReactNode
-  items: { to: string; label: string; icon: React.ReactNode }[]
+  items: { to: string; label: string; icon: React.ReactNode; end?: boolean }[]
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -119,7 +120,9 @@ function NavDropdown({
 
   const isActive = items.some((item) => {
     const path = item.to.split('?')[0]
-    return location.pathname === path || location.pathname.startsWith(`${path}/`)
+    return item.end
+      ? location.pathname === path
+      : location.pathname === path || location.pathname.startsWith(`${path}/`)
   })
 
   return (
@@ -143,6 +146,7 @@ function NavDropdown({
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.end}
               role="menuitem"
               onClick={() => setOpen(false)}
               className={({ isActive: active }) =>
@@ -444,7 +448,14 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   items={[
                     {
                       to: '/discover',
+                      end: true,
                       label: t('nav.recommendations'),
+                      icon: <Compass size={14} />,
+                    },
+                    {
+                      to: '/discover/modes',
+                      end: true,
+                      label: t('nav.discoveryModes'),
                       icon: <Compass size={14} />,
                     },
                     { to: '/genres', label: t('nav.genres'), icon: <Music size={14} /> },
@@ -554,12 +565,24 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </NavLink>
               <NavLink
                 to="/discover"
+                end
                 className={mobileNavLinkClass}
                 onClick={() => setMenuOpen(false)}
               >
                 <span className="flex items-center gap-1.5">
                   <Compass size={14} aria-hidden="true" />
                   {t('nav.discover')}
+                </span>
+              </NavLink>
+              <NavLink
+                to="/discover/modes"
+                end
+                className={mobileNavLinkClass}
+                onClick={() => setMenuOpen(false)}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Compass size={14} aria-hidden="true" />
+                  {t('nav.discoveryModes')}
                 </span>
               </NavLink>
               <NavLink
@@ -702,6 +725,7 @@ function InnerApp() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/discover" element={<DiscoverPage />} />
+              <Route path="/discover/modes" element={<DiscoveryModesPage />} />
               <Route path="/genres" element={<GenresPage />} />
               <Route path="/genres/:slug" element={<GenreDetailPage />} />
               <Route path="/playlists" element={<PlaylistsPage />} />
