@@ -1,12 +1,12 @@
 # Roadmap
 
-> Updated: 2026-04-13 | Current: v0.25.0
+> Updated: 2026-04-13 | Current: v0.26.0
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
 ## Where We Are
 
-All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, and Emby. Multilingual support is fully shipped: all UI strings are translated across 15 locales, and AI-assisted discovery output follows the user's selected language. Deezer OAuth connect with four authenticated data sources (favorites, followed, Flow, playlists) shipped in v0.22.0. Discovery mode expansion is nearly complete: the currently runnable modes are ListenBrainz (Artist Radio, User Radio, Tag Radio, Similar Users Quick/Deep), Release Radar, and Similar Artist Web, now surfaced from Discover -> Discovery Modes instead of embedded on the main Discover page. Labels and Artist Relationships remain planned and stay visible there as unavailable cards with explicit blocking reasons until they have real integrations. Current focus is download-target breadth and the remaining two discovery modes.
+All five v1 exit criteria now pass. Digarr is feature-complete for a v1 release, and the first full library-sync stack is now shipped across Lidarr, Plex, Jellyfin, Emby, and slskd. Multilingual support is fully shipped: all UI strings are translated across 15 locales, and AI-assisted discovery output follows the user's selected language. Deezer OAuth connect with four authenticated data sources (favorites, followed, Flow, playlists) shipped in v0.22.0. Discovery mode expansion is nearly complete: the currently runnable modes are ListenBrainz (Artist Radio, User Radio, Tag Radio, Similar Users Quick/Deep), Release Radar, and Similar Artist Web, now surfaced from Discover -> Discovery Modes instead of embedded on the main Discover page. Labels and Artist Relationships remain planned and stay visible there as unavailable cards with explicit blocking reasons until they have real integrations. Current focus is the remaining two discovery modes and UX polish around review and playback.
 
 ## v1 Goals
 
@@ -40,10 +40,6 @@ Committed direction, roughly in priority order.
 - ~~Deeper ListenBrainz integration (radio, similar-users coverage)~~ shipped in v0.23.0; ~~tag radio~~ shipped in v0.24.0 (with recording-artist cache for MB resolution)
 - Label-catalog discovery mode implementation
 - Artist-relationship discovery mode implementation
-
-### Integrations
-
-- slskd / Soulseek as a download target
 
 ### UX
 
@@ -107,10 +103,15 @@ Low confidence. Would build only with real demand.
 - Recording-artist cache for MusicBrainz recording-to-artist lookups
 - Full i18n coverage: all remaining hardcoded English strings translated across 15 locales
 
-### v0.25.0
+### v0.26.0
 
 - Discovery Modes moved to a dedicated page under the Discover menu so the main Discover view stays focused on recommendation review
 - Unavailable discovery-mode cards now explain why they are blocked, and shipped ListenBrainz radio modes no longer show "not shipped yet"
+
+### v0.25.0
+
+- Settings > Targets now supports creating `slskd` download targets, including an optional linked Lidarr target for combined approvals
+- Linked `slskd` targets now run a background wanted-release worker with import-verified completion, plus admin sync and active-job endpoints
 
 ### v0.23.0
 

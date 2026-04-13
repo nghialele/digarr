@@ -4,6 +4,8 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.26.0 - 2026-04-13
+
 ### Changed
 
 - Discovery Modes now live on their own page under the Discover menu, keeping the main Discover view focused on recommendation review
