@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-13 | Current: v0.26.4
+> Updated: 2026-04-13 | Current: v0.26.5
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -127,6 +127,11 @@ Low confidence. Would build only with real demand.
 
 - Shared forms, dialogs, admin surfaces, and server-side validation errors now respect the selected locale instead of falling back to hardcoded English
 - Locale catalogs now pass stricter quality checks for untranslated English fallbacks and restored native accents or diacritics where they belong
+
+### v0.26.5
+
+- Large library syncs now batch artist and album inserts instead of sending one oversized statement that can exceed database parameter limits
+- The batch sizing targets SQLite-safe parameter ceilings so the same sync path stays portable across database backends
 
 ### v0.25.0
 

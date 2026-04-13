@@ -4,6 +4,13 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.26.5 - 2026-04-13
+
+### Fixed
+
+- Large library syncs now batch `library_artists` and `library_albums` inserts instead of sending a single oversized statement that can exceed database host-parameter limits
+- Library sync batching now sizes inserts against SQLite-compatible parameter ceilings so the write path stays safe across current and future database backends
+
 ## v0.26.4 - 2026-04-13
 
 ### Fixed
