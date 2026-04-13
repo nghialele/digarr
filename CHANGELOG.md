@@ -4,6 +4,19 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.26.2 - 2026-04-13
+
+### Fixed
+
+- Completing setup no longer leaves the app in an unauthenticated zero-user state; public setup routes still work, but registration or login is required once setup is finished
+- Settings now preserve unset secrets instead of masking them as saved credentials, so service status no longer shows false connected states
+- Settings now show Deezer and Emby service icons, and more admin-facing copy is routed through shipped locale keys
+
+### Changed
+
+- README multilingual docs now list all shipped languages and note that translations are machine-generated pending community fixes
+- API docs, roadmap notes, and both CI pipelines were updated to match the current setup and i18n checks
+
 ## v0.26.1 - 2026-04-13
 
 ### Fixed

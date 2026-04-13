@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-13 | Current: v0.26.1
+> Updated: 2026-04-13 | Current: v0.26.2
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -111,6 +111,11 @@ Low confidence. Would build only with real demand.
 
 - Shipped ListenBrainz radio modes now show as available, while placeholder modes stay blocked with explicit reasons
 - Manual discovery-mode runs now preflight Artist Radio seeds, return a `jobId` immediately, and surface quick failures instead of silently stalling behind a success toast
+
+### v0.26.2
+
+- Setup completion now hands cleanly into required registration or login instead of leaving a zero-user auth gap
+- Settings no longer report missing secrets as saved integrations, now show Deezer and Emby icons, and the docs/CI checks were tightened to match the current multilingual surface
 
 ### v0.25.0
 
