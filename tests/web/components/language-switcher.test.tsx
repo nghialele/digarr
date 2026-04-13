@@ -338,7 +338,9 @@ describe('language switcher surfaces', () => {
 
     const switcher = await screen.findByLabelText('Language')
     fireEvent.change(switcher, { target: { value: 'de' } })
-    expect(switcher).toHaveValue('de')
+    await waitFor(() => {
+      expect(switcher).toHaveValue('de')
+    })
 
     userRequest.resolve({
       id: 1,
