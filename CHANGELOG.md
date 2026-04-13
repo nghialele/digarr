@@ -4,6 +4,14 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.26.6 - 2026-04-14
+
+### Fixed
+
+- Backup restore now resets serial sequences after replaying explicit row ids, so later inserts do not fail with duplicate-key errors
+- User identity lookups now enforce unique non-null email and OIDC subject values at the database level
+- Linked `slskd` workers now accept Lidarr's paginated wanted-release payloads instead of assuming a top-level array, fixing repeated sync failures against current Lidarr builds
+
 ## v0.26.5 - 2026-04-13
 
 ### Fixed

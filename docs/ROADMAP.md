@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-13 | Current: v0.26.5
+> Updated: 2026-04-14 | Current: v0.26.6
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -118,6 +118,13 @@ Low confidence. Would build only with real demand.
 - Settings no longer report missing secrets as saved integrations, now show Deezer and Emby icons, and the docs/CI checks were tightened to match the current multilingual surface
 
 ### v0.26.3
+
+### v0.26.4 -- v0.26.6
+
+- Finished the remaining localization sweep, tightened translation quality checks, and kept the shipped locale set aligned across the app
+- Large library syncs now batch database inserts to stay under backend parameter limits
+- Backup restore now repairs serial sequences after replaying explicit ids, and user identity fields now enforce unique non-null email and OIDC subject values
+- Linked `slskd` background sync now handles Lidarr's paginated wanted-release responses without crashing on each tick
 
 - Library Health now persists scan snapshots, shows last sync timing, auto-rescans on the configured interval, and keeps a manual sync action
 - Settings now gives Job History and System Health dedicated tabs, expands target controls to match the newer admin style, and removes the oversized dashboard health block
