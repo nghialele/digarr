@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-13 | Current: v0.26.0
+> Updated: 2026-04-13 | Current: v0.26.1
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -106,7 +106,11 @@ Low confidence. Would build only with real demand.
 ### v0.26.0
 
 - Discovery Modes moved to a dedicated page under the Discover menu so the main Discover view stays focused on recommendation review
-- Unavailable discovery-mode cards now explain why they are blocked, and shipped ListenBrainz radio modes no longer show "not shipped yet"
+
+### v0.26.1
+
+- Shipped ListenBrainz radio modes now show as available, while placeholder modes stay blocked with explicit reasons
+- Manual discovery-mode runs now preflight Artist Radio seeds, return a `jobId` immediately, and surface quick failures instead of silently stalling behind a success toast
 
 ### v0.25.0
 

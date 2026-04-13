@@ -4,11 +4,7 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
-## v0.26.0 - 2026-04-13
-
-### Changed
-
-- Discovery Modes now live on their own page under the Discover menu, keeping the main Discover view focused on recommendation review
+## v0.26.1 - 2026-04-13
 
 ### Fixed
 
@@ -16,6 +12,13 @@ All notable user-facing changes are documented here.
 - Manual discovery-mode runs now return a `jobId` immediately, so the UI can track the accepted job instead of showing a blind success toast
 - ListenBrainz Artist Radio now resolves artist-name seeds to MusicBrainz IDs before the run is accepted, so invalid free-text seeds fail up front instead of dying silently in the background
 - Discovery-run feedback now surfaces quick job failures to the user instead of only logging them server-side
+- Discovery-mode availability reasons now fall back to the original message when a locale-specific alias is missing
+
+## v0.26.0 - 2026-04-13
+
+### Changed
+
+- Discovery Modes now live on their own page under the Discover menu, keeping the main Discover view focused on recommendation review
 
 ## v0.25.0 - 2026-04-13
 
