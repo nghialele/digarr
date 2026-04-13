@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-13 | Current: v0.26.2
+> Updated: 2026-04-13 | Current: v0.26.3
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -116,6 +116,12 @@ Low confidence. Would build only with real demand.
 
 - Setup completion now hands cleanly into required registration or login instead of leaving a zero-user auth gap
 - Settings no longer report missing secrets as saved integrations, now show Deezer and Emby icons, and the docs/CI checks were tightened to match the current multilingual surface
+
+### v0.26.3
+
+- Library Health now persists scan snapshots, shows last sync timing, auto-rescans on the configured interval, and keeps a manual sync action
+- Settings now gives Job History and System Health dedicated tabs, expands target controls to match the newer admin style, and removes the oversized dashboard health block
+- Fresh databases now skip pre-migration auto-backups until the app tables exist, avoiding noisy first-boot warnings
 
 ### v0.25.0
 

@@ -4,6 +4,8 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.26.3 - 2026-04-13
+
 ### Changed
 
 - Settings now exposes `Job History` and `System Health` as first-class tabs in the shared settings shell, and the dashboard no longer carries the full system-health block at the top
@@ -14,6 +16,7 @@ All notable user-facing changes are documented here.
 - Discover > Subscriptions now uses the same content width as the other primary app pages
 - Library Health now persists the latest scan snapshot, shows last-sync timing, auto-rescans on the configured library-sync interval, and keeps a manual `Sync Now` action
 - Jobs health now includes library-sync status so the new system-health tab can surface it alongside pipeline, subscription, playlist, and source state
+- Fresh databases now skip pre-migration auto-backups until the app tables exist, avoiding noisy startup warnings during first boot and Playwright setup
 
 ## v0.26.2 - 2026-04-13
 
