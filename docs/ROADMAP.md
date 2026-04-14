@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-14 | Current: v0.26.7
+> Updated: 2026-04-14 | Current: v0.27.8
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -103,6 +103,16 @@ Release reminder: after publishing a new app image, update the pinned digests in
 - Library operations now cover Lidarr, Plex, Jellyfin, Emby, and `slskd`, with artist and album sync, reconciliation review, persistent Library Health snapshots, and better sync visibility
 - Operations and safety now include backup/restore, pre-flight migration checks, auto-backups, job history, stuck-task detection, and browser-test release gates
 - Recent integration work added Deezer OAuth feeds, Emby support, linked `slskd` targets, and broader playlist export coverage
+
+### v0.27.0 -- v0.27.8
+
+- Data-safety fixes for legacy `SERIAL` sequence restore and identity-index carryover
+- Pipeline isolation so manual runs no longer share state with scheduled runs
+- `oidc_tokens` table now encrypted at rest via the same AES-256-GCM / HKDF envelope as other sensitive columns
+- Full SSRF sweep: CGNAT (100.64.0.0/10), LIKE-escape on OAuth state lookup, OIDC IP pinning via `openid-client` `customFetch`, route + client + provider-level URL validation, `publicIpOnly` on HTTP clients that talk to user-configured endpoints
+- i18n coverage sweep across components and library-sync progress messages; catalog parity held at 15 locales with targeted MT-quality fixes
+- Kubernetes hardening: dedicated ServiceAccount with token automount disabled, PodDisruptionBudget template gated on replicas > 1, Pod Security Standards `enforce: restricted` on the namespace, bundled Postgres container now drops all capabilities
+- CI supply chain: all Forgejo runner images and Dockerfile FROMs pinned by `@sha256` digest; GitHub release workflow now signs every published image with cosign via Sigstore OIDC (keyless) and attaches the SBOM as a cosign attestation bound to the image digest
 
 ### v0.25.0
 
