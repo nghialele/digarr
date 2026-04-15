@@ -110,7 +110,11 @@ describe('validation: users', () => {
     const res = await app.request('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ username: 'newuser', password: 'password123', isAdmin: 'yes' }),
+      body: JSON.stringify({
+        username: 'newuser',
+        password: 'password123',
+        isAdmin: 'yes',
+      }),
     })
     expect(res.status).toBe(400)
     const body = await res.json()
@@ -314,7 +318,9 @@ describe('validation: recommendations', () => {
 
   it('rejects GET query with invalid sort enum', async () => {
     const { app, headers } = await authedApp()
-    const res = await app.request('/api/recommendations?sort=random', { headers })
+    const res = await app.request('/api/recommendations?sort=random', {
+      headers,
+    })
     expect(res.status).toBe(400)
   })
 })
@@ -357,8 +363,8 @@ describe('validation: admin restore', () => {
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({
         version: 1,
-        appVersion: '0.27.9',
-        createdAt: '2026-04-14',
+        appVersion: '0.27.10',
+        createdAt: '2026-04-15',
         encryptionKeyHash: null,
         includesCaches: false,
         // data: {} missing entirely
@@ -376,8 +382,8 @@ describe('validation: admin restore', () => {
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({
         version: 1,
-        appVersion: '0.27.9',
-        createdAt: '2026-04-14',
+        appVersion: '0.27.10',
+        createdAt: '2026-04-15',
         encryptionKeyHash: null,
         includesCaches: false,
         data: {
