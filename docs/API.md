@@ -147,12 +147,12 @@ Locale notes:
 | GET | `/api/recommendations/feedback-summary` | Yes | Genre approval rates (top 20) |
 
 **GET /api/recommendations** query params:
-- `status` -- `pending`, `approved`, `rejected`, `added_to_lidarr`, `add_failed` (comma-separated)
-- `batchId` -- filter by batch
-- `sort` -- `score_desc` (default), `score_asc`, `created_desc`, `acted_on_desc`
-- `decades` -- era filter, comma-separated: `60s`, `70s`, `80s`, `90s`, `00s`, `10s`, `20s`
-- `limit` -- 1-200 (default 20)
-- `offset` -- pagination offset
+- `status` - `pending`, `approved`, `rejected`, `added_to_lidarr`, `add_failed` (comma-separated)
+- `batchId` - filter by batch
+- `sort` - `score_desc` (default), `score_asc`, `created_desc`, `acted_on_desc`
+- `decades` - era filter, comma-separated: `60s`, `70s`, `80s`, `90s`, `00s`, `10s`, `20s`
+- `limit` - 1-200 (default 20)
+- `offset` - pagination offset
 
 **PATCH /api/recommendations/:id** body:
 ```json
@@ -185,8 +185,8 @@ Approval notes:
 | GET | `/api/preview/audio` | Yes | Proxy Deezer preview audio (CORS bypass) |
 
 **GET /api/preview/audio** query params:
-- `url` -- Deezer CDN preview URL (must match `*.dzcdn.net`)
-- `token` -- auth token (for `<audio>` elements that can't send headers)
+- `url` - Deezer CDN preview URL (must match `*.dzcdn.net`)
+- `token` - auth token (for `<audio>` elements that can't send headers)
 
 ---
 
@@ -373,9 +373,9 @@ Locale notes:
 Each source includes a `stability` field (`stable` or `experimental`). TIDAL and Bandcamp are experimental.
 
 **GET /api/search** query params:
-- `q` -- required search string
-- `sources` -- optional comma-separated source IDs
-- `limit` -- 1-50 (default 20)
+- `q` - required search string
+- `sources` - optional comma-separated source IDs
+- `limit` - 1-50 (default 20)
 
 When one enabled source fails, Digarr still returns results from the healthy sources when possible.
 
@@ -418,6 +418,7 @@ When one enabled source fails, Digarr still returns results from the healthy sou
 **GET /api/library/sources** response notes:
 - `lastSyncCounts.albumsSynced` is present for album-capable sources after a successful sync
 - Lidarr, Plex, and Jellyfin source rows now include artist sync counts plus the number of reconciled album rows written for that source snapshot
+- `lastSyncCounts.mbApiCallsFailed` is the number of MusicBrainz lookups that failed after internal retries. A non-zero value means the sync completed with partial reconciliation; affected artists and albums are retried on the next sync
 
 **POST /api/library/warm** body:
 ```json
@@ -431,7 +432,7 @@ Notes:
 - Only the first 50 MBIDs are queued per request
 
 **GET /api/library/warm/status** query params:
-- `mbids` -- comma-separated MBIDs to inspect (up to 100)
+- `mbids` - comma-separated MBIDs to inspect (up to 100)
 
 **POST /api/library/sync** notes:
 - Rate limited: 5/min
@@ -530,10 +531,10 @@ Query params: `range` (week/month/year), `limit` (1-50).
 | GET | `/api/jobs/health` | Admin | System health summary (pipeline, subscriptions, playlists, library sync, sources) |
 
 **GET /api/jobs** query params:
-- `type` -- `pipeline`, `quick_discover`, `subscription`, `target`, `playlist`, `library_sync`
-- `status` -- `running`, `completed`, `failed`, `stuck`
-- `limit` -- 1-100 (default 50)
-- `offset` -- pagination offset (minimum 0)
+- `type` - `pipeline`, `quick_discover`, `subscription`, `target`, `playlist`, `library_sync`
+- `status` - `running`, `completed`, `failed`, `stuck`
+- `limit` - 1-100 (default 50)
+- `offset` - pagination offset (minimum 0)
 - Invalid `type` or `status` values return `400`
 
 ---
