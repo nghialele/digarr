@@ -1,7 +1,11 @@
+import { getCookie, setCookie } from 'hono/cookie'
 import { createMiddleware } from 'hono/factory'
 import { generateSessionToken, hashPassword } from '@/core/auth'
 import { isIpTrusted } from '@/core/auth/cidr'
-import { createSession, getActiveSessionForUser } from '@/core/sessions'
+import { isSingleAdminCollision } from '@/core/db-errors'
+import { createSession, getSession } from '@/core/sessions'
+import { SESSION_TTL_MS } from '@/db/queries/sessions'
+import { SESSION_COOKIE_NAME, sessionCookieOptions } from '@/server/middleware/session-cookie'
 import type { HonoEnv } from '@/server/types'
 
 type ProxyAuthDeps = {
@@ -68,25 +72,54 @@ export function proxyAuthMiddleware(deps: ProxyAuthDeps) {
       const isFirstUser = (await deps.getUserCount()) === 0
       // Generate random password hash - proxy users authenticate via headers, not passwords
       const randomHash = hashPassword(crypto.randomUUID())
-      user = await deps.createUser({
-        username: forwardedUser,
-        passwordHash: randomHash,
-        isAdmin: isFirstUser,
-        email: forwardedEmail,
-        authProvider: 'proxy',
-      })
+      try {
+        user = await deps.createUser({
+          username: forwardedUser,
+          passwordHash: randomHash,
+          isAdmin: isFirstUser,
+          email: forwardedEmail,
+          authProvider: 'proxy',
+        })
+      } catch (err: unknown) {
+        // First-admin race: a concurrent request won the admin slot via the
+        // users_single_admin partial unique index. Retry as a non-admin.
+        if (!isFirstUser || !isSingleAdminCollision(err)) throw err
+        const existing = await deps.getUserByUsername(forwardedUser)
+        if (existing) {
+          user = existing
+        } else {
+          user = await deps.createUser({
+            username: forwardedUser,
+            passwordHash: randomHash,
+            isAdmin: false,
+            email: forwardedEmail,
+            authProvider: 'proxy',
+          })
+        }
+      }
     }
 
-    // Reuse existing session or create new one (for SSE ?token= compatibility)
-    let sessionToken = await getActiveSessionForUser(user.id)
-    if (!sessionToken) {
-      sessionToken = generateSessionToken()
+    // Reuse the existing session cookie when it already points at this user.
+    // Otherwise mint a fresh per-request session and set an httpOnly cookie so
+    // subsequent requests authenticate via the cookie alone. We must NOT look
+    // up "any active session for this user" (the previous implementation did
+    // that via an in-memory raw-token cache) because it leaked password-mode
+    // session tokens into proxy-auth responses and vice versa.
+    const existingCookie = getCookie(c, SESSION_COOKIE_NAME)
+    let validCookieSession = false
+    if (existingCookie) {
+      const session = await getSession(existingCookie)
+      if (session && session.userId === user.id) validCookieSession = true
+    }
+
+    if (!validCookieSession) {
+      const sessionToken = generateSessionToken()
       await createSession(user.id, sessionToken)
+      setCookie(c, SESSION_COOKIE_NAME, sessionToken, sessionCookieOptions(SESSION_TTL_MS / 1000))
     }
 
     c.set('userId', user.id)
     c.set('proxyAuth', true)
-    c.set('sessionToken', sessionToken)
 
     return next()
   })

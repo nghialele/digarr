@@ -83,6 +83,9 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 
   const { headers: extraHeaders, ...restOptions } = options ?? {}
   const res = await fetch(`${BASE}${path}`, {
+    // Send the httpOnly session cookie on same-origin requests so proxy-auth
+    // and OIDC flows authenticate without JS having to read the token.
+    credentials: 'same-origin',
     ...restOptions,
     headers: { ...headers, ...(extraHeaders as Record<string, string>) },
   })
@@ -102,14 +105,22 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 export type AuthStatus = {
   required: boolean
   hasUsers: boolean
-  oidcEnabled?: boolean
-  proxyAuthEnabled?: boolean
-  proxyAuth?: boolean
-  token?: string
+  authenticated?: boolean
   userId?: number
-  version?: string
+  isAdmin?: boolean
+  oidcEnabled?: boolean
+  // version and proxyAuthEnabled are auth-gated on /auth/meta - do NOT re-add
+  // them here without rechecking the fingerprint-hardening audit (1.5).
 }
 export const getAuthStatus = () => fetchApi<AuthStatus>('/auth/status')
+
+// Deployment metadata that leaks fingerprint/topology info - kept behind auth.
+export type AuthMeta = {
+  version: string
+  oidcEnabled: boolean
+  proxyAuthEnabled: boolean
+}
+export const getAuthMeta = () => fetchApi<AuthMeta>('/auth/meta')
 
 export type AuthResponse = {
   user: { id: number; username: string; isAdmin: boolean }

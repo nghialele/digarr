@@ -1,7 +1,9 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import { getCookie } from 'hono/cookie'
 import { createMiddleware } from 'hono/factory'
 import { envConfig } from '@/config/env'
 import { getSession } from '@/core/sessions'
+import { SESSION_COOKIE_NAME } from '@/server/middleware/session-cookie'
 import type { HonoEnv } from '@/server/types'
 
 /** Constant-time comparison that does not leak length via early return. */
@@ -53,7 +55,10 @@ export function authGuard(options: {
     const proxyAuthed = c.get('proxyAuth')
     if (proxyAuthed) return next()
 
-    // Extract token from Authorization header or query param (SSE fallback)
+    // Extract token from Authorization header, query param (SSE fallback), or
+    // the httpOnly session cookie (set by proxy-auth / OIDC callback / login).
+    // Header wins over cookie so the SPA's localStorage flow keeps working;
+    // the cookie is the fallback for browser-only sessions.
     const header = c.req.header('Authorization')
     let provided: string | undefined
     if (header?.startsWith('Bearer ')) {
@@ -61,6 +66,10 @@ export function authGuard(options: {
     } else {
       const qp = c.req.query('token')
       if (qp && QUERY_TOKEN_PATHS.has(c.req.path)) provided = qp
+      if (!provided) {
+        const cookieToken = getCookie(c, SESSION_COOKIE_NAME)
+        if (cookieToken) provided = cookieToken
+      }
     }
 
     // Try session token first
@@ -95,6 +104,13 @@ export function authGuard(options: {
     if (!legacyToken && !usersExist && !setupComplete) {
       c.set('authSkipped', true)
       return next() // No auth configured at all
+    }
+    // Degenerate state: setup marked complete but no users exist. Indicates
+    // orphaned DB state (admin record deleted while setup flag stayed true,
+    // or an interrupted migration). Return 503 so ops can notice and re-run
+    // setup, rather than 401 which would let callers retry indefinitely.
+    if (!legacyToken && !usersExist && setupComplete) {
+      return c.json({ error: 're-run setup', detail: 'admin record missing' }, 503)
     }
 
     return c.json({ error: 'Unauthorized' }, 401)
