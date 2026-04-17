@@ -4,6 +4,28 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.28.5 - 2026-04-17
+
+Security-critical release: closes the three-step unauthenticated admin-takeover chain identified in the deep audit, plus surrounding auth-surface hardening. All authenticated users should keep working without action; the tightenings only affect new registrations and newly-rotated passwords.
+
+### Fixed
+
+- CIDR matching now supports IPv6 with a strict parser. The prior IPv4-only implementation silently passed IPv6 addresses through an integer-only check, allowing an IPv6 address like `2400:beef::1` to match an unrelated `2400:cb00::/32` CIDR and bypass proxy-auth trust boundaries. The new parser validates each family independently and rejects leading-zero octets (CVE-2021-29923 class).
+- `PROXY_AUTH_TRUSTED_PROXIES` entries are validated at boot. Unbounded ranges (`0.0.0.0/0`, `::/0`, plus every textual variant that normalizes to `/0`) are refused so a misconfigured deployment fails loudly instead of silently trusting the internet.
+- Session tokens are no longer cached in an in-memory per-user map. Proxy-auth previously reused any active session for the resolved user, which could hand a password-mode session's raw token back via `/api/auth/status` when the same user had also signed in through the proxy. Each proxy-auth request now mints a fresh session pinned to an httpOnly, SameSite=Lax cookie.
+- `/api/auth/status` no longer echoes session tokens to the client. Authenticated callers rely on the cookie for follow-up requests; the response exposes `authenticated`, `userId`, and `isAdmin` instead.
+- First-admin bootstrap is now serialized via a unique partial index on `users(is_admin) WHERE is_admin = true`. Two concurrent setup or registration requests can no longer both succeed as admin; the losing request is resolved to the existing admin or retried as a non-admin. The migration auto-demotes extra admins (keeping the oldest) with a `RAISE NOTICE` when applied against a database that previously accumulated duplicates.
+- OIDC callbacks sanitize the `preferred_username` claim (allowlist `[A-Za-z0-9._-]`, 50-char cap) so an untrusted IdP cannot inject arbitrary characters into usernames that flow into filesystem, SQL, or UI contexts.
+- Verbose OIDC error messages no longer leak into the login-screen URL fragment. Short stable codes (`config`, `oidc_failed`) replace them; detail stays in the server log.
+- Auth middleware returns `503 re-run setup` for the degenerate state where setup is flagged complete but no users exist (orphaned DB state). Callers no longer retry against a dead deployment indefinitely.
+
+### Changed
+
+- OIDC email-verified auto-link is now opt-in. A new `OIDC_TRUST_EMAIL_VERIFIED` environment variable (default `false`) must be set to `true` before an OIDC sign-in will automatically link to an existing local account on matching `email_verified=true` claim. `docs/AUTHENTICATION.md` documents the threat model (single-tenant IdPs safe to enable, public issuers not).
+- `/api/auth/status` no longer exposes `version` or `proxyAuthEnabled` to unauthenticated callers. Those fields moved to a new auth-gated `GET /api/auth/meta` endpoint. `oidcEnabled` stays public so the login screen can still render the OIDC sign-in button.
+- Password minimum length is now 12 characters across registration and password changes. Existing users with shorter passwords continue to log in; the new minimum only applies when a password is set or rotated.
+- Hono bumped to 4.12.14 to pick up GHSA-458j-xx4x-4375 (medium-severity HTML injection in `hono/jsx` SSR; Digarr does not use that path, but the upstream CI scan blocks without the fix).
+
 ## v0.27.12 - 2026-04-16
 
 ### Fixed
