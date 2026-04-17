@@ -15,12 +15,10 @@ AGENTS.md
 CLAUDE.md
 /ROADMAP.md
 PLAN.md
-SECURITY-AUDIT.md
 .claude/
 .worktrees/
 .playwright-mcp/
 docs/local/
 .planning/
-UI-REVIEW.md
 mempalace.yaml
 entities.json
