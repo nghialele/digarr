@@ -2,40 +2,12 @@ import { resolve } from 'node:path'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { HTTPException } from 'hono/http-exception'
 import { secureHeaders } from 'hono/secure-headers'
 import { envConfig } from '@/config/env'
-import type { OidcService } from '@/core/auth/oidc'
-import type { DiscoveryModeRegistry } from '@/core/discovery-modes/registry'
-import type { DiscoveryModeRequest } from '@/core/discovery-modes/request'
-import type { GenreService } from '@/core/genre/service'
-import type { SupportedLocale } from '@/core/i18n/locales'
-import type { AlbumCoverage } from '@/core/library/album-coverage'
-import type { LibraryHealthService } from '@/core/library/health'
-import type { SkyHookWarmer } from '@/core/library/skyhook-warmer'
-import type { LibrarySyncStore } from '@/core/library/store'
-import type { SyncOrchestrator } from '@/core/library/sync'
-import type { PipelineOrchestrator } from '@/core/pipeline/orchestrator'
-import type { SubscriptionScheduler } from '@/core/pipeline/subscription-scheduler'
-import type { AiProviderRegistry } from '@/core/providers/registry'
-import type { ServiceTestResult } from '@/core/types'
-import type { ArtistRow } from '@/db/queries/artists'
-import type { BatchRow } from '@/db/queries/batches'
-import type { ActivityEntry, TasteGenre } from '@/db/queries/dashboard'
-import type {
-  ListRecommendationsFilters,
-  ListRecommendationsResult,
-  RecommendationWithArtist,
-  StatusUpdateExtra,
-} from '@/db/queries/recommendations'
-import type { SettingsRow, SetupConfig } from '@/db/queries/settings'
-import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
-import type { subscriptions } from '@/db/schema'
-
-type SubscriptionRow = typeof subscriptions.$inferSelect
-
-import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
-import type { UserPublic } from '@/db/queries/users'
 import { VERSION } from '@/version'
+import { openapiDoc } from './helpers/openapi-doc'
+import { problem } from './helpers/problem'
 import { adminGuard } from './middleware/admin-guard'
 import { authGuard } from './middleware/auth'
 import { requestLogger } from './middleware/logger'
@@ -60,10 +32,8 @@ import { moodRoutes } from './routes/mood'
 import { oauthRoutes } from './routes/oauth'
 import { oidcRoutes } from './routes/oidc'
 import { pipelineRoutes } from './routes/pipeline'
-import type { PlaylistDeps } from './routes/playlists'
 import { playlistRoutes } from './routes/playlists'
 import { recommendationRoutes } from './routes/recommendations'
-import type { SearchDeps } from './routes/search'
 import { searchRoutes } from './routes/search'
 import { settingsRoutes } from './routes/settings'
 import { setupRoutes } from './routes/setup'
@@ -71,150 +41,46 @@ import { slskdRoutes } from './routes/slskd'
 import { subscriptionRoutes } from './routes/subscriptions'
 import { targetRoutes } from './routes/targets'
 import { userRoutes } from './routes/users'
-import type { DiscoveryConnectionSnapshot, HonoEnv } from './types'
+import type { HonoEnv } from './types'
 
-export type AppDependencies = {
-  db: import('@/db').Database
-  storeDb: import('@/core/pipeline/store').StoreDb
-  orchestrator: PipelineOrchestrator
-  scheduler: SubscriptionScheduler
-  providerRegistry: AiProviderRegistry
-  isSetupComplete: () => Promise<boolean>
-  getSettings: () => Promise<SettingsRow | null>
-  updateSettings: (partial: Record<string, unknown>) => Promise<void>
-  completeSetup: (config: SetupConfig) => Promise<unknown>
-  // Pipeline status
-  getLastBatch: () => Promise<{ id: number; createdAt: Date | string; status: string } | null>
-  // Recommendation query functions
-  listRecommendations: (filters?: ListRecommendationsFilters) => Promise<ListRecommendationsResult>
-  getRecommendation: (id: number) => Promise<RecommendationWithArtist | null>
-  updateRecommendationStatus: (
-    id: number,
-    status: string,
-    extra?: StatusUpdateExtra,
-  ) => Promise<void>
-  bulkUpdateStatus: (ids: number[], status: string) => Promise<void>
-  filterOwnedIds: (ids: number[], userId: number | undefined) => Promise<number[]>
-  // Batch query functions
-  listBatches: () => Promise<BatchRow[]>
-  getBatch: (id: number) => Promise<BatchRow | null>
-  // Artist query functions
-  getArtistById: (id: number) => Promise<ArtistRow | null>
-  restartScheduler: (cron: string | null) => void
-  restartPlaylistScheduler: () => Promise<void>
-  restartLibraryMaintenanceScheduler?: (intervalHours: number) => void
-  // User query functions
-  createUser: (data: {
-    username: string
-    passwordHash: string
-    isAdmin?: boolean
-  }) => Promise<UserPublic>
-  getUserByUsername: (
-    username: string,
-  ) => Promise<{ id: number; username: string; passwordHash: string; isAdmin: boolean } | null>
-  getUserById: (id: number) => Promise<UserPublic | null>
-  getUserCount: () => Promise<number>
-  updatePassword: (id: number, passwordHash: string) => Promise<void>
-  updateUserPreferredLocale: (id: number, preferredLocale: SupportedLocale | null) => Promise<void>
-  // OIDC + user management
-  getOidcService: () => Promise<OidcService | null>
-  getUserByOidcSubject: (subject: string) => Promise<{ id: number; username: string } | null>
-  getUserByEmail: (email: string) => Promise<{ id: number; username: string } | null>
-  updateUser: (
-    id: number,
-    data: { isAdmin?: boolean; email?: string; oidcSubject?: string },
-  ) => Promise<void>
-  listUsers: () => Promise<UserPublic[]>
-  deleteUser: (id: number) => Promise<void>
-  // Genre service
-  genreService: GenreService
-  // Library health service
-  libraryHealth: LibraryHealthService
-  // SkyHook cache warmer (optional - absent if Lidarr is not configured)
-  skyhookWarmer?: SkyHookWarmer | null
-  // Library sync orchestrator + store
-  librarySync: SyncOrchestrator
-  librarySyncStore: LibrarySyncStore
-  slskdOrchestrator?: {
-    readonly isSyncing: boolean
-    triggerSync: () => Promise<void>
-    warmup: () => Promise<void>
-    getActiveJobs: (limit?: number) => Promise<
-      Array<{
-        id: number
-        targetId: number
-        recommendationId: number | null
-        state: string
-        releaseTitle: string
-      }>
-    >
-  }
-  albumCoverage?: {
-    getCoverageForArtist: (userId: number, artistMbid: string) => Promise<AlbumCoverage>
-  }
-  // Subscription query functions
-  subscriptionQueries: {
-    createSubscription: (data: SubscriptionInsert) => Promise<SubscriptionRow>
-    getSubscription: (id: number) => Promise<SubscriptionRow | null>
-    getSubscriptionsByUser: (userId: number) => Promise<SubscriptionRow[]>
-    getEnabledSubscriptions: () => Promise<SubscriptionRow[]>
-    updateSubscription: (id: number, data: SubscriptionUpdate) => Promise<void>
-    deleteSubscription: (id: number) => Promise<void>
-  }
-  // Manual subscription trigger
-  runSubscription: (id: number) => Promise<void>
-  // Target management
-  targetQueries: {
-    createTarget: (data: TargetInsert) => Promise<{ id: number }>
-    getTargetsByUser: (userId: number) => Promise<TargetRow[]>
-    getAllTargets: () => Promise<TargetRow[]>
-    getTarget: (id: number) => Promise<TargetRow | null>
-    updateTarget: (id: number, data: TargetUpdate) => Promise<void>
-    deleteTarget: (id: number) => Promise<void>
-  }
-  testTargetConnection: (
-    type: string,
-    config: Record<string, unknown>,
-  ) => Promise<ServiceTestResult>
-  getEnabledTargetsForUser: (
-    userId: number,
-  ) => Promise<import('@/core/targets/types').DestinationTarget[]>
-  getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
-  dashboardQueries: {
-    getTopGenresForUser: (userId: number | undefined) => Promise<TasteGenre[]>
-    getRecentActivity: (
-      userId: number | undefined,
-      isAdmin: boolean,
-      limit?: number,
-    ) => Promise<ActivityEntry[]>
-  }
-  discoveryModeRegistry?: DiscoveryModeRegistry
-  getDiscoveryConnectionSnapshot?: (userId: number) => Promise<DiscoveryConnectionSnapshot>
-  runDiscoveryMode?: (
-    request: DiscoveryModeRequest,
-    options?: { existingJobId?: number },
-  ) => Promise<{ batchId: number; artistsFound?: number }>
-  // Job recording & queries
-  jobRecorder: import('@/core/jobs/types').JobRecorder
-  jobQueries: {
-    listJobs: (
-      filters?: import('@/db/queries/jobs').ListJobsFilters,
-    ) => Promise<{ items: import('@/core/jobs/types').JobRunRow[]; total: number }>
-    getJobById: (id: number) => Promise<import('@/core/jobs/types').JobRunRow | null>
-    getJobHealth: (nextRun: Date | null) => Promise<import('@/db/queries/jobs').HealthSummary>
-    getJobsForSubscription: (
-      subId: number,
-      limit?: number,
-    ) => Promise<import('@/core/jobs/types').JobRunRow[]>
-  }
-  // Playlist deps (optional - omit in test environments without a DB)
-  playlistDeps?: PlaylistDeps
-  // Search deps (optional - absent when no search sources are configured)
-  search?: SearchDeps
-}
+// AppDependencies is the intersection of every per-domain slice in deps.ts.
+// Route files that only need a subset (see TargetDeps / LibraryDeps / etc.
+// already defined locally in some routes) can import from `./deps` instead
+// of accepting the full bag. Keeping this re-export stable avoids breaking
+// every caller.
+export type { AppDependencies } from './deps'
+
+import type { AppDependencies } from './deps'
 
 export function createApp(deps: AppDependencies) {
   const app = new Hono<HonoEnv>()
+
+  // Central error handler: maps HTTPException (including zJson's hook failures
+  // when a handler throws one) and unknown errors to RFC 9457 problem+json.
+  // Zod/validator hooks still return their {error, code, details} shape
+  // directly so existing clients keep working; only unhandled throws flow here.
+  app.onError((err, c) => {
+    if (err instanceof HTTPException) {
+      const res = err.getResponse()
+      // If the exception already carries a fully-formed response (e.g. from a
+      // middleware that built its own body), prefer it over the problem+json
+      // envelope to avoid clobbering specialised payloads.
+      if (res.headers.get('content-type')?.includes('application/json')) return res
+      return problem(c, `http-${err.status}`, err.message || 'HTTP Error', err.status, undefined)
+    }
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[server] unhandled error:', msg, err instanceof Error ? err.stack : '')
+    return problem(c, 'internal-error', 'Internal Server Error', 500)
+  })
+
+  // 404 for unmatched /api/* requests. Non-API paths fall through to the SPA
+  // static serving in production, so we only intercept API routes here.
+  app.notFound((c) => {
+    if (c.req.path.startsWith('/api/')) {
+      return problem(c, 'not-found', 'Not Found', 404, `No route for ${c.req.method} ${c.req.path}`)
+    }
+    return c.text('Not Found', 404)
+  })
 
   // Log all requests first - before auth/cors so we capture everything
   app.use('*', requestLogger())
@@ -314,6 +180,30 @@ export function createApp(deps: AppDependencies) {
       proxyAuthEnabled: envConfig.proxyAuthEnabled,
     })
   })
+
+  // OpenAPI 3.1 spec. Intentionally public so integrators can read the
+  // contract without credentials. The spec is a skeleton today - see
+  // src/server/helpers/openapi-doc.ts. `/api/docs` returns a tiny
+  // no-external-JS landing page pointing at the spec; rendering with
+  // Scalar/Swagger is deferred to keep the CSP strict.
+  app.get('/api/docs/openapi.json', (c) =>
+    c.json(openapiDoc, 200, { 'cache-control': 'public, max-age=60' }),
+  )
+  app.get(
+    '/api/docs',
+    (_c) =>
+      new Response(
+        `<!doctype html><html><head><meta charset="utf-8"><title>digarr API</title>
+<style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem;line-height:1.5}code{background:#f4f4f4;padding:.1rem .3rem;border-radius:.2rem}</style>
+</head><body>
+<h1>digarr API</h1>
+<p>The machine-readable OpenAPI 3.1 specification is served at
+<a href="/api/docs/openapi.json"><code>/api/docs/openapi.json</code></a>.</p>
+<p>Paste the URL into your favourite viewer (Scalar, Swagger UI, Redoc, Insomnia, Bruno, Postman) to browse it interactively.</p>
+</body></html>`,
+        { headers: { 'content-type': 'text/html; charset=utf-8' } },
+      ),
+  )
 
   app.route(
     '/',
