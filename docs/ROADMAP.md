@@ -104,6 +104,16 @@ Release reminder: after publishing a new app image, update the pinned digests in
 - Operations and safety now include backup/restore, pre-flight migration checks, auto-backups, job history, stuck-task detection, and browser-test release gates
 - Recent integration work added Deezer OAuth feeds, Emby support, linked `slskd` targets, and broader playlist export coverage
 
+### v0.31.x (deep-audit phase 4)
+
+- Six missing foreign-key indexes added and GIN indexes on `artists.genres[]` / `tags[]`, so cascades, FK joins, and array-membership queries stop degrading to sequential scans as row count grows
+- Three check-then-write upserts (library sync state, artist-match and album-match overrides) rewritten as atomic `ON CONFLICT DO UPDATE` with `NULLS NOT DISTINCT` natural-key indexes so shared-cursor rows participate in conflict matching
+- Backup restore and hygiene loops batched: per-row `ON CONFLICT` becomes 1000-row chunked inserts, rebuildGenres 2000-row chunks, rescoreRecommendations uses `UPDATE ... FROM unnest(ids, scores)` at 5000-row chunks
+- Dashboard top-genres and feedback history aggregations pushed into SQL via `unnest` + `GROUP BY` instead of JS-side reduction over every row
+- `pg.Pool` defaults hardened: `max=20`, `idleTimeoutMillis=30s`, server-side `statement_timeout=30s`
+- `preferencesSchema.passthrough()` replaced with `.strict()`; `settings.preferences.fanartApiKey` flagged in the backup encrypted-field map
+- `DIGARR_ENCRYPTION_KEY_NEXT` dual-key rotation mode with `scripts/rotate-encryption-key.ts` and a 3-deploy runbook
+
 ### v0.29.x - v0.30.x (deep-audit phases 2 + 3)
 
 - Outbound HTTP now pins resolved IPs after DNS lookup to defeat rebinding, with bracketed-IPv6 SNI fallback and cloud-metadata/link-local ranges in the private-IP denylist

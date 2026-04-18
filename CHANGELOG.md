@@ -4,6 +4,31 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.31.7 - 2026-04-18
+
+Phase 4 of the deep-audit remediation: database-layer correctness and performance. Six missing foreign-key indexes added, three check-then-write upsert races closed, N+1 loops in backup restore and hygiene batched into chunked statements, per-row JS genre aggregation pushed into SQL via `unnest`, and `DIGARR_ENCRYPTION_KEY_NEXT` dual-key rotation landed with a runbook. Three migrations; no user action required beyond standard deploy.
+
+### Fixed
+
+- `upsertLibrarySyncState`, `upsertOverride`, and `upsertAlbumOverride` no longer race under concurrent writes. Rewritten as atomic `INSERT ... ON CONFLICT DO UPDATE` with the three natural-key unique indexes migrated to `NULLS NOT DISTINCT` so shared-cursor rows (nullable `user_id`) participate in conflict matching.
+- `preferencesSchema` no longer accepts arbitrary unknown keys. `.passthrough()` replaced with `.strict()` on both the outer and `scoringWeights` objects, closing a storage-bloat surface where a hostile admin client could inflate the `preferences` jsonb indefinitely.
+- Backup key-mismatch detection now flags `settings.preferences.fanartApiKey` alongside top-level sensitive columns so a restore into a different-key deployment surfaces every field that may be unreadable.
+- `getGenreArtists` deep_cuts view no longer wraps `artistMetadata.nameNormalized` in `lower()`. The column is already lowercased at write time; the wrapper defeated any btree index on it.
+
+### Performance
+
+- Six missing foreign-key indexes added: `genres(parent_genre_id)`, `recommendation_batches(subscription_id)`, `job_runs(user_id)`, `job_runs(batch_id)`, `slskd_jobs(target_id)`, `slskd_jobs(recommendation_id)`. Postgres does not auto-index FK columns; cascades and joins previously degraded to sequential scans as row count grew.
+- GIN indexes on `artists.genres[]` and `artists.tags[]` so array-membership queries like `genres @> ARRAY['indie']` can use an index instead of a sequential scan.
+- `pg.Pool` defaults: `max=20` (up from the libpg default of 10), `idleTimeoutMillis=30s`, server-side `statement_timeout=30s`. Caps runaway queries at the connection level.
+- Backup restore batches rows (1000 per chunk) using `ON CONFLICT DO UPDATE` with an `excluded.*` set clause. Round-trips for a 10k-row restore drop from 10k to ~10.
+- Hygiene `rebuildGenres` batches inserts (2000 per chunk). `rescoreRecommendations` replaces per-row `UPDATE` with `UPDATE ... FROM unnest(ids, scores)` chunked at 5000; two array parameters regardless of row count.
+- `getTopGenresForUser` and `getGenreFeedbackHistory` push their genre tallies into SQL via `unnest` + `GROUP BY` instead of materializing every row in JS and reducing.
+
+### Added
+
+- `DIGARR_ENCRYPTION_KEY_NEXT` environment variable enables dual-key rotation mode. `decryptField` tries primary -> NEXT -> legacy; writes always use the primary. See [docs/runbooks/encryption-key-rotation.md](docs/runbooks/encryption-key-rotation.md) for the 3-deploy procedure.
+- `scripts/rotate-encryption-key.ts` re-encrypts every `enc:v1:` value (including nested jsonb paths and `targets.config`) with the current primary key. Safe to re-run; idempotent.
+
 ## v0.30.5 - 2026-04-18
 
 Phase 3 of the deep-audit remediation: 15 correctness bugs closed across pipeline, OAuth, scheduler, backup, recommendations, and rate-limit surfaces, plus a hono CVE bump. No user action required; all fixes are internal to the running deployment.
