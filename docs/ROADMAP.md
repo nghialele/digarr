@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-15 | Current: v0.27.11
+> Updated: 2026-04-18 | Current: v0.30.5
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -103,6 +103,18 @@ Release reminder: after publishing a new app image, update the pinned digests in
 - Library operations now cover Lidarr, Plex, Jellyfin, Emby, and `slskd`, with artist and album sync, reconciliation review, persistent Library Health snapshots, and better sync visibility
 - Operations and safety now include backup/restore, pre-flight migration checks, auto-backups, job history, stuck-task detection, and browser-test release gates
 - Recent integration work added Deezer OAuth feeds, Emby support, linked `slskd` targets, and broader playlist export coverage
+
+### v0.29.x - v0.30.x (deep-audit phases 2 + 3)
+
+- Outbound HTTP now pins resolved IPs after DNS lookup to defeat rebinding, with bracketed-IPv6 SNI fallback and cloud-metadata/link-local ranges in the private-IP denylist
+- Last.fm `api_key` and related sensitive query params are redacted from `HttpError` messages, blocked-redirect logs, and malformed URLs that fail `new URL()` parsing
+- Auto-approve now keys `added_to_lidarr` off the Lidarr result's `success` flag so a Lidarr failure surfaces as `add_failed` even when a secondary target succeeded
+- CSV import and export share a formula-injection guard with RFC 4180 row tokenization; hostile cells like `=HYPERLINK(...)` are stripped on both sides
+- OAuth `clientSecret` stays encrypted through the entire pending-auth window; token refresh preserves `clientId`, `clientSecret`, and `scopes` instead of nulling them
+- All long-running crons (slskd, library sync/health, stuck-detector) are now captured as handles and stopped on SIGTERM/SIGINT; rate-limit middleware shares one prune interval across instances
+- Login pays the scrypt cost for missing usernames too, closing a timing-based user-enumeration oracle
+- Backup restore schema is strict (prototype-pollution surface closed) and the restore route now requires `?confirm=true` in addition to `?force=`
+- `hono` pinned >=4.12.14 for GHSA-458j-xx4x-4375
 
 ### v0.27.0 - v0.27.11
 

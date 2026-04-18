@@ -5,11 +5,11 @@
 
 services:
   app:
-    image: docker.io/iuliandita/digarr:0.27
+    image: docker.io/iuliandita/digarr:0.30
     # Pin to a patch version for full stability:
-    # image: docker.io/iuliandita/digarr:0.27.11
+    # image: docker.io/iuliandita/digarr:0.30.5
     # Alpine variant (smaller image, musl libc):
-    # image: docker.io/iuliandita/digarr:0.27.11-alpine
+    # image: docker.io/iuliandita/digarr:0.30.5-alpine
     env_file:
       - path: .env
         required: false

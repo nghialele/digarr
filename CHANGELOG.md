@@ -4,6 +4,46 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.30.5 - 2026-04-18
+
+Phase 3 of the deep-audit remediation: 15 correctness bugs closed across pipeline, OAuth, scheduler, backup, recommendations, and rate-limit surfaces, plus a hono CVE bump. No user action required; all fixes are internal to the running deployment.
+
+### Fixed
+
+- Auto-approve no longer marks a recommendation as `added_to_lidarr` when the Lidarr target's `addArtist` actually failed. The status now keys off the Lidarr result's `success` flag; a Lidarr failure surfaces as `add_failed` even when a secondary target (Emby, slskd, playlist) succeeded. Lidarr is treated as the authoritative downloader for status purposes.
+- CSV import and export share a formula-injection guard (`cellSafe` / `parseCell`) that strips leading `= + - @ \t \r` characters and applies RFC 4180 quote handling. Import additionally tokenizes rows with a proper quoted-field parser instead of a naive split on commas.
+- OAuth `clientSecret` is now always encrypted at rest, including during the pre-auth pending window. Only `accessToken` stays plaintext when it is a pending marker, because the LIKE-prefix state lookup requires it. Existing encrypted rows are unaffected.
+- OAuth token refresh preserves `clientId`, `clientSecret`, and `scopes` instead of nulling them out on every refresh. Rows previously reduced to `{accessToken, refreshToken, expiresAt}` after the first refresh are now restored on the next successful refresh.
+- Shutdown handling: the slskd cron, library sync cron, library health cron, and stuck-detector cron are now captured as handles and `.stop()`'d on SIGTERM/SIGINT, alongside the pipeline and playlist schedulers.
+- `imageFailedAt` insert-path priority now matches the update path: artist with an `imageUrl` always clears the negative cache, regardless of the `imageFailed` flag.
+- `PipelineOrchestrator._currentUserId` resets in the `finally` block so subsequent non-pipeline emits don't inherit a stale userId.
+- Admin reasoning-generation prompts interpolate `artistName` through `JSON.stringify` to neutralize artist-name injection into the prompt structure.
+- Recommendation status filters (`?status=foo,bar,...`) are allowlisted against `VALID_STATUSES` before hitting the DB. Unknown tokens (including SQL-looking payloads) are dropped instead of being passed to `inArray`.
+- Jellyfin playlist `searchTrack` now logs transport errors with the artist and track context, instead of swallowing them silently with a `catch {}`.
+- Login pays the scrypt cost for missing usernames too (a pre-computed `DUMMY_PASSWORD_HASH` is verified in the `user == null` branch), closing a timing-based user-enumeration oracle.
+- Backup restore (`POST /api/admin/restore`) now requires `?confirm=true` in addition to `?force=`. The `data` object schema is strict: unknown keys are rejected, closing a prototype-pollution surface that `.passthrough()` previously left open.
+
+### Changed
+
+- Rate-limit middleware shares one `setInterval` prune loop across all limiter instances via a module-level registry, instead of each instance owning its own. Exposes `__shutdownRateLimiter()` for test cleanup.
+- `hono` pinned >=4.12.14 (GHSA-458j-xx4x-4375, medium HTML-injection in `hono/jsx` SSR; Digarr does not use that path but the dep-scan gate required it).
+- Vestigial `BatchStats.scored` field dropped from the `batches` query type; the orchestrator, webhook payload, and jobs API already used `discovered`.
+
+## v0.29.3 - 2026-04-18
+
+Phase 2 of the deep-audit remediation: SSRF hardening for outbound HTTP and Last.fm api-key redaction in error logs.
+
+### Fixed
+
+- Webhook and outbound HTTP callers now pin the resolved IP after DNS lookup to defeat DNS-rebinding TOCTOU attacks. HTTPS callers preserve SNI via a bracketed-host fallback; HTTP callers rewrite the hostname to the pinned address while setting the `Host` header back to the original value.
+- `isPrivateIp` covers more reserved ranges (link-local v6, loopback variants, cloud-metadata IPs) and normalizes bracketed IPv6 hosts before evaluation. Webhook SSRF allowlists tightened accordingly.
+- OIDC test endpoint and other admin-adjacent test URL helpers are now gated behind the admin role, closing a bypass where an authenticated non-admin could probe arbitrary hosts via the test path.
+- Last.fm API keys (and other sensitive query params like `apikey`, `key`, `token`, `secret`, `password`) are redacted from `HttpError` messages, `redactUrlForLog` output, and blocked-redirect error paths. A URL-parser-failure fallback (`redactQueryStringFallback`) handles malformed inputs that break `new URL()`.
+
+### Changed
+
+- Zod schemas migrated to the `z` namespace import across all `src/server/schemas/*` modules and matching tests, settling on a single import style.
+
 ## v0.28.5 - 2026-04-17
 
 Security-critical release: closes the three-step unauthenticated admin-takeover chain identified in the deep audit, plus surrounding auth-surface hardening. All authenticated users should keep working without action; the tightenings only affect new registrations and newly-rotated passwords.
