@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>Digarr</Name>
-  <!-- Digest pin (synced via scripts/sync-deploy-digests.ts): sha256:fd30badc2a434e71ec97ed62d3de7874146965898810310d4a66a19525ee8502 -->
+  <!-- Digest pin (synced via scripts/sync-deploy-digests.ts): sha256:7fe81a93dedc27d73e0e4f3710be88c72b7bbd6a01c9d958f3ba1e9d35871d98 -->
    <Repository>docker.io/iuliandita/digarr:0.32.3</Repository>
    <Tag>0.32.3</Tag>
    <TagDescription>v0.32.3 stable release</TagDescription>
