@@ -4,7 +4,7 @@ image:
   repository: ghcr.io/iuliandita/digarr
   tag: "0.37.5"
   # Pin the digest after publishing the release image. The digest comes from the published registry artifact.
-  digest: "sha256:ee9d3c7af014eaffc7b1ad92d804d8612ac936856b23168bc6e82d3e78d86db6"
+  digest: "sha256:a41c8711d4c136dffe4b243de6d97b0ea14ba3c06fb38d12545fac4b699928e4"
   pullPolicy: Always
 
 podSecurityContext:
