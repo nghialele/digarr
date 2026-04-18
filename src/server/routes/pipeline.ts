@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { envConfig } from '@/config/env'
 import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
@@ -325,12 +326,14 @@ export function pipelineRoutes(deps: AppDependencies) {
         }
 
         // Get AI recommendations focused on this artist
+        let aiUsage: unknown = null
         if (settings.aiProvider && settings.aiModel) {
           try {
             const provider = await deps.providerRegistry.create(settings.aiProvider as string, {
               apiKey: (settings.aiApiKey as string) ?? null,
               model: settings.aiModel as string,
               baseUrl: (settings.aiBaseUrl as string) ?? null,
+              timeoutSeconds: envConfig.aiTimeoutSeconds ?? null,
             })
             const aiRecs = await provider.getRecommendations({
               topArtists: [
@@ -341,6 +344,7 @@ export function pipelineRoutes(deps: AppDependencies) {
               responseLocale,
               promptLocale,
             })
+            aiUsage = provider.lastUsage ?? null
             for (const rec of aiRecs) {
               discovered.push({
                 name: rec.artistName,
@@ -361,6 +365,7 @@ export function pipelineRoutes(deps: AppDependencies) {
                 seedArtist: trimmedArtistName,
                 artistsDiscovered: 0,
                 artistsStored: 0,
+                ...(aiUsage ? { aiUsage } : {}),
               },
             })
           }
@@ -400,6 +405,7 @@ export function pipelineRoutes(deps: AppDependencies) {
               seedArtist: trimmedArtistName,
               artistsDiscovered: discovered.length,
               artistsStored: filtered.length,
+              ...(aiUsage ? { aiUsage } : {}),
             },
           })
         }

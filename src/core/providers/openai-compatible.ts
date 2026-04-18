@@ -5,12 +5,14 @@ import {
   parseRecommendationResponse,
   unwrapRecommendationArrayPayload,
 } from './prompt'
-import type { RecommendationProvider } from './types'
+import { fetchWithRetry } from './retry'
+import type { AiUsage, RecommendationProvider } from './types'
 
 export class OpenAICompatibleProvider implements RecommendationProvider {
   private baseUrl: string
   private apiKey: string | null
   private model: string
+  lastUsage: AiUsage | null = null
 
   constructor(baseUrl: string, model: string, apiKey: string | null = null) {
     this.baseUrl = baseUrl.replace(/\/+$/, '')
@@ -19,6 +21,7 @@ export class OpenAICompatibleProvider implements RecommendationProvider {
   }
 
   async getRecommendations(profile: TasteProfile): Promise<AiRecommendation[]> {
+    this.lastUsage = null
     const prompt = buildRecommendationPrompt(profile)
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     if (this.apiKey) headers.Authorization = `Bearer ${this.apiKey}`
@@ -26,27 +29,35 @@ export class OpenAICompatibleProvider implements RecommendationProvider {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 60_000)
     try {
-      const res = await fetch(`${this.baseUrl}/v1/chat/completions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            { role: 'system', content: 'Respond with a JSON array only.' },
-            { role: 'user', content: prompt },
-          ],
-          max_completion_tokens: 4096,
-        }),
-        signal: controller.signal,
-      })
-
-      if (!res.ok) {
-        const body = await res.text().catch(() => '')
-        throw new Error(`API error: ${res.status} ${body}`)
-      }
+      const res = await fetchWithRetry(
+        `${this.baseUrl}/v1/chat/completions`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: this.model,
+            messages: [
+              { role: 'system', content: 'Respond with a JSON array only.' },
+              { role: 'user', content: prompt },
+            ],
+            max_completion_tokens: 4096,
+          }),
+          signal: controller.signal,
+        },
+        { providerLabel: 'openai-compatible' },
+      )
 
       const data = (await res.json()) as {
         choices?: Array<{ message?: { content?: string } }>
+        usage?: { prompt_tokens?: number; completion_tokens?: number }
+      }
+      if (data.usage) {
+        this.lastUsage = {
+          provider: 'openai-compatible',
+          model: this.model,
+          inputTokens: data.usage.prompt_tokens,
+          outputTokens: data.usage.completion_tokens,
+        }
       }
       const text = data.choices?.[0]?.message?.content
       if (!text) throw new Error('Empty response')

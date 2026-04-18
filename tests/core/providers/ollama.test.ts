@@ -141,10 +141,11 @@ describe('OllamaProvider', () => {
       expect(promptText).toContain('drone')
     })
 
-    test('throws on non-OK response', async () => {
+    test('throws on 4xx response without retrying', async () => {
       fetchSpy.mockResolvedValueOnce(new Response('Model not found', { status: 404 }))
 
-      await expect(provider.getRecommendations(sampleProfile)).rejects.toThrow('Ollama API error')
+      await expect(provider.getRecommendations(sampleProfile)).rejects.toThrow(/client error 404/)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -192,6 +193,31 @@ describe('OllamaProvider', () => {
         `${TEST_BASE_URL}/api/tags`,
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       )
+    })
+  })
+
+  describe('timeout', () => {
+    test('aborts getRecommendations when configured timeout elapses', async () => {
+      // Use a 1-second timeout + a fetch mock that never resolves unless the
+      // signal aborts. The retry helper treats AbortError as non-retriable,
+      // so we expect a single aborted call.
+      const short = new OllamaProvider('llama3', TEST_BASE_URL, 1)
+      fetchSpy.mockImplementationOnce(
+        (_url: RequestInfo | URL, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal
+            const abortErr = new Error('aborted')
+            abortErr.name = 'AbortError'
+            signal?.addEventListener('abort', () => reject(abortErr))
+          }),
+      )
+      await expect(short.getRecommendations(sampleProfile)).rejects.toThrow(/abort/i)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+    })
+
+    test('defaults to the Ollama-friendly 120s when no timeout provided', () => {
+      const p = new OllamaProvider('llama3', TEST_BASE_URL)
+      expect((p as unknown as { timeoutMs: number }).timeoutMs).toBe(120_000)
     })
   })
 })

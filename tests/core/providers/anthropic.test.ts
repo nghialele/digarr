@@ -2,9 +2,14 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { TasteProfile } from '@/core/types'
 
 const mockCreate = vi.fn()
+const anthropicCtorCalls: Array<Record<string, unknown>> = []
 
 vi.mock('@anthropic-ai/sdk', () => {
-  const MockAnthropic = vi.fn(function (this: Record<string, unknown>) {
+  const MockAnthropic = vi.fn(function (
+    this: Record<string, unknown>,
+    options: Record<string, unknown>,
+  ) {
+    anthropicCtorCalls.push(options)
     this.messages = { create: mockCreate }
   })
   return { default: MockAnthropic }
@@ -48,11 +53,70 @@ describe('AnthropicProvider', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    anthropicCtorCalls.length = 0
     provider = new AnthropicProvider('test-api-key', 'claude-3-5-sonnet-20241022')
   })
 
+  describe('baseURL', () => {
+    test('omits baseURL when none provided', () => {
+      new AnthropicProvider('k')
+      const lastCall = anthropicCtorCalls.at(-1) ?? {}
+      expect(lastCall.baseURL).toBeUndefined()
+    })
+
+    test('threads baseURL into SDK constructor', () => {
+      new AnthropicProvider('k', 'claude-3-5-sonnet-20241022', 'https://proxy.example.com')
+      const lastCall = anthropicCtorCalls.at(-1) ?? {}
+      expect(lastCall.baseURL).toBe('https://proxy.example.com')
+    })
+
+    test('ignores null baseURL', () => {
+      new AnthropicProvider('k', 'claude-3-5-sonnet-20241022', null)
+      const lastCall = anthropicCtorCalls.at(-1) ?? {}
+      expect(lastCall.baseURL).toBeUndefined()
+    })
+  })
+
   describe('getRecommendations', () => {
-    test('returns parsed AiRecommendation[] from API response', async () => {
+    test('prefers the tool_use block when present', async () => {
+      mockCreate.mockResolvedValueOnce({
+        content: [
+          {
+            type: 'tool_use',
+            name: 'emit_recommendations',
+            input: { recommendations: sampleRecommendations },
+          },
+        ],
+      })
+
+      const result = await provider.getRecommendations(sampleProfile)
+
+      expect(result).toHaveLength(2)
+      expect(result[0]?.artistName).toBe('Grouper')
+    })
+
+    test('requests the emit_recommendations tool', async () => {
+      mockCreate.mockResolvedValueOnce({
+        content: [
+          {
+            type: 'tool_use',
+            name: 'emit_recommendations',
+            input: { recommendations: sampleRecommendations },
+          },
+        ],
+      })
+
+      await provider.getRecommendations(sampleProfile)
+      const callArgs = mockCreate.mock.calls[0]?.[0] as {
+        tools?: Array<{ name: string; input_schema?: Record<string, unknown> }>
+        tool_choice?: { type: string; name?: string }
+      }
+      expect(callArgs.tools?.[0]?.name).toBe('emit_recommendations')
+      expect(callArgs.tools?.[0]?.input_schema).toBeDefined()
+      expect(callArgs.tool_choice).toEqual({ type: 'tool', name: 'emit_recommendations' })
+    })
+
+    test('falls back to text parsing when no tool_use block returned', async () => {
       mockCreate.mockResolvedValueOnce({
         content: [
           {
@@ -71,6 +135,85 @@ describe('AnthropicProvider', () => {
         confidence: 0.85,
         genres: ['ambient', 'drone'],
       })
+    })
+
+    test('sends cacheable system prelude with ephemeral cache_control', async () => {
+      mockCreate.mockResolvedValueOnce({
+        content: [
+          {
+            type: 'tool_use',
+            name: 'emit_recommendations',
+            input: { recommendations: sampleRecommendations },
+          },
+        ],
+      })
+
+      await provider.getRecommendations(sampleProfile)
+      const args = mockCreate.mock.calls[0]?.[0] as {
+        system?: Array<{ type: string; text: string; cache_control?: { type: string } }>
+        messages: Array<{ content: string }>
+      }
+      expect(args.system?.[0]?.type).toBe('text')
+      expect(args.system?.[0]?.cache_control).toEqual({ type: 'ephemeral' })
+      // The system block must NOT contain the listener-specific profile data;
+      // profile fields must live in the user turn so the prelude is cacheable.
+      expect(args.system?.[0]?.text).not.toContain('Boards of Canada')
+      expect(args.messages[0]?.content).toContain('Boards of Canada')
+    })
+
+    test('records lastUsage from the response', async () => {
+      mockCreate.mockResolvedValueOnce({
+        content: [
+          {
+            type: 'tool_use',
+            name: 'emit_recommendations',
+            input: { recommendations: sampleRecommendations },
+          },
+        ],
+        usage: {
+          input_tokens: 120,
+          output_tokens: 80,
+          cache_read_input_tokens: 100,
+          cache_creation_input_tokens: 20,
+        },
+      })
+
+      await provider.getRecommendations(sampleProfile)
+      expect(provider.lastUsage).toEqual({
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        inputTokens: 120,
+        outputTokens: 80,
+        cacheReadInputTokens: 100,
+        cacheCreationInputTokens: 20,
+      })
+    })
+
+    test('resets lastUsage when a prior call completed without usage', async () => {
+      mockCreate
+        .mockResolvedValueOnce({
+          content: [
+            {
+              type: 'tool_use',
+              name: 'emit_recommendations',
+              input: { recommendations: sampleRecommendations },
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 5 },
+        })
+        .mockResolvedValueOnce({
+          content: [
+            {
+              type: 'tool_use',
+              name: 'emit_recommendations',
+              input: { recommendations: sampleRecommendations },
+            },
+          ],
+        })
+      await provider.getRecommendations(sampleProfile)
+      expect(provider.lastUsage).not.toBeNull()
+      await provider.getRecommendations(sampleProfile)
+      expect(provider.lastUsage).toBeNull()
     })
 
     test('sends prompt that includes top artists from profile', async () => {

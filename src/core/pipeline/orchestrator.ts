@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events'
+import { envConfig } from '@/config/env'
 import { createFanartClient } from '@/core/clients/fanart'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
@@ -191,6 +192,7 @@ export class PipelineOrchestrator extends EventEmitter {
               apiKey: settings.aiApiKey ?? null,
               model: settings.aiModel,
               baseUrl: settings.aiBaseUrl ?? null,
+              timeoutSeconds: envConfig.aiTimeoutSeconds ?? null,
             })
           : null
 
@@ -460,6 +462,7 @@ export class PipelineOrchestrator extends EventEmitter {
             artistsDiscovered: scored.length,
             artistsStored: filtered.length,
             artistsFiltered: scored.length - filtered.length,
+            ...(aiProvider?.lastUsage ? { aiUsage: aiProvider.lastUsage } : {}),
           },
           sourceResults,
           batchId,
