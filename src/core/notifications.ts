@@ -1,5 +1,6 @@
 import { lookup } from 'node:dns/promises'
-import { isHttpUrl, isPrivateIp, isPrivateUrl } from './validation'
+import { isIP } from 'node:net'
+import { getLookupHostname, isHttpUrl, isPrivateIp, isPrivateUrl, normalizeIp } from './validation'
 
 export { isPrivateIp, isPrivateUrl }
 
@@ -60,7 +61,7 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
   let parsedUrl: URL
   try {
     parsedUrl = new URL(url)
-    const { address } = await lookup(parsedUrl.hostname)
+    const { address } = await lookup(getLookupHostname(parsedUrl))
     if (isPrivateIp(address)) {
       console.error('Webhook URL resolves to a private/internal IP address')
       return
@@ -76,26 +77,30 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
 
   const safeUrl = url.replace(/:\/\/[^@]*@/, '://***@')
   const body = isDiscordWebhook(url) ? formatDiscordPayload(payload) : payload
+  const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+  const fetchUrl = new URL(url)
+  fetchUrl.hostname = resolvedAddress
 
   // Pin the resolved IP to prevent DNS rebinding between check and use.
-  // For HTTPS this only works when the server accepts the IP directly;
-  // most webhook targets (Discord, Slack) use SNI so we keep the original URL
-  // for https:// and only pin for http://.
-  const fetchUrl =
-    parsedUrl.protocol === 'http:' ? url.replace(parsedUrl.hostname, resolvedAddress) : url
-  const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (parsedUrl.protocol === 'http:' && resolvedAddress !== parsedUrl.hostname) {
-    fetchHeaders.Host = parsedUrl.hostname
+  // HTTPS keeps the original hostname for SNI while connecting to the pinned IP.
+  if (resolvedAddress !== parsedUrl.hostname || parsedUrl.protocol === 'https:') {
+    fetchHeaders.Host = parsedUrl.host
+  }
+
+  const fetchInit: RequestInit & { tls?: { serverName: string } } = {
+    method: 'POST',
+    headers: fetchHeaders,
+    body: JSON.stringify(body),
+    signal: controller.signal,
+    redirect: 'manual',
+  }
+  const normalizedHostname = normalizeIp(parsedUrl.hostname)
+  if (parsedUrl.protocol === 'https:' && !isIpLiteral(normalizedHostname)) {
+    fetchInit.tls = { serverName: normalizedHostname }
   }
 
   try {
-    const res = await fetch(fetchUrl, {
-      method: 'POST',
-      headers: fetchHeaders,
-      body: JSON.stringify(body),
-      signal: controller.signal,
-      redirect: 'manual',
-    })
+    const res = await fetch(fetchUrl.toString(), fetchInit)
     if (!res.ok) {
       console.error(`Webhook POST to ${safeUrl} failed: HTTP ${res.status}`)
     }
@@ -104,4 +109,8 @@ export async function sendWebhook(url: string, payload: WebhookPayload): Promise
   } finally {
     clearTimeout(timeout)
   }
+}
+
+function isIpLiteral(hostname: string): boolean {
+  return isIP(hostname) !== 0
 }

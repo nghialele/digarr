@@ -3,7 +3,6 @@ import { createLastFmClient } from '@/core/clients/lastfm'
 import { createLidarrClient } from '@/core/clients/lidarr'
 import { createListenBrainzClient } from '@/core/clients/listenbrainz'
 import { sendWebhook } from '@/core/notifications'
-import { validatePublicServiceUrl } from '@/core/url-safety'
 import { errMsg } from '@/core/validation'
 import { getUserConnections, updateUserConnections } from '@/db/queries/users'
 import type { Preferences } from '@/db/schema'
@@ -55,6 +54,14 @@ function mergePreferenceUpdate(
   }
 
   return merged
+}
+
+function sanitizeServiceTestResult(
+  result: { success: boolean; message: string },
+  fallbackMessage: string,
+) {
+  if (result.success) return result
+  return { success: false, message: fallbackMessage }
 }
 
 /** Strip global connection fields that should not leak to non-admin users. */
@@ -284,21 +291,18 @@ export function settingsRoutes(deps: AppDependencies) {
       acceptLanguage: c.req.header('Accept-Language'),
     })
     const service = c.req.param('service')
+    const isAdmin = await resolveAdmin(
+      c.get('userId'),
+      deps.getUserById,
+      c.get('authSkipped'),
+      c.get('legacyTokenAuth'),
+    )
+    if (!isAdmin) {
+      return c.json({ success: false, message: messages['common.adminAccessRequired'] }, 403)
+    }
+
     const body = await c.req.json()
     const testUserId = c.get('userId')
-
-    // Admin-only services: lidarr, ai, oidc - only enforced when user sessions are active
-    if (testUserId && (service === 'lidarr' || service === 'ai' || service === 'oidc')) {
-      const isAdmin = await resolveAdmin(
-        testUserId,
-        deps.getUserById,
-        c.get('authSkipped'),
-        c.get('legacyTokenAuth'),
-      )
-      if (!isAdmin) {
-        return c.json({ success: false, message: messages['common.adminAccessRequired'] }, 403)
-      }
-    }
 
     // Fall back to stored credentials when the request sends empty keys
     const stored = await deps.getSettings()
@@ -313,7 +317,7 @@ export function settingsRoutes(deps: AppDependencies) {
         }
         const client = createLidarrClient(url, apiKey, body.skipTlsVerify)
         const result = await client.testConnection()
-        return c.json(result)
+        return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
       }
       case 'listenbrainz': {
         const username = body.username || userConns?.listenbrainzUsername || ''
@@ -327,7 +331,7 @@ export function settingsRoutes(deps: AppDependencies) {
           result.message +=
             ' (warning: no API token set - listening data, subscriptions, and recommendations will not work without it)'
         }
-        return c.json(result)
+        return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
       }
       case 'lastfm': {
         const username = body.username || userConns?.lastfmUsername || ''
@@ -340,7 +344,7 @@ export function settingsRoutes(deps: AppDependencies) {
         }
         const client = createLastFmClient(username, apiKey)
         const result = await client.testConnection()
-        return c.json(result)
+        return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
       }
       case 'ai': {
         try {
@@ -354,9 +358,9 @@ export function settingsRoutes(deps: AppDependencies) {
             },
           )
           const result = await provider.testConnection()
-          return c.json(result)
-        } catch (err: unknown) {
-          return c.json({ success: false, message: errMsg(err) })
+          return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
+        } catch (_err: unknown) {
+          return c.json({ success: false, message: messages['common.unknownError'] })
         }
       }
       case 'plex': {
@@ -368,7 +372,7 @@ export function settingsRoutes(deps: AppDependencies) {
         const { createPlexClient } = await import('@/core/clients/plex')
         const client = createPlexClient(url, token)
         const result = await client.testConnection()
-        return c.json(result)
+        return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
       }
       case 'jellyfin': {
         const url = body.url || userConns?.jellyfinUrl || ''
@@ -384,7 +388,7 @@ export function settingsRoutes(deps: AppDependencies) {
         if (result.success && !jfUserId) {
           result.message += ' (warning: no user ID set - listening data will not work without it)'
         }
-        return c.json(result)
+        return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
       }
       case 'emby': {
         const url = body.url || userConns?.embyUrl || ''
@@ -400,7 +404,7 @@ export function settingsRoutes(deps: AppDependencies) {
         if (result.success && !embyUserId) {
           result.message += ' (warning: no user ID set - listening data will not work without it)'
         }
-        return c.json(result)
+        return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
       }
       case 'discogs': {
         const token = body.token || userConns?.discogsToken || ''
@@ -414,7 +418,7 @@ export function settingsRoutes(deps: AppDependencies) {
         const { createDiscogsClient } = await import('@/core/clients/discogs')
         const client = createDiscogsClient(token, username)
         const result = await client.testConnection()
-        return c.json(result)
+        return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
       }
       case 'spotify': {
         const spotifyUserId = c.get('userId')
@@ -427,18 +431,12 @@ export function settingsRoutes(deps: AppDependencies) {
         const { createSpotifyClient } = await import('@/core/clients/spotify')
         const client = createSpotifyClient(oauthToken.accessToken)
         const result = await client.testConnection()
-        return c.json(result)
+        return c.json(sanitizeServiceTestResult(result, messages['common.unknownError']))
       }
       case 'oidc': {
         const issuerUrl = body.issuerUrl || (stored?.oidcIssuerUrl as string) || ''
         const clientId = body.clientId || (stored?.oidcClientId as string) || ''
         const clientSecret = body.clientSecret || (stored?.oidcClientSecret as string) || ''
-        if (issuerUrl) {
-          const validation = await validatePublicServiceUrl(issuerUrl, 'OIDC issuer URL')
-          if (!validation.ok) {
-            return c.json({ success: false, message: validation.message }, 400)
-          }
-        }
         if (!issuerUrl || !clientId) {
           return c.json({ success: false, message: 'Issuer URL and Client ID are required' })
         }
@@ -449,7 +447,9 @@ export function settingsRoutes(deps: AppDependencies) {
           clientSecret: clientSecret || undefined,
           scopes: 'openid',
         })
-        return c.json(await svc.testConnection())
+        return c.json(
+          sanitizeServiceTestResult(await svc.testConnection(), messages['common.unknownError']),
+        )
       }
       default:
         return c.json({ error: `Unknown service: ${service}` }, 400)

@@ -1,5 +1,9 @@
 import * as dns from 'node:dns/promises'
 import { isPrivateIp, isPrivateUrl } from '@/core/notifications'
+import { getLookupHostname } from '@/core/validation'
+
+const REDACTED_QUERY_VALUE = '[REDACTED]'
+const SENSITIVE_QUERY_KEYS = new Set(['api_key', 'apikey', 'key', 'token', 'secret', 'password'])
 
 type HttpClientConfig = {
   baseUrl: string
@@ -60,7 +64,11 @@ export function createHttpClient(config: HttpClientConfig) {
 
         if (!followRedirects && res.status >= 300 && res.status < 400) {
           const location = res.headers.get('location')
-          throw new HttpError(res.status, `Redirect blocked${location ? `: ${location}` : ''}`, url)
+          throw new HttpError(
+            res.status,
+            `Redirect blocked${location ? `: ${redactUrlForLog(location)}` : ''}`,
+            url,
+          )
         }
 
         const errorBody = await readResponseText(res)
@@ -84,7 +92,7 @@ export function createHttpClient(config: HttpClientConfig) {
       }
     }
 
-    throw new Error(`Request failed after ${retries} retries: ${method} ${url}`)
+    throw new Error(`Request failed after ${retries} retries: ${method} ${redactUrlForLog(url)}`)
   }
 
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -127,14 +135,17 @@ async function prepareRequest(
     }
 
     const parsedUrl = new URL(url)
-    const { address } = await dns.lookup(parsedUrl.hostname)
+    const hostname = getLookupHostname(parsedUrl)
+    const { address } = await dns.lookup(hostname)
     if (isPrivateIp(address)) {
       throw new Error('URL resolves to a private/internal IP')
     }
 
-    if (parsedUrl.protocol === 'http:' && address !== parsedUrl.hostname) {
-      fetchUrl = url.replace(parsedUrl.hostname, address)
-      headers.set('Host', parsedUrl.hostname)
+    if (parsedUrl.protocol === 'http:' && address !== hostname) {
+      const pinnedUrl = new URL(url)
+      pinnedUrl.hostname = address
+      fetchUrl = pinnedUrl.toString()
+      headers.set('Host', parsedUrl.host)
     }
   }
 
@@ -152,11 +163,15 @@ export class HttpError extends Error {
   constructor(
     public status: number,
     public body: string,
-    public url: string,
+    url: string,
   ) {
-    super(`HTTP ${status} from ${url}: ${body}`)
+    const redactedUrl = redactUrlForLog(url)
+    super(`HTTP ${status} from ${redactedUrl}: ${body}`)
     this.name = 'HttpError'
+    this.url = redactedUrl
   }
+
+  public url: string
 }
 
 function sleep(ms: number): Promise<void> {
@@ -166,4 +181,50 @@ function sleep(ms: number): Promise<void> {
 async function readResponseText(res: Response): Promise<string> {
   const text = await res.text()
   return text || '(empty response body)'
+}
+
+export function redactUrlForLog(url: string): string {
+  try {
+    const absolute = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)
+    const parsed = absolute ? new URL(url) : new URL(url, 'http://redact.invalid')
+    const redactedParams = new URLSearchParams()
+
+    for (const [key, value] of parsed.searchParams.entries()) {
+      redactedParams.append(
+        key,
+        SENSITIVE_QUERY_KEYS.has(key.toLowerCase()) ? REDACTED_QUERY_VALUE : value,
+      )
+    }
+
+    parsed.search = redactedParams.toString()
+    const serialized = parsed.toString()
+    return absolute ? serialized : serialized.replace('http://redact.invalid', '')
+  } catch {
+    return redactQueryStringFallback(url)
+  }
+}
+
+function redactQueryStringFallback(url: string): string {
+  const queryStart = url.indexOf('?')
+  if (queryStart === -1) return url
+
+  const hashStart = url.indexOf('#', queryStart)
+  const prefix = url.slice(0, queryStart + 1)
+  const query = url.slice(queryStart + 1, hashStart === -1 ? undefined : hashStart)
+  const suffix = hashStart === -1 ? '' : url.slice(hashStart)
+
+  const redactedQuery = query
+    .split('&')
+    .map((part) => {
+      const equalsIndex = part.indexOf('=')
+      if (equalsIndex === -1) return part
+
+      const key = part.slice(0, equalsIndex).toLowerCase()
+      if (!SENSITIVE_QUERY_KEYS.has(key)) return part
+
+      return `${part.slice(0, equalsIndex + 1)}${REDACTED_QUERY_VALUE}`
+    })
+    .join('&')
+
+  return `${prefix}${redactedQuery}${suffix}`
 }
