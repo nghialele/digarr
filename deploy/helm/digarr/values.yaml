@@ -54,6 +54,11 @@ podDisruptionBudget:
 ingress:
   enabled: false
   className: nginx
+  # Namespace of the ingress controller. Used by the NetworkPolicy ingress
+  # rule to allow traffic from this namespace only. The controller's
+  # namespace must carry the `kubernetes.io/metadata.name` label
+  # (automatic on Kubernetes >= 1.22).
+  controllerNamespace: ingress-nginx
   annotations: {}
   hosts:
     - host: digarr.example.com
@@ -79,6 +84,26 @@ env:
   PORT: "3000"
   LOG_LEVEL: info
 
+# Extra environment variables appended to the deployment container.
+# Use this for secrets like DIGARR_ENCRYPTION_KEY, OIDC_CLIENT_SECRET, etc.
+# Each entry follows the Kubernetes envVar shape (name + value or valueFrom).
+# Example:
+#   extraEnv:
+#     - name: DIGARR_ENCRYPTION_KEY
+#       valueFrom:
+#         secretKeyRef:
+#           name: my-digarr-secret
+#           key: encryption-key
+extraEnv: []
+
+# Extra envFrom sources appended to the deployment container. Useful for
+# importing an entire secret or configmap of env vars in one block.
+# Example:
+#   extraEnvFrom:
+#     - secretRef:
+#         name: my-oidc-secret
+extraEnvFrom: []
+
 startupProbe:
   httpGet:
     path: /health
@@ -88,21 +113,22 @@ startupProbe:
   timeoutSeconds: 3
 
 livenessProbe:
-  tcpSocket:
+  httpGet:
+    path: /health
     port: http
-  initialDelaySeconds: 10
-  periodSeconds: 30
-  timeoutSeconds: 5
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 10
   failureThreshold: 3
 
 readinessProbe:
   httpGet:
     path: /health
     port: http
-  initialDelaySeconds: 3
-  periodSeconds: 10
-  timeoutSeconds: 3
-  failureThreshold: 3
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 2
 
 # ---------------------------------------------------------------------------
 # Database
@@ -151,3 +177,42 @@ database:
   password: ""
   # Name of an existing Secret with key DATABASE_URL
   existingSecret: ""
+
+# ---------------------------------------------------------------------------
+# Optional Namespace with Pod Security Admission labels
+# ---------------------------------------------------------------------------
+# When true the chart emits a Namespace object with the PSA `restricted`
+# profile enforced. Use only when Helm installs the namespace (i.e. not
+# when `helm install -n <ns> --create-namespace` is used with an existing
+# namespace you already manage).
+namespace:
+  create: false
+  labels: {}
+
+# ---------------------------------------------------------------------------
+# Optional Gateway API HTTPRoute (replaces Ingress on clusters running
+# Gateway API controllers like Cilium, Traefik, Envoy Gateway, Istio).
+# Ingress-NGINX reaches EOL in March 2026; this is the forward path.
+# ---------------------------------------------------------------------------
+gateway:
+  enabled: false
+  # Name of the parent Gateway resource. Required when enabled=true.
+  gatewayName: ""
+  # Optional: namespace of the parent Gateway. Leave empty for same-ns.
+  gatewayNamespace: ""
+  # Optional: listener sectionName on the parent Gateway.
+  sectionName: ""
+  # List of hostnames to match on. Empty list matches any.
+  hostnames: []
+  # - digarr.example.com
+
+# ---------------------------------------------------------------------------
+# Optional PVC for /app/backups
+# ---------------------------------------------------------------------------
+# Default is emptyDir -- backups live only for the pod lifetime. Enable
+# persistence to survive pod restarts and cluster events.
+backups:
+  persistence:
+    enabled: false
+    size: 5Gi
+    # storageClass: ""  # uses cluster default if unset
