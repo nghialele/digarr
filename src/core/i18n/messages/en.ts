@@ -21,7 +21,6 @@ export const en = {
   'auth.createAccount': 'Create account',
   'auth.creatingAccount': 'Creating account...',
   'auth.credentialsRequired': 'Username and password are required',
-  'auth.createFirstAccount': 'Create the first account to get started.',
   'auth.invalidCredentials': 'Invalid credentials',
   'auth.invalidInput': 'Invalid input',
   'auth.invalidToken': 'Invalid token',
@@ -42,7 +41,6 @@ export const en = {
   'auth.usernameRequired': 'Username is required',
   'auth.usernameTaken': 'Username already taken',
   'auth.password': 'Password',
-  'common.back': 'Back',
   'common.cancel': 'Cancel',
   'common.clear': 'Clear',
   'common.continue': 'Continue',
@@ -70,7 +68,6 @@ export const en = {
   'playlist.backToPlaylists': 'Back to Playlists',
   'playlist.lastGenerated': 'Last generated',
   'playlist.notFound': 'Playlist not found.',
-  'playlist.playlists': 'Playlists',
   'playlist.tracks': 'Tracks',
   'playlists.create': 'Create Playlist',
   'playlists.empty':
@@ -105,7 +102,6 @@ export const en = {
   'genres.libraryGenres': 'Your Library Genres',
   'genreDetail.backToGenres': 'Back to Genres',
   'genreDetail.createSubscription': 'Create Subscription',
-  'analytics.title': 'Analytics',
   'jobHistory.title': 'Job History',
   'libraryHealth.title': 'Library Health',
   'libraryReconciliation.title': 'Unreconciled Artists',
@@ -186,7 +182,6 @@ export const en = {
   'setup.starting': 'Starting...',
   'setup.stepComplete': 'Step complete',
   'setup.subtitle': 'This determines how approved recommendations are handled.',
-  'setup.title': 'Initial setup',
   'setup.userId': 'User ID',
   'setup.verifyProviderLater':
     'You can verify the provider from Settings after setup. Continue once the provider details are filled in.',
@@ -275,7 +270,6 @@ export const en = {
   'discover.monitorSelectedDescription': 'Choose which albums to monitor',
   'discover.monitorNoneDescription': 'Add unmonitored (tracking only)',
   'discover.discoveryRunStarted': 'Discovery run started.',
-  'discover.expand': 'Expand',
   'discover.exportFailed': 'Export failed',
   'discover.exported': 'exported',
   'discover.hideFeedbackInsights': 'Hide feedback insights',
@@ -380,7 +374,6 @@ export const en = {
   'libraryReconciliation.page': 'Page',
   'libraryReconciliation.showing': 'Showing',
   'playlist.delete': 'Delete',
-  'playlist.deleteConfirm': 'Delete',
   'playlist.deleteFailed': 'Failed to delete playlist',
   'playlist.deleteWarning': 'Delete this playlist? This cannot be undone.',
   'playlist.deletedNamed': 'Playlist deleted',
@@ -549,10 +542,6 @@ export const en = {
   'cronPicker.everyTwoWeeks': 'Every 2 weeks (1st + 15th)',
   'cronPicker.monthlyFirst': 'Monthly (1st)',
   'cronPicker.standardHint': 'Standard cron: minute hour day-of-month month day-of-week',
-  'subscription.feed.deezerFavorites': 'Deezer Favorites',
-  'subscription.feed.deezerFlow': 'Deezer Flow Recommendations',
-  'subscription.feed.deezerFollowed': 'Deezer Followed Artists',
-  'subscription.feed.deezerPlaylists': 'Deezer Playlists',
   'analytics.statusCompleted': 'Completed',
   'analytics.noBatchesYet': 'No batches yet. Run a scan to generate recommendations.',
   'analytics.recommendationsShort': 'recs',
@@ -692,8 +681,6 @@ export const en = {
   'settings.deezer': 'Deezer',
   'settings.deezerConnectHelp':
     'Connect your Deezer account to import favorites, followed artists, and playlist data.',
-  'settings.deezerImportPlaylists': 'Import from Playlists',
-  'settings.deezerSelectPlaylists': 'Select playlists to import artists from',
   'settings.importFavorites': 'Import Favorites',
   'settings.importFollowed': 'Import Followed',
   'settings.integrationCapabilities': 'Integration Capabilities',
@@ -709,7 +696,6 @@ export const en = {
   'systemHealth.lastRun': 'last:',
   'systemHealth.nextRun': 'next:',
   'systemHealth.healthy': 'healthy',
-  'systemHealth.degraded': 'degraded',
   'systemHealth.overdue': 'overdue',
   'systemHealth.inMinutes': 'in {0}m',
   'systemHealth.inHours': 'in {0}h',
@@ -845,7 +831,6 @@ export const en = {
     '{0} MusicBrainz lookups failed. Affected artists are left unreconciled and will retry next sync.',
 
   // Library Stats
-  'libraryStats.title': 'Library Statistics',
   'libraryStats.artists': 'Artists',
   'libraryStats.monitored': 'Monitored',
   'libraryStats.albums': 'Albums',
@@ -1196,7 +1181,6 @@ export const en = {
   'admin.currentVersion': 'Current version',
   'admin.pendingMigrations': 'Pending migrations',
   'admin.upToDate': 'Up to date',
-  'admin.pendingCount': '{0} pending',
   'admin.restoreSummary': 'Restored {0} rows across {1} tables',
   'admin.restoreSummaryForce': 'Restored {0} rows. Re-enter credentials for encrypted fields.',
   'admin.encryptionMismatchMessage': 'The backup was created with a different encryption key.',
@@ -1279,9 +1263,34 @@ export const en = {
 
   // Album picker empty state
   'albumPicker.noReleaseGroups': 'No release groups found',
+  'albumPicker.title': 'Select albums',
+  'albumPicker.loadFailed': 'Failed to load albums',
+  'albumPicker.selectAll': 'All',
+  'albumPicker.selectNone': 'None',
+  'albumPicker.selectedCount': '{0} selected',
+  'albumPicker.aiPick': 'AI pick',
+  'albumPicker.monitorSingular': 'Monitor {0} album',
+  'albumPicker.monitorPlural': 'Monitor {0} albums',
+  'albumPicker.monitor': 'Monitor',
 
   // Approve dialog
   'approveDialog.loadingProfiles': 'Loading profiles...',
+  'approveDialog.title': 'Lidarr Settings for This Artist',
+  'approveDialog.loadFailed': 'Failed to load Lidarr profiles. Check your Lidarr connection.',
+  'approveDialog.qualityProfile': 'Quality Profile',
+  'approveDialog.metadataProfile': 'Metadata Profile',
+  'approveDialog.rootFolder': 'Root Folder',
+
+  // Card stack navigation hints
+  'cardStack.counter': '{0} of {1}',
+  'cardStack.swipeHint': 'Swipe right to approve, left to reject',
+
+  // Service card footer
+  'serviceCard.testConnection': 'Test Connection',
+
+  // Preview playback toasts
+  'preview.noPreviewAvailable': 'No preview available for this artist',
+  'preview.playbackBlocked': 'Playback blocked by browser - try clicking again',
 
   // Genre grid empty state
   'genres.noneFound': 'No genres found.',
@@ -1331,4 +1340,16 @@ export const en = {
 
   // Library sync progress messages
   'librarySync.message.syncingSource': 'Syncing {0}...',
+
+  // Server-emitted error codes (problem+json `code` field). Client resolves
+  // these against the active locale and falls back to the problem `title`.
+  'errors.auth.invalidCredentials': 'Invalid credentials',
+  'errors.auth.notAuthenticated': 'Not authenticated',
+  'errors.auth.passwordIncorrect': 'Current password is incorrect',
+  'errors.auth.usernameTaken': 'Username already taken',
+  'errors.target.notFound': 'Target not found',
+  'errors.pipeline.alreadyRunning': 'A pipeline run is already in progress',
+  'errors.recommendation.notFound': 'Recommendation not found',
+  'errors.subscription.notFound': 'Subscription not found',
+  'errors.playlist.notFound': 'Playlist not found',
 } as const
