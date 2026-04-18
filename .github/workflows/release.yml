@@ -34,10 +34,12 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: quality-gate
+    environment: production
     permissions:
       contents: write
       packages: write
       id-token: write # cosign keyless signing via Sigstore OIDC
+      attestations: write # actions/attest-build-provenance
     strategy:
       matrix:
         include:
@@ -108,6 +110,22 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             RUNTIME_IMAGE=${{ matrix.runtime-image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Attest build provenance (GHCR)
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest build provenance (Docker Hub)
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: docker.io/iuliandita/digarr
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
 
       - name: Sign images (cosign keyless)
         env:
@@ -120,9 +138,11 @@ jobs:
 
       - name: Generate SBOM (container)
         if: matrix.variant == 'debian'
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          image: ${{ env.IMAGE_REF }}
           artifact-name: sbom-container.spdx.json
           output-file: sbom-container.spdx.json
 
@@ -153,3 +173,32 @@ jobs:
         run: |
           gh release create "$TAG" --repo "$REPO" --title "$TAG" --generate-notes 2>/dev/null || true
           gh release upload "$TAG" sbom-container.spdx.json sbom-source.spdx.json --clobber
+
+  verify-digest-sync:
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+      - name: Assert deploy artefacts carry the same digest
+        run: |
+          k8s=$(grep -oE 'sha256:[a-f0-9]+' deploy/k8s/deployment.yaml | head -1)
+          helm=$(grep -oE 'sha256:[a-f0-9]+' deploy/helm/digarr/values.yaml | head -1)
+          unraid=$(grep -oE 'sha256:[a-f0-9]+' deploy/unraid/digarr.xml | head -1)
+          if [ -z "$k8s" ] || [ -z "$helm" ] || [ -z "$unraid" ]; then
+            echo "missing digest in one or more deploy files:"
+            echo "  k8s=$k8s"
+            echo "  helm=$helm"
+            echo "  unraid=$unraid"
+            exit 1
+          fi
+          if [ "$k8s" != "$helm" ] || [ "$k8s" != "$unraid" ]; then
+            echo "digest drift detected:"
+            echo "  k8s=$k8s"
+            echo "  helm=$helm"
+            echo "  unraid=$unraid"
+            echo "Run: bun scripts/sync-deploy-digests.ts <tag>"
+            exit 1
+          fi
+          echo "digests aligned: $k8s"
