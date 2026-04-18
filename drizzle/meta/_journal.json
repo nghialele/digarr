@@ -190,6 +190,27 @@
       "when": 1776456510416,
       "tag": "0026_single_admin_partial_index",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1776509648892,
+      "tag": "0027_fk_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1776509887445,
+      "tag": "0028_library_natural_keys_nulls_not_distinct",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1776510950630,
+      "tag": "0029_artists_gin_indexes",
+      "breakpoints": true
     }
   ]
 }

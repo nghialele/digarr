@@ -123,8 +123,12 @@ export async function createBackup(db: OpsDb, options: BackupOptions = {}): Prom
 
 // ── Restore ────────────────────────────────────
 
+// Flags for the detectEncryptionMismatch warning. Entries may be top-level
+// column names (e.g. 'lidarrApiKey') or nested jsonb paths in dotted form
+// (e.g. 'preferences.fanartApiKey'). The detector only uses these labels for
+// the surfaced error message, so dotted paths are a pure string contract.
 const ENCRYPTED_FIELD_MAP: Record<string, readonly string[]> = {
-  settings: SENSITIVE_SETTINGS,
+  settings: [...SENSITIVE_SETTINGS, 'preferences.fanartApiKey'],
   users: SENSITIVE_USER_CONNECTIONS,
   oauthTokens: SENSITIVE_OAUTH,
   oidcTokens: SENSITIVE_OIDC,
@@ -177,16 +181,28 @@ function createRestoreSpec<TTable extends BackupTable>(
       await tx.delete(table)
     },
     async restore(tx, rows) {
+      if (rows.length === 0) return
       const target = conflictTarget ?? getDefaultConflictTarget(table)
-      for (const row of rows) {
-        const safeRow = filterToSchemaColumns(table, row) as TTable['$inferInsert']
+      const columns = getTableColumns(table)
+      // Build an excluded.* set clause once per table so the batched upsert
+      // copies every inserted value onto existing rows. Drop `id` so the
+      // original primary key is not overwritten with itself (harmless, but
+      // noisier EXPLAIN output).
+      const setClause: Record<string, ReturnType<typeof sql>> = {}
+      for (const [jsName, col] of Object.entries(columns) as [string, AnyPgColumn][]) {
+        if (jsName === 'id') continue
+        setClause[jsName] = sql.raw(`excluded.${col.name}`)
+      }
+      const safeRows = rows.map((row) => filterToSchemaColumns(table, row))
+      // Postgres caps bind parameters at 65535. Keep chunks well below that:
+      // assume up to ~30 cols per row, so 1000 rows = ~30k params with headroom.
+      const CHUNK = 1000
+      for (let i = 0; i < safeRows.length; i += CHUNK) {
+        const chunk = safeRows.slice(i, i + CHUNK)
         await tx
           .insert(table)
-          .values(safeRow as never)
-          .onConflictDoUpdate({
-            target,
-            set: safeRow as never,
-          })
+          .values(chunk as never)
+          .onConflictDoUpdate({ target, set: setClause as never })
       }
     },
     async resetSequence(tx) {
