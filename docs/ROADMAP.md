@@ -1,6 +1,6 @@
 # Roadmap
 
-> Updated: 2026-04-18 | Current: v0.30.5
+> Updated: 2026-04-18 | Current: v0.32.3
 >
 > Priorities change with feedback. This is current intent, not a promise.
 
@@ -103,6 +103,13 @@ Release reminder: after publishing a new app image, update the pinned digests in
 - Library operations now cover Lidarr, Plex, Jellyfin, Emby, and `slskd`, with artist and album sync, reconciliation review, persistent Library Health snapshots, and better sync visibility
 - Operations and safety now include backup/restore, pre-flight migration checks, auto-backups, job history, stuck-task detection, and browser-test release gates
 - Recent integration work added Deezer OAuth feeds, Emby support, linked `slskd` targets, and broader playlist export coverage
+
+### v0.32.x (deep-audit phase 5)
+
+- Forgejo demoted to CI-only so GitHub is the sole release surface; release pipeline consolidated and `.forgejo/workflows/ci.yml` annotated with mirror-origin comments to keep action SHAs in sync with `.github/` after Dependabot bumps
+- SLSA v1.0 build provenance attestations now ride alongside cosign signatures on every published image (GHCR + Docker Hub), pushed to both the registry referrers API and the GitHub attestations API
+- Image digests kept in lockstep across `deploy/k8s/deployment.yaml`, `deploy/helm/digarr/values.yaml`, and `deploy/unraid/digarr.xml` by a new `scripts/sync-deploy-digests.ts` script; release CI asserts no drift
+- Buildx caches across runs via `type=gha` and the docker job is gated on a `production` environment with required reviewer, so tag pushes no longer publish unattended
 
 ### v0.31.x (deep-audit phase 4)
 

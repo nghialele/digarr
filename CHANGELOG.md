@@ -4,6 +4,25 @@ All notable user-facing changes are documented here.
 
 ## Unreleased
 
+## v0.32.3 - 2026-04-18
+
+Phase 5 of the deep-audit remediation: supply chain and release integrity. Forgejo demoted to CI-only so GitHub is the sole release surface. SLSA v1.0 build provenance attestations now ride alongside cosign signatures on every published image. Image digests are kept in lockstep across `deploy/k8s/deployment.yaml`, `deploy/helm/digarr/values.yaml`, and `deploy/unraid/digarr.xml` by a new sync script, with a CI assertion that fails the release pipeline on drift. Buildx now caches across runs via GitHub Actions cache, and the docker job is gated on a `production` environment with required reviewer.
+
+### Added
+
+- `actions/attest-build-provenance@v4.1.0` produces SLSA v1.0 build-provenance attestations for both GHCR and Docker Hub on every release. Attestations are pushed to the registry referrers API and to the GitHub attestations API.
+- `scripts/sync-deploy-digests.ts` fetches the multi-arch manifest digest from ghcr.io and rewrites all three deploy artefacts. Run it post-release as `bun scripts/sync-deploy-digests.ts vX.Y.Z`.
+- `verify-digest-sync` job in `.github/workflows/release.yml` asserts that the Kubernetes manifest, Helm chart values, and Unraid template all carry the same `sha256:` digest. The release pipeline fails on drift.
+- Docker job gated on `environment: production` with `iuliandita` as required reviewer; tag pushes now block at the publish step until acknowledged.
+- Buildx now uses `cache-from: type=gha` / `cache-to: type=gha,mode=max`, cutting cold-cache build time on subsequent releases.
+
+### Changed
+
+- Forgejo no longer publishes release artefacts. `.forgejo/workflows/release.yml` deleted; the GitHub release workflow is canonical.
+- `.forgejo/workflows/ci.yml` annotated with mirror-origin comments on every `actions/checkout` step so future Dependabot bumps to `.github/` can be mirrored manually without ambiguity.
+- SBOM step in the release workflow routes the image arg through `IMAGE_REF` env, matching the pattern used by the `Resolve tag` step.
+- Unraid template (`deploy/unraid/digarr.xml`) carries an explicit digest-pin comment, kept in sync with the other deploy files by the sync script.
+
 ## v0.31.7 - 2026-04-18
 
 Phase 4 of the deep-audit remediation: database-layer correctness and performance. Six missing foreign-key indexes added, three check-then-write upsert races closed, N+1 loops in backup restore and hygiene batched into chunked statements, per-row JS genre aggregation pushed into SQL via `unnest`, and `DIGARR_ENCRYPTION_KEY_NEXT` dual-key rotation landed with a runbook. Three migrations; no user action required beyond standard deploy.
