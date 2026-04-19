@@ -2,6 +2,14 @@
 
 All notable user-facing changes are documented here.
 
+## v0.40.6 - 2026-04-19
+
+Closes the last Phase 2 SSRF gap from the deep audit (item 2.3). NAT64 (RFC 6052, `64:ff9b::/32`) and Teredo (RFC 4380, `2001::/32`) encode arbitrary IPv4 inside IPv6, so an attacker controlling DNS for an IPv6 hostname could previously tunnel webhook/probe traffic back into RFC1918 space. `isPrivateIp` now rejects both prefixes.
+
+### Security
+
+- `src/core/validation.ts` rejects NAT64 and Teredo IPv6 prefixes when screening webhook targets and other outbound hosts. The companion test assertions are flipped from `false` to `true`.
+
 ## v0.37.5 - 2026-04-18
 
 Phase 10 of the deep-audit remediation: AI/LLM hardening. Anthropic and OpenAI now respect `baseURL` so proxy deployments work; Gemini, Ollama, and OpenAI-compatible providers retry with exponential backoff and honour `Retry-After`; Ollama's timeout is configurable via `DIGARR_AI_TIMEOUT_SECONDS`; the mood endpoint wraps user input in `<user_query>` delimiters with control-character sanitation. Every recommendation response is now Zod-validated, Anthropic requests use tool-use + prompt caching (`cache_control: { type: 'ephemeral' }` on a static prelude), and per-request token usage lands in `job_runs.metadata.aiUsage`. Promptfoo fixtures ship as an advisory eval gate.

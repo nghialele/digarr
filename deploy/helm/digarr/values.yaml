@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/iuliandita/digarr
-  tag: "0.40.5"
+  tag: "0.40.6"
   # Pin the digest after publishing the release image. The digest comes from the published registry artifact.
   digest: "sha256:9d9ee33b96d262c582eb4af0578db21feee60075cd3a9c5d111be2ee98d65487"
   pullPolicy: Always
