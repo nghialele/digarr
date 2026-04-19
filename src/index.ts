@@ -689,7 +689,8 @@ const subscriptionQueriesImpl = {
   createSubscription: (data: Parameters<typeof createSubscription>[1]) =>
     createSubscription(db, data),
   getSubscription: (id: number) => getSubscription(db, id),
-  getSubscriptionsByUser: (userId: number) => getSubscriptionsByUser(db, userId),
+  getSubscriptionsByUser: (userId: number, opts?: Parameters<typeof getSubscriptionsByUser>[2]) =>
+    getSubscriptionsByUser(db, userId, opts),
   getEnabledSubscriptions: () => getEnabledSubscriptions(db),
   updateSubscription: (id: number, data: Parameters<typeof updateSubscription>[2]) =>
     updateSubscription(db, id, data),
@@ -1169,7 +1170,7 @@ const app = createApp({
     updateRecommendationStatus(db, id, status, extra),
   bulkUpdateStatus: (ids, status) => bulkUpdateStatus(db, ids, status),
   filterOwnedIds: (ids, userId) => filterOwnedIds(db, ids, userId),
-  listBatches: () => listBatches(db),
+  listBatches: (opts?: Parameters<typeof listBatches>[1]) => listBatches(db, opts),
   getBatch: (id) => getBatch(db, id),
   getArtistById: (id) => getArtistById(db, id),
   restartScheduler: (cron: string | null) => {
@@ -1194,7 +1195,7 @@ const app = createApp({
   getUserByOidcSubject: (subject) => getUserByOidcSubject(db, subject),
   getUserByEmail: (email) => getUserByEmail(db, email),
   updateUser: (id, data) => updateUser(db, id, data),
-  listUsers: () => listUsers(db),
+  listUsers: (opts?: Parameters<typeof listUsers>[1]) => listUsers(db, opts),
   deleteUser: (id) => deleteUser(db, id),
   genreService,
   libraryHealth,
@@ -1207,8 +1208,9 @@ const app = createApp({
   runSubscription: (id) => executeSubscription(id),
   targetQueries: {
     createTarget: (data: TargetInsert) => createTarget(db, data),
-    getTargetsByUser: (userId: number) => getTargetsByUser(db, userId),
-    getAllTargets: () => getAllTargets(db),
+    getTargetsByUser: (userId: number, opts?: Parameters<typeof getTargetsByUser>[2]) =>
+      getTargetsByUser(db, userId, opts),
+    getAllTargets: (opts?: Parameters<typeof getAllTargets>[1]) => getAllTargets(db, opts),
     getTarget: (id: number) => getTarget(db, id),
     updateTarget: (id: number, data: Parameters<typeof updateTarget>[2]) =>
       updateTarget(db, id, data),

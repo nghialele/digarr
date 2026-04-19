@@ -307,23 +307,13 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
     return 'not_configured'
   }
 
-  function createTester(
-    key: string,
-    label: string,
-    testFn: () => Promise<{ success: boolean; message?: string }>,
-  ) {
+  function createTester(key: string, label: string, testFn: () => Promise<{ message: string }>) {
     return async () => {
       setTest(key, 'testing')
       try {
-        const res = await testFn()
-        setTest(key, res.success ? 'ok' : 'error')
-        if (res.success) {
-          toast.success(formatLabelMessage('settings.serviceConnectedToast', label))
-        } else {
-          toast.error(
-            res.message || formatLabelMessage('settings.serviceConnectionFailedToast', label),
-          )
-        }
+        await testFn()
+        setTest(key, 'ok')
+        toast.success(formatLabelMessage('settings.serviceConnectedToast', label))
       } catch {
         setTest(key, 'error')
         toast.error(formatLabelMessage('settings.serviceUnreachableToast', label))
@@ -365,9 +355,8 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
   async function handleTestWebhook() {
     setTestingWebhook(true)
     try {
-      const res = await testWebhook()
-      if (res.success) toast.success(t('settings.webhookTestSuccess'))
-      else toast.error(res.message || t('settings.webhookTestFailed'))
+      await testWebhook()
+      toast.success(t('settings.webhookTestSuccess'))
     } catch {
       toast.error(t('settings.webhookTestFailed'))
     } finally {
@@ -463,7 +452,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
       const res = await initiateOAuth('spotify', {
         clientId: spotifyClientId,
         clientSecret: spotifyClientSecret,
-        redirectUri: `${window.location.origin}/api/auth/oauth/spotify/callback`,
+        redirectUri: `${window.location.origin}/api/v1/auth/oauth/spotify/callback`,
       })
       window.location.href = res.authUrl
     } catch {
@@ -1140,7 +1129,7 @@ function ConnectionsTab({ settings, onSaved }: { settings: Settings; onSaved: ()
                       const res = await initiateOAuth('deezer', {
                         clientId: '',
                         clientSecret: '',
-                        redirectUri: `${window.location.origin}/api/auth/oauth/deezer/callback`,
+                        redirectUri: `${window.location.origin}/api/v1/auth/oauth/deezer/callback`,
                       })
                       window.location.href = res.authUrl
                     } catch {
@@ -2631,13 +2620,12 @@ function AuthTab({ settings, onSaved }: { settings: Settings; onSaved: () => voi
   async function handleTestOidc() {
     setTestingOidc(true)
     try {
-      const res = await testService('oidc', {
+      await testService('oidc', {
         issuerUrl: oidcIssuerUrl,
         clientId: oidcClientId,
         clientSecret: oidcClientSecret || undefined,
       })
-      if (res.success) toast.success(t('settings.oidcTestSuccess'))
-      else toast.error(res.message || t('settings.oidcTestFailed'))
+      toast.success(t('settings.oidcTestSuccess'))
     } catch {
       toast.error(t('settings.oidcTestFailed'))
     } finally {

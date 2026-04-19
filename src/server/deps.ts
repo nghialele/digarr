@@ -30,6 +30,7 @@ import type {
 import type { SettingsRow, SetupConfig } from '@/db/queries/settings'
 import type { SubscriptionInsert, SubscriptionUpdate } from '@/db/queries/subscriptions'
 import type { subscriptions } from '@/db/schema'
+import type { Cursor } from '@/server/helpers/pagination-cursor'
 
 type SubscriptionRow = typeof subscriptions.$inferSelect
 
@@ -77,7 +78,7 @@ export interface UserDeps {
     id: number,
     data: { isAdmin?: boolean; email?: string; oidcSubject?: string },
   ) => Promise<void>
-  listUsers: () => Promise<UserPublic[]>
+  listUsers: (opts?: { limit?: number; cursor?: Cursor | null }) => Promise<UserPublic[]>
   deleteUser: (id: number) => Promise<void>
 }
 
@@ -120,7 +121,7 @@ export interface RecommendationDeps {
   ) => Promise<void>
   bulkUpdateStatus: (ids: number[], status: string) => Promise<void>
   filterOwnedIds: (ids: number[], userId: number | undefined) => Promise<number[]>
-  listBatches: () => Promise<BatchRow[]>
+  listBatches: (opts?: { limit?: number; cursor?: Cursor | null }) => Promise<BatchRow[]>
   getBatch: (id: number) => Promise<BatchRow | null>
   getArtistById: (id: number) => Promise<ArtistRow | null>
   getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
@@ -132,7 +133,10 @@ export interface SubscriptionDeps {
   subscriptionQueries: {
     createSubscription: (data: SubscriptionInsert) => Promise<SubscriptionRow>
     getSubscription: (id: number) => Promise<SubscriptionRow | null>
-    getSubscriptionsByUser: (userId: number) => Promise<SubscriptionRow[]>
+    getSubscriptionsByUser: (
+      userId: number,
+      opts?: { limit?: number; cursor?: Cursor | null },
+    ) => Promise<SubscriptionRow[]>
     getEnabledSubscriptions: () => Promise<SubscriptionRow[]>
     updateSubscription: (id: number, data: SubscriptionUpdate) => Promise<void>
     deleteSubscription: (id: number) => Promise<void>
@@ -145,8 +149,11 @@ export interface SubscriptionDeps {
 export interface TargetDeps {
   targetQueries: {
     createTarget: (data: TargetInsert) => Promise<{ id: number }>
-    getTargetsByUser: (userId: number) => Promise<TargetRow[]>
-    getAllTargets: () => Promise<TargetRow[]>
+    getTargetsByUser: (
+      userId: number,
+      opts?: { limit?: number; cursor?: Cursor | null },
+    ) => Promise<TargetRow[]>
+    getAllTargets: (opts?: { limit?: number; cursor?: Cursor | null }) => Promise<TargetRow[]>
     getTarget: (id: number) => Promise<TargetRow | null>
     updateTarget: (id: number, data: TargetUpdate) => Promise<void>
     deleteTarget: (id: number) => Promise<void>

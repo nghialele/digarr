@@ -18,6 +18,8 @@ import {
 } from '@/db/queries/playlists'
 import { getSettings } from '@/db/queries/settings'
 import { mergePreferences, type PlaylistConfig } from '@/db/schema'
+import { readPagination } from '@/server/helpers/pagination'
+import { encodeCursor } from '@/server/helpers/pagination-cursor'
 import { problem } from '@/server/helpers/problem'
 import {
   createPlaylistSchema,
@@ -63,8 +65,8 @@ export function playlistRoutes(deps: PlaylistDeps) {
   const router = new Hono<HonoEnv>()
   const { db } = deps
 
-  // GET /api/playlists/scheduler - must be registered before :id route
-  router.get('/api/playlists/scheduler', async (c) => {
+  // GET /api/v1/playlists/scheduler - must be registered before :id route
+  router.get('/api/v1/playlists/scheduler', async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
@@ -91,17 +93,30 @@ export function playlistRoutes(deps: PlaylistDeps) {
     })
   })
 
-  // GET /api/playlists
-  router.get('/api/playlists', async (c) => {
+  // GET /api/v1/playlists
+  router.get('/api/v1/playlists', async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
-    const rows = await getPlaylistsByUser(db, userId)
-    return c.json(rows)
+    const page = readPagination(c)
+    if (page === null) {
+      const rows = await getPlaylistsByUser(db, userId)
+      return c.json(rows)
+    }
+    const rows = await getPlaylistsByUser(db, userId, {
+      limit: page.limit + 1,
+      cursor: page.cursor,
+    })
+    const hasMore = rows.length > page.limit
+    const data = hasMore ? rows.slice(0, page.limit) : rows
+    const last = data[data.length - 1]
+    const nextCursor =
+      hasMore && last ? encodeCursor({ id: last.id, ts: last.createdAt.toISOString() }) : null
+    return c.json({ data, meta: { limit: page.limit, nextCursor } })
   })
 
-  // POST /api/playlists
-  router.post('/api/playlists', zJson(createPlaylistSchema), async (c) => {
+  // POST /api/v1/playlists
+  router.post('/api/v1/playlists', zJson(createPlaylistSchema), async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
@@ -121,8 +136,8 @@ export function playlistRoutes(deps: PlaylistDeps) {
     return c.json(row, 201)
   })
 
-  // GET /api/playlists/:id
-  router.get('/api/playlists/:id', zParam(playlistIdParamSchema), async (c) => {
+  // GET /api/v1/playlists/:id
+  router.get('/api/v1/playlists/:id', zParam(playlistIdParamSchema), async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
@@ -153,9 +168,9 @@ export function playlistRoutes(deps: PlaylistDeps) {
     return c.json(result)
   })
 
-  // GET /api/playlists/:id/export/:format
+  // GET /api/v1/playlists/:id/export/:format
   router.get(
-    '/api/playlists/:id/export/:format',
+    '/api/v1/playlists/:id/export/:format',
     zParam(playlistExportFormatParamSchema),
     async (c) => {
       const userId = c.get('userId')
@@ -200,9 +215,9 @@ export function playlistRoutes(deps: PlaylistDeps) {
     },
   )
 
-  // PATCH /api/playlists/:id
+  // PATCH /api/v1/playlists/:id
   router.patch(
-    '/api/playlists/:id',
+    '/api/v1/playlists/:id',
     zParam(playlistIdParamSchema),
     zJson(updatePlaylistSchema),
     async (c) => {
@@ -235,12 +250,12 @@ export function playlistRoutes(deps: PlaylistDeps) {
       const body = c.req.valid('json')
       await updatePlaylist(db, id, body as Record<string, unknown>)
       await deps.restartPlaylistScheduler()
-      return c.json({ updated: true })
+      return c.body(null, 204)
     },
   )
 
-  // DELETE /api/playlists/:id
-  router.delete('/api/playlists/:id', zParam(playlistIdParamSchema), async (c) => {
+  // DELETE /api/v1/playlists/:id
+  router.delete('/api/v1/playlists/:id', zParam(playlistIdParamSchema), async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
@@ -270,11 +285,11 @@ export function playlistRoutes(deps: PlaylistDeps) {
 
     await deletePlaylist(db, id)
     await deps.restartPlaylistScheduler()
-    return c.json({ deleted: true })
+    return c.body(null, 204)
   })
 
-  // POST /api/playlists/:id/generate
-  router.post('/api/playlists/:id/generate', zParam(playlistIdParamSchema), async (c) => {
+  // POST /api/v1/playlists/:id/generate
+  router.post('/api/v1/playlists/:id/generate', zParam(playlistIdParamSchema), async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 

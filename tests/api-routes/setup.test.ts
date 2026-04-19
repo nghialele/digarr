@@ -9,7 +9,7 @@ describe('API routes: setup', () => {
       getUserCount: vi.fn(async () => 0),
     })
 
-    const statusRes = await app.request('/api/setup/status')
+    const statusRes = await app.request('/api/v1/setup/status')
     expect(statusRes.status).toBe(200)
     const body = await statusRes.json()
     expect(body.setupComplete).toBe(false)
@@ -22,7 +22,7 @@ describe('API routes: setup', () => {
       getUserCount: vi.fn(async () => 0),
     })
 
-    const res = await app.request('/api/setup/complete', {
+    const res = await app.request('/api/v1/setup/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'discover' }),
@@ -38,7 +38,7 @@ describe('API routes: setup', () => {
       completeSetup,
     })
 
-    const completeRes = await app.request('/api/setup/complete', {
+    const completeRes = await app.request('/api/v1/setup/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -46,7 +46,7 @@ describe('API routes: setup', () => {
         aiModel: 'gpt-4o',
       }),
     })
-    expect(completeRes.status).toBe(200)
+    expect(completeRes.status).toBe(204)
     expect(completeSetup).toHaveBeenCalled()
   })
 
@@ -56,7 +56,7 @@ describe('API routes: setup', () => {
       getUserCount: vi.fn(async () => 0),
     })
 
-    const res = await app.request('/api/setup/complete', {
+    const res = await app.request('/api/v1/setup/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'discover' }),
@@ -74,7 +74,7 @@ describe('API routes: setup', () => {
       completeSetup,
     })
 
-    const completeRes = await app.request('/api/setup/complete', {
+    const completeRes = await app.request('/api/v1/setup/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -84,7 +84,7 @@ describe('API routes: setup', () => {
         lastfmUsername: 'legacy-lastfm',
       }),
     })
-    expect(completeRes.status).toBe(200)
+    expect(completeRes.status).toBe(204)
     expect(completeSetup).toHaveBeenCalledWith(
       expect.not.objectContaining({
         listenbrainzUsername: expect.anything(),

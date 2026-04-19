@@ -286,7 +286,7 @@ async function authedRequest(
   })
 }
 
-describe('GET /api/settings', () => {
+describe('GET /api/v1/settings', () => {
   it('returns settings with secrets masked', async () => {
     mockGetUserConnections.mockResolvedValueOnce({
       ...defaultUserConnections,
@@ -294,7 +294,7 @@ describe('GET /api/settings', () => {
       listenbrainzToken: 'lb-token',
     })
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings')
+    const res = await authedRequest(app, '/api/v1/settings')
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.lidarrUrl).toBe('http://lidarr:8686')
@@ -306,7 +306,7 @@ describe('GET /api/settings', () => {
   it('preserves null secret fields instead of pretending they were saved', async () => {
     mockGetUserConnections.mockResolvedValueOnce(defaultUserConnections)
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings')
+    const res = await authedRequest(app, '/api/v1/settings')
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.aiApiKey).toBeNull()
@@ -315,25 +315,25 @@ describe('GET /api/settings', () => {
 
   it('returns 403 when setup not complete', async () => {
     const app = createApp(makeDeps({ isSetupComplete: async () => false }))
-    const res = await app.request('/api/settings')
+    const res = await app.request('/api/v1/settings')
     expect(res.status).toBe(403)
   })
 
   it('returns 404 when no settings exist', async () => {
     const app = createApp(makeDeps({ getSettings: vi.fn(async () => null) }))
-    const res = await authedRequest(app, '/api/settings')
+    const res = await authedRequest(app, '/api/v1/settings')
     expect(res.status).toBe(404)
   })
 })
 
-describe('PATCH /api/settings', () => {
+describe('PATCH /api/v1/settings', () => {
   it('calls updateSettings and returns updated settings', async () => {
     const updateSettings = vi.fn(async () => {})
     const updatedSettings = { ...mockSettings, lidarrUrl: 'http://new:8686' }
     const getSettings = vi.fn(async () => updatedSettings as unknown as SettingsRow)
     const app = createApp(makeDeps({ updateSettings, getSettings }))
 
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lidarrUrl: 'http://new:8686' }),
@@ -347,7 +347,7 @@ describe('PATCH /api/settings', () => {
   it('restarts scheduler when cron is updated', async () => {
     const restartScheduler = vi.fn()
     const app = createApp(makeDeps({ restartScheduler }))
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences: { scheduleCron: '0 3 * * *' } }),
@@ -359,7 +359,7 @@ describe('PATCH /api/settings', () => {
   it('stops scheduler when cron is set to empty string', async () => {
     const restartScheduler = vi.fn()
     const app = createApp(makeDeps({ restartScheduler }))
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences: { scheduleCron: '' } }),
@@ -373,7 +373,7 @@ describe('PATCH /api/settings', () => {
       throw new TypeError('Invalid cron expression')
     })
     const app = createApp(makeDeps({ restartScheduler }))
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences: { scheduleCron: 'not a cron' } }),
@@ -386,7 +386,7 @@ describe('PATCH /api/settings', () => {
   it('does not restart scheduler when preferences lack scheduleCron', async () => {
     const restartScheduler = vi.fn()
     const app = createApp(makeDeps({ restartScheduler }))
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences: { librarySeedRatio: 0.5 } }),
@@ -409,7 +409,7 @@ describe('PATCH /api/settings', () => {
     )
     const app = createApp(makeDeps({ restartScheduler, getSettings }))
 
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences: { librarySeedRatio: 0.4 } }),
@@ -422,7 +422,7 @@ describe('PATCH /api/settings', () => {
   it('restarts playlist scheduling when playlist preferences change', async () => {
     const restartPlaylistScheduler = vi.fn(async () => {})
     const app = createApp(makeDeps({ restartPlaylistScheduler }))
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences: { playlistEnabled: true } }),
@@ -446,7 +446,7 @@ describe('PATCH /api/settings', () => {
     )
     const app = createApp(makeDeps({ restartPlaylistScheduler, getSettings }))
 
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences: { librarySeedRatio: 0.4 } }),
@@ -459,7 +459,7 @@ describe('PATCH /api/settings', () => {
   it('does not restart scheduler when no preferences in body', async () => {
     const restartScheduler = vi.fn()
     const app = createApp(makeDeps({ restartScheduler }))
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lidarrUrl: 'http://new:8686' }),
@@ -471,7 +471,7 @@ describe('PATCH /api/settings', () => {
   it('restarts library maintenance scheduling when the sync interval is updated', async () => {
     const restartLibraryMaintenanceScheduler = vi.fn()
     const app = createApp(makeDeps({ restartLibraryMaintenanceScheduler }))
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ librarySyncIntervalHours: 12 }),
@@ -496,7 +496,7 @@ describe('PATCH /api/settings', () => {
     )
     const app = createApp(makeDeps({ updateSettings, getSettings }))
 
-    const res = await authedRequest(app, '/api/settings', {
+    const res = await authedRequest(app, '/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences: { subscriptionMode: 'ai-only' } }),
@@ -516,7 +516,7 @@ describe('PATCH /api/settings', () => {
 
   it('returns 403 when setup not complete', async () => {
     const app = createApp(makeDeps({ isSetupComplete: async () => false }))
-    const res = await app.request('/api/settings', {
+    const res = await app.request('/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lidarrUrl: 'http://new:8686' }),
@@ -573,7 +573,7 @@ describe('PATCH /api/settings', () => {
       }),
     )
 
-    const res = await app.request('/api/settings', {
+    const res = await app.request('/api/v1/settings', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -602,7 +602,7 @@ describe('PATCH /api/settings', () => {
   })
 })
 
-describe('POST /api/settings/test/:service', () => {
+describe('POST /api/v1/settings/test/:service', () => {
   it('requires admin access for every settings test service', async () => {
     await clearAllSessions()
     await createSession(7, 'non-admin-settings-test-token')
@@ -651,7 +651,7 @@ describe('POST /api/settings/test/:service', () => {
     ]
 
     for (const service of services) {
-      const res = await app.request(`/api/settings/test/${service}`, {
+      const res = await app.request(`/api/v1/settings/test/${service}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -661,16 +661,15 @@ describe('POST /api/settings/test/:service', () => {
       })
 
       expect(res.status, `service: ${service}`).toBe(403)
-      await expect(res.json()).resolves.toEqual({
-        success: false,
-        message: 'Admin access required',
-      })
+      const body = await res.json()
+      expect(body.type).toBe('/problems/admin-required')
+      expect(body.title).toBe('Admin access required')
     }
   })
 
   it('allows admins to test private HTTP service URLs', async () => {
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings/test/emby', {
+    const res = await authedRequest(app, '/api/v1/settings/test/emby', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -697,7 +696,7 @@ describe('POST /api/settings/test/:service', () => {
     }
 
     const app = createApp(makeDeps({ providerRegistry: providerRegistry as never }))
-    const res = await authedRequest(app, '/api/settings/test/ai', {
+    const res = await authedRequest(app, '/api/v1/settings/test/ai', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -710,59 +709,59 @@ describe('POST /api/settings/test/:service', () => {
       }),
     })
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(502)
     const body = await res.json()
-    expect(body.success).toBe(false)
-    expect(body.message).not.toContain('HTTP 500')
-    expect(body.message).not.toContain('probe failed')
-    expect(body.message).not.toContain('127.0.0.1')
-    expect(body.message).toBe('Unbekannter Fehler')
+    expect(body.type).toBe('/problems/probe-failed')
+    expect(body.detail).not.toContain('HTTP 500')
+    expect(body.detail).not.toContain('probe failed')
+    expect(body.detail).not.toContain('127.0.0.1')
+    expect(body.detail).toBe('Unbekannter Fehler')
   })
 
-  it('tests lidarr and returns ServiceTestResult shape', async () => {
+  it('tests lidarr and returns 200 or 502 with problem+json', async () => {
     const app = createApp(makeDeps())
-    // Client will fail to connect but must return a ServiceTestResult (not throw)
-    const res = await authedRequest(app, '/api/settings/test/lidarr', {
+    // Client will fail to connect - 502 problem+json, not a 200 with success:false
+    const res = await authedRequest(app, '/api/v1/settings/test/lidarr', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'http://invalid-lidarr:9999', apiKey: 'key' }),
     })
-    expect(res.status).toBe(200)
+    expect([200, 502]).toContain(res.status)
     const body = await res.json()
-    expect(typeof body.success).toBe('boolean')
-    expect(typeof body.message).toBe('string')
+    if (res.status === 200) expect(typeof body.message).toBe('string')
+    else expect(body.type).toBe('/problems/probe-failed')
   })
 
-  it('tests listenbrainz and returns ServiceTestResult shape', async () => {
+  it('tests listenbrainz and returns 200 or 502 with problem+json', async () => {
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings/test/listenbrainz', {
+    const res = await authedRequest(app, '/api/v1/settings/test/listenbrainz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'testuser', token: 'token123' }),
     })
-    expect(res.status).toBe(200)
+    expect([200, 502]).toContain(res.status)
     const body = await res.json()
-    expect(typeof body.success).toBe('boolean')
-    expect(typeof body.message).toBe('string')
+    if (res.status === 200) expect(typeof body.message).toBe('string')
+    else expect(body.type).toBe('/problems/probe-failed')
   })
 
-  it('tests lastfm and returns ServiceTestResult shape', async () => {
+  it('tests lastfm and returns 200 or 502 with problem+json', async () => {
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings/test/lastfm', {
+    const res = await authedRequest(app, '/api/v1/settings/test/lastfm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'testuser', apiKey: 'lfmkey' }),
     })
-    expect(res.status).toBe(200)
+    expect([200, 502]).toContain(res.status)
     const body = await res.json()
-    expect(typeof body.success).toBe('boolean')
-    expect(typeof body.message).toBe('string')
+    if (res.status === 200) expect(typeof body.message).toBe('string')
+    else expect(body.type).toBe('/problems/probe-failed')
   })
 
-  it('tests ai provider and returns ServiceTestResult shape', async () => {
+  it('tests ai provider and returns 200 or 502 with problem+json', async () => {
     vi.mocked(lookup).mockResolvedValue({ address: '93.184.216.34', family: 4 })
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings/test/ai', {
+    const res = await authedRequest(app, '/api/v1/settings/test/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -772,15 +771,15 @@ describe('POST /api/settings/test/:service', () => {
         baseUrl: 'http://ollama.example.com:11434',
       }),
     })
-    expect(res.status).toBe(200)
+    expect([200, 502]).toContain(res.status)
     const body = await res.json()
-    expect(typeof body.success).toBe('boolean')
-    expect(typeof body.message).toBe('string')
+    if (res.status === 200) expect(typeof body.message).toBe('string')
+    else expect(body.type).toBe('/problems/probe-failed')
   })
 
   it('returns 400 for unknown service', async () => {
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings/test/unknown', {
+    const res = await authedRequest(app, '/api/v1/settings/test/unknown', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -790,7 +789,7 @@ describe('POST /api/settings/test/:service', () => {
 
   it('blocks test endpoints until setup is complete', async () => {
     const app = createApp(makeDeps({ isSetupComplete: async () => false }))
-    const res = await app.request('/api/settings/test/lidarr', {
+    const res = await app.request('/api/v1/settings/test/lidarr', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'http://lidarr:8686', apiKey: 'key' }),
@@ -832,7 +831,7 @@ describe('POST /api/settings/test/:service', () => {
       }),
     )
 
-    const res = await app.request('/api/settings/test/oidc', {
+    const res = await app.request('/api/v1/settings/test/oidc', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -845,10 +844,9 @@ describe('POST /api/settings/test/:service', () => {
     })
 
     expect(res.status).toBe(403)
-    await expect(res.json()).resolves.toEqual({
-      success: false,
-      message: 'Admin access required',
-    })
+    const body = await res.json()
+    expect(body.type).toBe('/problems/admin-required')
+    expect(body.title).toBe('Admin access required')
   })
 
   it('localizes admin-only test endpoint errors', async () => {
@@ -885,7 +883,7 @@ describe('POST /api/settings/test/:service', () => {
       }),
     )
 
-    const res = await app.request('/api/settings/test/oidc', {
+    const res = await app.request('/api/v1/settings/test/oidc', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -899,15 +897,14 @@ describe('POST /api/settings/test/:service', () => {
     })
 
     expect(res.status).toBe(403)
-    await expect(res.json()).resolves.toEqual({
-      success: false,
-      message: 'Adminzugriff erforderlich',
-    })
+    const body = await res.json()
+    expect(body.type).toBe('/problems/admin-required')
+    expect(body.code).toBe('common.adminAccessRequired')
   })
 
   it('allows admins to test OIDC issuer URLs', async () => {
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings/test/oidc', {
+    const res = await authedRequest(app, '/api/v1/settings/test/oidc', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -919,7 +916,6 @@ describe('POST /api/settings/test/:service', () => {
     expect(res.status).toBe(200)
     expect(mockOidcTestConnection).toHaveBeenCalledTimes(1)
     const body = await res.json()
-    expect(body.success).toBe(true)
     expect(body.message).toBe('OIDC discovery successful')
   })
 })
@@ -930,7 +926,7 @@ describe('per-user listening source connections', () => {
     // call. (Degenerate state `setupComplete=true && no users` returns 503,
     // covered separately in auth-status-shape.test.ts.)
     const app = createApp(makeDeps({ getUserCount: vi.fn(async () => 1) }))
-    const res = await app.request('/api/settings')
+    const res = await app.request('/api/v1/settings')
     expect(res.status).toBe(401)
   })
 
@@ -938,7 +934,7 @@ describe('per-user listening source connections', () => {
     const updateSettings = vi.fn(async () => {})
     const app = createApp(makeDeps({ updateSettings, getUserCount: vi.fn(async () => 1) }))
 
-    const res = await app.request('/api/settings', {
+    const res = await app.request('/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -958,7 +954,7 @@ describe('per-user listening source connections', () => {
     const updateSettings = vi.fn(async () => {})
     const app = createApp(makeDeps({ updateSettings, getUserCount: vi.fn(async () => 1) }))
 
-    const res = await app.request('/api/settings', {
+    const res = await app.request('/api/v1/settings', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -988,7 +984,7 @@ describe('per-user listening source connections', () => {
     )
   })
 
-  it('GET /api/settings exposes user-scoped emby fields for non-admins', async () => {
+  it('GET /api/v1/settings exposes user-scoped emby fields for non-admins', async () => {
     await clearAllSessions()
     const sessionToken = 'emby-session-token-7'
     await createSession(7, sessionToken)
@@ -1038,7 +1034,7 @@ describe('per-user listening source connections', () => {
         })),
       }),
     )
-    const res = await app.request('/api/settings', {
+    const res = await app.request('/api/v1/settings', {
       headers: { Authorization: `Bearer ${sessionToken}` },
     })
     expect(res.status).toBe(200)
@@ -1049,9 +1045,9 @@ describe('per-user listening source connections', () => {
     expect(body._embyScope).toBe('user')
   })
 
-  it('POST /api/settings/test/emby validates the Emby connection', async () => {
+  it('POST /api/v1/settings/test/emby validates the Emby connection', async () => {
     const app = createApp(makeDeps())
-    const res = await authedRequest(app, '/api/settings/test/emby', {
+    const res = await authedRequest(app, '/api/v1/settings/test/emby', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1060,10 +1056,10 @@ describe('per-user listening source connections', () => {
         userId: 'user-1',
       }),
     })
-    expect(res.status).toBe(200)
+    expect([200, 502]).toContain(res.status)
     const body = await res.json()
-    expect(typeof body.success).toBe('boolean')
-    expect(typeof body.message).toBe('string')
+    if (res.status === 200) expect(typeof body.message).toBe('string')
+    else expect(body.type).toBe('/problems/probe-failed')
   })
 
   it('PATCH excludes lastfm fields from global updateSettings when user is authenticated', async () => {
@@ -1074,7 +1070,7 @@ describe('per-user listening source connections', () => {
     const updateSettings = vi.fn(async () => {})
     const app = createApp(makeDeps({ updateSettings, getUserCount: vi.fn(async () => 1) }))
 
-    const res = await app.request('/api/settings', {
+    const res = await app.request('/api/v1/settings', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import type { ServiceTestResult } from '@/core/types'
 import type { TargetInsert, TargetRow, TargetUpdate } from '@/db/queries/targets'
+import { readPagination } from '@/server/helpers/pagination'
+import { type Cursor, encodeCursor } from '@/server/helpers/pagination-cursor'
 import { problem } from '@/server/helpers/problem'
 import { adminGuard } from '@/server/middleware/admin-guard'
 import {
@@ -15,7 +17,7 @@ type TargetDeps = {
   targetQueries: {
     createTarget: (data: TargetInsert) => Promise<{ id: number }>
     getTargetsByUser: (userId: number) => Promise<TargetRow[]>
-    getAllTargets: () => Promise<TargetRow[]>
+    getAllTargets: (opts?: { limit?: number; cursor?: Cursor | null }) => Promise<TargetRow[]>
     getTarget: (id: number) => Promise<TargetRow | null>
     updateTarget: (id: number, data: TargetUpdate) => Promise<void>
     deleteTarget: (id: number) => Promise<void>
@@ -32,21 +34,33 @@ export function targetRoutes(deps: TargetDeps) {
 
   // Returns all targets. Each target includes `owned: true` if it belongs to the caller.
   // Non-owners see masked configs and cannot modify/delete.
-  router.get('/api/targets', async (c) => {
+  router.get('/api/v1/targets', async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
-    const allTargets = await deps.targetQueries.getAllTargets()
-    return c.json(
-      allTargets.map((t) => ({
-        ...t,
-        config: maskConfig(t.config),
-        owned: t.userId === userId,
-      })),
-    )
+    const page = readPagination(c)
+    const shape = (t: TargetRow) => ({
+      ...t,
+      config: maskConfig(t.config),
+      owned: t.userId === userId,
+    })
+    if (page === null) {
+      const allTargets = await deps.targetQueries.getAllTargets()
+      return c.json(allTargets.map(shape))
+    }
+    const rows = await deps.targetQueries.getAllTargets({
+      limit: page.limit + 1,
+      cursor: page.cursor,
+    })
+    const hasMore = rows.length > page.limit
+    const data = hasMore ? rows.slice(0, page.limit) : rows
+    const last = data[data.length - 1]
+    const nextCursor =
+      hasMore && last ? encodeCursor({ id: last.id, ts: last.createdAt.toISOString() }) : null
+    return c.json({ data: data.map(shape), meta: { limit: page.limit, nextCursor } })
   })
 
   router.post(
-    '/api/targets',
+    '/api/v1/targets',
     adminGuard(deps.getUserById),
     zJson(createTargetSchema),
     async (c) => {
@@ -65,7 +79,7 @@ export function targetRoutes(deps: TargetDeps) {
   )
 
   router.patch(
-    '/api/targets/:id',
+    '/api/v1/targets/:id',
     adminGuard(deps.getUserById),
     zParam(targetIdParamSchema),
     zJson(updateTargetSchema),
@@ -89,12 +103,12 @@ export function targetRoutes(deps: TargetDeps) {
 
       const allowed: TargetUpdate = c.req.valid('json')
       await deps.targetQueries.updateTarget(id, allowed)
-      return c.json({ success: true })
+      return c.body(null, 204)
     },
   )
 
   router.delete(
-    '/api/targets/:id',
+    '/api/v1/targets/:id',
     adminGuard(deps.getUserById),
     zParam(targetIdParamSchema),
     async (c) => {
@@ -120,7 +134,7 @@ export function targetRoutes(deps: TargetDeps) {
     },
   )
 
-  router.post('/api/targets/:id/test', zParam(targetIdParamSchema), async (c) => {
+  router.post('/api/v1/targets/:id/test', zParam(targetIdParamSchema), async (c) => {
     const userId = c.get('userId')
     if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
