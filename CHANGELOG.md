@@ -2,7 +2,9 @@
 
 All notable user-facing changes are documented here.
 
-## Unreleased
+## v0.42.0 - 2026-04-20
+
+Metadata enrichment release. TheAudioDB becomes the primary artist-image source ahead of the existing Lidarr/SkyHook + fanart.tv + musicinfo.pro chain, and recommendation cards now carry a short Wikidata-sourced bio plus external-link pills (Wikipedia, official site, Discogs, MusicBrainz).
 
 ### Added
 
