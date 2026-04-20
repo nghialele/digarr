@@ -1,6 +1,41 @@
 import { useState } from 'react'
 import { hueFromName } from '../lib/utils'
 
+const AUDIODB_HOSTS = new Set(['img.theaudiodb.com', 'theaudiodb.com', 'www.theaudiodb.com'])
+const PROXY_FLAG_KEY = 'digarr:audiodbProxyImages'
+
+export function setAudiodbProxyFlag(enabled: boolean): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(PROXY_FLAG_KEY, enabled ? '1' : '0')
+  } catch {
+    // storage unavailable; proxy just won't kick in
+  }
+}
+
+function readProxyFlag(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem(PROXY_FLAG_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function resolveSrc(url: string | null | undefined, proxy: boolean): string | undefined {
+  if (!url) return undefined
+  if (!proxy) return url
+  try {
+    const u = new URL(url)
+    if (AUDIODB_HOSTS.has(u.hostname)) {
+      return `/api/v1/media/image-proxy?src=${encodeURIComponent(url)}`
+    }
+  } catch {
+    // fall through
+  }
+  return url
+}
+
 // ArtistThumb
 
 /**
@@ -24,16 +59,17 @@ export function ArtistThumb({
   className?: string
 }) {
   const [imgError, setImgError] = useState(false)
+  const resolvedSrc = resolveSrc(imageUrl ?? null, readProxyFlag())
   const px = size * 4
   const hue = hueFromName(name)
 
   const sizeStyle = fill ? undefined : { width: `${px}px`, height: `${px}px` }
   const sizeClass = fill ? 'w-full h-full' : 'shrink-0'
 
-  if (imageUrl && !imgError) {
+  if (resolvedSrc && !imgError) {
     return (
       <img
-        src={imageUrl}
+        src={resolvedSrc}
         alt={name}
         className={`rounded-md object-cover bg-bg ${sizeClass} ${className ?? ''}`}
         style={sizeStyle}

@@ -12,6 +12,7 @@ import { createJellyfinClient } from './core/clients/jellyfin'
 import { createLidarrClient } from './core/clients/lidarr'
 import { createMusicBrainzClient } from './core/clients/musicbrainz'
 import { createPlexClient } from './core/clients/plex'
+import { tryConsume } from './core/clients/rate-limiter'
 import { createSlskdClient } from './core/clients/slskd'
 import { createSpotifyClient } from './core/clients/spotify'
 import { initEncryption, isEncryptionEnabled } from './core/crypto'
@@ -273,6 +274,7 @@ const storeDb: StoreDb = {
       .where(and(...conds.filter((c): c is NonNullable<typeof c> => c !== undefined)))
   },
   userHasAnySyncState: (userId) => librarySyncStore.userHasAnySyncState(userId),
+  tryConsumeRateLimit: (key, config) => tryConsume(db, key, config),
 }
 
 jobRecorder = createJobRecorder(db)
@@ -450,6 +452,9 @@ const libraryHealth = new LibraryHealthService({
     getAll: async () => db.select().from(artists),
     updateImageUrl: async (mbid, imageUrl) => {
       await db.update(artists).set({ imageUrl }).where(eq(artists.mbid, mbid))
+    },
+    updateWikidataEnrichment: async (mbid, data) => {
+      await db.update(artists).set(data).where(eq(artists.mbid, mbid))
     },
   },
   stateStore: {
