@@ -2,6 +2,28 @@
 
 All notable user-facing changes are documented here.
 
+## v0.44.0 - 2026-04-26
+
+UX release. Rejecting a recommendation now opens a structured picker with six fixed reasons (already own, wrong style, not interested, tried it didn't like it, maybe later, other) plus a "Don't show again" checkbox that promotes the rejection to a permanent per-user blacklist. Settings gets a new Blocked tab to view, search, and unblock entries. The new blocklist filters the pipeline, subscriptions, and quick-discover independent of the existing rejection cooldown, so unblocking does not bypass the cooldown.
+
+### Added
+
+- Permanent per-user artist blacklist (`artist_blocks` table) keyed on `(user_id, artist_id)` with cascade FKs and unique upsert semantics
+- Structured rejection reasons (6 fixed + freeform "Other") captured via a bottom-sheet/modal picker on the existing reject action
+- `Settings > Blocked` tab with debounced name search, cursor pagination, and unblock-with-undo toast
+- `POST /api/v1/artist-blocks`, `GET /api/v1/artist-blocks`, `DELETE /api/v1/artist-blocks/:artistId` routes (auth required, scoped to the calling user)
+- `rejection_reason` and `rejection_reason_text` columns on `recommendations` so the reason persists with the rejection record
+- Pipeline filter, subscription runner, and quick-discover all honour the blocklist as an independent layer above the rejection cooldown
+- 28 new i18n keys translated across all 15 shipped locales
+- Backup/restore round-trips include `artist_blocks`
+- Server-side Zod validation enforces UI invariants (`not_right_now` is incompatible with permanent; `reasonText` only valid when `reason='other'`)
+
+### Changed
+
+- `POST /api/v1/recommendations/:id/status` with `status: 'rejected'` now accepts optional `reason`, `reasonText`, and `permanent` fields; legacy callers that omit them continue to work unchanged
+- `StoreDb` interface gains `getBlockedMbids(userId)`; production wiring and all test mocks updated
+- New `Digarr` signature theme added to the theme picker (cool slate-navy + muted moss + warm-dim crimson)
+
 ## v0.42.0 - 2026-04-20
 
 Metadata enrichment release. TheAudioDB becomes the primary artist-image source ahead of the existing Lidarr/SkyHook + fanart.tv + musicinfo.pro chain, and recommendation cards now carry a short Wikidata-sourced bio plus external-link pills (Wikipedia, official site, Discogs, MusicBrainz).
