@@ -16,11 +16,11 @@ networks:
 
 services:
   app:
-    image: docker.io/iuliandita/digarr:0.34
+    image: docker.io/iuliandita/digarr:0.44
     # Pin to a patch version for full stability:
-    # image: docker.io/iuliandita/digarr:0.34.4
+    # image: docker.io/iuliandita/digarr:0.44.0
     # Alpine variant (smaller image, musl libc):
-    # image: docker.io/iuliandita/digarr:0.34.4-alpine
+    # image: docker.io/iuliandita/digarr:0.44.0-alpine
     user: "1000:1000"
     networks:
       - frontend
