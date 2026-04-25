@@ -33,6 +33,7 @@ function makeDeps(overrides: Partial<SubscriptionRunDeps> = {}): SubscriptionRun
       upsertArtist: vi.fn().mockResolvedValue({ id: 1 }),
       insertRecommendation: vi.fn().mockResolvedValue(undefined),
       getRejectedMbids: vi.fn().mockResolvedValue(new Set()),
+      getBlockedMbids: vi.fn().mockResolvedValue(new Set()),
       getFeedbackHistory: vi.fn().mockResolvedValue(new Map()),
     },
     queries: {
@@ -53,6 +54,7 @@ function makeDeps(overrides: Partial<SubscriptionRunDeps> = {}): SubscriptionRun
     libraryMbids: new Set<string>(),
     libraryGenres: [],
     rejectedMbids: new Set<string>(),
+    blockedMbids: new Set<string>(),
     feedbackHistory: new Map(),
     cooldownDays: 30,
     defaultScoreThreshold: 0.5,

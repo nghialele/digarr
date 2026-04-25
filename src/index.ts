@@ -86,6 +86,12 @@ import { createSlskdTarget } from './core/targets/slskd'
 import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
 import { errMsg } from './core/validation'
 import { db, pool } from './db'
+import {
+  addBlock as addArtistBlockQuery,
+  getBlockedMbids as getBlockedArtistMbids,
+  listBlocks as listArtistBlocksQuery,
+  removeBlock as removeArtistBlockQuery,
+} from './db/queries/artist-blocks'
 import { getPopularityMap, lookupByName } from './db/queries/artist-metadata'
 import { getArtistById, upsertArtist } from './db/queries/artists'
 import { completeBatch, getBatch, listBatches } from './db/queries/batches'
@@ -118,6 +124,7 @@ import {
   getRejectedArtistMbids,
   insertRecommendation,
   listRecommendations,
+  rejectRecommendation,
   updateRecommendationStatus,
 } from './db/queries/recommendations'
 import { sessionQueries } from './db/queries/sessions'
@@ -253,6 +260,7 @@ const storeDb: StoreDb = {
     })
   },
   getRejectedMbids: (cooldownDays) => getRejectedArtistMbids(db, cooldownDays),
+  getBlockedMbids: (userId) => getBlockedArtistMbids(db, userId),
   getFeedbackHistory: () => getGenreFeedbackHistory(db),
   lookupArtistMetadata: (name) => lookupByName(db, name),
   getPopularityMap: () => getPopularityMap(db),
@@ -740,6 +748,7 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
       : null
 
   const rejectedMbids = await storeDb.getRejectedMbids(prefs.rejectionCooldownDays)
+  const blockedMbids = sub.userId ? await storeDb.getBlockedMbids(sub.userId) : new Set<string>()
   const feedbackHistory = await storeDb.getFeedbackHistory()
 
   const userConns = sub.userId ? await getUserConnections(db, sub.userId) : null
@@ -888,6 +897,7 @@ async function executeSubscription(subscriptionId: number): Promise<void> {
       libraryMbids,
       libraryGenres,
       rejectedMbids,
+      blockedMbids,
       feedbackHistory,
       cooldownDays: prefs.rejectionCooldownDays,
       defaultScoreThreshold: prefs.scoreThreshold,
@@ -1173,6 +1183,17 @@ const app = createApp({
   getRecommendation: (id) => getRecommendation(db, id),
   updateRecommendationStatus: (id, status, extra) =>
     updateRecommendationStatus(db, id, status, extra),
+  rejectRecommendation: (params) => rejectRecommendation(db, params),
+  listArtistBlocks: (params) => listArtistBlocksQuery(db, params),
+  removeArtistBlock: (params) => removeArtistBlockQuery(db, params),
+  addArtistBlock: (params) =>
+    addArtistBlockQuery(db, {
+      userId: params.userId,
+      artistId: params.artistId,
+      reason: params.reason ?? null,
+      reasonText: params.reasonText ?? null,
+      source: 'manual',
+    }),
   bulkUpdateStatus: (ids, status) => bulkUpdateStatus(db, ids, status),
   filterOwnedIds: (ids, userId) => filterOwnedIds(db, ids, userId),
   listBatches: (opts?: Parameters<typeof listBatches>[1]) => listBatches(db, opts),

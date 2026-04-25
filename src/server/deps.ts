@@ -119,12 +119,31 @@ export interface RecommendationDeps {
     status: string,
     extra?: StatusUpdateExtra,
   ) => Promise<void>
+  rejectRecommendation: (
+    params: import('@/db/queries/recommendations').RejectRecommendationParams,
+  ) => Promise<number | null>
   bulkUpdateStatus: (ids: number[], status: string) => Promise<void>
   filterOwnedIds: (ids: number[], userId: number | undefined) => Promise<number[]>
   listBatches: (opts?: { limit?: number; cursor?: Cursor | null }) => Promise<BatchRow[]>
   getBatch: (id: number) => Promise<BatchRow | null>
   getArtistById: (id: number) => Promise<ArtistRow | null>
   getFeedbackHistory: () => Promise<Map<string, { approved: number; total: number }>>
+  listArtistBlocks: (params: {
+    userId: number
+    limit?: number
+    cursor?: import('@/db/queries/artist-blocks').ListBlocksCursor | null
+    q?: string | null
+  }) => Promise<{
+    items: import('@/db/queries/artist-blocks').BlockedArtistRow[]
+    nextCursor: import('@/db/queries/artist-blocks').ListBlocksCursor | null
+  }>
+  removeArtistBlock: (params: { userId: number; artistId: number }) => Promise<boolean>
+  addArtistBlock: (params: {
+    userId: number
+    artistId: number
+    reason?: import('@/core/recommendations/rejection-reasons').RejectionReason | null
+    reasonText?: string | null
+  }) => Promise<void>
 }
 
 // ---- Subscriptions ----

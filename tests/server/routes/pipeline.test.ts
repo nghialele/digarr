@@ -75,6 +75,10 @@ function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependencies {
     listRecommendations: vi.fn(async () => ({ items: [], total: 0 })),
     getRecommendation: vi.fn(async () => null),
     updateRecommendationStatus: vi.fn(async () => {}),
+    rejectRecommendation: vi.fn(async () => 1),
+    listArtistBlocks: vi.fn(async () => ({ items: [], nextCursor: null })),
+    removeArtistBlock: vi.fn(async () => true),
+    addArtistBlock: vi.fn(async () => {}),
     bulkUpdateStatus: vi.fn(async () => {}),
     filterOwnedIds: vi.fn(async (ids: number[]) => ids),
     listBatches: vi.fn(async () => []),
@@ -374,6 +378,7 @@ describe('POST /api/v1/pipeline/quick-discover', () => {
         storeDb: {
           getExistingRecommendationMbids: vi.fn(async () => new Set<string>()),
           getRejectedMbids: vi.fn(async () => new Set<string>()),
+          getBlockedMbids: vi.fn(async () => new Set<string>()),
           getFeedbackHistory: vi.fn(async () => new Map()),
         } as unknown as AppDependencies['storeDb'],
       }),
@@ -458,6 +463,7 @@ describe('POST /api/v1/pipeline/quick-discover', () => {
         storeDb: {
           getExistingRecommendationMbids: vi.fn(async () => new Set<string>()),
           getRejectedMbids: vi.fn(async () => new Set<string>()),
+          getBlockedMbids: vi.fn(async () => new Set<string>()),
           getFeedbackHistory: vi.fn(async () => new Map()),
         } as unknown as AppDependencies['storeDb'],
       }),
@@ -542,6 +548,7 @@ describe('POST /api/v1/pipeline/quick-discover', () => {
         storeDb: {
           getExistingRecommendationMbids: vi.fn(async () => new Set<string>()),
           getRejectedMbids: vi.fn(async () => new Set<string>()),
+          getBlockedMbids: vi.fn(async () => new Set<string>()),
           getFeedbackHistory: vi.fn(async () => new Map()),
         } as unknown as AppDependencies['storeDb'],
       }),

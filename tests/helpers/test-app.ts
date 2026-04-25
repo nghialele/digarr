@@ -13,6 +13,7 @@ export function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependenc
       upsertArtist: vi.fn(async () => ({ id: 1 })),
       insertRecommendation: vi.fn(),
       getRejectedMbids: vi.fn(async () => new Set()),
+      getBlockedMbids: vi.fn(async () => new Set()),
       getFeedbackHistory: vi.fn(async () => new Map()),
     } as unknown as AppDependencies['storeDb'],
     orchestrator: Object.assign(new EventEmitter(), {
@@ -41,6 +42,10 @@ export function makeDeps(overrides: Partial<AppDependencies> = {}): AppDependenc
     listRecommendations: vi.fn(async () => ({ items: [], total: 0 })),
     getRecommendation: vi.fn(async () => null),
     updateRecommendationStatus: vi.fn(),
+    rejectRecommendation: vi.fn(async () => 1),
+    listArtistBlocks: vi.fn(async () => ({ items: [], nextCursor: null })),
+    removeArtistBlock: vi.fn(async () => true),
+    addArtistBlock: vi.fn(async () => {}),
     bulkUpdateStatus: vi.fn(),
     filterOwnedIds: vi.fn(async (ids: number[]) => ids),
     listBatches: vi.fn(async () => []),
