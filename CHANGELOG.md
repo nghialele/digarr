@@ -4,6 +4,30 @@ All notable user-facing changes are documented here.
 
 Releases that have been promoted to the `:stable` Docker channel carry a `(stable)` marker after the version heading. Promotion happens after a release has been live for at least seven days with no follow-up patch.
 
+## v1.0.0-rc.0 - 2026-05-03
+
+Release candidate for the v1 line. This consolidates the v1 audit follow-ups across API contracts, security hardening, CI release safety, accessibility, i18n, Docker/Kubernetes deployment defaults, and UI polish.
+
+### Added
+
+- `:stable` Docker channel support and a manual stable-promotion workflow, so release candidates and fresh releases can ship without moving the recommended self-hosting channel.
+- Probe success metadata for service test routes and expanded API documentation coverage for the v1 endpoint surface.
+- Warning theme token coverage across all shipped themes.
+
+### Changed
+
+- Docker release automation keeps prerelease tags off floating stable-style channels and creates GitHub prereleases automatically for prerelease tags.
+- Dashboard, discovery, mobile navigation, recommendation hover controls, touch targets, and focus-visible states were tightened for the v1 candidate.
+- AI provider settings copy now describes privacy behavior based on the configured host instead of making a blanket provider claim.
+
+### Fixed
+
+- DNS rebinding and pinned-IP handling for outbound HTTP checks, including AI base URL validation.
+- Problem-details responses for auth failures and validation for numeric route inputs.
+- Hardcoded English strings in navigation and health-check UI paths.
+- Bandcamp scraping sanitization for encoded and incomplete HTML tags.
+- Kubernetes app/database selector isolation, pod termination timing, shell script robustness, foreign-key index coverage, and release/security scan pinning.
+
 ## v0.44.0 - 2026-04-26
 
 UX release. Rejecting a recommendation now opens a structured picker with six fixed reasons (already own, wrong style, not interested, tried it didn't like it, maybe later, other) plus a "Don't show again" checkbox that promotes the rejection to a permanent per-user blacklist. Settings gets a new Blocked tab to view, search, and unblock entries. The new blocklist filters the pipeline, subscriptions, and quick-discover independent of the existing rejection cooldown, so unblocking does not bypass the cooldown.
