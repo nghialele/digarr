@@ -4,6 +4,14 @@ All notable user-facing changes are documented here.
 
 Releases that have been promoted to the `:stable` Docker channel carry a `(stable)` marker after the version heading. Promotion happens after a release has been live for at least seven days with no follow-up patch.
 
+## v1.0.0-rc.1 - 2026-05-05
+
+Dashboard layout polish release candidate.
+
+### Changed
+
+- Dashboard Listening History and Recent Activity now sit beside Recently Approved above the fold, while Subscription Pulse is grouped with Taste Profile lower on the page.
+
 ## v1.0.0-rc.0 - 2026-05-03
 
 Release candidate for the v1 line. This consolidates the v1 audit follow-ups across API contracts, security hardening, CI release safety, accessibility, i18n, Docker/Kubernetes deployment defaults, and UI polish.
