@@ -76,7 +76,7 @@ const targets: Target[] = [
   },
   {
     path: 'deploy/helm/digarr/values.yaml',
-    pattern: /(^image:\n(?:  .*\n)*?  digest: ")sha256:[a-f0-9]+(")/m,
+    pattern: /(^image:\n(?: {2}.*\n)*? {2}digest: ")sha256:[a-f0-9]+(")/m,
     replacement: (d, _match, prefix, suffix) => `${prefix}${d}${suffix}`,
   },
   {
@@ -95,7 +95,9 @@ for (const t of targets) {
     continue
   }
   t.pattern.lastIndex = 0
-  const updated = content.replace(t.pattern, (match, ...groups) => t.replacement(digest, match, ...groups))
+  const updated = content.replace(t.pattern, (match, ...groups) =>
+    t.replacement(digest, match, ...groups),
+  )
   writeFileSync(t.path, updated)
   console.log(`updated ${t.path}`)
 }
