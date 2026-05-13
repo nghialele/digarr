@@ -238,8 +238,8 @@ spec:
         app.kubernetes.io/instance: digarr
         app.kubernetes.io/component: app
       annotations:
-        checksum/config: a609b1b38c6c54f414fe217a3659b30f37fb59ad5a23686b88f2ffa7d6832b9e
-        checksum/sensitive-config: 8f38c843cd46396a911d31d7c9a4b921f1419721b83e1ea2fe967ed017822a64
+        checksum/config: b2d293a001a0d024dd7549a9b1cc4938f197c4e087079ecbf13ba888ee512973
+        checksum/sensitive-config: fccd48b07b9c0223f36f361d3945b92e6a815c7cccea3d9dd51b62e55baa7aed
     spec:
       serviceAccountName: digarr
       automountServiceAccountToken: false
