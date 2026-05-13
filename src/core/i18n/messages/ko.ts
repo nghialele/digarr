@@ -268,6 +268,8 @@ export const ko = {
   'discover.monitorNewDescription': '앞으로 나올 새 발매만 모니터링',
   'discover.monitorSelected': '선택한 앨범',
   'discover.monitorSelectedDescription': '모니터링할 앨범 선택',
+  'discover.monitorPopular': '인기 앨범',
+  'discover.monitorPopularDescription': '가장 인기 있는 앨범 릴리스 3개 모니터링',
   'discover.monitorNoneDescription': '모니터링 없이 추가(추적만)',
   'discover.discoveryRunStarted': '검색 실행이 시작되었습니다.',
   'discover.exportFailed': '내보내기 실패',

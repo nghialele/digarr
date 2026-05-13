@@ -272,6 +272,8 @@ export const fr = {
   'discover.monitorNewDescription': 'Surveiller uniquement les nouvelles sorties à venir',
   'discover.monitorSelected': 'Albums sélectionnés',
   'discover.monitorSelectedDescription': 'Choisir les albums à surveiller',
+  'discover.monitorPopular': 'Albums populaires',
+  'discover.monitorPopularDescription': "Surveiller les 3 sorties d'album les plus populaires",
   'discover.monitorNoneDescription': 'Ajouter sans surveillance (suivi uniquement)',
   'discover.discoveryRunStarted': "L'exécution de la découverte a démarré.",
   'discover.exportFailed': "Échec de l'exportation",

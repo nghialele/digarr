@@ -41,6 +41,7 @@ vi.mock('@/web/lib/api', () => ({
   approveToTarget: vi.fn(),
   bulkAction: vi.fn(),
   getWarmStatuses: vi.fn(),
+  getPopularAlbums: vi.fn(),
   rescanArtists: vi.fn(),
   triggerPipeline: vi.fn(),
   listTargets: vi.fn().mockResolvedValue([]),
@@ -262,6 +263,19 @@ describe('DiscoverPage', () => {
         expect.objectContaining({ monitorOption: 'all' }),
       )
     })
+  })
+
+  it('offers popular albums from the approve dropdown', async () => {
+    setupMockApi()
+    renderWithQuery(<DiscoverPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Artist')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByLabelText('Monitoring options'))
+
+    expect(screen.getByText('Popular albums')).toBeInTheDocument()
   })
 
   it('bulk approve above threshold calls bulkAction', async () => {

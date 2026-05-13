@@ -14,6 +14,14 @@ export type SpotifyTopArtist = {
   popularity: number
 }
 
+export type SpotifyPopularAlbum = {
+  id: string
+  title: string
+  releaseDate?: string
+  popularity: number
+  spotifyUrl?: string
+}
+
 export type SpotifyRecentTrack = {
   name: string
   artists: Array<{ name: string; id: string }>
@@ -61,6 +69,37 @@ type SpotifySearchTracksResponse = {
       artists: Array<{ name: string }>
     }>
   }
+}
+
+type SpotifySearchArtistsResponse = {
+  artists: {
+    items: Array<{
+      name: string
+      id: string
+      genres: string[]
+      popularity: number
+    }>
+  }
+}
+
+type SpotifyArtistAlbumsResponse = {
+  items: Array<{
+    id: string
+    name: string
+    release_date?: string
+    album_type?: string
+  }>
+  next: string | null
+}
+
+type SpotifyAlbumsResponse = {
+  albums: Array<{
+    id: string
+    name: string
+    release_date?: string
+    popularity?: number
+    external_urls?: { spotify?: string }
+  } | null>
 }
 
 export function createSpotifyClient(accessToken: string, options?: { baseUrl?: string }) {
@@ -117,6 +156,70 @@ export function createSpotifyClient(accessToken: string, options?: { baseUrl?: s
     }))
   }
 
+  async function findExactArtistByName(name: string): Promise<SpotifyTopArtist | null> {
+    const params = new URLSearchParams({
+      q: name,
+      type: 'artist',
+      limit: '10',
+    })
+    const res = await get<SpotifySearchArtistsResponse>(`/search?${params}`)
+    const exactMatches = res.artists.items.filter(
+      (artist) => artist.name.toLowerCase() === name.toLowerCase(),
+    )
+    if (exactMatches.length !== 1 || !exactMatches[0]) return null
+    return {
+      name: exactMatches[0].name,
+      id: exactMatches[0].id,
+      genres: exactMatches[0].genres,
+      popularity: exactMatches[0].popularity,
+    }
+  }
+
+  async function getPopularAlbumsForArtist(
+    artistId: string,
+    limit = 3,
+  ): Promise<SpotifyPopularAlbum[]> {
+    const albumIds: string[] = []
+    const seen = new Set<string>()
+    const pageSize = 10
+
+    for (let offset = 0; albumIds.length < 50; offset += pageSize) {
+      const params = new URLSearchParams({
+        include_groups: 'album',
+        limit: String(pageSize),
+        offset: String(offset),
+      })
+      const res = await get<SpotifyArtistAlbumsResponse>(
+        `/artists/${encodeURIComponent(artistId)}/albums?${params}`,
+      )
+      for (const album of res.items) {
+        if (!album.id || seen.has(album.id)) continue
+        seen.add(album.id)
+        albumIds.push(album.id)
+      }
+      if (!res.next || res.items.length < pageSize) break
+    }
+
+    const albums: SpotifyPopularAlbum[] = []
+    for (let offset = 0; offset < albumIds.length; offset += 20) {
+      const ids = albumIds.slice(offset, offset + 20)
+      const params = new URLSearchParams({ ids: ids.join(',') })
+      const res = await get<SpotifyAlbumsResponse>(`/albums?${params}`)
+      for (const album of res.albums) {
+        if (!album) continue
+        albums.push({
+          id: album.id,
+          title: album.name,
+          releaseDate: album.release_date,
+          popularity: album.popularity ?? 0,
+          spotifyUrl: album.external_urls?.spotify,
+        })
+      }
+    }
+
+    return albums.sort((a, b) => b.popularity - a.popularity).slice(0, limit)
+  }
+
   async function testConnection(): Promise<ServiceTestResult> {
     try {
       const profile = await get<SpotifyProfileResponse>('/me')
@@ -134,6 +237,8 @@ export function createSpotifyClient(accessToken: string, options?: { baseUrl?: s
     getTopArtists,
     getRecentlyPlayed,
     searchTracks,
+    findExactArtistByName,
+    getPopularAlbumsForArtist,
     testConnection,
   }
 }

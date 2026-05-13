@@ -271,6 +271,8 @@ export const tr = {
   'discover.monitorNewDescription': 'Bundan sonra yalnızca yeni yayınları izle',
   'discover.monitorSelected': 'Seçili albümler',
   'discover.monitorSelectedDescription': 'Hangi albümlerin izleneceğini seç',
+  'discover.monitorPopular': 'Popüler albümler',
+  'discover.monitorPopularDescription': 'En popüler 3 albüm yayınını izle',
   'discover.monitorNoneDescription': 'İzleme olmadan ekle (yalnızca takip)',
   'discover.discoveryRunStarted': 'Keşif çalıştırması başladı.',
   'discover.exportFailed': 'Dışa aktarma başarısız oldu',

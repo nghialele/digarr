@@ -7,6 +7,7 @@ import { getAlbums } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { hueFromName } from '../lib/utils'
 import { Hint } from './hint'
+import { MonitoringOptions, type MonitorOption } from './monitoring-options'
 import { StreamingLinks } from './streaming-links'
 import { Skeleton } from './ui/skeleton'
 
@@ -15,6 +16,7 @@ export type Recommendation = {
   score: number
   status: string
   aiReasoning?: string | null
+  recommendedReleaseGroupId?: string | null
   artist: {
     id: number
     name: string
@@ -37,6 +39,8 @@ type TodaysPickProps = {
   onRunScan: () => void
   targets?: Array<{ id: number; type: string; name: string }>
   onApproveToTarget?: (recId: number, targetId: string) => void
+  onApproveWithOption?: (recId: number, option: MonitorOption) => void
+  onOpenAlbumPicker?: (recId: number) => void
 }
 
 export function TodaysPick({
@@ -48,6 +52,8 @@ export function TodaysPick({
   onRunScan,
   targets,
   onApproveToTarget,
+  onApproveWithOption,
+  onOpenAlbumPicker,
 }: TodaysPickProps) {
   const { t } = useI18n()
   const [imgError, setImgError] = useState(false)
@@ -290,23 +296,35 @@ export function TodaysPick({
               )}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (standaloneApproveTarget?.type === 'slskd') {
-                  onApproveToTarget?.(
-                    rec.id,
-                    `${standaloneApproveTarget.type}-${standaloneApproveTarget.id}`,
-                  )
-                  return
-                }
+            <div className="flex-1">
+              {standaloneApproveTarget?.type === 'slskd' ||
+              !onApproveWithOption ||
+              !onOpenAlbumPicker ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (standaloneApproveTarget?.type === 'slskd') {
+                      onApproveToTarget?.(
+                        rec.id,
+                        `${standaloneApproveTarget.type}-${standaloneApproveTarget.id}`,
+                      )
+                      return
+                    }
 
-                onApprove(rec.id)
-              }}
-              className="flex-1 py-2 text-sm font-medium text-center rounded-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
-            >
-              {t('todaysPick.approve')}
-            </button>
+                    onApprove(rec.id)
+                  }}
+                  className="w-full py-2 text-sm font-medium text-center rounded-lg border border-approve/30 text-approve bg-approve/5 hover:bg-approve/15 transition-colors"
+                >
+                  {t('todaysPick.approve')}
+                </button>
+              ) : (
+                <MonitoringOptions
+                  fill
+                  onApprove={(option) => onApproveWithOption(rec.id, option)}
+                  onOpenAlbumPicker={() => onOpenAlbumPicker(rec.id)}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>

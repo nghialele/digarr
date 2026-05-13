@@ -44,6 +44,7 @@ vi.mock('@/web/lib/api', () => ({
   updateRecommendation: vi.fn(),
   approveRecommendation: vi.fn().mockResolvedValue({}),
   approveToTarget: vi.fn().mockResolvedValue({}),
+  getPopularAlbums: vi.fn(),
   deletePlaylistApi: vi.fn(),
   generatePlaylistApi: vi.fn(),
   listTargets: vi.fn().mockResolvedValue([]),
@@ -82,6 +83,7 @@ vi.mock('@/web/lib/hooks', async (importOriginal) => {
 
 import { PlaylistCard } from '@/web/components/playlist-card'
 import {
+  approveRecommendation,
   approveToTarget,
   getDashboardActivity,
   getDashboardTaste,
@@ -96,6 +98,7 @@ import {
 import { Dashboard } from '@/web/pages/dashboard'
 
 const mockApproveToTarget = vi.mocked(approveToTarget)
+const mockApproveRecommendation = vi.mocked(approveRecommendation)
 const mockGetRecommendations = vi.mocked(getRecommendations)
 const mockGetTopArtists = vi.mocked(getTopArtists)
 const mockGetRecentTracks = vi.mocked(getRecentTracks)
@@ -245,6 +248,20 @@ describe('Dashboard', () => {
     await waitFor(() => {
       expect(screen.getByText('Sigur Ros')).toBeInTheDocument()
       expect(screen.getByText('85')).toBeInTheDocument()
+    })
+  })
+
+  it("approves today's pick with popular albums from the approve menu", async () => {
+    setupMocks()
+    renderWithQuery(<Dashboard />)
+
+    await screen.findByText('Sigur Ros')
+
+    fireEvent.click(screen.getByLabelText('Monitoring options'))
+    fireEvent.click(screen.getByText('Popular albums'))
+
+    await waitFor(() => {
+      expect(mockApproveRecommendation).toHaveBeenCalledWith(1, { monitorOption: 'popular' })
     })
   })
 

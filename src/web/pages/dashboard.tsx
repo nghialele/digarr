@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { AlbumPicker } from '../components/album-picker'
 import { ApproveDialog } from '../components/approve-dialog'
 import { ArtistThumb } from '../components/artist-thumb'
 import { Hint } from '../components/hint'
@@ -471,6 +472,7 @@ export function Dashboard() {
   const approveTargets = targets.filter(
     (target) => target.enabled && target.owned && canApproveArtistToTarget(target.type),
   )
+  const hasLidarrTarget = approveTargets.some((target) => target.type === 'lidarr')
 
   // User preferences (for ApproveDialog defaults)
   const { data: prefsData } = useQuery({
@@ -487,6 +489,7 @@ export function Dashboard() {
     monitorOption: MonitorOption
     targetId?: string
   } | null>(null)
+  const [albumPickerRec, setAlbumPickerRec] = useState<Recommendation | null>(null)
 
   // Auto-rescan images for artists that are missing them (once per mount)
   const rescannedRef = useRef(false)
@@ -546,6 +549,37 @@ export function Dashboard() {
         return next
       })
     }
+  }
+
+  async function handleApproveWithOption(recId: number, monitorOption: MonitorOption) {
+    if (hasLidarrTarget) {
+      setApproveDialogState({ recId, monitorOption })
+      return
+    }
+
+    setActedIds((prev) => new Set([...prev, recId]))
+    try {
+      await approveRecommendation(recId, { monitorOption })
+      toast.success(t('dashboard.approvedSuccess'))
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
+    } catch {
+      toast.error(t('dashboard.actionFailed'))
+      setActedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(recId)
+        return next
+      })
+    }
+  }
+
+  function handleOpenAlbumPicker(recId: number) {
+    const rec = currentPick?.id === recId ? currentPick : null
+    if (!rec?.artist.mbid) {
+      toast.error(t('dashboard.actionFailed'))
+      return
+    }
+    setAlbumPickerRec(rec)
   }
 
   async function handleApproveToTarget(recId: number, targetId: string) {
@@ -618,6 +652,8 @@ export function Dashboard() {
           }}
           targets={approveTargets}
           onApproveToTarget={handleApproveToTarget}
+          onApproveWithOption={handleApproveWithOption}
+          onOpenAlbumPicker={handleOpenAlbumPicker}
         />
       </section>
 
@@ -712,6 +748,43 @@ export function Dashboard() {
           }}
         />
       )}
+
+      {albumPickerRec?.artist.mbid &&
+        (() => {
+          const pickerRec = albumPickerRec
+          const artistMbid = pickerRec.artist.mbid
+          if (!artistMbid) return null
+          return (
+            <AlbumPicker
+              artistMbid={artistMbid}
+              artistName={pickerRec.artist.name}
+              artistImageUrl={pickerRec.artist.imageUrl}
+              suggestedAlbumId={pickerRec.recommendedReleaseGroupId}
+              onConfirm={async (selectedAlbumIds) => {
+                setAlbumPickerRec(null)
+                setActedIds((prev) => new Set([...prev, pickerRec.id]))
+                try {
+                  await approveRecommendation(pickerRec.id, {
+                    monitorOption: 'selected',
+                    selectedAlbumIds,
+                  })
+                  toast.success(t('dashboard.approvedSuccess'))
+                  queryClient.invalidateQueries({ queryKey: ['dashboard-pick'] })
+                  queryClient.invalidateQueries({ queryKey: ['dashboard-approved'] })
+                } catch {
+                  toast.error(t('dashboard.actionFailed'))
+                } finally {
+                  setActedIds((prev) => {
+                    const next = new Set(prev)
+                    next.delete(pickerRec.id)
+                    return next
+                  })
+                }
+              }}
+              onCancel={() => setAlbumPickerRec(null)}
+            />
+          )
+        })()}
     </div>
   )
 }

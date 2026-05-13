@@ -11,6 +11,24 @@ vi.mock('@/core/clients/lidarr', () => ({
   createLidarrClient: vi.fn(),
 }))
 
+vi.mock('@/core/spotify-auth', () => ({
+  resolveSpotifyToken: vi.fn(async () => 'spotify-token'),
+}))
+
+vi.mock('@/core/clients/spotify', () => ({
+  createSpotifyClient: vi.fn(),
+}))
+
+vi.mock('@/core/clients/musicbrainz', () => ({
+  createMusicBrainzClient: vi.fn(() => ({
+    getReleaseGroups: vi.fn(async () => [
+      { id: 'rg-dummy', title: 'Dummy', type: 'Album', firstReleaseDate: '1994-08-22' },
+      { id: 'rg-portishead', title: 'Portishead', type: 'Album', firstReleaseDate: '1997-09-29' },
+      { id: 'rg-third', title: 'Third', type: 'Album', firstReleaseDate: '2008-04-28' },
+    ]),
+  })),
+}))
+
 // Mock sessions so auth middleware sets userId
 vi.mock('@/core/sessions', () => ({
   getSession: vi.fn(async () => ({
@@ -22,6 +40,7 @@ vi.mock('@/core/sessions', () => ({
 }))
 
 import { createLidarrClient } from '@/core/clients/lidarr'
+import { createSpotifyClient } from '@/core/clients/spotify'
 
 function makeMockOrchestrator() {
   const emitter = new EventEmitter()
@@ -483,6 +502,53 @@ describe('PATCH /api/v1/recommendations/:id', () => {
         qualityProfileId: 5,
         metadataProfileId: 3,
         rootFolderId: 2,
+      }),
+    )
+  })
+
+  it('resolves popular albums to selected release groups before approving', async () => {
+    vi.mocked(createSpotifyClient).mockReturnValue({
+      findExactArtistByName: vi.fn(async () => ({ id: 'sp-artist', name: 'Test Artist' })),
+      getPopularAlbumsForArtist: vi.fn(async () => [
+        { id: 'sp-third', title: 'Third', releaseDate: '2008-04-28', popularity: 82 },
+        { id: 'sp-dummy', title: 'Dummy', releaseDate: '1994-08-22', popularity: 78 },
+        { id: 'sp-portishead', title: 'Portishead', releaseDate: '1997-09-29', popularity: 75 },
+      ]),
+    } as unknown as ReturnType<typeof createSpotifyClient>)
+
+    const mockAddArtist = vi.fn().mockResolvedValue({
+      success: true,
+      targetType: 'lidarr',
+      targetId: 1,
+      externalId: 99,
+    })
+    const mockTarget = {
+      id: 'lidarr-1',
+      name: 'Lidarr',
+      type: 'lidarr',
+      capabilities: ['addArtist'],
+      addArtist: mockAddArtist,
+      testConnection: vi.fn(),
+    }
+
+    const app = createApp(
+      makeDeps({
+        getEnabledTargetsForUser: vi.fn().mockResolvedValue([mockTarget]),
+      }),
+    )
+
+    const res = await authedRequest(app, '/api/v1/recommendations/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+      body: JSON.stringify({ status: 'approved', monitorOption: 'popular' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(mockAddArtist).toHaveBeenCalledWith(
+      { mbid: 'mbid-abc-123', name: 'Test Artist' },
+      expect.objectContaining({
+        monitorOption: 'selected',
+        selectedAlbumIds: ['rg-third', 'rg-dummy', 'rg-portishead'],
       }),
     )
   })

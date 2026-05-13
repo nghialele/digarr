@@ -14,7 +14,7 @@ export const recommendationIdParamSchema = z.object({
 
 export const recommendationStatusSchema = z.enum(['approved', 'rejected', 'pending'])
 export const approvalModeSchema = z.enum(['single_target', 'combined_lidarr_slskd'])
-export const monitorOptionSchema = z.enum(['all', 'new', 'none', 'selected'])
+export const monitorOptionSchema = z.enum(['all', 'new', 'none', 'selected', 'popular'])
 export const sortSchema = z.enum(['score_desc', 'score_asc', 'created_desc', 'acted_on_desc'])
 
 export const updateRecommendationSchema = z.object({

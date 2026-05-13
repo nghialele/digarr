@@ -272,6 +272,8 @@ export const es = {
   'discover.monitorNewDescription': 'Solo supervisa los nuevos lanzamientos a partir de ahora',
   'discover.monitorSelected': 'Álbumes seleccionados',
   'discover.monitorSelectedDescription': 'Elige qué álbumes supervisar',
+  'discover.monitorPopular': 'Álbumes populares',
+  'discover.monitorPopularDescription': 'Supervisar los 3 lanzamientos de álbum más populares',
   'discover.monitorNoneDescription': 'Añadir sin supervisión (solo seguimiento)',
   'discover.discoveryRunStarted': 'Se inició la ejecución de descubrimiento.',
   'discover.exportFailed': 'Exportación fallida',
