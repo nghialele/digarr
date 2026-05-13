@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rejectStatusSchema } from '@/server/schemas/recommendations'
+import { monitorOptionSchema, rejectStatusSchema } from '@/server/schemas/recommendations'
 
 describe('rejectStatusSchema', () => {
   it('accepts a minimal { status: rejected }', () => {
@@ -64,5 +64,11 @@ describe('rejectStatusSchema', () => {
       reason: 'made_up_reason',
     })
     expect(r.success).toBe(false)
+  })
+})
+
+describe('monitorOptionSchema', () => {
+  it('accepts popular album approval mode', () => {
+    expect(monitorOptionSchema.safeParse('popular').success).toBe(true)
   })
 })

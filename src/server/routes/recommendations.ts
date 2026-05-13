@@ -1,4 +1,8 @@
 import { Hono } from 'hono'
+import { selectPopularReleaseGroups } from '@/core/albums/popular'
+import { createMusicBrainzClient } from '@/core/clients/musicbrainz'
+import { createSpotifyClient } from '@/core/clients/spotify'
+import { resolveSpotifyToken } from '@/core/spotify-auth'
 import { mergePreferences } from '@/db/schema'
 import type { AppDependencies } from '@/server'
 import { resolveUserPreferences } from '@/server/helpers/preferences'
@@ -25,7 +29,56 @@ type ApproveResult = {
 }
 
 type ApprovalMode = 'single_target' | 'combined_lidarr_slskd'
+type MonitorOption = 'all' | 'new' | 'none' | 'selected' | 'popular'
 type TargetActionStatus = 'added' | 'queued' | 'failed'
+
+type ApprovalArtist = {
+  mbid: string
+  name: string
+  streamingUrls?: Record<string, string> | null
+}
+
+const POPULAR_ALBUM_LIMIT = 3
+
+function extractSpotifyArtistId(url?: string): string | null {
+  if (!url) return null
+  const match = url.match(/open\.spotify\.com\/artist\/([^/?#]+)/)
+  return match?.[1] ? decodeURIComponent(match[1]) : null
+}
+
+async function resolvePopularAlbumIds(
+  deps: AppDependencies,
+  userId: number | undefined,
+  artist: ApprovalArtist | undefined,
+): Promise<string[]> {
+  if (!userId) {
+    throw new Error('Popular album approval requires a signed-in user')
+  }
+  if (!artist) {
+    throw new Error('Popular album approval requires artist metadata')
+  }
+
+  const accessToken = await resolveSpotifyToken(deps.db, userId)
+  const spotify = createSpotifyClient(accessToken)
+  const spotifyId =
+    extractSpotifyArtistId(artist.streamingUrls?.spotify) ??
+    (await spotify.findExactArtistByName(artist.name))?.id
+
+  if (!spotifyId) {
+    throw new Error(`Could not resolve Spotify artist for ${artist.name}`)
+  }
+
+  const [spotifyAlbums, releaseGroups] = await Promise.all([
+    spotify.getPopularAlbumsForArtist(spotifyId, POPULAR_ALBUM_LIMIT),
+    createMusicBrainzClient().getReleaseGroups(artist.mbid),
+  ])
+  const selected = selectPopularReleaseGroups(spotifyAlbums, releaseGroups, POPULAR_ALBUM_LIMIT)
+  if (selected.length === 0) {
+    throw new Error(`Could not map popular Spotify albums to Lidarr albums for ${artist.name}`)
+  }
+
+  return selected.map((album) => album.id)
+}
 
 type TargetExecutionResult = {
   action?: {
@@ -205,8 +258,9 @@ function isOwned(rec: { userId?: number | null }, callerId?: number): boolean {
 async function buildAddOptions(
   deps: AppDependencies,
   userId: number | undefined,
+  artist: ApprovalArtist | undefined,
   overrides: {
-    monitorOption?: string
+    monitorOption?: MonitorOption
     selectedAlbumIds?: string[]
     qualityProfileId?: number
     metadataProfileId?: number
@@ -219,10 +273,23 @@ async function buildAddOptions(
   // Merge per-user preferences over global
   const resolved = await resolveUserPreferences(deps.getUserById, globalPrefs, userId)
   const prefs = mergePreferences(resolved ?? globalPrefs)
+  const popularAlbumIds =
+    overrides.monitorOption === 'popular'
+      ? await resolvePopularAlbumIds(deps, userId, artist)
+      : undefined
 
   return {
-    ...(overrides.monitorOption != null ? { monitorOption: overrides.monitorOption } : {}),
-    ...(overrides.selectedAlbumIds ? { selectedAlbumIds: overrides.selectedAlbumIds } : {}),
+    ...(overrides.monitorOption != null
+      ? {
+          monitorOption:
+            overrides.monitorOption === 'popular' ? 'selected' : overrides.monitorOption,
+        }
+      : {}),
+    ...(popularAlbumIds
+      ? { selectedAlbumIds: popularAlbumIds }
+      : overrides.selectedAlbumIds
+        ? { selectedAlbumIds: overrides.selectedAlbumIds }
+        : {}),
     qualityProfileId: overrides.qualityProfileId ?? prefs.qualityProfileId,
     metadataProfileId: overrides.metadataProfileId ?? prefs.metadataProfileId,
     rootFolderId: overrides.rootFolderId ?? prefs.rootFolderId,
@@ -393,13 +460,31 @@ export function recommendationRoutes(deps: AppDependencies) {
           }
         }
 
-        const addOptions = await buildAddOptions(deps, userId, {
-          monitorOption: monitorOption ?? 'all',
-          selectedAlbumIds,
-          qualityProfileId: qpOverride,
-          metadataProfileId: mpOverride,
-          rootFolderId: rfOverride,
-        })
+        let addOptions: Record<string, unknown>
+        try {
+          addOptions = await buildAddOptions(
+            deps,
+            userId,
+            {
+              mbid: rec.artist.mbid,
+              name: rec.artist.name,
+              streamingUrls: rec.artist.streamingUrls,
+            },
+            {
+              monitorOption: (monitorOption ?? 'all') as MonitorOption,
+              selectedAlbumIds,
+              qualityProfileId: qpOverride,
+              metadataProfileId: mpOverride,
+              rootFolderId: rfOverride,
+            },
+          )
+        } catch (err) {
+          if (monitorOption !== 'popular') throw err
+          return c.json(
+            { error: err instanceof Error ? err.message : 'Popular albums could not be resolved' },
+            400,
+          )
+        }
 
         const result =
           approvalMode === 'combined_lidarr_slskd' && lidarrTarget && slskdTarget
@@ -514,7 +599,7 @@ export function recommendationRoutes(deps: AppDependencies) {
       return c.json({ error: `Target does not support artist approval: ${targetId}` }, 400)
     }
 
-    const addOptions = await buildAddOptions(deps, userId, {
+    const addOptions = await buildAddOptions(deps, userId, undefined, {
       qualityProfileId: qpOverride,
       metadataProfileId: mpOverride,
       rootFolderId: rfOverride,

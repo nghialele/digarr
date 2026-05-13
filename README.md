@@ -52,7 +52,7 @@ Digarr now ships localized catalogs for 15 languages, a visible language switche
 > Translations are reviewed in-repo and checked for missing or untranslated catalog values. If you notice awkward wording or missing context, please [open an issue](https://github.com/iuliandita/digarr/issues) or send a PR with fixes.
 
 ### Flexible Setup
-The setup wizard supports three starting points: Lidarr, Emby, or discovery-only. If you connect Lidarr, approved artists are added with your chosen quality and metadata profiles. If you start with Emby, Digarr saves the server connection for library sync and creates an Emby playlist target during setup. If you skip both, you can still run discovery and add targets later from Settings, including playlist exports. `slskd` targets are configured later in Settings > Targets and support standalone queueing or linked Lidarr handoff.
+The setup wizard supports three starting points: Lidarr, Emby, or discovery-only. If you connect Lidarr, approved artists are added with your chosen quality and metadata profiles. Approval can monitor all albums, future albums, selected albums, or the top 3 popular album releases resolved through Spotify. If you start with Emby, Digarr saves the server connection for library sync and creates an Emby playlist target during setup. If you skip both, you can still run discovery and add targets later from Settings, including playlist exports. `slskd` targets are configured later in Settings > Targets and support standalone queueing or linked Lidarr handoff.
 
 ### slskd Integration
 `slskd` targets support two approval modes:

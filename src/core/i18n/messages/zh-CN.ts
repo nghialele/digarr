@@ -258,6 +258,8 @@ export const zhCN = {
   'discover.monitorNewDescription': '仅监控今后的新发行',
   'discover.monitorSelected': '已选专辑',
   'discover.monitorSelectedDescription': '选择要监控的专辑',
+  'discover.monitorPopular': '热门专辑',
+  'discover.monitorPopularDescription': '监控最热门的 3 张专辑发行',
   'discover.monitorNoneDescription': '以不监控方式添加（仅跟踪）',
   'discover.discoveryRunStarted': '发现运行已开始。',
   'discover.exportFailed': '导出失败',

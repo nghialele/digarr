@@ -272,6 +272,8 @@ export const ro = {
   'discover.monitorNewDescription': 'Monitorizează doar lansările noi de acum înainte',
   'discover.monitorSelected': 'Albume selectate',
   'discover.monitorSelectedDescription': 'Alege ce albume să monitorizezi',
+  'discover.monitorPopular': 'Albume populare',
+  'discover.monitorPopularDescription': 'Monitorizează cele mai populare 3 lansări de albume',
   'discover.monitorNoneDescription': 'Adaugă fără monitorizare (doar urmărire)',
   'discover.discoveryRunStarted': 'Executarea descoperirii a început.',
   'discover.exportFailed': 'Exportul nu a reușit',

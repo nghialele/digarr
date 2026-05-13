@@ -83,4 +83,23 @@ describe('TodaysPick', () => {
     expect(screen.getByText('Add to Backup Lidarr')).toBeInTheDocument()
     expect(screen.queryByText('Add to Spotify playlist')).not.toBeInTheDocument()
   })
+
+  it('shows popular albums in the approve menu when monitoring options are available', () => {
+    renderWithQuery(
+      <TodaysPick
+        rec={rec}
+        loading={false}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+        onSkip={vi.fn()}
+        onRunScan={vi.fn()}
+        onApproveWithOption={vi.fn()}
+        onOpenAlbumPicker={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByLabelText('Monitoring options'))
+
+    expect(screen.getByText('Popular albums')).toBeInTheDocument()
+  })
 })

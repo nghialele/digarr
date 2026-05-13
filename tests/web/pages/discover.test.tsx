@@ -41,6 +41,7 @@ vi.mock('@/web/lib/api', () => ({
   approveToTarget: vi.fn(),
   bulkAction: vi.fn(),
   getWarmStatuses: vi.fn(),
+  getPopularAlbums: vi.fn(),
   rescanArtists: vi.fn(),
   triggerPipeline: vi.fn(),
   listTargets: vi.fn().mockResolvedValue([]),
@@ -264,6 +265,19 @@ describe('DiscoverPage', () => {
     })
   })
 
+  it('offers popular albums from the approve dropdown', async () => {
+    setupMockApi()
+    renderWithQuery(<DiscoverPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Artist')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByLabelText('Monitoring options'))
+
+    expect(screen.getByText('Popular albums')).toBeInTheDocument()
+  })
+
   it('bulk approve above threshold calls bulkAction', async () => {
     mockBulkAction.mockResolvedValue(undefined as unknown as never)
     // Two recs: one above 70%, one below
@@ -281,6 +295,52 @@ describe('DiscoverPage', () => {
       // Only rec id=1 qualifies (85% >= 70%)
       expect(mockBulkAction).toHaveBeenCalledWith([1], 'approve')
     })
+  })
+
+  it('clears all pending recommendations in bounded batches', async () => {
+    mockBulkAction.mockResolvedValue(undefined as unknown as never)
+    const firstBatch = Array.from({ length: 200 }, (_, idx) => makeRec({ id: idx + 1 }))
+    const secondBatch = Array.from({ length: 50 }, (_, idx) => makeRec({ id: idx + 201 }))
+    const pendingBatches = [firstBatch, secondBatch, []]
+
+    mockGetRecommendations.mockImplementation((params) => {
+      const p = params as Record<string, string> | undefined
+      if (p?.status === 'pending' && p.limit === '200') {
+        return Promise.resolve(makeRes(pendingBatches.shift() ?? []))
+      }
+      if (p?.status === 'pending' && p.limit === '10000') {
+        return Promise.resolve(makeRes([...firstBatch, ...secondBatch]))
+      }
+      return Promise.resolve(makeRes([makeRec()]))
+    })
+    ;(getWarmStatuses as ReturnType<typeof vi.fn>).mockResolvedValue({ statuses: {} })
+    mockListTargets.mockResolvedValue([])
+
+    renderWithQuery(<DiscoverPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'More actions' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Clear All' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Reject All' }))
+
+    await waitFor(() => {
+      expect(mockBulkAction).toHaveBeenCalledTimes(2)
+    })
+    expect(mockBulkAction).toHaveBeenNthCalledWith(
+      1,
+      firstBatch.map((r) => r.id),
+      'reject',
+    )
+    expect(mockBulkAction).toHaveBeenNthCalledWith(
+      2,
+      secondBatch.map((r) => r.id),
+      'reject',
+    )
+    expect(
+      mockGetRecommendations.mock.calls.some(([params]) => {
+        const p = params as Record<string, string> | undefined
+        return p?.status === 'pending' && Number(p.limit) > 200
+      }),
+    ).toBe(false)
   })
 
   it('reject button calls updateRecommendation', async () => {

@@ -213,7 +213,8 @@ Locale notes:
 {
   "status": "approved",
   "approvalMode": "combined_lidarr_slskd",
-  "monitorOption": "all",
+  "monitorOption": "popular",
+  "selectedAlbumIds": ["release-group-mbid"],
   "lidarrTargetId": "lidarr-1",
   "targetId": "slskd-7",
   "qualityProfileId": 1,
@@ -224,6 +225,8 @@ Locale notes:
 
 Approval notes:
 - `approvalMode` defaults to `single_target`
+- `monitorOption` accepts `all`, `new`, `selected`, `popular`, or `none`. `popular` resolves the artist through Spotify, ranks album releases by Spotify popularity, maps the top 3 matches back to MusicBrainz release groups, and sends them to Lidarr as selected albums.
+- `selectedAlbumIds` contains MusicBrainz release-group MBIDs when `monitorOption` is `selected`; clients may omit it for `popular` because Digarr resolves the top albums server-side.
 - use `approvalMode: "combined_lidarr_slskd"` with an `slskd-*` `targetId` to add to Lidarr first and then queue the matched release in `slskd`
 - `lidarrTargetId` is optional; when the selected `slskd` target is linked to a Lidarr target, Digarr uses that linked target as the fallback, and an explicit `lidarrTargetId` only overrides that default
 - rejected recommendations may include `reason`, `reasonText`, and `permanent`; `permanent: true` also adds the artist to the caller's blocklist

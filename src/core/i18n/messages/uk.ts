@@ -272,6 +272,8 @@ export const uk = {
   'discover.monitorNewDescription': 'Відстежувати лише майбутні релізи',
   'discover.monitorSelected': 'Вибрані альбоми',
   'discover.monitorSelectedDescription': 'Виберіть, які альбоми відстежувати',
+  'discover.monitorPopular': 'Популярні альбоми',
+  'discover.monitorPopularDescription': 'Відстежувати 3 найпопулярніші релізи альбомів',
   'discover.monitorNoneDescription': 'Додати без моніторингу (лише відстеження)',
   'discover.discoveryRunStarted': 'Запуск виявлення розпочато.',
   'discover.exportFailed': 'Помилка експорту',

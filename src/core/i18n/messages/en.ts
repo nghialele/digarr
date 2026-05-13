@@ -285,6 +285,8 @@ export const en = {
   'discover.monitorNewDescription': 'Only monitor new releases going forward',
   'discover.monitorSelected': 'Selected albums',
   'discover.monitorSelectedDescription': 'Choose which albums to monitor',
+  'discover.monitorPopular': 'Popular albums',
+  'discover.monitorPopularDescription': 'Monitor the top 3 album releases',
   'discover.monitorNoneDescription': 'Add unmonitored (tracking only)',
   'discover.discoveryRunStarted': 'Discovery run started.',
   'discover.exportFailed': 'Export failed',

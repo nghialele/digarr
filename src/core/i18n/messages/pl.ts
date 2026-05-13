@@ -272,6 +272,8 @@ export const pl = {
   'discover.monitorNewDescription': 'Monitoruj tylko przyszłe wydania',
   'discover.monitorSelected': 'Wybrane albumy',
   'discover.monitorSelectedDescription': 'Wybierz, które albumy monitorować',
+  'discover.monitorPopular': 'Popularne albumy',
+  'discover.monitorPopularDescription': 'Monitoruj 3 najpopularniejsze wydania albumów',
   'discover.monitorNoneDescription': 'Dodaj bez monitorowania (tylko śledzenie)',
   'discover.discoveryRunStarted': 'Rozpoczęto wykrywanie.',
   'discover.exportFailed': 'Eksport nie powiódł się',

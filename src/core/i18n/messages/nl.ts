@@ -272,6 +272,8 @@ export const nl = {
   'discover.monitorNewDescription': 'Alleen toekomstige releases volgen',
   'discover.monitorSelected': 'Geselecteerde albums',
   'discover.monitorSelectedDescription': 'Kies welke albums je wilt volgen',
+  'discover.monitorPopular': 'Populaire albums',
+  'discover.monitorPopularDescription': 'Volg de 3 populairste albumreleases',
   'discover.monitorNoneDescription': 'Toevoegen zonder monitoring (alleen volgen)',
   'discover.discoveryRunStarted': 'Discovery-run gestart.',
   'discover.exportFailed': 'Exporteren is mislukt',

@@ -271,6 +271,8 @@ export const ja = {
   'discover.monitorNewDescription': '今後の新作のみを監視',
   'discover.monitorSelected': '選択したアルバム',
   'discover.monitorSelectedDescription': '監視するアルバムを選択',
+  'discover.monitorPopular': '人気アルバム',
+  'discover.monitorPopularDescription': '人気上位3件のアルバムリリースを監視',
   'discover.monitorNoneDescription': '監視せずに追加（追跡のみ）',
   'discover.discoveryRunStarted': '検出の実行が開始されました。',
   'discover.exportFailed': 'エクスポートに失敗しました',

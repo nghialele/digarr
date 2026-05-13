@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { Button } from './ui/button'
 
-export type MonitorOption = 'all' | 'new' | 'selected' | 'none'
+export type MonitorOption = 'all' | 'new' | 'selected' | 'popular' | 'none'
 
 type Props = {
   onApprove: (option: MonitorOption, selectedAlbumIds?: string[]) => void
   onOpenAlbumPicker: () => void
   loading?: boolean
+  fill?: boolean
 }
 
-export function MonitoringOptions({ onApprove, onOpenAlbumPicker, loading }: Props) {
+export function MonitoringOptions({ onApprove, onOpenAlbumPicker, loading, fill }: Props) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const options: Array<{ value: MonitorOption; label: string; description: string }> = [
@@ -30,6 +31,11 @@ export function MonitoringOptions({ onApprove, onOpenAlbumPicker, loading }: Pro
       description: t('discover.monitorSelectedDescription'),
     },
     {
+      value: 'popular',
+      label: t('discover.monitorPopular'),
+      description: t('discover.monitorPopularDescription'),
+    },
+    {
       value: 'none',
       label: t('common.none'),
       description: t('discover.monitorNoneDescription'),
@@ -46,12 +52,12 @@ export function MonitoringOptions({ onApprove, onOpenAlbumPicker, loading }: Pro
   }
 
   return (
-    <div className="relative inline-flex">
+    <div className={`relative inline-flex ${fill ? 'w-full' : ''}`}>
       {/* Primary approve button - defaults to 'all' */}
       <Button
         size="sm"
         variant="outline"
-        className="rounded-r-none text-approve border-approve/40 hover:bg-approve/10 hover:text-approve border-r-0"
+        className={`rounded-r-none text-approve border-approve/40 hover:bg-approve/10 hover:text-approve border-r-0 ${fill ? 'flex-1 py-2 text-sm' : ''}`}
         disabled={loading}
         onClick={(e) => {
           e.stopPropagation()
@@ -68,7 +74,7 @@ export function MonitoringOptions({ onApprove, onOpenAlbumPicker, loading }: Pro
           e.stopPropagation()
           setOpen((prev) => !prev)
         }}
-        className="inline-flex items-center justify-center px-1.5 py-1.5 rounded-r-md text-xs border border-approve/40 text-approve hover:bg-approve/10 transition-colors disabled:pointer-events-none disabled:opacity-50"
+        className={`inline-flex items-center justify-center px-1.5 py-1.5 rounded-r-md text-xs border border-approve/40 text-approve hover:bg-approve/10 transition-colors disabled:pointer-events-none disabled:opacity-50 ${fill ? 'px-2 py-2' : ''}`}
         aria-label={t('discover.monitoringOptions')}
         aria-expanded={open}
         aria-haspopup="true"

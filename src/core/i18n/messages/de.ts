@@ -272,6 +272,8 @@ export const de = {
   'discover.monitorNewDescription': 'Nur zukünftige Neuerscheinungen überwachen',
   'discover.monitorSelected': 'Ausgewählte Alben',
   'discover.monitorSelectedDescription': 'Wähle, welche Alben überwacht werden sollen',
+  'discover.monitorPopular': 'Beliebte Alben',
+  'discover.monitorPopularDescription': 'Die 3 beliebtesten Album-Veröffentlichungen überwachen',
   'discover.monitorNoneDescription': 'Ohne Überwachung hinzufügen (nur verfolgen)',
   'discover.discoveryRunStarted': 'Erkennungslauf gestartet.',
   'discover.exportFailed': 'Der Export ist fehlgeschlagen',

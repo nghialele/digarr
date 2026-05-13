@@ -272,6 +272,8 @@ export const it = {
   'discover.monitorNewDescription': 'Monitora solo le nuove uscite da ora in poi',
   'discover.monitorSelected': 'Album selezionati',
   'discover.monitorSelectedDescription': 'Scegli quali album monitorare',
+  'discover.monitorPopular': 'Album popolari',
+  'discover.monitorPopularDescription': 'Monitora le 3 uscite album più popolari',
   'discover.monitorNoneDescription': 'Aggiungi senza monitoraggio (solo tracciamento)',
   'discover.discoveryRunStarted': "L'esecuzione del rilevamento è iniziata.",
   'discover.exportFailed': 'Esportazione non riuscita',

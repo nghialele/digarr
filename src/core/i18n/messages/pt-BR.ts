@@ -272,6 +272,8 @@ export const ptBR = {
   'discover.monitorNewDescription': 'Monitorar apenas novos lançamentos daqui para frente',
   'discover.monitorSelected': 'Álbuns selecionados',
   'discover.monitorSelectedDescription': 'Escolha quais álbuns monitorar',
+  'discover.monitorPopular': 'Álbuns populares',
+  'discover.monitorPopularDescription': 'Monitorar os 3 lançamentos de álbum mais populares',
   'discover.monitorNoneDescription': 'Adicionar sem monitoramento (apenas rastreamento)',
   'discover.discoveryRunStarted': 'Execução de descoberta iniciada.',
   'discover.exportFailed': 'Falha na exportação',
