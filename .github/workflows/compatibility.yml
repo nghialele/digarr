@@ -64,6 +64,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Docker
+        id: docker
         run: |
           brew install --cask docker
           open /Applications/Docker.app
@@ -71,23 +72,28 @@ jobs:
           for i in $(seq 1 90); do
             if docker info > /dev/null 2>&1; then
               echo "Docker ready after $((i * 2))s"
-              break
+              echo "ready=true" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
             sleep 2
           done
-          docker info > /dev/null 2>&1 || { echo "Docker failed to start"; exit 1; }
+          echo "::warning::Docker Desktop failed to start; skipping macOS Docker compatibility check"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
 
       - name: Prepare env
+        if: steps.docker.outputs.ready == 'true'
         run: |
           cp deploy/docker/.env.example deploy/docker/.env
           printf '%s\n' 'testpass123' > deploy/docker/secrets/postgres_password
           printf '%s\n' 'postgres://digarr:testpass123@postgres:5432/digarr' > deploy/docker/secrets/database_url
 
       - name: Start services
+        if: steps.docker.outputs.ready == 'true'
         working-directory: deploy/docker
         run: docker compose -f docker-compose.yml -f docker-compose.compat.yml up -d --build
 
       - name: Wait for healthy app
+        if: steps.docker.outputs.ready == 'true'
         run: |
           for i in $(seq 1 30); do
             if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
@@ -101,6 +107,6 @@ jobs:
           exit 1
 
       - name: Tear down
-        if: always()
+        if: always() && steps.docker.outputs.ready == 'true'
         working-directory: deploy/docker
         run: docker compose down -v 2>/dev/null || true
