@@ -24,7 +24,7 @@ export function lidarrRoutes(deps: AppDependencies) {
 
   router.onError((err, c) => c.json({ error: errMsg(err) }, 500))
 
-  router.get('/api/v1/lidarr/stats', async (c) => {
+  router.get('/api/v1/lidarr/stats', adminGuard(deps.getUserById), async (c) => {
     const client = await getClient()
     const artists = await client.getArtists()
     return c.json({
@@ -33,19 +33,39 @@ export function lidarrRoutes(deps: AppDependencies) {
     })
   })
 
-  router.get('/api/v1/lidarr/metadataprofiles', async (c) => {
+  router.get('/api/v1/lidarr/metadataprofiles', adminGuard(deps.getUserById), async (c) => {
     const client = await getClient()
     return c.json(await client.getMetadataProfiles())
   })
 
-  router.get('/api/v1/lidarr/profiles', async (c) => {
+  router.get('/api/v1/lidarr/profiles', adminGuard(deps.getUserById), async (c) => {
     const client = await getClient()
     return c.json(await client.getQualityProfiles())
   })
 
-  router.get('/api/v1/lidarr/rootfolders', async (c) => {
+  router.get('/api/v1/lidarr/rootfolders', adminGuard(deps.getUserById), async (c) => {
     const client = await getClient()
     return c.json(await client.getRootFolders())
+  })
+
+  // Non-admin picker for the approve dialog. The four GETs above stay
+  // admin-only because they expose library structure and free-space; this
+  // endpoint returns only the fields the picker needs. The explicit .map
+  // projection is the security boundary -- never c.json a raw client object,
+  // as RootFolder carries freeSpace (and the types may gain fields later).
+  router.get('/api/v1/lidarr/approve-options', async (c) => {
+    const client = await getClient()
+    const [qualityProfiles, metadataProfiles, rootFolders] = await Promise.all([
+      client.getQualityProfiles(),
+      client.getMetadataProfiles(),
+      client.getRootFolders(),
+    ])
+    return c.json({
+      qualityProfiles: qualityProfiles.map((p) => ({ id: p.id, name: p.name })),
+      metadataProfiles: metadataProfiles.map((p) => ({ id: p.id, name: p.name })),
+      // path is kept as the picker label; freeSpace and any other fields drop.
+      rootFolders: rootFolders.map((f) => ({ id: f.id, path: f.path })),
+    })
   })
 
   router.post(
