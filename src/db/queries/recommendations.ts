@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, inArray, isNull, or, type SQL, sql } from 'drizzle-orm'
 import type { GenreFeedback } from '@/core/pipeline/score'
 import type { RejectionReason } from '@/core/recommendations/rejection-reasons'
 import { isValidStatus, parseStatusFilter } from '@/core/recommendations/statuses'
@@ -38,6 +38,7 @@ export type ListRecommendationsFilters = {
   batchId?: number
   userId?: number
   decades?: string
+  kind?: 'artist' | 'album'
   sort?: 'score_desc' | 'score_asc' | 'created_desc' | 'acted_on_desc'
   limit?: number
   offset?: number
@@ -52,7 +53,16 @@ export async function listRecommendations(
   db: Database,
   filters: ListRecommendationsFilters = {},
 ): Promise<ListRecommendationsResult> {
-  const { status, batchId, userId, decades, sort = 'score_desc', limit = 20, offset = 0 } = filters
+  const {
+    status,
+    batchId,
+    userId,
+    decades,
+    kind,
+    sort = 'score_desc',
+    limit = 20,
+    offset = 0,
+  } = filters
 
   const conditions = []
   if (status !== undefined) {
@@ -67,6 +77,7 @@ export async function listRecommendations(
   }
   if (batchId !== undefined) conditions.push(eq(recommendations.batchId, batchId))
   if (userId !== undefined) conditions.push(eq(recommendations.userId, userId))
+  if (kind === 'artist' || kind === 'album') conditions.push(eq(recommendations.kind, kind))
 
   if (decades) {
     const ranges = parseDecades(decades)
@@ -398,19 +409,22 @@ export async function getGenreArtists(
   return rows.map(({ spotifyPopularity: _sp, ...r }) => r)
 }
 
+export type InsertRecommendationData = {
+  artistId: number
+  batchId: number
+  score: number
+  sources: Record<string, number>
+  aiReasoning?: string
+  status: string
+  userId?: number
+  recommendedReleaseGroupId?: string
+  recommendedReleaseGroupTitle?: string
+  kind?: 'artist' | 'album'
+}
+
 export async function insertRecommendation(
   db: DbOrTx,
-  data: {
-    artistId: number
-    batchId: number
-    score: number
-    sources: Record<string, number>
-    aiReasoning?: string
-    status: string
-    userId?: number
-    recommendedReleaseGroupId?: string
-    recommendedReleaseGroupTitle?: string
-  },
+  data: InsertRecommendationData,
 ): Promise<void> {
   await db.insert(recommendations).values({
     artistId: data.artistId,
@@ -422,5 +436,27 @@ export async function insertRecommendation(
     userId: data.userId,
     recommendedReleaseGroupId: data.recommendedReleaseGroupId,
     recommendedReleaseGroupTitle: data.recommendedReleaseGroupTitle,
+    kind: data.kind ?? 'artist',
   })
+}
+
+/**
+ * Release-group MBIDs of existing album-kind recommendations, for album dedup.
+ * Scoped to the given user (plus global/null-user recs). If `userId` is omitted,
+ * returns the set across ALL users — only safe for global passes, NOT per-user dedup.
+ */
+export async function getExistingAlbumReleaseGroupMbids(
+  db: Database,
+  userId?: number,
+): Promise<Set<string>> {
+  const conditions: SQL[] = [eq(recommendations.kind, 'album')]
+  if (userId !== undefined) {
+    // biome-ignore lint/style/noNonNullAssertion: or() with two non-null args always returns SQL, never undefined
+    conditions.push(or(eq(recommendations.userId, userId), isNull(recommendations.userId))!)
+  }
+  const rows = await db
+    .select({ rg: recommendations.recommendedReleaseGroupId })
+    .from(recommendations)
+    .where(and(...conditions))
+  return new Set(rows.map((r) => r.rg).filter((rg): rg is string => Boolean(rg)))
 }

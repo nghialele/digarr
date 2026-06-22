@@ -87,6 +87,7 @@ import { createSlskdTarget } from './core/targets/slskd'
 import { createSpotifyPlaylistTarget } from './core/targets/spotify-playlist'
 import { errMsg } from './core/validation'
 import { db, pool } from './db'
+import { getBlockedAlbumKeys } from './db/queries/album-blocks'
 import {
   addBlock as addArtistBlockQuery,
   getBlockedMbids as getBlockedArtistMbids,
@@ -120,6 +121,7 @@ import {
 import {
   bulkUpdateStatus,
   filterOwnedIds,
+  getExistingAlbumReleaseGroupMbids,
   getGenreFeedbackHistory,
   getRecommendation,
   getRejectedArtistMbids,
@@ -228,6 +230,8 @@ const librarySyncIntervalHours = bootSettings?.librarySyncIntervalHours ?? 6
 const librarySyncStore = createLibrarySyncStore(db)
 
 const storeDb: StoreDb = {
+  getExistingAlbumReleaseGroupMbids: (userId) => getExistingAlbumReleaseGroupMbids(db, userId),
+  getBlockedAlbumKeys: (userId) => getBlockedAlbumKeys(db, userId),
   getExistingRecommendationMbids: async (userId) => {
     const base = db
       .select({ mbid: artists.mbid })

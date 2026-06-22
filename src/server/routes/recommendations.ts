@@ -196,6 +196,99 @@ async function approveToTargets(
   return { status, targetActions, lidarrArtistId, lidarrError }
 }
 
+/** Approve-to-target logic for album-kind recs (uses the addAlbum capability). */
+async function approveAlbumToTargets(
+  album: { artistMbid: string; artistName: string; releaseGroupMbid: string },
+  targets: TargetWithCapabilities[],
+  addOptions: Record<string, unknown>,
+  jobRecorder?: import('@/core/jobs/types').JobRecorder,
+  userId?: number,
+  recommendationId?: number,
+): Promise<ApproveResult> {
+  const actionableTargets = targets.filter((target) => target.capabilities?.includes('addAlbum'))
+
+  if (actionableTargets.length === 0) {
+    return { status: 'add_failed', targetActions: {} }
+  }
+
+  const targetActions: Record<string, unknown> = {}
+  let anySuccess = false
+  let externalId: number | string | undefined
+  let lidarrError: string | undefined
+
+  for (const target of actionableTargets) {
+    const targetJobId = jobRecorder
+      ? await jobRecorder.start({
+          type: 'target',
+          userId,
+          metadata: {
+            targetType: target.type,
+            artistName: album.artistName,
+            mbid: album.artistMbid,
+            releaseGroupMbid: album.releaseGroupMbid,
+            action: 'addAlbum',
+          },
+        })
+      : null
+
+    const result = await target.addAlbum?.(
+      {
+        artistMbid: album.artistMbid,
+        artistName: album.artistName,
+        releaseGroupMbid: album.releaseGroupMbid,
+      },
+      { ...addOptions, userId, recommendationId },
+    )
+
+    if (!result) {
+      if (targetJobId != null && jobRecorder) {
+        await jobRecorder.complete(targetJobId, {
+          metadata: { targetType: target.type, artistName: album.artistName, skipped: true },
+        })
+      }
+      continue
+    }
+
+    if (targetJobId != null && jobRecorder) {
+      if (result.success) {
+        await jobRecorder.complete(targetJobId, {
+          metadata: {
+            targetType: target.type,
+            artistName: album.artistName,
+            externalId: result.externalId,
+          },
+        })
+      } else {
+        await recordFailureSafely(
+          jobRecorder,
+          targetJobId,
+          result.error ?? 'Target returned failure',
+        )
+      }
+    }
+
+    targetActions[target.id] = {
+      status: result.success ? (target.type === 'slskd' ? 'queued' : 'added') : 'failed',
+      externalId: result.externalId,
+      error: result.error,
+    }
+    if (result.success) {
+      anySuccess = true
+      if (target.type === 'lidarr' && externalId == null) externalId = result.externalId
+    } else if (target.type === 'lidarr') {
+      lidarrError = result.error
+    }
+  }
+
+  const status = anySuccess ? 'added_to_lidarr' : 'add_failed'
+  // Do NOT persist the album external id as lidarrArtistId: for album approvals
+  // `externalId` is the Lidarr ALBUM id, which has wrong semantics for the
+  // recommendations.lidarr_artist_id column. The album id is already retained
+  // in targetActions[target.id], and album status is driven by `anySuccess`.
+  void externalId
+  return { status, targetActions, lidarrArtistId: undefined, lidarrError }
+}
+
 async function approveWithCombinedLidarrSlskd(
   artist: { mbid: string; name: string },
   lidarrTarget: TargetWithCapabilities,
@@ -308,6 +401,10 @@ export function recommendationRoutes(deps: AppDependencies) {
       batchId: query.batchId,
       userId,
       decades: query.decades || undefined,
+      kind:
+        query.kind === 'artist' || query.kind === 'album'
+          ? (query.kind as 'artist' | 'album')
+          : undefined,
       sort: query.sort,
       limit: query.limit,
       offset: query.offset,
@@ -462,6 +559,11 @@ export function recommendationRoutes(deps: AppDependencies) {
           }
         }
 
+        // Album recs resolve the target album via releaseGroupMbid and ignore
+        // selectedAlbumIds entirely, so skip the popular/selected resolution
+        // (which hits Spotify/MusicBrainz and can 400 when Spotify is unset).
+        const isAlbumRec = rec.kind === 'album'
+
         let addOptions: Record<string, unknown>
         try {
           addOptions = await buildAddOptions(
@@ -473,8 +575,8 @@ export function recommendationRoutes(deps: AppDependencies) {
               streamingUrls: rec.artist.streamingUrls,
             },
             {
-              monitorOption: (monitorOption ?? 'all') as MonitorOption,
-              selectedAlbumIds,
+              monitorOption: isAlbumRec ? undefined : ((monitorOption ?? 'all') as MonitorOption),
+              selectedAlbumIds: isAlbumRec ? undefined : selectedAlbumIds,
               qualityProfileId: qpOverride,
               metadataProfileId: mpOverride,
               rootFolderId: rfOverride,
@@ -489,24 +591,37 @@ export function recommendationRoutes(deps: AppDependencies) {
         }
 
         const result =
-          approvalMode === 'combined_lidarr_slskd' && lidarrTarget && slskdTarget
-            ? await approveWithCombinedLidarrSlskd(
-                { mbid: rec.artist.mbid, name: rec.artist.name },
-                lidarrTarget,
-                slskdTarget,
-                addOptions,
-                id,
-                deps.jobRecorder,
-                userId,
-              )
-            : await approveToTargets(
-                { mbid: rec.artist.mbid, name: rec.artist.name },
+          rec.kind === 'album' && rec.recommendedReleaseGroupId
+            ? await approveAlbumToTargets(
+                {
+                  artistMbid: rec.artist.mbid,
+                  artistName: rec.artist.name,
+                  releaseGroupMbid: rec.recommendedReleaseGroupId,
+                },
                 effectiveTargets,
                 addOptions,
                 deps.jobRecorder,
                 userId,
                 id,
               )
+            : approvalMode === 'combined_lidarr_slskd' && lidarrTarget && slskdTarget
+              ? await approveWithCombinedLidarrSlskd(
+                  { mbid: rec.artist.mbid, name: rec.artist.name },
+                  lidarrTarget,
+                  slskdTarget,
+                  addOptions,
+                  id,
+                  deps.jobRecorder,
+                  userId,
+                )
+              : await approveToTargets(
+                  { mbid: rec.artist.mbid, name: rec.artist.name },
+                  effectiveTargets,
+                  addOptions,
+                  deps.jobRecorder,
+                  userId,
+                  id,
+                )
 
         const extra: Record<string, unknown> = { targetActions: result.targetActions }
         if (result.lidarrArtistId) extra.lidarrArtistId = result.lidarrArtistId
